@@ -2,6 +2,7 @@ test_args = _args
 test_deps = _deps
 test_array = [  #
     ['test_element', 'ElementTest.cc', ''],
+    ['test_mattermask', 'MaskManagerTests.cc', ''],
     ['test_matter_cache', 'MatterCache.cc', 'sulfolene'],
     ['test_iohelp', 'IOHelpersTest.cc', ''],
     ['test_potcachekey', 'PotCacheKey.cc', ''],

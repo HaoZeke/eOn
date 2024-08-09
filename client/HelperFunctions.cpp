@@ -464,4 +464,15 @@ std::vector<int> helper_functions::split_string_int(std::string s,
 
 double roundUp(double x, double f) { return ceil(x / f); }
 
+std::vector<int> helper_functions::filtered_indices(Vector<bool> const &mask) {
+  using ranges::begin;
+  using ranges::end;
+  using ranges::views::filter;
+  using ranges::views::iota;
+
+  int const N = mask.size();
+  auto c = iota(0, N) | filter([&mask](auto const &i) { return mask[i]; });
+  return std::vector(begin(c), end(c));
+}
+
 } // namespace eonc

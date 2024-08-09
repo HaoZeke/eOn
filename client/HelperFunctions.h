@@ -11,6 +11,7 @@
 */
 #pragma once
 #include "Eigen.h"
+#include <range/v3/all.hpp>
 #include <string>
 #include <vector>
 
@@ -81,6 +82,7 @@ AtomMatrix loadMode(FILE *modeFile, int nAtoms);
 AtomMatrix loadMode(std::string filename, int nAtoms);
 std::vector<int> split_string_int(std::string s, std::string delim);
 
+std::vector<int> filtered_indices(Vector<bool> const &mask);
 } // namespace helper_functions
 
 } // namespace eonc

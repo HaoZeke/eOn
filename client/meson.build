@@ -141,6 +141,10 @@ _deps += [eigen_dep]
 fmt_dep = dependency('fmt', required: true)
 _deps += fmt_dep
 
+
+range_dep = dependency('range-v3', required: true)
+_deps += range_dep
+
 spdlog_dep = dependency('spdlog', required: true)
 _deps += spdlog_dep
 _args += ['-DSPDLOG_FMT_EXTERNAL']

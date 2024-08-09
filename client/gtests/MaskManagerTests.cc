@@ -24,7 +24,10 @@ TEST_CASE("AtomMask: Basic Functionality", "[AtomMask]") {
 
   REQUIRE(mask.atomIndices == atomIndices);
   REQUIRE(mask.freeMask == freeMask);
-  REQUIRE(mask.freeIndices == std::vector<int>{0, 2, 3});
+
+  eonc::Vector<size_t> exp_freeIndices(3);
+  exp_freeIndices << 0, 2, 3;
+  REQUIRE(mask.freeIndices == exp_freeIndices);
 }
 
 TEST_CASE("AtomMask: Inconsistent Sizes", "[AtomMask]") {
@@ -45,7 +48,7 @@ TEST_CASE("FreeFixer: Filter Positions", "[FreeFixer]") {
   eonc::Vector<bool> freeMask(5);
   freeMask << true, false, true, true, false;
 
-  AtomMask mask(atomIndices, freeMask);
+  AtomMask mask(atomIndices, freeMask, 3);
   FreeFixer freef(mask);
 
   Eigen::MatrixXd filtered_positions = freef(positions);
@@ -56,7 +59,7 @@ TEST_CASE("FreeFixer: Filter Positions", "[FreeFixer]") {
   Eigen::MatrixXd expected_positions(3, 3);
   expected_positions << 1, 2, 3, 7, 8, 9, 10, 11, 12;
 
-  REQUIRE(filtered_positions.isApprox(expected_positions));
+  REQUIRE(filtered_positions == expected_positions);
 }
 
 TEST_CASE("FreeFixer: Empty Free Mask", "[FreeFixer]") {
@@ -94,27 +97,51 @@ TEST_CASE("FreeFixer: All Free Atoms", "[FreeFixer]") {
   REQUIRE(filtered_positions.rows() == positions.rows());
   REQUIRE(filtered_positions.cols() == positions.cols());
 
-  REQUIRE(filtered_positions.isApprox(positions));
+  REQUIRE(filtered_positions == positions);
 }
 
 TEST_CASE("FreeFixer: Vector Input", "[FreeFixer]") {
   Eigen::VectorXd velocities(15);
   velocities << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15;
 
-  eonc::Vector<size_t> atomIndices(7);
-  atomIndices << 0, 1, 7, 3, 14, 8, 11;
-  eonc::Vector<bool> freeMask(7);
-  freeMask << true, false, true, true, false, true, true;
+  eonc::Vector<size_t> atomIndices(2);
+  atomIndices << 0, 1;
+  eonc::Vector<bool> freeMask(2);
+  freeMask << true, false;
+
+  Eigen::MatrixXd reshaped_velocities =
+      Eigen::Map<Eigen::MatrixXd>(velocities.data(), velocities.size() / 3, 3);
+
+  AtomMask mask(atomIndices, freeMask);
+  FreeFixer freef(mask);
+  Eigen::MatrixXd filtered_positions_matrix = freef(reshaped_velocities);
+
+  Eigen::VectorXd filtered_velocities = Eigen::Map<Eigen::VectorXd>(
+      filtered_positions_matrix.data(), filtered_positions_matrix.size());
+
+  REQUIRE(filtered_velocities.size() == 3);
+
+  Eigen::VectorXd expected_velocities(3);
+  expected_velocities << 1, 2, 3;
+
+  REQUIRE(filtered_velocities == expected_velocities);
+}
+
+TEST_CASE("FreeFixer: Out of Bounds Indices", "[FreeFixer]") {
+  Eigen::VectorXd velocities(15);
+  velocities << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15;
+
+  eonc::Vector<size_t> atomIndices(3);
+  atomIndices << 0, 1, 6; // Index 6 is out of bounds for reshaped_velocities
+  eonc::Vector<bool> freeMask(3);
+  freeMask << true, false, true;
+
+  Eigen::MatrixXd reshaped_velocities =
+      Eigen::Map<Eigen::MatrixXd>(velocities.data(), velocities.size() / 3, 3);
 
   AtomMask mask(atomIndices, freeMask);
   FreeFixer freef(mask);
 
-  Eigen::VectorXd filtered_velocities = freef(velocities);
-
-  REQUIRE(filtered_velocities.size() == 5);
-
-  Eigen::VectorXd expected_velocities(5);
-  expected_velocities << 1, 8, 15, 9, 12;
-
-  REQUIRE(filtered_velocities == expected_velocities);
+  // Expecting an out_of_range exception due to out-of-bounds index
+  REQUIRE_THROWS_AS(freef(reshaped_velocities), std::out_of_range);
 }
