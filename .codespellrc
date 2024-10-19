@@ -1,0 +1,5 @@
+[tool.codespell]
+builtin = ["clear", "rare", "informal", "usage", "code", "names"]
+ignore-words-list = ["enew", "ro", "fo", "cna", "fPt"]
+skip = "*imd_cg.c,*.f90,*POTCAR,*archive*"
+count = true
