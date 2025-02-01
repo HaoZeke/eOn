@@ -65,6 +65,7 @@ void GaussianProcessRegression::initialize(const InputParameters& parameters,
 
     sigma2 = parameters.gp_sigma2.value;
     jitter_sigma2 = parameters.jitter_sigma2.value;
+    report_level = parameters.report_level.value;
 
     if (parameters.optimization_alg.value == "SCG_opt") {
         optimization_alg = SCG_opt;
@@ -275,7 +276,9 @@ void GaussianProcessRegression::evaluateTrainingCovarianceMatrix(
         }
     }
 
-    // log_man << "Training covariance matrix is " << cov_matrix.size() << " over ( " << cov_matrix.rows() << ", " << cov_matrix.cols() << " )" << "\n";
+    // log_man << "Training covariance matrix is " << cov_matrix.size() << "
+    // over ( " << cov_matrix.rows() << ", " << cov_matrix.cols() << " )" <<
+    // "\n";
     is_training_cov_matrix_evaluated = true;
 }
 
@@ -645,7 +648,8 @@ void GaussianProcessRegression::calculatePotential(Observation& image1)
     // KK =
     // gp_cov(gp,R_all2,[repmat(R,D+1,1),reshape(repmat(0:D,N_im,1),[],1)]);
     evaluateCovarianceMatrix(R_matrix, R_mod, R_indices, R_mod_ind, KK);
-    // log_man << "KK is " << KK.size() << " over ( " << KK.rows() << ", " << KK.cols() << " )" << "\n";
+    // log_man << "KK is " << KK.size() << " over ( " << KK.rows() << ", " <<
+    // KK.cols() << " )" << "\n";
 
     // EG_R = KK'*a;
     EG_R = KK.transpose() * a;
@@ -690,16 +694,29 @@ void GaussianProcessRegression::optimize(const Observation& observation)
     // log_man << "Parameters before SCG: " << parameters_cf << "\n";
     scg.setAlgorithmSettings(opt_alg_settings);
 
-    auto start = std::chrono::steady_clock::now();
+    std::chrono::time_point<std::chrono::steady_clock> start;
+
+    if (this->report_level >= 2) {
+        start = std::chrono::steady_clock::now();
+    }
 
     scg.optimize(R_matrix, R_indices, energy_and_gradient, parameters_cf,
                  &gpr::GaussianProcessRegression::evaluateEnergyAndGradient,
                  *this);
-    log_man << "R_matrix size for optimization " << R_matrix.size() << " over ( " << R_matrix.rows() << ", " << R_matrix.cols() << " )" << "\n";
 
-    std::chrono::duration<double> elp_time =
-        std::chrono::steady_clock::now() - start;
-    log_man << "optimize time: " << elp_time.count() << "s\n";
+    if (this->report_level >= 2) {
+        log_man << "R_matrix size for optimization " << R_matrix.size()
+                << " over ( " << R_matrix.rows() << ", " << R_matrix.cols()
+                << " )"
+                << "\n";
+    }
+
+    if (this->report_level >= 2) {
+        std::chrono::duration<double> elp_time =
+            std::chrono::steady_clock::now() - start;
+        log_man << "optimize time: " << elp_time.count() << "s\n";
+    }
+
     if (scg.failedOptim) {
         log_man << "Set optim failure in GP\n";
         failedOptimizer = true;
@@ -709,10 +726,17 @@ void GaussianProcessRegression::optimize(const Observation& observation)
     }
 
     setParameters(parameters_cf);
-    log_man << "Parameter size " << parameters_cf.size() << "\n";
-    // log_man << "Parameters after SCG: " << parameters_cf << "\n";
-    // log_man << "Difference: " << old_parameters_cf - parameters_cf << "\n";
-    log_man << "Parameter Norm: " << (old_parameters_cf - parameters_cf).norm() << "\n";
+    if (this->report_level >= 2) {
+        log_man << "Parameter size " << parameters_cf.size() << "\n";
+        log_man << "magnSigma2: " << sexpat_cov_func->getMagnSigma2() << "\n";
+        log_man << "lengthScales:\n"
+                << sexpat_cov_func->getLengthScaleRef().extractEigenVector()
+                << "\n";
+        // log_man << "Difference: " << old_parameters_cf - parameters_cf <<
+        // "\n";
+        log_man << "Parameter Norm: "
+                << (old_parameters_cf - parameters_cf).norm() << "\n";
+    }
     calculatePosteriorMeanPrediction();
 }
 

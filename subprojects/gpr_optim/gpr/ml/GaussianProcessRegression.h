@@ -355,6 +355,7 @@ private:
     double sigma2;
     double jitter_sigma2;
     uint8_t optimization_alg;
+    uint8_t report_level;
 
     LikGaussian* lik_gaussian;
     SexpatCF* sexpat_cov_func;
