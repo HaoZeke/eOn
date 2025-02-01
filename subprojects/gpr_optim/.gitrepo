@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:HaoZeke/gpr_optim
 	branch = gprd_sella_bench
-	commit = 5edff996b62a41c391b25bc1b20bd6f8656d9d91
-	parent = 632acc2c0fd4d8d255eab1fe590fee11e2ac299b
+	commit = a7554976fecaa9cb31914c55ca16e7113b68057c
+	parent = 57f5c5a6bd784993837a13afdad5545896db6828
 	method = merge
-	cmdver = 0.4.9
+	cmdver = 0.4.3
