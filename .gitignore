@@ -1,5 +1,4 @@
 # Custom, other things are auto-ignored
-subprojects
 /docs/source/apidocs/
 # /
 /*.tmp
@@ -601,6 +600,7 @@ Temporary Items
 # subproject directories
 /subprojects/*
 !/subprojects/*.wrap
+!subprojects/gpr_optim
 
 # Meson Directories
 meson-logs
