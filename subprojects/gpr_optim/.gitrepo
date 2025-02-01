@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:HaoZeke/gpr_optim
+	branch = gprd_sella_bench
+	commit = 5edff996b62a41c391b25bc1b20bd6f8656d9d91
+	parent = 632acc2c0fd4d8d255eab1fe590fee11e2ac299b
+	method = merge
+	cmdver = 0.4.9
