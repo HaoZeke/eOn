@@ -5,7 +5,6 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-
 using std::this_thread::sleep_for;
 
 /**
@@ -18,19 +17,6 @@ IPIPot::IPIPot(std::shared_ptr<Parameters> p)
     : Potential(PotType::IPI, p),
       sock_fd(-1),
       is_connected(false) {
-
-  // --- IMPORTANT ---
-  // You must add a 'socket_ipi_options' struct to your Parameters.h
-  // similar to 'socket_nwchem_options'
-  //
-  // struct SocketIPiOptions {
-  //     bool unix_socket_mode = true;
-  //     std::string unix_socket_path = "/tmp/ipi_eon_socket";
-  //     std::string host = "127.0.0.1";
-  //     int port = 31415;
-  // };
-  //
-  // --- END IMPORTANT ---
 
   unix_socket_mode = p->socket_ipi_options.unix_socket_mode;
 
@@ -86,9 +72,11 @@ IPIPot::~IPIPot() {
 /**
  * @brief Main force call implementation (see header for details).
  */
-void IPIPot::force(long N, const double *R, const int *atomicNrs,
-                         double *F, double *U, double *variance,
-                         const double *box) {
+/**
+ * @brief Main force call implementation (see header for details).
+ */
+void IPIPot::force(long N, const double *R, const int *atomicNrs, double *F,
+                   double *U, double *variance, const double *box) {
   if (!is_connected) {
     throw std::runtime_error("i-PI server is not connected.");
   }
@@ -115,8 +103,7 @@ void IPIPot::force(long N, const double *R, const int *atomicNrs,
     for (long i = 0; i < N; ++i) {
       extra_string += " " + atom_symbols_cache[i];
     }
-    // Add comment for clarity
-    extra_string += " # EON Client";
+    extra_string += " # EON Client"; // Add comment for clarity
 
     int32_t init_payload[2];
     init_payload[0] = 0; // bead_index (we only send one bead)
@@ -136,25 +123,52 @@ void IPIPot::force(long N, const double *R, const int *atomicNrs,
   }
 
   // --- Send Position Data ---
-  // i-PI expects Angstrom, so no conversion of R is needed.
-  // We send identity matrices for cell/inv_cell for simplicity,
-  // assuming non-periodic calculations.
-  // If you need PBCs, you must calculate and send the *real*
-  // transposed cell and inverse cell here.
-  double invcell_T[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-  double cell_T[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-  // Or, if `box` is the 9-element cell matrix (row-major):
-  // cell_T[0]=box[0]; cell_T[1]=box[3]; cell_T[2]=box[6]; // Col 1
-  // cell_T[3]=box[1]; cell_T[4]=box[4]; cell_T[5]=box[7]; // Col 2
-  // cell_T[6]=box[2]; cell_T[7]=box[5]; cell_T[8]=box[8]; // Col 3
-  // ... and you would need to compute invcell_T ...
 
+  // 1. Create vectors to hold data in atomic units (Bohr).
+  std::vector<double> pos_bohr(N * 3);
+  for (int i = 0; i < N * 3; ++i) {
+    pos_bohr[i] = R[i] / BOHR_IN_ANGSTROM;
+  }
+
+  // 2. Map Eon's row-major box to an Eigen matrix and convert to Bohr
+  Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor>> cell_angstrom(
+      box);
+  Eigen::Matrix3d cell_bohr = cell_angstrom / BOHR_IN_ANGSTROM;
+
+  double cell_T[9];
+  double invcell_T[9];
+
+  // 3. SAFETY CHECK: Calculate determinant to check for singular matrix
+  double det = cell_bohr.determinant();
+
+  if (std::abs(det) < 1e-9) {
+    // Cell is singular (all zeros, or 2D). Send identity matrices.
+    // This prevents the "Division by zero" crash.
+    double cell_T_identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    double invcell_T_identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+    std::memcpy(cell_T, cell_T_identity, sizeof(cell_T));
+    std::memcpy(invcell_T, invcell_T_identity, sizeof(invcell_T));
+  } else {
+    // Cell is valid. Calculate inverse.
+    Eigen::Matrix3d invcell_bohr = cell_bohr.inverse();
+
+    // i-PI expects Fortran-ordered (column-major) data.
+    // Eigen's default storage is column-major. When we assign the
+    // row-major `cell_angstrom` to the col-major `cell_bohr`,
+    // Eigen automatically transposes it. `cell_bohr` is now
+    // exactly the `cell_T` that i-PI expects.
+    std::memcpy(cell_T, cell_bohr.data(), sizeof(cell_T));
+    std::memcpy(invcell_T, invcell_bohr.data(), sizeof(invcell_T));
+  }
+
+  // 4. Send all data
   send_header("POSDATA");
   int32_t nat = N;
   send_exact(cell_T, sizeof(cell_T));
   send_exact(invcell_T, sizeof(invcell_T));
   send_exact(&nat, sizeof(nat));
-  send_exact(R, N * 3 * sizeof(double)); // Send positions in Angstrom
+  send_exact(pos_bohr.data(),
+             pos_bohr.size() * sizeof(double)); // Send pos in Bohr
 
   // --- Poll for results ---
   while (true) {
@@ -163,8 +177,7 @@ void IPIPot::force(long N, const double *R, const int *atomicNrs,
     if (std::string(status_buffer) == "HAVEDATA") {
       break;
     }
-    // A small sleep to prevent busy-waiting
-    sleep_for(10ms);
+    sleep_for(10ms); // A small sleep to prevent busy-waiting
   }
 
   // --- Request and receive results ---
@@ -206,8 +219,6 @@ void IPIPot::force(long N, const double *R, const int *atomicNrs,
   }
 
   // Parse variance from the extra string
-  // We assume the *first* value in the string is the POTENTIAL ENERGY
-  // VARIANCE in (Hartree^2).
   if (extra_len > 0) {
     std::string extra_str(extra_buf.data());
     std::stringstream ss(extra_str);

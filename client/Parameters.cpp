@@ -109,6 +109,12 @@ Parameters::Parameters() {
   socket_nwchem_options.unix_socket_mode = false;
   socket_nwchem_options.make_template_input = true;
 
+  // [IPI] //
+  socket_ipi_options.host = "127.0.0.1";
+  socket_ipi_options.port = 9999;
+  socket_ipi_options.unix_socket_path = "eon_ipi";
+  socket_ipi_options.unix_socket_mode = false;
+
   // [Structure Comparison] //
   distanceDifference = 0.1;
   neighborCutoff = 3.3;
@@ -550,6 +556,19 @@ int Parameters::load(FILE *file) {
       socket_nwchem_options.make_template_input =
           ini.GetValueB("SocketNWChemPot", "make_template_input",
                         socket_nwchem_options.make_template_input);
+    }
+
+    // [IPI]
+    if (potential == PotType::IPI) {
+      socket_ipi_options.host =
+          ini.GetValue("IPI", "host", socket_ipi_options.host);
+      socket_ipi_options.port =
+          ini.GetValueL("IPI", "port", socket_ipi_options.port);
+      socket_ipi_options.unix_socket_path = ini.GetValue(
+          "IPI", "unix_socket_path", socket_ipi_options.unix_socket_path);
+      socket_ipi_options.unix_socket_mode =
+          ini.GetValueB("IPI", "unix_socket_mode",
+                        socket_ipi_options.unix_socket_mode);
     }
 
     // [Debug] //

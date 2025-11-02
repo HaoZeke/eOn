@@ -163,6 +163,7 @@ subdir('potentials/LJCluster')
 subdir('potentials/Morse')
 subdir('potentials/ZBL')
 subdir('potentials/SocketNWChem')
+subdir('potentials/IPIPot')
 subdir('potentials/NewPot')
 
 potentials = [
@@ -175,6 +176,7 @@ potentials = [
     morse,
     newpot,
     zbl,
+    ipipot,
     socket_nwchem,
 ]
 

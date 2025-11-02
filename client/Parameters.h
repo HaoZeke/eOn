@@ -110,6 +110,15 @@ public:
     bool make_template_input;
   } socket_nwchem_options;
 
+  // [IPI] //
+  struct socket_ipi_options_t {
+    std::string host;
+    int port;
+    int mem_in_gb;
+    std::string unix_socket_path;
+    bool unix_socket_mode;
+  } socket_ipi_options;
+
   // [Structure Comparison] //
   double distanceDifference; // The distance criterion for comparing geometries
   double neighborCutoff; // radius used in the local atomic structure analysis

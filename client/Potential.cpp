@@ -36,6 +36,7 @@
 #include "potentials/LJCluster/LJCluster.h"
 #include "potentials/Morse/Morse.h"
 #include "potentials/SocketNWChem/SocketNWChemPot.h"
+#include "potentials/IPIPot/IPIPot.h"
 #include "potentials/ZBL/ZBLPot.h"
 
 #ifdef WITH_FORTRAN
@@ -334,6 +335,10 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
   }
   case PotType::SocketNWChem: {
     return (std::make_shared<SocketNWChemPot>(params));
+    break;
+  }
+  case PotType::IPI: {
+    return (std::make_shared<IPIPot>(params));
     break;
   }
   default:
