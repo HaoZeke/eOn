@@ -1,26 +1,4 @@
-Everything looks good. The refactoring is complete. Let me provide a summary of all changes made.
+Both files fixed. The diagnostics about `Eigen/Dense` and `VectorXd` are pre-existing clangd issues (missing include paths), not related to this change.
 
-## Summary
-
-The refactoring is complete. Here's what was done:
-
-### Parameters.h
-- Defined 4 new structs wrapping formerly loose members:
-  - `constants_t constants` — `kB`, `timeUnit`
-  - `main_options_t main_options` — `job`, `randomSeed`, `temperature`, `quiet`, `writeLog`, `checkpoint`, `iniFilename`, `conFilename`, `finiteDifference`, `maxForceCalls`, `removeNetForce`
-  - `potential_options_t potential_options` — `potential`, `MPIPollPeriod`, `LAMMPSLogging`, `LAMMPSThreads`, `EMTRasmussen`, `LogPotential`, `extPotPath`, `MPIPotentialRank`, `MPIClientComm`
-  - `optimizer_options_t optimizer_options` — `method`, `convergence_metric`, `convergence_metric_label`, `max_iterations`, `max_move`, `converged_force`, `time_step_input`, `time_step`, `max_time_step_input`, `max_time_step`, plus nested sub-structs: `refine_t refine`, `lbfgs_t lbfgs`, `cg_t cg`, `quickmin_t quickmin`, `sd_t sd`
-- Removed the old loose members and the standalone MPI members block
-
-### Parameters.cpp
-- Updated all constructor defaults and `load()` method to use the new struct access patterns
-
-### Consumer files (~45 files updated)
-All files across `client/` and `client/potentials/` that accessed the former loose members were updated, including:
-- Job files (ParallelReplicaJob, ProcessSearchJob, TADJob, ReplicaExchangeJob, GlobalOptimizationJob, BasinHoppingJob, SaddleSearchJob, MonteCarloJob, MinimizationJob, SafeHyperJob, GPSurrogateJob, NudgedElasticBandJob)
-- Core files (Matter.cpp, Dynamics.cpp, Potential.cpp/.h, Job.h/.cpp, ClientEON.cpp, CommandLine.cpp)
-- Optimizer files (LBFGS.h/.cpp, ConjugateGradients.cpp, Quickmin.h/.cpp, FIRE.h, SteepestDescent.cpp, Optimizer.h, MinModeSaddleSearch.cpp, NudgedElasticBand.cpp, NEBInitialPaths.cpp, BiasedGradientSquaredDescent.cpp)
-- Saddle search files (Dimer.cpp, ImprovedDimer.cpp, Lanczos.cpp, DynamicsSaddleSearch.cpp)
-- Other files (Hessian.cpp, Prefactor.cpp, MonteCarlo.cpp, BasinHoppingSaddleSearch.cpp)
-- Potential plugins (MPIPot.cpp, LAMMPSPot.cpp, EffectiveMediumTheory.cpp, ASE.cpp, ExtPot.h)
-- Test files (ApproveParams.cpp, GPRDimerTest.cpp, ImpDimerTest.cpp, XTBTest.cpp, NEBTest.cpp, PotTest.cpp, MatterTest.cpp, MetatomicTest.cpp, ZBLPotTest.cpp, SocketNWChemPotTest.cpp, ObsTest.cpp, cuh2Test.cpp)
+- **`GlobalOptimizationJob.h`**: `globalOptimizationBeta` → `global_optimization_options.beta`, `globalOptimizationAlpha` → `global_optimization_options.alpha`, `globalOptimizationMdmin` → `global_optimization_options.mdmin`
+- **`PrefactorJob.cpp`**: `prefactorAllFreeAtoms` → `prefactor_options.all_free_atoms`, `prefactorConfiguration` → `prefactor_options.configuration`

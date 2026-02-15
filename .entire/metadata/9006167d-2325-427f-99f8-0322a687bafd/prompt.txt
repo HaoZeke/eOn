@@ -1,142 +1,66 @@
-Implement the following plan:
-
-# Plan: Wrap Loose Parameters Members into Structs
-
-## Context
-The `Parameters` class in `client/Parameters.{h,cpp}` has a mix of styles: many sections already use nested structs (e.g., `metatomic_options`, `xtb_options`, `neb_options`), but three groups remain as loose flat members:
-- **[Main]** params (job, temperature, randomSeed, etc.)
-- **[Potential]** params (potential, LAMMPSLogging, etc.)
-- **[Optimizer]** params (optMethod, optMaxMove, optConvergedForce, etc.)
-- Physical constants (kB, timeUnit)
-- MPI members (MPIPotentialRank, MPIClientComm)
-
-This refactor wraps them all into the struct-instance pattern already used throughout the class.
-
-## New Structs
-
-### 0. `constants_t` / `constants` (separate from user-configurable options)
-Members: `kB`, `timeUnit`
-
-### 1. `main_options_t` / `main_options`
-Members: `job`, `randomSeed`, `temperature`, `quiet`, `writeLog`, `checkpoint`, `iniFilename`, `conFilename`, `finiteDifference`, `maxForceCalls`, `removeNetForce`
-
-### 2. `potential_options_t` / `potential_options`
-Members: `potential`, `MPIPollPeriod`, `LAMMPSLogging`, `LAMMPSThreads`, `EMTRasmussen`, `LogPotential`, `extPotPath`, `MPIPotentialRank`, `MPIClientComm` (MPI members go here since they're potential-related)
-
-### 3. `optimizer_options_t` / `optimizer_options`
-Top-level members: `method` (was `optMethod`), `convergence_metric`, `convergence_metric_label`, `max_iterations`, `max_move`, `converged_force`, `time_step_input`, `time_step`, `max_time_step_input`, `max_time_step`
-
-Nested sub-structs (mirrors INI sections / Python schema):
-- `refine_t refine` — `method` (was `refineOptMethod`), `threshold`
-- `lbfgs_t lbfgs` — `memory`, `inverse_curvature`, `max_inverse_curvature`, `auto_scale`, `angle_reset`, `distance_reset`
-- `cg_t cg` — `no_overshooting`, `knock_out_max_move`, `line_search`, `line_converged`, `line_search_max_iter`, `max_iter_before_reset`
-- `quickmin_t quickmin` — `steepest_descent` (was `optQMSteepestDecent`)
-- `sd_t sd` — `alpha`, `two_point`
-
-## Files to Modify
-
-### Core (Parameters definition)
-- `client/Parameters.h` — Define new structs, remove loose members
-- `client/Parameters.cpp` — Update constructor defaults and `load()` method
-
-### Files referencing [Main] members
-| File | Members used |
-|------|-------------|
-| `client/ClientEON.cpp` | job, quiet, writeLog, checkpoint, iniFilename, conFilename |
-| `client/ParallelReplicaJob.cpp` | kB, timeUnit, randomSeed, temperature, quiet, writeLog, checkpoint, iniFilename, conFilename |
-| `client/ProcessSearchJob.cpp` | kB, randomSeed, temperature |
-| `client/TADJob.cpp` | kB, randomSeed, temperature, quiet, writeLog, iniFilename, conFilename |
-| `client/ReplicaExchangeJob.cpp` | kB, timeUnit, randomSeed, temperature, quiet, writeLog, iniFilename, conFilename |
-| `client/GlobalOptimizationJob.cpp` | kB, temperature, quiet, writeLog, iniFilename, conFilename |
-| `client/BasinHoppingJob.cpp` | temperature, randomSeed, quiet, writeLog, iniFilename, conFilename |
-| `client/SaddleSearchJob.cpp` | randomSeed |
-| `client/DynamicsSaddleSearch.cpp` | kB, timeUnit |
-| `client/Dynamics.cpp` | kB, timeUnit, temperature |
-| `client/Dynamics.h` | temperature (type reference) |
-| `client/SafeHyperJob.cpp` | kB, randomSeed, temperature, quiet, writeLog, iniFilename, conFilename |
-| `client/Prefactor.cpp` | kB, temperature |
-| `client/MonteCarlo.cpp` | kB, temperature |
-| `client/BasinHoppingSaddleSearch.cpp` | kB |
-| `client/Matter.cpp` | finiteDifference, maxForceCalls, removeNetForce |
-| `client/ImprovedDimer.cpp` | finiteDifference |
-| `client/Dimer.cpp` | finiteDifference |
-| `client/Lanczos.cpp` | finiteDifference |
-| `client/LBFGS.cpp` | finiteDifference |
-| `client/Hessian.cpp` | finiteDifference |
-| `client/ConjugateGradients.cpp` | finiteDifference |
-| `client/MonteCarloJob.cpp` | temperature |
-
-### Files referencing [Potential] members
-| File | Members used |
-|------|-------------|
-| `client/ClientEON.cpp` | MPIPotentialRank, MPIClientComm |
-| `client/potentials/MPIPot/MPIPot.cpp` | MPIPollPeriod, MPIPotentialRank |
-| `client/potentials/LAMMPS/LAMMPSPot.cpp` | LAMMPSLogging, LAMMPSThreads, MPIClientComm |
-| `client/potentials/EMT/EffectiveMediumTheory.cpp` | EMTRasmussen |
-| `client/potentials/EMT/EffectiveMediumTheory.h` | EMTRasmussen |
-| `client/potentials/EMT/Asap/EMTRasmussenParameterProvider.cpp` | EMTRasmussen |
-| `client/potentials/EMT/Asap/EMTRasmussenParameterProvider.h` | EMTRasmussen |
-| `client/potentials/ExtPot/ExtPot.h` | extPotPath |
-| `client/potentials/ASE/ASE.cpp` | extPotPath |
-| `client/CommandLine.cpp` | potential (if referenced) |
-
-### Files referencing [Optimizer] members
-| File | Members used |
-|------|-------------|
-| `client/Matter.cpp` | optMethod, optConvergenceMetric, optConvergenceMetricLabel, optMaxIterations, optMaxMove, optConvergedForce |
-| `client/MinModeSaddleSearch.cpp` | optMethod, optConvergenceMetric, optConvergenceMetricLabel, optMaxMove |
-| `client/NudgedElasticBand.cpp` | refineOptMethod, refineThreshold, optConvergenceMetric, optConvergenceMetricLabel, optMaxMove |
-| `client/NEBInitialPaths.cpp` | optMaxMove |
-| `client/BiasedGradientSquaredDescent.cpp` | optMethod, optMaxMove |
-| `client/Optimizer.h` | optMethod |
-| `client/LBFGS.h` | optLBFGSMemory |
-| `client/LBFGS.cpp` | optLBFGSInverseCurvature, optLBFGSAutoScale, optLBFGSAngleReset, optLBFGSDistanceReset, finiteDifference |
-| `client/ConjugateGradients.cpp` | optCG* params |
-| `client/Quickmin.h` | optMaxIterations, optMaxMove, optMaxTimeStep |
-| `client/Quickmin.cpp` | optQMSteepestDecent, optMaxTimeStep |
-| `client/FIRE.h` | optMaxMove, optMaxTimeStep |
-| `client/SteepestDescent.cpp` | optSDAlpha, optSDTwoPoint |
-| `client/CommandLine.cpp` | optMethod, optConvergedForce |
-| `client/GPSurrogateJob.cpp` | optConvergedForce |
-| `client/NudgedElasticBandJob.cpp` | optConvergedForce (if referenced) |
-| `client/GPRHelpers.cpp` | optimizer params (if referenced) |
-
-### Tests
-| File | Changes |
-|------|---------|
-| `client/gtests/ApproveParams.cpp` | Update ALL `params.X` → `params.main_options.X` / `params.potential_options.X` / `params.optimizer_options.X` |
-| `client/gtests/GPRDimerTest.cpp` | optMethod, optConvergedForce references |
-| `client/gtests/ImpDimerTest.cpp` | optMethod, optConvergedForce references |
-| `client/gtests/XTBTest.cpp` | potential reference |
-
-### Python / Config
-- `eon/config.yaml` — Add separate `QuickMin:`, `FIRE:`, `CG:`, `SD:`, `Refine:` sections if missing (currently some are under `Optimizer:` and `LBFGS:`). Add `emt_rasmussen` to Potential if missing.
-- `eon/schema.py` — Already well-structured with `OptimizerConfig`, `QuickMinConfig`, etc. May need minor consistency fixes.
-
-### Build files
-- `client/CMakeLists.txt` — No changes needed (no new files)
-- `client/meson.build` — No changes needed (no new files)
-
-## Implementation Order
-
-1. **Parameters.h** — Define the three new structs, remove loose members
-2. **Parameters.cpp** — Update constructor and `load()` to use new struct access
-3. **All consumer files** — Mechanical find-and-replace of member access patterns:
-   - `params.kB` → `params.constants.kB`, `params.timeUnit` → `params.constants.timeUnit`
-   - `params.job` → `params.main_options.job`, `params.temperature` → `params.main_options.temperature`, etc.
-   - `params.potential` → `params.potential_options.potential`, `params.LAMMPSLogging` → `params.potential_options.LAMMPSLogging`, etc.
-   - `params.optMethod` → `params.optimizer_options.method`, `params.optMaxMove` → `params.optimizer_options.max_move`, etc.
-   - `params.optLBFGSMemory` → `params.optimizer_options.lbfgs.memory`, etc.
-   - `params.refineOptMethod` → `params.optimizer_options.refine.method`, etc.
-4. **ApproveParams.cpp** — Update test output
-5. **Other test files** — Update GPRDimerTest, ImpDimerTest, XTBTest
-6. **config.yaml / schema.py** — Ensure consistency with new C++ structure
-7. **Build and test** — `meson compile` and run gtests
-
-## Verification
-- `meson setup builddir && meson compile -C builddir` (or equivalent)
-- Run the approval tests to regenerate the snapshot
-- `ctest --test-dir builddir` to verify all tests pass
-
-
-If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/rgoswami/.claude/projects/-home-rgoswami-Git-Github-TheochemUI-eOn/bef50305-5ee5-4c5c-9798-0e4a06e970df.jsonl
+In file included from ../client/Job.cpp:16:
+../client/GlobalOptimizationJob.h: In constructor 'GlobalOptimizationJob::GlobalOptimizationJob(std::unique_ptr<Parameters>)':
+../client/GlobalOptimizationJob.h:24:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
+   24 |         beta1{params->globalOptimizationBeta},
+      |                       ^~~~~~~~~~~~~~~~~~~~~~
+      |                       global_optimization_options
+../client/GlobalOptimizationJob.h:25:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
+   25 |         beta2{params->globalOptimizationBeta},
+      |                       ^~~~~~~~~~~~~~~~~~~~~~
+      |                       global_optimization_options
+../client/GlobalOptimizationJob.h:26:28: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
+   26 |         beta3{1. / params->globalOptimizationBeta},
+      |                            ^~~~~~~~~~~~~~~~~~~~~~
+      |                            global_optimization_options
+../client/GlobalOptimizationJob.h:27:29: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationAlpha'; did you mean 'global_optimization_options'?
+   27 |         alpha1{1. / params->globalOptimizationAlpha},
+      |                             ^~~~~~~~~~~~~~~~~~~~~~~
+      |                             global_optimization_options
+../client/GlobalOptimizationJob.h:28:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationAlpha'; did you mean 'global_optimization_options'?
+   28 |         alpha2{params->globalOptimizationAlpha},
+      |                        ^~~~~~~~~~~~~~~~~~~~~~~
+      |                        global_optimization_options
+../client/GlobalOptimizationJob.h:29:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationMdmin'; did you mean 'global_optimization_options'?
+   29 |         mdmin{params->globalOptimizationMdmin},
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~
+      |                       global_optimization_options
+../client/GlobalOptimizationJob.h:24:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
+   24 |         beta1{params->globalOptimizationBeta},
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../client/GlobalOptimizationJob.h:25:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
+   25 |         beta2{params->globalOptimizationBeta},
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../client/GlobalOptimizationJob.h:26:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
+   26 |         beta3{1. / params->globalOptimizationBeta},
+ble' in initialization
+   27 |         alpha1{1. / params->globalOptimizationAlpha},
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../client/GlobalOptimizationJob.h:28:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
+   28 |         alpha2{params->globalOptimizationAlpha},
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../client/GlobalOptimizationJob.h:29:9: error: cannot convert '<brace-enclosed initializer list>' to 'long int' in initialization
+   29 |         mdmin{params->globalOptimizationMdmin},
+      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp: In member function 'virtual std::vector<std::__cxx11::basic_string<char> > PrefactorJob::run()':
+../client/PrefactorJob.cpp:43:15: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorAllFreeAtoms'
+   43 |   if (params->prefactorAllFreeAtoms) {
+      |               ^~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:47:17: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   47 |     if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_REACTANT) {
+      |                 ^~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:49:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   49 |     } else if (params->prefactorConfiguration ==
+      |                        ^~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:52:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   52 |     } else if (params->prefactorConfiguration ==
+      |                        ^~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:74:15: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   74 |   if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_REACTANT) {
+      |               ^~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:77:22: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   77 |   } else if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_SADDLE) {
+      |                      ^~~~~~~~~~~~~~~~~~~~~~
+../client/PrefactorJob.cpp:80:22: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
+   80 |   } else if (params->prefactorConfiguration ==
+      |                      ^~~~~~~~~~~~~~~~~~~~~~
+[101/168] Compiling C++ object client/libeonclib.so.p/BondBoost.cpp.o
