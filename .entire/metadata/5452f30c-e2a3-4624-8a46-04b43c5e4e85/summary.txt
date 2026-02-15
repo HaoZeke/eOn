@@ -1,0 +1,9 @@
+Created 5 news fragments:
+
+| Fragment | Type | Content |
+|---|---|---|
+| `+noptr-mta-ref.mta.changed` | Changed | Refactored MetatomicPotential variant resolution to use upstream `pick_output` |
+| `+noptr-mta-fix.mta.fixed` | Fixed | Fixed uninitialized const reference member in MetatomicPotential |
+| `+noptr-twr-fix.bld.fixed` | Fixed | Fixed testWriteR build failure from shared_ptr-to-reference mismatch |
+| `+noptr-asv.ci.added` | Added | ASV benchmark CI workflow with asv-spyglass for PR performance comparison |
+| `+noptr-mta-ci.ci.dev` | Developer | Added macOS arm64 to metatomic CI, disabled unneeded Fortran potentials |
