@@ -26,6 +26,7 @@
 
 namespace eonc {
 
+#ifndef _WIN32
 static void fpe_signal_handler(int sig, siginfo_t *sip, void *scp) {
   int fe_code = sip->si_code;
   std::cerr << "Floating point exception: ";
@@ -41,6 +42,7 @@ static void fpe_signal_handler(int sig, siginfo_t *sip, void *scp) {
 
   std::abort();
 }
+#endif
 
 void enableFPE() {
 #ifdef _WIN32
@@ -66,12 +68,14 @@ void enableFPE() {
   std::cerr << "FPE trapping not supported on this platform." << std::endl;
 #endif
 
-  // Register signal handler
+#ifndef _WIN32
+  // Register POSIX signal handler
   struct sigaction act;
   act.sa_sigaction = fpe_signal_handler;
   sigemptyset(&act.sa_mask);
   act.sa_flags = SA_SIGINFO;
   sigaction(SIGFPE, &act, nullptr);
+#endif
 }
 
 void FPEHandler::eat_fpe() {
