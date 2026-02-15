@@ -1,0 +1,25 @@
+Both workflows look correct. Here's a summary of what was resolved:
+
+## Status of the two pending issues
+
+### 1. gfortran macOS arm64 failure — **Fixed**
+
+**Root cause**: The pixi.toml pinned `gfortran = ">=13.3.0,<13.4"` which forced `gfortran_osx-arm64-13.3.0-h3c33bd0_1` — a conda-forge package with a broken wrapper script that fails meson's Fortran sanity check (`clang: error: no input files` during linking).
+
+**Fix**: Removed the global gfortran pin (since `compilers = ">=1.9.0,<2"` already handles gfortran via `fortran-compiler`) and added a platform-specific override:
+
+```toml
+[target.osx-arm64.dependencies]
+gfortran = ">=13.2.0,<13.3"
+```
+
+This pins osx-arm64 to gfortran 13.2.0 (confirmed working in conda-lock.yml CI) while leaving Linux and other platforms free to use whatever `compilers` resolves. The SDKROOT step in the CI workflow is still there as a good practice for macOS builds.
+
+After pushing, you'll need to run `pixi install` to regenerate `pixi.lock`.
+
+### 2. ASV / asv-spyglass versions — **Confirmed correct**
+
+- `pip install asv asv-spyglass` installs **asv 0.6.5** (latest, released Sep 2025) and **asv-spyglass 0.1.0** (latest and only release)
+- The `asv run --python=same --set-commit-hash HASH --quick HEAD^!` syntax is **valid** for asv 0.6.5
+- The `asv-spyglass compare before.json after.json benchmarks.json` syntax is **correct** per the upstream README
+- The benchmark CI workflow is properly structured
