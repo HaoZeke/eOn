@@ -58,7 +58,7 @@ jobs:
         run: |
           cp -r /tmp/benchmarks benchmarks
           cp /tmp/asv.conf.json asv.conf.json
-          asv run --python=same --set-commit-hash ${{ steps.shas.outputs.main }} --quick HEAD^!
+          asv run --python=same --set-commit-hash ${{ steps.shas.outputs.main }} --quick
 
       # ── Benchmark PR HEAD ───────────────────────────────────────
       - name: Build eonclient (PR)
@@ -71,7 +71,7 @@ jobs:
 
       - name: Benchmark PR
         shell: pixi run bash -e {0}
-        run: asv run --python=same --set-commit-hash ${{ steps.shas.outputs.pr }} --quick HEAD^!
+        run: asv run --python=same --set-commit-hash ${{ steps.shas.outputs.pr }} --quick
 
       # ── Compare & comment ───────────────────────────────────────
       - name: Locate result files
