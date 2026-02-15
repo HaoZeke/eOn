@@ -1,1 +1,1 @@
-finally lets add the uvx towncrier stuff for this set of new features
+check the earlier release PRs I think there's some more stuff to do
