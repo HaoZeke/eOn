@@ -26,7 +26,7 @@ std::vector<std::string> SafeHyperJob::run(void) {
   minimizeFCalls = mdFCalls = refineFCalls = dephaseFCalls = 0;
   time = 0.0;
   string reactantFilename =
-      helper_functions::getRelevantFile(params->conFilename);
+      helper_functions::getRelevantFile(params->main_options.conFilename);
   current->con2matter(reactantFilename);
 
   SPDLOG_LOGGER_DEBUG(log, "Minimizing initial reactant");
@@ -43,11 +43,11 @@ std::vector<std::string> SafeHyperJob::run(void) {
 
   if (newStateFlag) {
     SPDLOG_LOGGER_DEBUG(log, "Transition time: {:.2e} s",
-                        minCorrectedTime * 1.0e-15 * params->timeUnit);
+                        minCorrectedTime * 1.0e-15 * params->constants.timeUnit);
   } else {
     SPDLOG_LOGGER_DEBUG(
         log, "No new state was found in {} dynamics steps ({:.3e} s)",
-        params->mdSteps, time * 1.0e-15 * params->timeUnit);
+        params->mdSteps, time * 1.0e-15 * params->constants.timeUnit);
   }
 
   delete current;
@@ -70,7 +70,7 @@ int SafeHyperJob::dynamics() {
   long nCheck = 0, nRecord = 0, nBoost = 0, nState = 0;
   long StateCheckInterval, RecordInterval;
   double kinE, kinT, avgT, varT;
-  double kB = params->kB;
+  double kB = params->constants.kB;
   double correctedTime = 0.0, sumCorrectedTime = 0.0, firstTransitionTime = 0.0;
   double Temp = 0.0, sumT = 0.0, sumT2 = 0.0;
   double sumboost = 0.0, boost = 1.0, boostPotential = 0.0;
@@ -81,7 +81,7 @@ int SafeHyperJob::dynamics() {
   StateCheckInterval =
       int(params->parrepStateCheckInterval / params->mdTimeStep);
   RecordInterval = int(params->parrepRecordInterval / params->mdTimeStep);
-  Temp = params->temperature;
+  Temp = params->main_options.temperature;
   newStateFlag = metaStateFlag = false;
 
   mdBufferLength = long(StateCheckInterval / RecordInterval);
@@ -110,8 +110,8 @@ int SafeHyperJob::dynamics() {
       log,
       "Starting MD run\nTemperature: {:.2f} Kelvin\n"
       "Total Simulation Time: {:.2f} fs\nTime Step: {:.2f} fs\nTotal Steps: {}",
-      Temp, params->mdSteps * params->mdTimeStep * params->timeUnit,
-      params->mdTimeStep * params->timeUnit, params->mdSteps);
+      Temp, params->mdSteps * params->mdTimeStep * params->constants.timeUnit,
+      params->mdTimeStep * params->constants.timeUnit, params->mdSteps);
   SPDLOG_LOGGER_DEBUG(log, "MD buffer length: {}", mdBufferLength);
 
   long tenthSteps = params->mdSteps / 10;
@@ -211,11 +211,11 @@ int SafeHyperJob::dynamics() {
                           "tranisitonTime= {:.3e} s, biasPot= {:.3f} eV, "
                           "correctedTime= {:.3e} s, "
                           "sumCorrectedTime= {:.3e} s, minCorTime= {:.3e} s",
-                          transitionTime * 1e-15 * params->timeUnit,
+                          transitionTime * 1e-15 * params->constants.timeUnit,
                           transitionPot,
-                          correctedTime * 1e-15 * params->timeUnit,
-                          sumCorrectedTime * 1e-15 * params->timeUnit,
-                          minCorrectedTime * 1.0e-15 * params->timeUnit);
+                          correctedTime * 1e-15 * params->constants.timeUnit,
+                          sumCorrectedTime * 1e-15 * params->constants.timeUnit,
+                          minCorrectedTime * 1.0e-15 * params->constants.timeUnit);
 
       // refineFCalls += Potential::fcalls - refFCalls;
       transitionFlag = false;
@@ -286,8 +286,8 @@ void SafeHyperJob::saveData(int status) {
 
   fprintf(
       fileResults, "%s potential_type\n",
-      std::string{magic_enum::enum_name<PotType>(params->potential)}.c_str());
-  fprintf(fileResults, "%ld random_seed\n", params->randomSeed);
+      std::string{magic_enum::enum_name<PotType>(params->potential_options.potential)}.c_str());
+  fprintf(fileResults, "%ld random_seed\n", params->main_options.randomSeed);
   fprintf(fileResults, "%lf potential_energy_reactant\n",
           reactant->getPotentialEnergy());
   // fprintf(fileResults, "%ld total_force_calls\n", totalFCalls);
@@ -301,7 +301,7 @@ void SafeHyperJob::saveData(int status) {
 
   if (newStateFlag) {
     fprintf(fileResults, "%e transition_time_s\n",
-            minCorrectedTime * 1.0e-15 * params->timeUnit);
+            minCorrectedTime * 1.0e-15 * params->constants.timeUnit);
     fprintf(fileResults, "%lf potential_energy_product\n",
             product->getPotentialEnergy());
     fprintf(fileResults, "%lf moved_distance\n",
@@ -309,7 +309,7 @@ void SafeHyperJob::saveData(int status) {
   }
 
   fprintf(fileResults, "%e simulation_time_s\n",
-          time * 1.0e-15 * params->timeUnit);
+          time * 1.0e-15 * params->constants.timeUnit);
   fprintf(fileResults, "%lf speedup\n",
           time / params->mdSteps / params->mdTimeStep);
 
@@ -353,7 +353,7 @@ void SafeHyperJob::dephase() {
   DephaseSteps = int(params->parrepDephaseTime / params->mdTimeStep);
   Dynamics dephaseDynamics(current, params.get());
   SPDLOG_LOGGER_DEBUG(log, "Dephasing for {:.2f} fs",
-                      params->parrepDephaseTime * params->timeUnit);
+                      params->parrepDephaseTime * params->constants.timeUnit);
 
   step = stepNew = loop = 0;
 
@@ -406,7 +406,7 @@ void SafeHyperJob::dephase() {
       break;
     }
     SPDLOG_LOGGER_DEBUG(log, "Successfully Dephased for {:.2f} fs",
-                        step * params->mdTimeStep * params->timeUnit);
+                        step * params->mdTimeStep * params->constants.timeUnit);
   }
 }
 

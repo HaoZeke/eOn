@@ -26,11 +26,11 @@ std::vector<std::string> GPSurrogateJob::run(void) {
 
   // Clone and setup "true" params
   auto true_params = std::make_shared<Parameters>(*params);
-  true_params->job = params->sub_job;
+  true_params->main_options.job = params->sub_job;
   auto true_job =
       helper_functions::makeJob(std::make_unique<Parameters>(*true_params));
   auto pyparams = std::make_shared<Parameters>(*params);
-  pyparams->potential = PotType::CatLearn;
+  pyparams->potential_options.potential = PotType::CatLearn;
 
   // Get possible initial data source
   auto initial = std::make_shared<Matter>(pot, true_params);
@@ -72,7 +72,7 @@ std::vector<std::string> GPSurrogateJob::run(void) {
     helper_functions::eigen::addVectorRow(targets, target);
     surpot->train_optimize(features, targets);
     pyparams->nebClimbingImageMethod = false;
-    pyparams->optConvergedForce = params->optConvergedForce * 0.8;
+    pyparams->optimizer_options.converged_force = params->optimizer_options.converged_force * 0.8;
     for (auto &&obj : neb->path) {
       obj->setPotential(surpot);
     }
@@ -119,7 +119,7 @@ void GPSurrogateJob::saveData(NudgedElasticBand::NEBStatus status,
   }
 
   fileResults << static_cast<int>(status) << " termination_reason\n";
-  fileResults << magic_enum::enum_name<PotType>(params->potential)
+  fileResults << magic_enum::enum_name<PotType>(params->potential_options.potential)
               << " potential_type\n";
   fileResults << fmt::format("{:.6f} energy_reference\n",
                              neb->path[0]->getPotentialEnergy());

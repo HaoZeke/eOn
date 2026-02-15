@@ -55,7 +55,7 @@ int Prefactor::getPrefactors(Parameters *parameters, Matter *min1,
   // calculate min2 frequencies
   min2Freqs = hessian.getFreqs(min2, atoms);
   if (min2Freqs.size() == 0) {
-    if (!parameters->quiet) {
+    if (!parameters->main_options.quiet) {
       SPDLOG_ERROR("[Prefactor] Bad hessian: min2");
     }
     return -1;
@@ -68,7 +68,7 @@ int Prefactor::getPrefactors(Parameters *parameters, Matter *min1,
   // check Hessian sizes
   if ((min1Freqs.size() != saddleFreqs.size()) ||
       (min1Freqs.size() != saddleFreqs.size())) {
-    if (!parameters->quiet) {
+    if (!parameters->main_options.quiet) {
       SPDLOG_ERROR("[Prefactor] Bad prefactor: Hessian sizes do not match");
     }
     return -1;
@@ -131,7 +131,7 @@ int Prefactor::getPrefactors(Parameters *parameters, Matter *min1,
     pref1 = sqrt(pref1) / (2 * M_PI * 10.18e-15);
     pref2 = sqrt(pref2) / (2 * M_PI * 10.18e-15);
   } else if (parameters->prefactorRate == Prefactor::RATE_QQHTST) {
-    float kB_T = parameters->temperature * 8.617332e-5; // eV
+    float kB_T = parameters->main_options.temperature * 8.617332e-5; // eV
     float h_bar = 6.582119e-16;                         // eV*s
     float h = 4.135667e-15;                             // eV*s
     float temp = (h_bar / (2. * kB_T));
