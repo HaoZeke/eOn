@@ -48,6 +48,7 @@
 
 #ifdef _WIN32
 #include <float.h>
+#include <windows.h>
 #endif
 
 #ifndef _WIN32

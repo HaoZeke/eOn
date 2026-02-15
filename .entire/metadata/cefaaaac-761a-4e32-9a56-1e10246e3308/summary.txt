@@ -1,0 +1,3 @@
+That should fix the `ClientEON.cpp` errors. The `_WIN32` block at line 93 uses `TCHAR`, `DWORD`, `MAX_COMPUTERNAME_LENGTH`, `GetComputerName`, and `GetCurrentProcessId` — all from `<windows.h>`, which was never included.
+
+Also worth noting: the `SaddleSearchJob.cpp` warnings about `%li` vs `size_t` — want me to fix those too, or are you just focused on the build errors?
