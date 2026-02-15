@@ -1,1 +1,1 @@
-I want a bunch of uvx towncrier create stuff for the release notes, , set that up?
+hey hold on, why are we suggesting the disabling of fortran, we want the fortran to work everywhere on all supported systems right? What gives

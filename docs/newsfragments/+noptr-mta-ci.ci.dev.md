@@ -1,1 +1,1 @@
-Added macOS arm64 to metatomic CI matrix, disabled unneeded Fortran potentials
+Added macOS arm64 to metatomic CI matrix with SDKROOT fix for conda-forge gfortran

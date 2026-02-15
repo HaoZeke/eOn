@@ -1,9 +1,3 @@
-Created 5 news fragments:
+Reverted the Fortran disable. The actual fix: conda-forge's `arm64-apple-darwin20.0.0-gfortran` cross-compiler needs `SDKROOT` pointing to the macOS SDK to find system libraries and link correctly. Clang resolves this on its own (it has built-in SDK discovery), but gfortran does not — it relies on the environment variable that conda-forge's activation scripts normally set, but which pixi may not propagate to the meson subprocess.
 
-| Fragment | Type | Content |
-|---|---|---|
-| `+noptr-mta-ref.mta.changed` | Changed | Refactored MetatomicPotential variant resolution to use upstream `pick_output` |
-| `+noptr-mta-fix.mta.fixed` | Fixed | Fixed uninitialized const reference member in MetatomicPotential |
-| `+noptr-twr-fix.bld.fixed` | Fixed | Fixed testWriteR build failure from shared_ptr-to-reference mismatch |
-| `+noptr-asv.ci.added` | Added | ASV benchmark CI workflow with asv-spyglass for PR performance comparison |
-| `+noptr-mta-ci.ci.dev` | Developer | Added macOS arm64 to metatomic CI, disabled unneeded Fortran potentials |
+The `xcrun --show-sdk-path` step (line 24-26) runs before the pixi shell and exports `SDKROOT` into `GITHUB_ENV` so it's available for all subsequent steps.

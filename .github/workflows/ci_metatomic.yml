@@ -21,6 +21,9 @@ jobs:
           activate-environment: true
           environments: >-
             dev-mta
+      - name: Set SDKROOT (macOS)
+        if: runner.os == 'macOS'
+        run: echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
       - name: Install eon
         shell: pixi run bash -e {0}
         run: |
@@ -31,9 +34,7 @@ jobs:
           -Dwith_metatomic=True            \
           -Dtorch_version=2.9              \
           -Dwith_tests=True                \
-          -Dpip_metatomic=True             \
-          -Dwith_fortran=False             \
-          -Dwith_cuh2=False
+          -Dpip_metatomic=True
           meson install -C bbdir
       - name: Run tests
         shell: bash -el {0}
