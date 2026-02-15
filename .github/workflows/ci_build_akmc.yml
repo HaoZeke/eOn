@@ -1,0 +1,68 @@
+name: Build basic eon
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+on: [push, pull_request]
+
+env:
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  build_eon:
+    runs-on: ${{ matrix.os }}
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          cache: true
+          cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+      - name: Configure sccache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      - name: Use Homebrew gfortran (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install gcc
+          FC=$(find "$(brew --prefix gcc)/bin" -name 'gfortran-*' | head -1)
+          echo "FC=$FC" >> "$GITHUB_ENV"
+          echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+
+      - name: Compile and install [unix]
+        if: runner.os != 'Windows'
+        shell: pixi run bash -e {0}
+        run: |
+          meson setup bbdir --prefix=$CONDA_PREFIX --libdir=lib
+          meson install -C bbdir
+
+      - name: Compile and install [windows]
+        if: runner.os == 'Windows'
+        shell: pixi run pwsh {0}
+        run: |
+          # Windows gfortran can't handle iso_c_binding
+          meson setup bbdir --prefix $env:CONDA_PREFIX --libdir=lib -Dwith_cuh2=false
+          if ($LASTEXITCODE -ne 0) { throw "meson setup failed" }
+          meson install -C bbdir
+          if ($LASTEXITCODE -ne 0) { throw "meson install failed" }
+
+      - name: Run tests [unix]
+        if: runner.os != 'Windows'
+        shell: pixi run bash -e {0}
+        run: |
+          cd examples/akmc-al
+          python -m eon.server
+
+      - name: Run tests [windows]
+        if: runner.os == 'Windows'
+        shell: pixi run pwsh {0}
+        run: |
+          cd examples/akmc-al
+          python -m eon.server
+          if ($LASTEXITCODE -ne 0) { throw "tests failed" }

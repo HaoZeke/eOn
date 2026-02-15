@@ -1,0 +1,3 @@
+Understood — I will never try to regenerate the pixi lockfile. That's on you.
+
+Fixed the benchmark CI permission: added `issues: write` alongside `pull-requests: write`. The GitHub Issues Comments API requires both permissions.
