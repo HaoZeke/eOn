@@ -2,20 +2,29 @@
 
 **Session ID:** 23e4b212-6129-4498-957a-6a88baa8b5e2
 
-**Commit Message:** Stop trying o resolve them, I will run pixi lock --all on my own
-··· ...
+**Commit Message:** 0s
+2s
+Run # Windows gfortran can't handle iso_c_binding
+  # Windows gfor
 
 ## Prompt
 
-stop trying o resolve them, I will run pixi lock --all on my own
-··· ...dleSearchMorseDimer.time_saddle_search_dimer           60.9±0ms
-1s
-Run MACHINE=$(ls .asv/results/ | grep -v benchmarks.json | head -1)
-  
 0s
-Run TABLE=$(asv-spyglass compare \
-  
 2s
+Run # Windows gfortran can't handle iso_c_binding
+  # Windows gfortran can't handle iso_c_binding
+  meson setup bbdir --prefix $env:CONDA_PREFIX --libdir=lib -Dwith_cuh2=false
+  if ($LASTEXITCODE -ne 0) { throw "meson setup failed" }
+  meson install -C bbdir
+  if ($LASTEXITCODE -ne 0) { throw "meson install failed" }
+  shell: C:\Users\runneradmin\.pixi\bin\pixi.EXE run pwsh {0}
+  env:
+    SCCACHE_GHA_ENABLED: true
+    ACTIONS_CACHE_URL: https://acghubeus1.actions.githubusercontent.com/zTsVvoJDPSaBs0dQFiN5uBulGVh0xE0rkVdjpva2okA8vLifPc/
+    ACTIONS_RUNTIME_TOKEN: ***
+Processing -File 'D:\a\_temp\66d4c369-c1b2-486a-8ef1-36be269a8417' failed because the file does not have a '.ps1' extension. Specify a valid PowerShell script file name, and then try again.
+Error: Process completed with exit code 64.
+ I thought this was working before... FIX IT.. also this is still off maybe because it's still from a fork but then you could atleast echo it in the CI1s
 Run actions/github-script@v7
   
 RequestError [HttpError]: Resource not accessible by integration
@@ -33,7 +42,7 @@ RequestError [HttpError]: Resource not accessible by integration
       'content-encoding': 'gzip',
       'content-security-policy': "default-src 'none'",
       'content-type': 'application/json; charset=utf-8',
-      date: 'Sun, 15 Feb 2026 05:23:50 GMT',
+      date: 'Sun, 15 Feb 2026 05:33:15 GMT',
       'referrer-policy': 'origin-when-cross-origin, strict-origin-when-cross-origin',
       server: 'github.com',
       'strict-transport-security': 'max-age=31536000; includeSubdomains; preload',
@@ -44,12 +53,12 @@ RequestError [HttpError]: Resource not accessible by integration
       'x-frame-options': 'deny',
       'x-github-api-version-selected': '2022-11-28',
       'x-github-media-type': 'github.v3; format=json',
-      'x-github-request-id': '6008:1FD60A:960D0F:28BA475:69915866',
+      'x-github-request-id': '4C10:10BCB8:F347CF:41B25B1:69915A9B',
       'x-ratelimit-limit': '5000',
-      'x-ratelimit-remaining': '4996',
+      'x-ratelimit-remaining': '4990',
       'x-ratelimit-reset': '1771136344',
       'x-ratelimit-resource': 'core',
-      'x-ratelimit-used': '4',
+      'x-ratelimit-used': '10',
       'x-xss-protection': '0'
     },
     data: {
@@ -67,7 +76,7 @@ RequestError [HttpError]: Resource not accessible by integration
       authorization: 'token [REDACTED]',
       'content-type': 'application/json; charset=utf-8'
     },
-    body: '{"body":"<!-- asv-benchmark-result -->\\n## Benchmark results\\n\\nUsage: asv-spyglass compare [OPTIONS] B1 B2 [BCONF]\\nTry \'asv-spyglass compare --help\' for help.\\n\\nError: Invalid value for \'B1\': Path \'.asv/results/runnervmn36qa/f8e43a5ff19fd64d3dce983c808dd12f667b54a0.json\' does not exist.\\n\\n<details><summary>Details</summary>\\n\\n- **main:** `f8e43a5f`\\n- **PR:** `ccef1bf0`\\n- Runner: `ubuntu-22.04`\\n\\n</details>"}',
+    body: '{"body":"<!-- asv-benchmark-result -->\\n## Benchmark results\\n\\nUsage: asv-spyglass compare [OPTIONS] B1 B2 [BCONF]\\nTry \'asv-spyglass compare --help\' for help.\\n\\nError: Invalid value for \'B1\': Path \'.asv/results/runnervmn36qa/f8e43a5ff19fd64d3dce983c808dd12f667b54a0.json\' does not exist.\\n\\n<details><summary>Details</summary>\\n\\n- **main:** `f8e43a5f`\\n- **PR:** `45c8e6d0`\\n- Runner: `ubuntu-22.04`\\n\\n</details>"}',
     request: {
       agent: [Agent],
       fetch: [Function: proxyFetch],
@@ -79,12 +88,15 @@ Error: Unhandled error: HttpError: Resource not accessible by integration
 
 ## Summary
 
-Understood — I will never try to regenerate the pixi lockfile. That's on you.
+Done. Two fixes:
 
-Fixed the benchmark CI permission: added `issues: write` alongside `pull-requests: write`. The GitHub Issues Comments API requires both permissions.
+1. **Windows akmc**: Switched from `pixi run pwsh {0}` to `pixi run bash -e {0}` for Windows too — PowerShell requires `.ps1` extension on temp files which GHA doesn't provide. Git Bash is available on all Windows runners. Also unified the test step across platforms.
+
+2. **Benchmark 403**: Wrapped the PR comment posting in try/catch — on fork PRs (read-only token), it now logs a warning and echoes the full benchmark results to the CI log instead of failing.
 
 ## Key Actions
 
+- - **Read**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_build_akmc.yml
+- - **Write**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_build_akmc.yml
 - - **Read**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_benchmark.yml
 - - **Edit**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_benchmark.yml
-- - **TaskUpdate**: 

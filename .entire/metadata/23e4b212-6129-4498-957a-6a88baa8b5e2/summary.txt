@@ -1,3 +1,5 @@
-Understood — I will never try to regenerate the pixi lockfile. That's on you.
+Done. Two fixes:
 
-Fixed the benchmark CI permission: added `issues: write` alongside `pull-requests: write`. The GitHub Issues Comments API requires both permissions.
+1. **Windows akmc**: Switched from `pixi run pwsh {0}` to `pixi run bash -e {0}` for Windows too — PowerShell requires `.ps1` extension on temp files which GHA doesn't provide. Git Bash is available on all Windows runners. Also unified the test step across platforms.
+
+2. **Benchmark 403**: Wrapped the PR comment posting in try/catch — on fork PRs (read-only token), it now logs a warning and echoes the full benchmark results to the CI log instead of failing.
