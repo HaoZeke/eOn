@@ -155,7 +155,7 @@ VectorXd Hessian::removeZeroFreqs(VectorXd freqs) {
   newfreqs.resize(size);
   int nremoved = 0;
   for (int i = 0; i < size; i++) {
-    if (abs(freqs(i)) > parameters->hessianZeroFreqValue) {
+    if (abs(freqs(i)) > parameters->hessian_options.zero_freq_value) {
       newfreqs(i - nremoved) = freqs(i);
     } else {
       nremoved++;

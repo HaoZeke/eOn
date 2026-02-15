@@ -168,7 +168,7 @@ double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
 
   // Melander, Laasonen, Jonsson, JCTC, 11(3), 1055–1062, 2015
   // http://doi.org/10.1021/ct501155k
-  if (params->dimerRemoveRotation) {
+  if (params->dimer_options.remove_rotation) {
     matterDimer->setPositions(posDimer);
     rotationRemove(matterCenter, matterDimer);
     posDimer = matterDimer->getPositions();

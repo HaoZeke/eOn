@@ -138,13 +138,13 @@ int ConjugateGradients::single_step(double a_maxMove) {
     stepSize = projectedForce1 / curvature;
   }
 
-  if (m_params->saddleBowlBreakout and a_maxMove < 0.0) {
+  if (m_params->saddle_search_options.confine_positive.bowl_breakout and a_maxMove < 0.0) {
     stepSize = -a_maxMove;
     a_maxMove = -a_maxMove;
   }
 
   if (!m_params->optimizer_options.cg.no_overshooting) {
-    if (m_params->saddleBowlBreakout) {
+    if (m_params->saddle_search_options.confine_positive.bowl_breakout) {
       // max displacement is based on system not single atom
       pos += helper_functions::maxMotionAppliedV(stepSize * m_directionNorm,
                                                  a_maxMove);

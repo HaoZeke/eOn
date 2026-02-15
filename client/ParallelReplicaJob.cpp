@@ -172,7 +172,7 @@ std::vector<std::string> ParallelReplicaJob::run(void) {
 
   // start the decorrelation dynamics from the transition structure
   int decorrelationSteps =
-      int(floor(params->parrepCorrTime / params->dynamics_options.time_step + 0.5));
+      int(floor(params->parallel_replica_options.corr_time / params->dynamics_options.time_step + 0.5));
   SPDLOG_LOGGER_DEBUG(log, "[ParallelReplica] Decorrelating: {} steps",
                       decorrelationSteps);
   for (int step = 1; step <= decorrelationSteps; step++) {
@@ -209,7 +209,7 @@ std::vector<std::string> ParallelReplicaJob::run(void) {
     fprintf(fileResults, "%e transition_time_s\n",
             transitionTime * params->constants.timeUnit * 1.0e-15);
     fprintf(fileResults, "%e correlation_time_s\n",
-            params->parrepCorrTime * params->constants.timeUnit * 1.0e-15);
+            params->parallel_replica_options.corr_time * params->constants.timeUnit * 1.0e-15);
     fprintf(fileResults, "%lf potential_energy_product\n",
             product.getPotentialEnergy());
   }
@@ -230,7 +230,7 @@ void ParallelReplicaJob::dephase(Matter *trajectory) {
   Dynamics dynamics(trajectory, params.get());
 
   int dephaseSteps =
-      int(floor(params->parrepDephaseTime / params->dynamics_options.time_step + 0.5));
+      int(floor(params->parallel_replica_options.dephase_time / params->dynamics_options.time_step + 0.5));
   SPDLOG_LOGGER_DEBUG(log, "[ParallelReplica] Dephasing: {} steps",
                       dephaseSteps);
 

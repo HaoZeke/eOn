@@ -125,32 +125,32 @@ const Matter &Matter::operator=(const Matter &matter) {
 
 // The == comparison considers identity. This is crucial for process search.
 // bool Matter::operator==(const Matter& matter) {
-//     if(parameters->checkRotation) {
+//     if(parameters->structure_comparison_options.check_rotation) {
 //         return helper_functions::rotationMatch(this, &matter,
-//         parameters->distanceDifference);
+//         parameters->structure_comparison_options.distance_difference);
 //     }else{
-//         return (parameters->distanceDifference) > perAtomNorm(matter);
+//         return (parameters->structure_comparison_options.distance_difference) > perAtomNorm(matter);
 //     }
 // }
 
 bool Matter::compare(const Matter &matter, bool indistinguishable) {
   if (nAtoms != matter.numberOfAtoms())
     return false;
-  if (parameters->checkRotation && indistinguishable) {
+  if (parameters->structure_comparison_options.check_rotation && indistinguishable) {
     return helper_functions::sortedR(*this, matter,
-                                     parameters->distanceDifference);
+                                     parameters->structure_comparison_options.distance_difference);
   } else if (indistinguishable) {
-    if (this->numberOfFixedAtoms() == 0 and parameters->removeTranslation)
+    if (this->numberOfFixedAtoms() == 0 and parameters->structure_comparison_options.remove_translation)
       helper_functions::translationRemove(*this, matter);
     return helper_functions::identical(*this, matter,
-                                       parameters->distanceDifference);
-  } else if (parameters->checkRotation) {
+                                       parameters->structure_comparison_options.distance_difference);
+  } else if (parameters->structure_comparison_options.check_rotation) {
     return helper_functions::rotationMatch(*this, matter,
-                                           parameters->distanceDifference);
+                                           parameters->structure_comparison_options.distance_difference);
   } else {
-    if (this->numberOfFixedAtoms() == 0 and parameters->removeTranslation)
+    if (this->numberOfFixedAtoms() == 0 and parameters->structure_comparison_options.remove_translation)
       helper_functions::translationRemove(*this, matter);
-    return (parameters->distanceDifference) > perAtomNorm(matter);
+    return (parameters->structure_comparison_options.distance_difference) > perAtomNorm(matter);
   }
 }
 
