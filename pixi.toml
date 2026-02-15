@@ -27,11 +27,7 @@ compilers = ">=1.9.0,<2"
 fmt = ">=12,<13"
 spdlog = ">=1.16,<2"
 pkg-config = ">=0.29.2,<0.30"
-
-# gfortran 13.3.0 osx-arm64 wrapper has a broken clang linker invocation
-# (conda-forge gfortran_osx-arm64-13.3.0-h3c33bd0_1); pin to 13.2.x until fixed
-[target.osx-arm64.dependencies]
-gfortran = ">=13.2.0,<13.3"
+fortran-compiler = ">=1.10.0,<2"
 
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
