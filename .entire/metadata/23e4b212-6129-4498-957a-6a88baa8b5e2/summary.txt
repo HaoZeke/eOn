@@ -1,5 +1,1 @@
-Done. Two fixes:
-
-1. **Windows akmc**: Switched from `pixi run pwsh {0}` to `pixi run bash -e {0}` for Windows too — PowerShell requires `.ps1` extension on temp files which GHA doesn't provide. Git Bash is available on all Windows runners. Also unified the test step across platforms.
-
-2. **Benchmark 403**: Wrapped the PR comment posting in try/catch — on fork PRs (read-only token), it now logs a warning and echoes the full benchmark results to the CI log instead of failing.
+For the benchmark 403 — that's expected for fork PRs. The `pull_request` event from forks always gets a read-only `GITHUB_TOKEN` regardless of declared permissions. The try/catch fallback I added earlier will echo results to the log instead. That change just needs to be in the same push you're testing.

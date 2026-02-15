@@ -46,6 +46,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
+          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
           # Windows gfortran can't handle iso_c_binding
           meson setup bbdir --prefix=$CONDA_PREFIX --libdir=lib -Dwith_cuh2=false
           meson install -C bbdir

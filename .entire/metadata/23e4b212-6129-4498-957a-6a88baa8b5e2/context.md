@@ -2,101 +2,262 @@
 
 **Session ID:** 23e4b212-6129-4498-957a-6a88baa8b5e2
 
-**Commit Message:** 0s
-2s
-Run # Windows gfortran can't handle iso_c_binding
-  # Windows gfor
+**Commit Message:** The Meson build system
+Version: 1.10.1
+Source dir: D:\a\eOn\eOn
+Build di
 
 ## Prompt
 
-0s
-2s
-Run # Windows gfortran can't handle iso_c_binding
-  # Windows gfortran can't handle iso_c_binding
-  meson setup bbdir --prefix $env:CONDA_PREFIX --libdir=lib -Dwith_cuh2=false
-  if ($LASTEXITCODE -ne 0) { throw "meson setup failed" }
-  meson install -C bbdir
-  if ($LASTEXITCODE -ne 0) { throw "meson install failed" }
-  shell: C:\Users\runneradmin\.pixi\bin\pixi.EXE run pwsh {0}
-  env:
-    SCCACHE_GHA_ENABLED: true
-    ACTIONS_CACHE_URL: https://acghubeus1.actions.githubusercontent.com/zTsVvoJDPSaBs0dQFiN5uBulGVh0xE0rkVdjpva2okA8vLifPc/
-    ACTIONS_RUNTIME_TOKEN: ***
-Processing -File 'D:\a\_temp\66d4c369-c1b2-486a-8ef1-36be269a8417' failed because the file does not have a '.ps1' extension. Specify a valid PowerShell script file name, and then try again.
-Error: Process completed with exit code 64.
- I thought this was working before... FIX IT.. also this is still off maybe because it's still from a fork but then you could atleast echo it in the CI1s
-Run actions/github-script@v7
+The Meson build system
+Version: 1.10.1
+Source dir: D:\a\eOn\eOn
+Build dir: D:\a\eOn\eOn\bbdir
+Build type: native build
+Project name: eon
+Project version: 2.10.0.dev0+git20260215.8d23ab0
+
+meson.build:3:0: ERROR: Found GNU link.exe instead of MSVC link.exe in C:\Program Files\Git\usr\bin\link.EXE.
+This link.exe is not a linker.
+You may need to reorder entries to your %PATH% variable to resolve this.
+
+A full log can be found at D:\a\eOn\eOn\bbdir\meson-logs\meson-log.txt
+==== CI platform detected, click here for meson-log.txt contents. ====
+  Build started at 2026-02-15T05:38:13.754917
+  Main binary: C:\Users\runneradmin\AppData\Local\rattler\cache\envs\eOn-12996526408526105280\envs\default\python.exe
+  Build Options: -Dwith_cuh2=false '-Dprefix=C:\Users\runneradmin\AppData\Local\rattler\cache\envs\eOn-12996526408526105280\envs\default' -Dlibdir=lib
+  Python system: Windows
+  The Meson build system
+  Version: 1.10.1
+  Source dir: D:\a\eOn\eOn
+  Build dir: D:\a\eOn\eOn\bbdir
+  Build type: native build
+  Running command: C:\Users\runneradmin\AppData\Local\rattler\cache\envs\eOn-12996526408526105280\envs\default\python.exe D:\a\eOn\eOn\tools/gitversion.py
+  --- stdout ---
+  2.10.0.dev0+git20260215.8d23ab0
   
-RequestError [HttpError]: Resource not accessible by integration
-    at /home/runner/work/_actions/actions/github-script/v7/dist/index.js:9537:21
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async eval (eval at callAsyncFunction (/home/runner/work/_actions/actions/github-script/v7/dist/index.js:36187:16), <anonymous>:34:3)
-    at async main (/home/runner/work/_actions/actions/github-script/v7/dist/index.js:36285:20) {
-  status: 403,
-  response: {
-    url: 'https://api.github.com/repos/TheochemUI/eOn/issues/299/comments',
-    status: 403,
-    headers: {
-      'access-control-allow-origin': '*',
-      'access-control-expose-headers': 'ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Used, X-RateLimit-Resource, X-RateLimit-Reset, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, X-GitHub-SSO, X-GitHub-Request-Id, Deprecation, Sunset',
-      'content-encoding': 'gzip',
-      'content-security-policy': "default-src 'none'",
-      'content-type': 'application/json; charset=utf-8',
-      date: 'Sun, 15 Feb 2026 05:33:15 GMT',
-      'referrer-policy': 'origin-when-cross-origin, strict-origin-when-cross-origin',
-      server: 'github.com',
-      'strict-transport-security': 'max-age=31536000; includeSubdomains; preload',
-      'transfer-encoding': 'chunked',
-      vary: 'Accept-Encoding, Accept, X-Requested-With',
-      'x-accepted-github-permissions': 'issues=write; pull_requests=write',
-      'x-content-type-options': 'nosniff',
-      'x-frame-options': 'deny',
-      'x-github-api-version-selected': '2022-11-28',
-      'x-github-media-type': 'github.v3; format=json',
-      'x-github-request-id': '4C10:10BCB8:F347CF:41B25B1:69915A9B',
-      'x-ratelimit-limit': '5000',
-      'x-ratelimit-remaining': '4990',
-      'x-ratelimit-reset': '1771136344',
-      'x-ratelimit-resource': 'core',
-      'x-ratelimit-used': '10',
-      'x-xss-protection': '0'
-    },
-    data: {
-      message: 'Resource not accessible by integration',
-      documentation_url: 'https://docs.github.com/rest/issues/comments#create-an-issue-comment',
-      status: '403'
-    }
-  },
-  request: {
-    method: 'POST',
-    url: 'https://api.github.com/repos/TheochemUI/eOn/issues/299/comments',
-    headers: {
-      accept: 'application/vnd.github.v3+json',
-      'user-agent': 'actions/github-script octokit-core.js/5.0.1 Node.js/20.19.6 (linux; x64)',
-      authorization: 'token [REDACTED]',
-      'content-type': 'application/json; charset=utf-8'
-    },
-    body: '{"body":"<!-- asv-benchmark-result -->\\n## Benchmark results\\n\\nUsage: asv-spyglass compare [OPTIONS] B1 B2 [BCONF]\\nTry \'asv-spyglass compare --help\' for help.\\n\\nError: Invalid value for \'B1\': Path \'.asv/results/runnervmn36qa/f8e43a5ff19fd64d3dce983c808dd12f667b54a0.json\' does not exist.\\n\\n<details><summary>Details</summary>\\n\\n- **main:** `f8e43a5f`\\n- **PR:** `45c8e6d0`\\n- Runner: `ubuntu-22.04`\\n\\n</details>"}',
-    request: {
-      agent: [Agent],
-      fetch: [Function: proxyFetch],
-      hook: [Function: bound bound register]
-    }
-  }
-}
-Error: Unhandled error: HttpError: Resource not accessible by integration
+  --- stderr ---
+  
+  
+  Project name: eon
+  Project version: 2.10.0.dev0+git20260215.8d23ab0
+  -----------
+  Detecting compiler via: `cl.exe /?` -> 0
+  stdout:
+  C/C++ COMPILER OPTIONS
+  
+  
+                                -OPTIMIZATION-
+  
+  /O1 maximum optimizations (favor space) /O2 maximum optimizations (favor speed)
+  /Ob<n> inline expansion (default n=0)   /Od disable optimizations (default)
+  /Og enable global optimization          /Oi[-] enable intrinsic functions
+  /Os favor code space                    /Ot favor code speed
+  /Ox optimizations (favor speed)         
+  /favor:<blend|AMD64|INTEL64|ATOM> select processor to optimize for, one of:
+      blend - a combination of optimizations for several different x64 processors
+      AMD64 - 64-bit AMD processors
+      INTEL64 - Intel(R)64 architecture processors
+      ATOM - Intel(R) Atom(TM) processors
+  
+                               -CODE GENERATION-
+  
+  /Gu[-] ensure distinct functions have distinct addresses
+  /Gw[-] separate global variables for linker
+  /GF enable read-only string pooling     /Gy[-] separate functions for linker
+  /GS[-] enable security checks           /GR[-] enable C++ RTTI
+  /guard:cf[-] enable CFG (control flow guard)
+  /guard:ehcont[-] enable EH continuation metadata (CET)
+  /EHs enable C++ EH (no SEH exceptions)  /EHa enable C++ EH (w/ SEH exceptions)
+  /EHc extern "C" defaults to nothrow     
+  /EHr always generate noexcept runtime termination checks
+  /fp:<contract|except[-]|fast|precise|strict> choose floating-point model:
+      contract - consider floating-point contractions when generating code
+      except[-] - consider floating-point exceptions when generating code
+      fast - "fast" floating-point model; results are less predictable
+      precise - "precise" floating-point model; results are predictable
+      strict - "strict" floating-point model (implies /fp:except)
+  /Qfast_transcendentals generate inline FP intrinsics even with /fp:except
+  /Qspectre[-] enable mitigations for CVE 2017-5753
+  /Qpar[-] enable parallel code generation
+  /Qpar-report:1 auto-parallelizer diagnostic; indicate parallelized loops
+  /Qpar-report:2 auto-parallelizer diagnostic; indicate loops not parallelized
+  /Qvec-report:1 auto-vectorizer diagnostic; indicate vectorized loops
+  /Qvec-report:2 auto-vectorizer diagnostic; indicate loops not vectorized
+  /GL[-] enable link-time code generation 
+  /volatile:<iso|ms> choose volatile model:
+      iso - Acquire/release semantics not guaranteed on volatile accesses
+      ms  - Acquire/release semantics guaranteed on volatile accesses
+  /GA optimize for Windows Application    /Ge force stack checking for all funcs
+  /Gs[num] control stack checking calls   /Gh enable _penter function call
+  /GH enable _pexit function call         /GT generate fiber-safe TLS accesses
+  /RTC1 Enable fast checks (/RTCsu)       /RTCc Convert to smaller type checks
+  /RTCs Stack Frame runtime checking      /RTCu Uninitialized local usage checks
+  /clr[:option] compile for common language runtime, where option is:
+      pure : produce IL-only output file (no native executable code)
+      safe : produce IL-only verifiable output file
+      netcore : produce assemblies targeting .NET Core runtime
+      noAssembly : do not produce an assembly
+      nostdlib : ignore the system .NET framework directory when searching for assemblies
+      nostdimport : do not import any required assemblies implicitly
+      initialAppDomain : enable initial AppDomain behavior of Visual C++ 2002
+      implicitKeepAlive- : turn off implicit emission of System::GC::KeepAlive(this)
+      char_t- : turn off metadata support for char8_t, char16_t and char32_t
+      ECMAParamArray : use rules specified in ECMA-372/14.6 for overloads with parameter arrays (implied by /clr)
+      ECMAParamArray- : use new rules for overloads with parameter arrays (implied by /clr:netcore)
+  /fsanitize=address Enable address sanitizer codegen
+  /homeparams Force parameters passed in registers to be written to the stack
+  /GZ Enable stack checks (/RTCs)         /Gv __vectorcall calling convention
+  (Preview) /dynamicdeopt Enable dynamic debugging; place deoptimized breakpoints and step in anywhere with on-demand function deoptimization
+  (Preview) /dynamicdeopt:suffix <suffix> File extension suffix for deoptimized output (default: .alt)
+  (Preview) /dynamicdeopt:sync Build deoptimized output after optimized output instead of in parallel
+  /arch:<SSE2|SSE4.2|AVX|AVX2|AVX512|AVX10.x> minimum CPU architecture requirements, one of:
+     SSE2 - (default) enable use of instructions available with SSE2-enabled CPUs
+     SSE4.2 - enable use of instructions available with SSE 4.2-enabled CPUs
+     AVX - enable use of instructions available with AVX-enabled CPUs
+     AVX2 - enable use of instructions available with AVX2-enabled CPUs
+     AVX512 - enable use of instructions available with AVX-512-enabled CPUs
+     AVX10.x - enable use of instructions available with AVX10.x-enabled CPUs. Valid values of x are 1
+  /QIntel-jcc-erratum enable mitigations for Intel JCC erratum
+  /Qspectre-load Enable spectre mitigations for all instructions which load memory
+  /Qspectre-load-cf Enable spectre mitigations for all control-flow instructions which load memory
+  /Qspectre-jmp[-] Enable spectre mitigations for unconditional jump instructions
+  /fpcvt:<IA|BC> FP to unsigned integer conversion compatibility
+     IA - results compatible with VCVTTSD2USI instruction
+     BC - results compatible with VS2017 and earlier compiler
+  /jumptablerdata Place jump tables for switch case statements in .rdata section
+  /vlen=<256|512> Choose vector length of either 256 or 512 for automatic code-generation
+  /vlen Choose default vector length based on /arch setting
+  
+                                -OUTPUT FILES-
+  
+  /Fa[file] name assembly listing file    /FA[scu] configure assembly listing
+  /Fd[file] name .PDB file                /Fe<file> name executable file
+  /Fm[file] name map file                 /Fo<file> name object file
+  /Fp<file> name precompiled header file  /Fr[file] name source browser file
+  /FR[file] name extended .SBR file       /Fi[file] name preprocessed file
+  /Fd: <file> name .PDB file              /Fe: <file> name executable file
+  /Fm: <file> name map file               /Fo: <file> name object file
+  /Fp: <file> name .PCH file              /FR: <file> name extended .SBR file
+  /Fi: <file> name preprocessed file      
+  /Ft<dir> location of the header files generated for #import
+  /doc[file] process XML documentation comments and optionally name the .xdc file
+  
+                                -PREPROCESSOR-
+  
+  /AI<dir> add to assembly search path    /FU<file> import .NET assembly/module
+  /FU:asFriend<file> import .NET assembly/module as friend
+  /C don't strip comments                 /D<name>{=|#}<text> define macro
+  /E preprocess to stdout                 /EP preprocess to stdout, no #line
+  /P preprocess to file                   /Fx merge injected code to file
+  /FI<file> name forced include file      /U<name> remove predefined macro
+  /u remove all predefined macros         /I<dir> add to include search path
+  /X ignore "standard places"             
+  /PH generate #pragma file_hash when preprocessing
+  /PD print all macro definitions         
+  
+                                  -LANGUAGE-
+  
+  /std:<c++14|c++17|c++20|c++latest> C++ standard version
+      c++14 - ISO/IEC 14882:2014 (default)
+      c++17 - ISO/IEC 14882:2017
+      c++20 - ISO/IEC 14882:2020
+      c++latest - latest draft standard (feature set subject to change)
+  /std:<c11|c17|clatest> C standard version
+      c11 - ISO/IEC 9899:2011
+      c17 - ISO/IEC 9899:2018
+      clatest - latest draft standard (feature set subject to change)
+  /permissive[-] enable some nonconforming code to compile
+                 (feature set subject to change) (off by default in C++20 and later)
+  /Za disable extensions (not recommended for C++)
+  /ZW enable WinRT language extensions    /Zs syntax check only
+  /await enable resumable functions extension
+  /await:strict enable standard C++20 coroutine support with earlier language versions
+  /constexpr:depth<N>     recursion depth limit for constexpr evaluation (default: 512)
+  /constexpr:backtrace<N> show N constexpr evaluations in diagnostics (default: 10)
+  /constexpr:steps<N>     terminate constexpr evaluation after N steps (default: 1048576)
+  /Zi enable debugging information        /Z7 enable old-style debug info
+  /Zo[-] generate richer debugging information for optimized code (on by default)
+  /ZH:[MD5|SHA1|SHA_256] hash algorithm for calculation of file checksum in debug info (default: SHA_256)
+  /Zp[n] pack structs on n-byte boundary  /Zl omit default library name in .OBJ
+  /vd{0|1|2} disable/enable vtordisp      /vm<x> type of pointers to members
+  /Zc:arg1[,arg2] language conformance, where arguments can be:
+    forScope[-]           enforce Standard C++ for scoping rules
+    wchar_t[-]            wchar_t is the native type, not a typedef
+    auto[-]               enforce the new Standard C++ meaning for auto
+    trigraphs[-]          enable trigraphs (off by default)
+    rvalueCast[-]         enforce Standard C++ explicit type conversion rules
+                          (on by default in C++20 or later, implied by /permissive-)
+    strictStrings[-]      disable string-literal to [char|wchar_t]*
+                          conversion (on by default in C++20 or later, implied by /permissive-)
+    implicitNoexcept[-]   enable implicit noexcept on required functions
+    threadSafeInit[-]     enable thread-safe local static initialization
+    inline[-]             remove unreferenced function or data if it is
+                          COMDAT or has internal linkage only (off by default)
+    sizedDealloc[-]       enable C++14 global sized deallocation
+                          functions (on by default)
+    throwingNew[-]        assume operator new throws on failure (off by default)
+    referenceBinding[-]   a temporary will not bind to a non-const
+                          lvalue reference (on by default in C++20 or later, implied by /permissive-)
+  /execution-charset:<iana-name>|.nnnn set execution character set
+  /utf-8 set source and execution character set to UTF-8
+  /validate-charset[-] validate UTF-8 files for only legal characters
+  /fastfail[-] enable fast-fail mode      /JMC[-] enable native just my code
+  /presetPadding[-] zero initialize padding for stack based class types
+  /volatileMetadata[-] generate metadata on volatile memory accesses
+  /sourcelink [file] file containing source link information
+  
+                                  -LINKING-
+  
+  /LD Create .DLL                         /LDd Create .DLL debug library
+  /LN Create a .netmodule                 /F<num> set stack size
+  /link [linker options and libraries]    /MD link with MSVCRT.LIB
+  /MT link with LIBCMT.LIB                /MDd link with MSVCRTD.LIB debug lib
+  /MTd link with LIBCMTD.LIB debug lib    
+  
+                                -CODE ANALYSIS-
+  
+  /analyze[-] Enable native analysis      /analyze:quiet[-] No warning to console
+  /analyze:log<name> Warnings to file     /analyze:autolog Log to *.pftlog
+  /analyze:autolog:ext<ext> Log to *.<ext>/analyze:autolog- No log file
+  /analyze:WX- Warnings not fatal         /analyze:stacksize<num> Max stack frame
+  /analyze:max_paths<num> Max paths       /analyze:only Analyze, no code gen
+  
+                                -DIAGNOSTICS-
+  
+  /diagnostics:<args,...> controls the format of diagnostic messages:
+               classic   - retains prior format
+               column[-] - prints column information
+               caret[-]  - prints column and the indicated line of source
+  /Wall enable all warnings               /w   disable all warnings
+  /W<n> set warning level (default n=1)   
+  /Wv:xx[.yy[.zzzzz]] disable warnings introduced after version xx.yy.zzzzz
+  /WX treat warnings as errors            /WL enable one line diagnostics
+  /wd<n> disable warning n                /we<n> treat warning n as an error
+  /wo<n> issue warning n once             /w<l><n> set warning level 1-4 for n
+  /external:I <path>      - location of external headers
+  /external:env:<var>     - environment variable with locations of external headers
+  /external:anglebrackets - treat all headers included via <> as external
+  /external:W<n>          - warning level for external headers
+  /external:templates[-]  - evaluate warning level across template instantiation chain
+  /sdl enable additional security features and warnings
+  /options:strict unrecognized compiler options are an error
+  -----------
+  stderr:
+  Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35222 for x64
+  Copyright (C) Microsoft Corporation.  All rights reserved.
+  -----------
+  
+  meson.build:3:0: ERROR: Found GNU link.exe instead of MSVC link.exe in C:\Program Files\Git\usr\bin\link.EXE.
+  This link.exe is not a linker.
+  You may need to reorder entries to your %PATH% variable to resolve this.
+   HOW THE FUCK IT WAS GREEN BEFORE
 
 ## Summary
 
-Done. Two fixes:
-
-1. **Windows akmc**: Switched from `pixi run pwsh {0}` to `pixi run bash -e {0}` for Windows too — PowerShell requires `.ps1` extension on temp files which GHA doesn't provide. Git Bash is available on all Windows runners. Also unified the test step across platforms.
-
-2. **Benchmark 403**: Wrapped the PR comment posting in try/catch — on fork PRs (read-only token), it now logs a warning and echoes the full benchmark results to the CI log instead of failing.
+For the benchmark 403 — that's expected for fork PRs. The `pull_request` event from forks always gets a read-only `GITHUB_TOKEN` regardless of declared permissions. The try/catch fallback I added earlier will echo results to the log instead. That change just needs to be in the same push you're testing.
 
 ## Key Actions
 
 - - **Read**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_build_akmc.yml
-- - **Write**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_build_akmc.yml
-- - **Read**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_benchmark.yml
-- - **Edit**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_benchmark.yml
+- - **Edit**: /home/rgoswami/Git/Github/TheochemUI/eOn/.github/workflows/ci_build_akmc.yml
