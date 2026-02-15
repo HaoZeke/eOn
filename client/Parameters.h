@@ -44,32 +44,42 @@ public:
   // jobs //
 
   // Physical Constants
-  double kB;
-  double timeUnit;
+  struct constants_t {
+    double kB;
+    double timeUnit;
+  } constants;
 
   /** input parameters **/
 
   // [Main] //
-  JobType job;
-  long randomSeed;
-  double temperature;
-  bool quiet;
-  bool writeLog;
-  bool checkpoint;
-  string iniFilename;
-  string conFilename;
-  double finiteDifference;
-  long maxForceCalls;
-  bool removeNetForce;
+  struct main_options_t {
+    JobType job;
+    long randomSeed;
+    double temperature;
+    bool quiet;
+    bool writeLog;
+    bool checkpoint;
+    string iniFilename;
+    string conFilename;
+    double finiteDifference;
+    long maxForceCalls;
+    bool removeNetForce;
+  } main_options;
 
   // [Potential] //
-  PotType potential;
-  double MPIPollPeriod;
-  bool LAMMPSLogging;
-  int LAMMPSThreads;
-  bool EMTRasmussen;
-  bool LogPotential;
-  string extPotPath;
+  struct potential_options_t {
+    PotType potential;
+    double MPIPollPeriod;
+    bool LAMMPSLogging;
+    int LAMMPSThreads;
+    bool EMTRasmussen;
+    bool LogPotential;
+    string extPotPath;
+    int MPIPotentialRank;
+#ifdef EONMPI
+    MPI_Comm MPIClientComm;
+#endif
+  } potential_options;
 
   // [AMS] and [AMS_IO] //
   struct ams_options_t {
@@ -171,44 +181,45 @@ public:
   } saddle_search_options;
 
   // [Optimizer] //
-  OptType optMethod;
-  OptType refineOptMethod;     // used below refine threshold
-  double refineThreshold;      // threshold to switch opt_method
-  string optConvergenceMetric; // norm, max_atom, max_component
-  string optConvergenceMetricLabel;
-  size_t optMaxIterations; // maximum iterations for saddle point searches and
-                           // minimization
-  double
-      optMaxMove; // maximum displacement vector for a step during optimization
-  double optConvergedForce; // force convergence criterion required for an
-                            // optimization
-  double optTimeStepInput;
-  double optTimeStep;         // time step size used in quickmin
-  double optMaxTimeStepInput; // maximum time step for FIRE.
-  double optMaxTimeStep;      // maximum time step for FIRE.
-  long optLBFGSMemory; // number of previous forces to keep in the bfgs memory
-  double optLBFGSInverseCurvature;
-  double optLBFGSMaxInverseCurvature;
-  bool optLBFGSAutoScale;
-  bool optLBFGSAngleReset;
-  bool optLBFGSDistanceReset;
-  bool optQMSteepestDecent; // if set the velocity will always be set to zero in
-                            // quickmin
-  bool optCGNoOvershooting; // if set it is ensured that the approximate line
-                            // search in conjugate gradients never overshoot the
-                            // minimum along the search line
-  bool
-      optCGKnockOutMaxMove; // if set the old search direction is nullified when
-                            // steps larger than the optMaxMove are conducted
-  bool optCGLineSearch;     // if set full line search is conducted
-  double optCGLineConverged;    // convergence criteria for line search, ratio
-                                // between force component along search line and
-                                // the orthogonal part
-  long optCGLineSearchMaxIter;  // maximal nr of iterations during line search
-  long optCGMaxIterBeforeReset; // max nr of cg steps before reset, if 0 no
-                                // resetting is done
-  double optSDAlpha;
-  bool optSDTwoPoint;
+  struct optimizer_options_t {
+    OptType method;
+    string convergence_metric; // norm, max_atom, max_component
+    string convergence_metric_label;
+    size_t max_iterations;
+    double max_move;
+    double converged_force;
+    double time_step_input;
+    double time_step;
+    double max_time_step_input;
+    double max_time_step;
+    struct refine_t {
+      OptType method;
+      double threshold;
+    } refine;
+    struct lbfgs_t {
+      long memory;
+      double inverse_curvature;
+      double max_inverse_curvature;
+      bool auto_scale;
+      bool angle_reset;
+      bool distance_reset;
+    } lbfgs;
+    struct cg_t {
+      bool no_overshooting;
+      bool knock_out_max_move;
+      bool line_search;
+      double line_converged;
+      long line_search_max_iter;
+      long max_iter_before_reset;
+    } cg;
+    struct quickmin_t {
+      bool steepest_descent;
+    } quickmin;
+    struct sd_t {
+      double alpha;
+      bool two_point;
+    } sd;
+  } optimizer_options;
 
   // [Dimer] //
   struct dimer_options_t {
@@ -569,13 +580,6 @@ public:
     double grad2energy_convergence;
     double grad2force_convergence;
   } bgsd_options;
-
-  // MPI stuff, not actually specified in config file
-  // it is used to pass information to the GPAW MPI potential.
-  int MPIPotentialRank;
-#ifdef EONMPI
-  MPI_Comm MPIClientComm;
-#endif
 
   // [Debug] //
   struct debug_options_t {
