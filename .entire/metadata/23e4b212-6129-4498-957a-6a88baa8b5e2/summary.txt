@@ -1,0 +1,6 @@
+The root cause was `--python=same` — per the [asv-spyglass docs](https://github.com/airspeed-velocity/asv_spyglass), this flag **skips writing result files**. 
+
+Changes:
+- Replaced `--python=same` with `-E "existing:$(which python)"` (writes results to disk)
+- Added `--record-samples` per the asv-spyglass example workflow
+- Updated the "Locate result files" step to glob-match result files by hash prefix, since `-E existing:` names files as `<hash>-<env>.json`
