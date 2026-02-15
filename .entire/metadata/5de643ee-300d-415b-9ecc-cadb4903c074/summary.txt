@@ -1,0 +1,23 @@
+Here's a summary of everything that's done:
+
+## Completed Work
+
+### Cu Vacancy Example (`examples/akmc-cu-vacancy/`)
+- **`pos.con`**: 499-atom Cu FCC 5x5x5 supercell with one vacancy (18.075 A box)
+- **`config.ini`**: AKMC job using EMT potential (built-in, no external files needed), with `displace_atom_kmc_state_script = ptmdisp.py` and `displace_all_listed = true`
+- **`ptmdisp.py`**: PEP 723 inline-script-metadata compatible script using OVITO's PTM to identify non-FCC atoms. Can be run with `uvx ptmdisp.py pos.con`
+
+### C++ Client `listed_atoms` EpiCenter (compiled successfully)
+- **`EpiCenters.h/cpp`**: New `listedAtomEpiCenter()` function and `DISP_LISTED_ATOMS` constant
+- **`Parameters.h/cpp`**: `displace_atom_list` vector parsed from comma-separated INI values, added to whitelist check
+- **`eon/schema.py`**: Added `"listed_atoms"` to `client_displace_type` Literal
+
+### Python-side Fixes (already committed)
+- `_utils.py`: Fixed types, path resolution, added `normalize_atom_list_str()` / `parse_atom_list_str()`
+- `state.py`: Fixed indentation, return type, consistent returns
+- `explorer.py`: Wired atom list from `state.info` into `DisplacementManager` config
+- `akmc.py`, `displace.py`: Removed dead code/unused imports
+- 25 tests all passing
+
+### Unstaged Changes
+The C++ changes, schema update, and new example directory are ready to commit.
