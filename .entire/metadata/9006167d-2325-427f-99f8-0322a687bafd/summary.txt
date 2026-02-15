@@ -1,19 +1,7 @@
-All active code references are fixed. The clangd diagnostics are pre-existing issues (missing Eigen headers, etc.), not related to these changes.
+The camelCase matches in `_options.` are all legitimate — they're members like `finiteDifference`, `conFilename`, `randomSeed` etc. that are camelCase in the struct definition in Parameters.h. Those are correct as-is.
 
-**Summary of all files fixed in this round:**
+All the build errors you reported are now fixed:
 
-| File | Old reference | New reference |
-|------|-------------|---------------|
-| `BondBoost.cpp` | `bondBoostRMDTime` | `hyperdynamics_options.rmd_time` |
-| `ConjugateGradients.cpp` | `saddleBowlBreakout` | `saddle_search_options.confine_positive.bowl_breakout` |
-| `FiniteDifferenceJob.cpp` | `neighborCutoff` | `structure_comparison_options.neighbor_cutoff` |
-| `Dimer.cpp` | `dimerRemoveRotation` | `dimer_options.remove_rotation` |
-| `Hessian.cpp` | `hessianZeroFreqValue` | `hessian_options.zero_freq_value` |
-| `Matter.cpp` | `checkRotation`, `distanceDifference`, `removeTranslation` | `structure_comparison_options.*` |
-| `Prefactor.cpp` | `prefactorFilterScheme`, `checkRotation`, `prefactorRate`, `prefactorMinDisplacement`, `prefactorWithinRadius`, `prefactorFilterFraction` | `prefactor_options.*`, `structure_comparison_options.*` |
-| `SafeHyperJob.cpp` | `mdSteps`, `mdTimeStep`, `parrepStateCheckInterval`, `parrepRecordInterval`, `parrepRefineTransition`, `parrepDephaseTime`, `parrepDephaseLoopStop`, `parrepDephaseLoopMax`, `biasPotential` | `dynamics_options.*`, `parallel_replica_options.*`, `hyperdynamics_options.*` |
-| `ParallelReplicaJob.cpp` | `parrepCorrTime`, `parrepDephaseTime`, `writeMoviesInterval` | `parallel_replica_options.*`, `debug_options.*` |
-| `CommandLine.cpp` | `distanceDifference`, `checkRotation` | `structure_comparison_options.*` |
-| `AtomicGPDimer.cpp` | `gprActiveRadius` | `gpr_dimer_options.active_radius` |
-| `GPSurrogateJob.cpp` | `nebImages`, `surrogatePotential` | `neb_options.image_count`, `gp_surrogate_options.potential` |
-| `ImpDimerTest.cpp` | `saddleMinmodeMethod` | `saddle_search_options.minmode_method` |
+- **BasinHoppingJob.cpp**: `displacementAlgorithm` → `displacement_algorithm`, `displacementDistribution` → `displacement_distribution`
+- **GlobalOptimizationJob.cpp**: `displacementDistribution` → `displacement_distribution`
+- **MinimizationJob.cpp**: `params->writeMovies` → `params->debug_options.write_movies`

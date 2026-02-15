@@ -321,16 +321,16 @@ AtomMatrix BasinHoppingJob::displaceRandom(double curDisplacement) {
     double disp = 0.0; // displacement size, possibly scaled
 
     if (!trial->getFixed(i)) {
-      if (params->basin_hopping_options.displacementAlgorithm == "standard") {
+      if (params->basin_hopping_options.displacement_algorithm == "standard") {
         disp = curDisplacement;
       }
       // scale displacement linearly with the particle radius
-      else if (params->basin_hopping_options.displacementAlgorithm == "linear") {
+      else if (params->basin_hopping_options.displacement_algorithm == "linear") {
         double Cs = curDisplacement / distvec.maxCoeff();
         disp = Cs * dist;
       }
       // scale displacement quadratically with the particle radius
-      else if (params->basin_hopping_options.displacementAlgorithm == "quadratic") {
+      else if (params->basin_hopping_options.displacement_algorithm == "quadratic") {
         double Cq = curDisplacement / (distvec.maxCoeff() * distvec.maxCoeff());
         disp = Cq * dist * dist;
       } else {
@@ -339,9 +339,9 @@ AtomMatrix BasinHoppingJob::displaceRandom(double curDisplacement) {
         std::exit(1);
       }
       for (int j = 0; j < 3; j++) {
-        if (params->basin_hopping_options.displacementDistribution == "uniform") {
+        if (params->basin_hopping_options.displacement_distribution == "uniform") {
           displacement(i, j) = randomDouble(2 * disp) - disp;
-        } else if (params->basin_hopping_options.displacementDistribution == "gaussian") {
+        } else if (params->basin_hopping_options.displacement_distribution == "gaussian") {
           displacement(i, j) = gaussRandom(0.0, disp);
         } else {
           log = spdlog::get("_traceback");

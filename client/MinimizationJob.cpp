@@ -45,7 +45,7 @@ std::vector<std::string> MinimizationJob::run(void) {
 
   bool converged;
   try {
-    converged = pos->relax(false, params->writeMovies, params->main_options.checkpoint,
+    converged = pos->relax(false, params->debug_options.write_movies, params->main_options.checkpoint,
                            "minimization", "pos");
     if (converged) {
       status = RunStatus::GOOD;
