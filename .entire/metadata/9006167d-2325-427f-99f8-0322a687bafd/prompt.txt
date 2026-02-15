@@ -1,66 +1,51 @@
-In file included from ../client/Job.cpp:16:
-../client/GlobalOptimizationJob.h: In constructor 'GlobalOptimizationJob::GlobalOptimizationJob(std::unique_ptr<Parameters>)':
-../client/GlobalOptimizationJob.h:24:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
-   24 |         beta1{params->globalOptimizationBeta},
-      |                       ^~~~~~~~~~~~~~~~~~~~~~
-      |                       global_optimization_options
-../client/GlobalOptimizationJob.h:25:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
-   25 |         beta2{params->globalOptimizationBeta},
-      |                       ^~~~~~~~~~~~~~~~~~~~~~
-      |                       global_optimization_options
-../client/GlobalOptimizationJob.h:26:28: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationBeta'; did you mean 'global_optimization_options'?
-   26 |         beta3{1. / params->globalOptimizationBeta},
-      |                            ^~~~~~~~~~~~~~~~~~~~~~
-      |                            global_optimization_options
-../client/GlobalOptimizationJob.h:27:29: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationAlpha'; did you mean 'global_optimization_options'?
-   27 |         alpha1{1. / params->globalOptimizationAlpha},
-      |                             ^~~~~~~~~~~~~~~~~~~~~~~
-      |                             global_optimization_options
-../client/GlobalOptimizationJob.h:28:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationAlpha'; did you mean 'global_optimization_options'?
-   28 |         alpha2{params->globalOptimizationAlpha},
-      |                        ^~~~~~~~~~~~~~~~~~~~~~~
-      |                        global_optimization_options
-../client/GlobalOptimizationJob.h:29:23: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'globalOptimizationMdmin'; did you mean 'global_optimization_options'?
-   29 |         mdmin{params->globalOptimizationMdmin},
-      |                       ^~~~~~~~~~~~~~~~~~~~~~~
-      |                       global_optimization_options
-../client/GlobalOptimizationJob.h:24:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
-   24 |         beta1{params->globalOptimizationBeta},
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-../client/GlobalOptimizationJob.h:25:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
-   25 |         beta2{params->globalOptimizationBeta},
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-../client/GlobalOptimizationJob.h:26:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
-   26 |         beta3{1. / params->globalOptimizationBeta},
-ble' in initialization
-   27 |         alpha1{1. / params->globalOptimizationAlpha},
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-../client/GlobalOptimizationJob.h:28:9: error: cannot convert '<brace-enclosed initializer list>' to 'double' in initialization
-   28 |         alpha2{params->globalOptimizationAlpha},
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-../client/GlobalOptimizationJob.h:29:9: error: cannot convert '<brace-enclosed initializer list>' to 'long int' in initialization
-   29 |         mdmin{params->globalOptimizationMdmin},
-      |         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp: In member function 'virtual std::vector<std::__cxx11::basic_string<char> > PrefactorJob::run()':
-../client/PrefactorJob.cpp:43:15: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorAllFreeAtoms'
-   43 |   if (params->prefactorAllFreeAtoms) {
-      |               ^~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:47:17: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   47 |     if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_REACTANT) {
-      |                 ^~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:49:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   49 |     } else if (params->prefactorConfiguration ==
-      |                        ^~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:52:24: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   52 |     } else if (params->prefactorConfiguration ==
-      |                        ^~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:74:15: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   74 |   if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_REACTANT) {
-      |               ^~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:77:22: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   77 |   } else if (params->prefactorConfiguration == PrefactorJob::PREFACTOR_SADDLE) {
-      |                      ^~~~~~~~~~~~~~~~~~~~~~
-../client/PrefactorJob.cpp:80:22: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'prefactorConfiguration'
-   80 |   } else if (params->prefactorConfiguration ==
-      |                      ^~~~~~~~~~~~~~~~~~~~~~
-[101/168] Compiling C++ object client/libeonclib.so.p/BondBoost.cpp.o
+st::boost()':
+../client/BondBoost.cpp:141:26: error: 'class Parameters' has no member named 'bondBoostRMDTime'
+  141 |   RMDS = int(parameters->bondBoostRMDTime / parameters->dynamics_options.time_step);
+      |                          ^~~~~~~~~~~~~~~~
+[17/67] Compiling C++ object client/libeonclib.so.p/ConjugateGradients.cpp.o
+FAILED: [code=1] client/libeonclib.so.p/ConjugateGradients.cpp.o 
+g++ -Iclient/libeoncbase.so.p -Iclient/potentials/EAM/libeam.so.p -Iclient/potentials/EMT/libemt.so.p -Iclient/potentials/ExtPot/libextpot.so.p -Iclient/potentials/IMD/libimd.so.p -Iclient/potentials/LJ/liblennard_jones.so.p -Iclient/potentials/LJCluster/liblennard_jones_cluster.so.p -Iclient/potentials/Morse/libmorse.so.p -Iclient/potentials/NewPot/libnewpot.so.p -Iclient/potentials/ZBL/libzbl.so.p -Iclient/potentials/SocketNWChem/libsocket_nwchem.so.p -Iclient/potentials/Aluminum/libaluminum.so.p -Iclient/potentials/EDIP/libedip.so.p -Iclient/potentials/FeHe/libfehe.so.p -Iclient/potentials/Lenosky/liblenosky.so.p -Iclient/potentials/SW/libsw.so.p -Iclient/potentials/Tersoff/libtersoff.so.p -Iclient/potentials/CuH2/libcuh2.so.p -Iclient/potentials/EMT/Asap/libasap.so.p -Iclient/libeonclib.so.p -Iclient -I../client -I. -I.. -I../client/thirdparty -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include/eigen3 -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -std=c++17 -O3 -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fPIC -DSPDLOG_SHARED_LIB -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -pthread -Wno-class-memaccess -Wno-unused-function -Wno-reorder -Wno-sign-compare -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-result -Wno-unused-variable -DCUH2_POT -DWITH_FORTRAN -MD -MQ client/libeonclib.so.p/ConjugateGradients.cpp.o -MF client/libeonclib.so.p/ConjugateGradients.cpp.o.d -o client/libeonclib.so.p/ConjugateGradients.cpp.o -c ../client/ConjugateGradients.cpp
+../client/ConjugateGradients.cpp: In member function 'int ConjugateGradients::single_step(double)':
+../client/ConjugateGradients.cpp:141:17: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'saddleBowlBreakout'
+  141 |   if (m_params->saddleBowlBreakout and a_maxMove < 0.0) {
+      |                 ^~~~~~~~~~~~~~~~~~
+../client/ConjugateGradients.cpp:147:19: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'saddleBowlBreakout'
+  147 |     if (m_params->saddleBowlBreakout) {
+      |                   ^~~~~~~~~~~~~~~~~~
+[18/67] Compiling C++ object client/libeonclib.so.p/FiniteDifferenceJob.cpp.o
+FAILED: [code=1] client/libeonclib.so.p/FiniteDifferenceJob.cpp.o 
+g++ -Iclient/libeoncbase.so.p -Iclient/potentials/EAM/libeam.so.p -Iclient/potentials/EMT/libemt.so.p -Iclient/potentials/ExtPot/libextpot.so.p -Iclient/potentials/IMD/libimd.so.p -Iclient/potentials/LJ/liblennard_jones.so.p -Iclient/potentials/LJCluster/liblennard_jones_cluster.so.p -Iclient/potentials/Morse/libmorse.so.p -Iclient/potentials/NewPot/libnewpot.so.p -Iclient/potentials/ZBL/libzbl.so.p -Iclient/potentials/SocketNWChem/libsocket_nwchem.so.p -Iclient/potentials/Aluminum/libaluminum.so.p -Iclient/potentials/EDIP/libedip.so.p -Iclient/potentials/FeHe/libfehe.so.p -Iclient/potentials/Lenosky/liblenosky.so.p -Iclient/potentials/SW/libsw.so.p -Iclient/potentials/Tersoff/libtersoff.so.p -Iclient/potentials/CuH2/libcuh2.so.p -Iclient/potentials/EMT/Asap/libasap.so.p -Iclient/libeonclib.so.p -Iclient -I../client -I. -I.. -I../client/thirdparty -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include/eigen3 -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -std=c++17 -O3 -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fPIC -DSPDLOG_SHARED_LIB -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -pthread -Wno-class-memaccess -Wno-unused-function -Wno-reorder -Wno-sign-compare -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-result -Wno-unused-variable -DCUH2_POT -DWITH_FORTRAN -MD -MQ client/libeonclib.so.p/FiniteDifferenceJob.cpp.o -MF client/libeonclib.so.p/FiniteDifferenceJob.cpp.o.d -o client/libeonclib.so.p/FiniteDifferenceJob.cpp.o -c ../client/FiniteDifferenceJob.cpp
+../client/FiniteDifferenceJob.cpp: In member function 'virtual std::vector<std::__cxx11::basic_string<char> > FiniteDifferenceJob::run()':
+../client/FiniteDifferenceJob.cpp:35:64: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'neighborCutoff'
+   35 |                                                        params->neighborCutoff);
+      |                                                                ^~~~~~~~~~~~~~
+[19/67] Compiling C++ object client/libeonclib.so.p/Matter.cpp.o
+FAILED: [code=1] client/libeonclib.so.p/Matter.cpp.o 
+g++ -Iclient/libeoncbase.so.p -Iclient/potentials/EAM/libeam.so.p -Iclient/potentials/EMT/libemt.so.p -Iclient/potentials/ExtPot/libextpot.so.p -Iclient/potentials/IMD/libimd.so.p -Iclient/potentials/LJ/liblennard_jones.so.p -Iclient/potentials/LJCluster/liblennard_jones_cluster.so.p -Iclient/potentials/Morse/libmorse.so.p -Iclient/potentials/NewPot/libnewpot.so.p -Iclient/potentials/ZBL/libzbl.so.p -Iclient/potentials/SocketNWChem/libsocket_nwchem.so.p -Iclient/potentials/Aluminum/libaluminum.so.p -Iclient/potentials/EDIP/libedip.so.p -Iclient/potentials/FeHe/libfehe.so.p -Iclient/potentials/Lenosky/liblenosky.so.p -Iclient/potentials/SW/libsw.so.p -Iclient/potentials/Tersoff/libtersoff.so.p -Iclient/potentials/CuH2/libcuh2.so.p -Iclient/potentials/EMT/Asap/libasap.so.p -Iclient/libeonclib.so.p -Iclient -I../client -I. -I.. -I../client/thirdparty -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include/eigen3 -I/home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -std=c++17 -O3 -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -DNDEBUG -D_FORTIFY_SOURCE=2 -O2 -isystem /home/rgoswami/.cache/rattler/cache/envs/eOn-11827977976251955151/envs/default/include -fPIC -DSPDLOG_SHARED_LIB -DSPDLOG_COMPILED_LIB -DSPDLOG_FMT_EXTERNAL -pthread -Wno-class-memaccess -Wno-unused-function -Wno-reorder -Wno-sign-compare -Wno-unused-but-set-parameter -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-unused-result -Wno-unused-variable -DCUH2_POT -DWITH_FORTRAN -MD -MQ client/libeonclib.so.p/Matter.cpp.o -MF client/libeonclib.so.p/Matter.cpp.o.d -o client/libeonclib.so.p/Matter.cpp.o -c ../client/Matter.cpp
+../client/Matter.cpp: In member function 'bool Matter::compare(const Matter&, bool)':
+../client/Matter.cpp:139:19: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'checkRotation'
+  139 |   if (parameters->checkRotation && indistinguishable) {
+      |                   ^~~~~~~~~~~~~
+../client/Matter.cpp:141:50: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'distanceDifference'
+  141 |                                      parameters->distanceDifference);
+      |                                                  ^~~~~~~~~~~~~~~~~~
+../client/Matter.cpp:143:57: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'removeTranslation'
+  143 |     if (this->numberOfFixedAtoms() == 0 and parameters->removeTranslation)
+      |                                                         ^~~~~~~~~~~~~~~~~
+../client/Matter.cpp:146:52: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'distanceDifference'
+  146 |                                        parameters->distanceDifference);
+      |                                                    ^~~~~~~~~~~~~~~~~~
+../client/Matter.cpp:147:26: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'checkRotation'
+  147 |   } else if (parameters->checkRotation) {
+      |                          ^~~~~~~~~~~~~
+../client/Matter.cpp:149:56: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'distanceDifference'
+  149 |                                            parameters->distanceDifference);
+      |                                                        ^~~~~~~~~~~~~~~~~~
+../client/Matter.cpp:151:57: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'removeTranslation'
+  151 |     if (this->numberOfFixedAtoms() == 0 and parameters->removeTranslation)
+      |                                                         ^~~~~~~~~~~~~~~~~
+../client/Matter.cpp:153:25: error: 'using std::__shared_ptr_access<Parameters, __gnu_cxx::_S_atomic, false, false>::element_type = class Parameters' {aka 'class Parameters'} has no member named 'distanceDifference'
+  153 |     return (parameters->distanceDifference) > perAtomNorm(matter);
+      |                         ^~~~~~~~~~~~~~~~~~
+[21/67] Compiling C++ object client/libeonclib.so.p/Prefactor.cpp.o
+FAILED: [code=1] client/libeonclib.so.p/Prefactor.cpp.o shouldn't you be able to fix all these youreslf

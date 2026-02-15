@@ -83,7 +83,7 @@ std::vector<std::string> ParallelReplicaJob::run(void) {
     double kinT =
         (2.0 * kinE / (trajectory->numberOfFreeAtoms() * 3) / params->constants.kB);
 
-    if (step % params->writeMoviesInterval == 0) {
+    if (step % params->debug_options.write_movies_interval == 0) {
       if (params->hyperdynamics_options.bias_potential == Hyperdynamics::NONE) {
         SPDLOG_LOGGER_DEBUG(log,
                             "[ParallelReplica] {:>8} {:>12.4e} {:>10.4f} "

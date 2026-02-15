@@ -104,7 +104,7 @@ void commandLine(int argc, char **argv) {
     }
 
     if (result.count("tolerance")) {
-      params->distanceDifference = result["tolerance"].as<double>();
+      params->structure_comparison_options.distance_difference = result["tolerance"].as<double>();
     }
 
     if (sflag && mflag) {
@@ -163,7 +163,7 @@ void commandLine(int argc, char **argv) {
     } else if (mflag) {
       minimize(std::move(matter), confileout);
     } else if (cflag) {
-      params->checkRotation = true;
+      params->structure_comparison_options.check_rotation = true;
       if (matter->compare(*matter2, true)) {
         std::cout << "Structures match" << std::endl;
       } else {
