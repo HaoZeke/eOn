@@ -1,23 +1,33 @@
-Here's a summary of everything that's done:
+The C++ changes and Cu vacancy example were already committed. The remaining unstaged changes are:
+1. `client/gtests/EpiCentersTest.cpp` (new test file)
+2. `client/gtests/ApproveParams.cpp` (added `displace_atom_list` to output)
+3. `client/gtests/approval_tests/ApproveParams.VerifyParameters.approved.txt` (updated reference)
+4. `client/meson.build` (registered new test)
 
-## Completed Work
+Here's a summary of what was done:
 
-### Cu Vacancy Example (`examples/akmc-cu-vacancy/`)
-- **`pos.con`**: 499-atom Cu FCC 5x5x5 supercell with one vacancy (18.075 A box)
-- **`config.ini`**: AKMC job using EMT potential (built-in, no external files needed), with `displace_atom_kmc_state_script = ptmdisp.py` and `displace_all_listed = true`
-- **`ptmdisp.py`**: PEP 723 inline-script-metadata compatible script using OVITO's PTM to identify non-FCC atoms. Can be run with `uvx ptmdisp.py pos.con`
+## C++ Tests Added
 
-### C++ Client `listed_atoms` EpiCenter (compiled successfully)
-- **`EpiCenters.h/cpp`**: New `listedAtomEpiCenter()` function and `DISP_LISTED_ATOMS` constant
-- **`Parameters.h/cpp`**: `displace_atom_list` vector parsed from comma-separated INI values, added to whitelist check
-- **`eon/schema.py`**: Added `"listed_atoms"` to `client_displace_type` Literal
+**`client/gtests/EpiCentersTest.cpp`** - 13 test cases, 371 assertions:
 
-### Python-side Fixes (already committed)
-- `_utils.py`: Fixed types, path resolution, added `normalize_atom_list_str()` / `parse_atom_list_str()`
-- `state.py`: Fixed indentation, return type, consistent returns
-- `explorer.py`: Wired atom list from `state.info` into `DisplacementManager` config
-- `akmc.py`, `displace.py`: Removed dead code/unused imports
-- 25 tests all passing
+### `listedAtomEpiCenter` tests (4 tests, using `Pt_Heptamer_FrozenLayers` fixture):
+- Returns an atom from the provided list (statistical check over 200 trials)
+- Filters out frozen atoms (only free atom from mixed list selected)
+- Filters out out-of-range indices (negative, >= nAtoms)
+- Single free atom always selected
 
-### Unstaged Changes
-The C++ changes, schema update, and new example directory are ready to commit.
+### Parameters parsing tests (9 tests, using `tmpfile()` for INI input):
+- Default `displace_atom_list` is empty
+- Default `displace_type` is `load`
+- Parses comma-separated `displace_atom_list` from INI (`"10, 20, 30"` → `{10, 20, 30}`)
+- Handles single-element list
+- Handles negative indices
+- Empty list stays empty when key is absent
+- `listed_atoms` is whitelisted (doesn't fall back to `load`)
+- Unknown type falls back to `load`
+- All 6 valid displace types accepted
+
+### Also updated:
+- `ApproveParams.cpp`: Added `saddleDisplaceAtomList` output
+- `ApproveParams.VerifyParameters.approved.txt`: Added expected default `[]`
+- `client/meson.build`: Registered `test_epicenters` in test array
