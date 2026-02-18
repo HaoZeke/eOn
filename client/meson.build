@@ -673,6 +673,9 @@ if get_option('with_tests')
         test_array += [['test_xtb', 'XTBTest.cpp', 'sulfolene']]
         test_array += [['test_cineb_xtb', 'CINEBXTBTest.cpp', 'cineb_xtb']]
     endif
+    if get_option('with_featomic') and get_option('with_xtb')
+        test_array += [['test_soapneb_xtb', 'SOAPNEBXTBTest.cpp', 'soapneb_xtb']]
+    endif
     foreach test : test_array
         test(
             test.get(0),
