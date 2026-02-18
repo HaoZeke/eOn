@@ -13,6 +13,9 @@
 #include "ConjugateGradients.h"
 #include "NEBInitialPaths.hpp"
 #include "Potential.h"
+#ifdef WITH_FEATOMIC
+#include "SoapNudgedElasticBand.h"
+#endif
 
 using namespace std;
 
@@ -93,8 +96,23 @@ std::vector<std::string> NudgedElasticBandJob::run(void) {
                        params.main_options.checkpoint, "prod_neb", "prod_neb");
   }
 
-  auto neb =
-      std::make_unique<NudgedElasticBand>(initial, final_state, params, pot);
+  std::unique_ptr<NudgedElasticBand> neb;
+#ifdef WITH_FEATOMIC
+  if (params.soap_neb_options.enabled) {
+    neb = std::make_unique<SoapNudgedElasticBand>(initial, final_state, params,
+                                                  pot);
+  } else {
+    neb = std::make_unique<NudgedElasticBand>(initial, final_state, params, pot);
+  }
+#else
+  if (params.soap_neb_options.enabled) {
+    SPDLOG_LOGGER_ERROR(
+        m_log, "SOAP NEB requested but eOn was built without featomic support. "
+               "Rebuild with -Dwith_featomic=True.");
+    throw std::runtime_error("SOAP NEB requires featomic support");
+  }
+  neb = std::make_unique<NudgedElasticBand>(initial, final_state, params, pot);
+#endif
 
   if (tsInterpolate) {
     AtomMatrix reactantToTS = transitionState->pbc(

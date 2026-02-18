@@ -39,11 +39,11 @@ public:
   NudgedElasticBand(std::vector<Matter> initPath,
                     const Parameters &parametersPassed,
                     std::shared_ptr<Potential> potPassed);
-  ~NudgedElasticBand() = default;
+  virtual ~NudgedElasticBand() = default;
 
   NudgedElasticBand::NEBStatus compute(void);
   NudgedElasticBand::NEBStatus getStatus() { return this->status; };
-  void updateForces(void);
+  virtual void updateForces(void);
   double convergenceForce(void);
   void findExtrema(void);
   void printImageData(bool writeToFile = false, size_t idx = 0);
@@ -66,11 +66,13 @@ public:
   double E_ref; // Reference energy chosen to be equal to the max energy of the
                 // reactant or product energy minimum
 
+protected:
+  Parameters params;
+
 private:
   int runMMFRefinement(double &alignment);
   double current_mmf_threshold{-1.0};
   double baseline_force{-1.0};
-  Parameters params;
   std::shared_ptr<Potential> pot;
   NEBStatus status;
   std::shared_ptr<spdlog::logger> log;

@@ -280,6 +280,10 @@ if get_option('with_gp_surrogate')
     endif
 endif
 
+if get_option('with_featomic') and get_option('with_metatomic')
+    eonclib_sources += ['SoapDescriptorEngine.cpp', 'SoapNudgedElasticBand.cpp']
+endif
+
 if get_option('with_vasp')
     if host_system != 'windows'
         subdir('potentials/VASP')
@@ -558,6 +562,26 @@ if get_option('with_metatomic')
     _args += ['-DWITH_METATOMIC']
 endif
 
+if get_option('with_featomic') and get_option('with_metatomic')
+    torch_ver = get_option('torch_version')
+    featomic_dep = declare_dependency(
+        dependencies: [
+            cppc.find_library('featomic',
+                dirs: [py.get_install_dir() / 'featomic' / 'lib']),
+            cppc.find_library('featomic_torch',
+                dirs: [py.get_install_dir() / 'featomic' / 'torch'
+                       / f'torch-@torch_ver@' / 'lib']),
+        ],
+        include_directories: include_directories(
+            py.get_install_dir() / 'featomic' / 'include',
+            py.get_install_dir() / 'featomic' / 'torch'
+                / f'torch-@torch_ver@' / 'include',
+        ),
+    )
+    _deps += [featomic_dep]
+    _args += ['-DWITH_FEATOMIC']
+endif
+
 _linkto += potentials
 
 # --------------------- Library
@@ -641,6 +665,9 @@ if get_option('with_tests')
     ]
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
+    endif
+    if get_option('with_featomic')
+        test_array += [['test_featomic', 'FeatomicTest.cpp', 'hcn']]
     endif
     if get_option('with_xtb')
         test_array += [['test_xtb', 'XTBTest.cpp', 'sulfolene']]
