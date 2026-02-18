@@ -19,6 +19,8 @@
 #include <torch/torch.h>
 #include <vector>
 
+class SoapSpaceNEBObjectiveFunction; // forward declaration
+
 /// NEB operating entirely in SOAP descriptor space.
 ///
 /// All path-geometric operations (distances, tangents, spring forces, force
@@ -26,8 +28,9 @@
 /// Cartesian coordinates are maintained at each image only for energy/force
 /// evaluation via the metatomic potential.
 ///
-/// At convergence with climbing image, the Cartesian forces are verified to be
-/// zero (modulo rigid-body/permutation null space of the Jacobian).
+/// Two modes of operation controlled by soap_space_optimizer:
+///  - false (default): Cartesian optimizer, SOAP-projected NEB forces
+///  - true: Optimizer works in SOAP descriptor space via pseudoinverse
 class SoapNudgedElasticBand : public NudgedElasticBand {
 public:
   SoapNudgedElasticBand(std::shared_ptr<Matter> initialPassed,
@@ -44,7 +47,13 @@ public:
   /// Override: NEB force computation in SOAP space.
   void updateForces(void) override;
 
+protected:
+  /// Override: create SOAP-space or Cartesian objective function.
+  std::shared_ptr<ObjectiveFunction> createObjectiveFunction() override;
+
 private:
+  friend class SoapSpaceNEBObjectiveFunction;
+
   SoapDescriptorEngine soap_engine_;
 
   /// Per-image SOAP descriptors, S_i (D-vector each)
@@ -53,8 +62,18 @@ private:
   /// Per-image Jacobians, J_i ([D, 3N] each)
   std::vector<torch::Tensor> soap_jacobians_;
 
+  /// Per-image SOAP-space NEB forces, F_NEB_S_i (D-vector each).
+  /// Only populated when soap_space_optimizer is true.
+  std::vector<torch::Tensor> soap_neb_forces_;
+
+  /// Cached descriptor dimension (set on first updateForces call).
+  int descriptor_dim_{0};
+
   /// Recompute all SOAP descriptors and Jacobians from current positions.
   void recomputeSoapData();
+
+  /// Recompute SOAP descriptors only (no Jacobians) for specified images.
+  void recomputeDescriptorsOnly();
 
   /// Build torch tensors from a Matter object for featomic computation.
   void matterToTensors(const Matter &m, torch::Tensor &positions,
@@ -64,19 +83,28 @@ private:
   std::shared_ptr<spdlog::logger> soap_log_;
 };
 
-/// Objective function wrapper for SOAP-NEB.
+/// Objective function that operates entirely in SOAP descriptor space.
 ///
-/// The optimizer still operates on Cartesian positions via
-/// getPositions/setPositions, but getGradient() returns the SOAP-projected
-/// NEB forces. The difference() method uses Cartesian PBC differences.
-class SoapNEBObjectiveFunction : public NEBObjectiveFunction {
+/// The optimizer sees concatenated SOAP descriptors as "positions" and
+/// SOAP-space NEB forces as "gradients". Cartesian updates happen via
+/// pseudoinverse mapping: ΔR = J^+ · ΔS.
+class SoapSpaceNEBObjectiveFunction : public ObjectiveFunction {
 public:
-  SoapNEBObjectiveFunction(SoapNudgedElasticBand *nebPassed,
-                           const Parameters &parametersPassed)
-      : NEBObjectiveFunction(nebPassed, parametersPassed),
+  SoapSpaceNEBObjectiveFunction(SoapNudgedElasticBand *nebPassed,
+                                const Parameters &parametersPassed)
+      : ObjectiveFunction(nullptr, parametersPassed),
         soap_neb_{nebPassed} {}
 
-  ~SoapNEBObjectiveFunction() = default;
+  ~SoapSpaceNEBObjectiveFunction() = default;
+
+  VectorXd getGradient(bool fdstep = false) override;
+  double getEnergy() override;
+  void setPositions(VectorXd x) override;
+  VectorXd getPositions() override;
+  int degreesOfFreedom() override;
+  bool isConverged() override;
+  double getConvergence() override;
+  VectorXd difference(VectorXd a, VectorXd b) override;
 
 private:
   SoapNudgedElasticBand *soap_neb_;

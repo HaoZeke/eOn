@@ -69,6 +69,11 @@ public:
 protected:
   Parameters params;
 
+  /// Factory method for creating the objective function used by compute().
+  /// Override in subclasses to provide alternative objective functions
+  /// (e.g., SOAP-space optimizer).
+  virtual std::shared_ptr<ObjectiveFunction> createObjectiveFunction();
+
 private:
   int runMMFRefinement(double &alignment);
   double current_mmf_threshold{-1.0};
@@ -101,6 +106,6 @@ public:
   VectorXd difference(VectorXd a, VectorXd b);
   NudgedElasticBand::NEBStatus status;
 
-private:
+protected:
   NudgedElasticBand *neb;
 };

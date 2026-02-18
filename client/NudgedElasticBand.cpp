@@ -18,6 +18,7 @@
 #include "NEBInitialPaths.hpp"
 #include "Optimizer.h"
 #include "eonExceptions.hpp"
+#include "fpe_handler.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <spdlog/spdlog.h>
@@ -291,7 +292,7 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute(void) {
 
   updateForces();
 
-  auto objf = std::make_shared<NEBObjectiveFunction>(this, params);
+  auto objf = createObjectiveFunction();
 
   bool switched{false};
   // TODO(rg): clear up the refine stanza with it's own opt method, use pre_post
@@ -531,20 +532,30 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute(void) {
       bool originalCIflag = params.neb_options.climbing_image.enabled;
       params.neb_options.climbing_image.enabled = ci_active;
 
-      if (refine_optim) {
-        if (optim && convForce > params.optimizer_options.refine.threshold) {
-          optim->step(params.optimizer_options.max_move);
-        } else {
-          if (!switched) {
-            switched = true;
-            SPDLOG_DEBUG("Switched to {}",
-                         magic_enum::enum_name<OptType>(
-                             params.optimizer_options.refine.method));
+      // FPE handler around optimizer step: the objective function may
+      // internally suppress harmless FPE (featomic/torch), but the optimizer
+      // arithmetic runs unprotected and can propagate NaN/Inf triggers.
+      {
+        eonc::FPEHandler fpeh;
+        fpeh.eat_fpe();
+
+        if (refine_optim) {
+          if (optim && convForce > params.optimizer_options.refine.threshold) {
+            optim->step(params.optimizer_options.max_move);
+          } else {
+            if (!switched) {
+              switched = true;
+              SPDLOG_DEBUG("Switched to {}",
+                           magic_enum::enum_name<OptType>(
+                               params.optimizer_options.refine.method));
+            }
+            refine_optim->step(params.optimizer_options.max_move);
           }
-          refine_optim->step(params.optimizer_options.max_move);
+        } else {
+          optim->step(params.optimizer_options.max_move);
         }
-      } else {
-        optim->step(params.optimizer_options.max_move);
+
+        fpeh.restore_fpe();
       }
 
       params.neb_options.climbing_image.enabled = originalCIflag;
@@ -554,14 +565,19 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute(void) {
 
     double dE = path[maxEnergyImage]->getPotentialEnergy() -
                 path[0]->getPotentialEnergy();
+    // Use objf->difference() for step-size metric: it dispatches to
+    // PBC-aware differencing for Cartesian NEB and plain subtraction
+    // for SOAP-space NEB (where pbcV on descriptors is meaningless).
     double stepSize = helper_functions::maxAtomMotionV(
-        path[0]->pbcV(objf->getPositions() - pos));
+        objf->difference(objf->getPositions(), pos));
     SPDLOG_LOGGER_DEBUG(log, "{:>10} {:>12.4e} {:>14.4e} {:>11} {:>12.4}",
                         iteration, stepSize, convergenceForce(), maxEnergyImage,
                         dE);
 
     if (pot->getType() == PotType::CatLearn) {
-      if (objf->isUncertain()) {
+      auto neb_objf =
+          std::dynamic_pointer_cast<NEBObjectiveFunction>(objf);
+      if (neb_objf && neb_objf->isUncertain()) {
         SPDLOG_LOGGER_DEBUG(log, "NEB failed due to high uncertainty");
         status = NEBStatus::MAX_UNCERTAINTY;
         break;
@@ -579,6 +595,11 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute(void) {
     }
   }
   return status;
+}
+
+std::shared_ptr<ObjectiveFunction>
+NudgedElasticBand::createObjectiveFunction() {
+  return std::make_shared<NEBObjectiveFunction>(this, params);
 }
 
 // Modified signature to return alignment
