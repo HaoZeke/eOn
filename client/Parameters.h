@@ -467,12 +467,13 @@ public:
 
   // [SOAP NEB] //
   struct soap_neb_options_t {
-    bool enabled;           // Toggle SOAP-space NEB
-    double cutoff_radius;   // Radial cutoff for SOAP descriptor
-    double smoothing_width; // Cutoff smoothing width
-    double density_width;   // Gaussian smearing width for atomic density
-    int max_angular;        // Maximum angular momentum (l_max)
-    int max_radial;         // Maximum radial basis functions (n_max)
+    bool enabled;              // Toggle SOAP-space NEB
+    bool soap_space_optimizer; // Optimizer works in SOAP descriptor space
+    double cutoff_radius;      // Radial cutoff for SOAP descriptor
+    double smoothing_width;    // Cutoff smoothing width
+    double density_width;      // Gaussian smearing width for atomic density
+    int max_angular;           // Maximum angular momentum (l_max)
+    int max_radial;            // Maximum radial basis functions (n_max)
   } soap_neb_options;
 
   // [Molecular Dynamics] //

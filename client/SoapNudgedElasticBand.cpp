@@ -32,10 +32,12 @@ SoapNudgedElasticBand::SoapNudgedElasticBand(
                    parametersPassed.soap_neb_options.max_radial) {
   soap_log_ = spdlog::get("combi");
   SPDLOG_LOGGER_INFO(soap_log_, "[SoapNEB] Initialized SOAP-space NEB with "
-                                 "cutoff={}, l_max={}, n_max={}",
+                                 "cutoff={}, l_max={}, n_max={}, "
+                                 "soap_space_optimizer={}",
                      parametersPassed.soap_neb_options.cutoff_radius,
                      parametersPassed.soap_neb_options.max_angular,
-                     parametersPassed.soap_neb_options.max_radial);
+                     parametersPassed.soap_neb_options.max_radial,
+                     parametersPassed.soap_neb_options.soap_space_optimizer);
 }
 
 SoapNudgedElasticBand::SoapNudgedElasticBand(
@@ -48,6 +50,19 @@ SoapNudgedElasticBand::SoapNudgedElasticBand(
                    parametersPassed.soap_neb_options.max_angular,
                    parametersPassed.soap_neb_options.max_radial) {
   soap_log_ = spdlog::get("combi");
+}
+
+// --- Factory method ---
+
+std::shared_ptr<ObjectiveFunction>
+SoapNudgedElasticBand::createObjectiveFunction() {
+  if (params.soap_neb_options.soap_space_optimizer) {
+    SPDLOG_LOGGER_INFO(soap_log_,
+                       "[SoapNEB] Using SOAP-space objective function");
+    return std::make_shared<SoapSpaceNEBObjectiveFunction>(this, params);
+  }
+  // Default: Cartesian optimizer with SOAP-projected forces
+  return NudgedElasticBand::createObjectiveFunction();
 }
 
 // --- Helper: Matter -> torch tensors ---
@@ -104,6 +119,23 @@ void SoapNudgedElasticBand::recomputeSoapData() {
       soap_descriptors_[i] = soap_engine_.compute(positions, types, cell, pbc);
     }
   }
+
+  // Cache descriptor dimension
+  if (descriptor_dim_ == 0 && soap_descriptors_[0].defined()) {
+    descriptor_dim_ = static_cast<int>(soap_descriptors_[0].size(0));
+  }
+}
+
+// --- Recompute descriptors only (no Jacobians) for setPositions consistency ---
+
+void SoapNudgedElasticBand::recomputeDescriptorsOnly() {
+  soap_descriptors_.resize(numImages + 2);
+
+  for (long i = 0; i <= numImages + 1; i++) {
+    torch::Tensor positions, types, cell, pbc;
+    matterToTensors(*path[i], positions, types, cell, pbc);
+    soap_descriptors_[i] = soap_engine_.compute(positions, types, cell, pbc);
+  }
 }
 
 // --- SOAP-space NEB force update ---
@@ -138,6 +170,11 @@ void SoapNudgedElasticBand::updateForces() {
 
   // Spring constant
   double k = params.neb_options.spring.constant;
+
+  // Resize SOAP NEB forces storage if in SOAP-space optimizer mode
+  if (params.soap_neb_options.soap_space_optimizer) {
+    soap_neb_forces_.resize(numImages + 2);
+  }
 
   // 4. Projection loop: compute NEB forces in SOAP space
   for (long i = 1; i <= numImages; i++) {
@@ -220,6 +257,11 @@ void SoapNudgedElasticBand::updateForces() {
       F_NEB_S = F_perp_S + F_spring_S;
     }
 
+    // Store SOAP-space NEB forces for the SOAP-space optimizer
+    if (params.soap_neb_options.soap_space_optimizer) {
+      soap_neb_forces_[i] = F_NEB_S.clone();
+    }
+
     // Map back to Cartesian via Jacobian transpose: F_cart_NEB = J^T @ F_NEB_S
     auto F_NEB_cart = torch::mv(J_i.t(), F_NEB_S); // [3N]
 
@@ -260,6 +302,143 @@ void SoapNudgedElasticBand::updateForces() {
   movedAfterForceCall = false;
 
   fpeh.restore_fpe();
+}
+
+// ==========================================================================
+// SoapSpaceNEBObjectiveFunction implementation
+// ==========================================================================
+
+VectorXd SoapSpaceNEBObjectiveFunction::getGradient(bool /*fdstep*/) {
+  if (soap_neb_->movedAfterForceCall) {
+    soap_neb_->updateForces();
+  }
+
+  int D = soap_neb_->descriptor_dim_;
+  VectorXd grad(D * soap_neb_->numImages);
+
+  for (long i = 1; i <= soap_neb_->numImages; i++) {
+    auto &F_S = soap_neb_->soap_neb_forces_[i];
+    auto F_ptr = F_S.contiguous().data_ptr<double>();
+    // Gradient = -force (optimizer minimizes)
+    for (int d = 0; d < D; d++) {
+      grad[(i - 1) * D + d] = -F_ptr[d];
+    }
+  }
+
+  return grad;
+}
+
+double SoapSpaceNEBObjectiveFunction::getEnergy() {
+  double energy = 0;
+  for (long i = 1; i <= soap_neb_->numImages; i++) {
+    energy += soap_neb_->path[i]->getPotentialEnergy();
+  }
+  return energy;
+}
+
+void SoapSpaceNEBObjectiveFunction::setPositions(VectorXd x) {
+  // featomic / torch trigger harmless FE_INVALID
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
+
+  soap_neb_->movedAfterForceCall = true;
+
+  int D = soap_neb_->descriptor_dim_;
+  int nCart = 3 * soap_neb_->atoms;
+
+  for (long i = 1; i <= soap_neb_->numImages; i++) {
+    // Extract target SOAP descriptor for this image
+    auto S_new_eigen = x.segment((i - 1) * D, D);
+    auto S_new = torch::from_blob(const_cast<double *>(S_new_eigen.data()),
+                                   {D}, torch::kFloat64)
+                     .clone();
+
+    // Current descriptor and Jacobian
+    auto &S_cur = soap_neb_->soap_descriptors_[i];
+    auto &J_i = soap_neb_->soap_jacobians_[i]; // [D, 3N]
+
+    // Delta in SOAP space
+    auto dS = S_new - S_cur; // [D]
+
+    // Compute ΔR = J^+ · ΔS via regularized normal equations.
+    // J is [D, 3N] with D >> 3N, so J^T J is small [3N, 3N].
+    // Tikhonov regularization prevents amplification of near-null-space
+    // directions (translations, rotations, permutational equivalences).
+    // ΔR = (J^T J + λI)^{-1} J^T ΔS
+    auto JtJ = torch::mm(J_i.t(), J_i);             // [3N, 3N]
+    // λ controls regularization strength: larger λ → more conservative
+    // Cartesian steps, effectively a trust region in Cartesian space.
+    auto reg = 1e-2 * torch::eye(nCart, torch::kFloat64);
+    auto Jt_dS = torch::mv(J_i.t(), dS);            // [3N]
+    auto dR = torch::mv(torch::inverse(JtJ + reg), Jt_dS); // [3N]
+
+    // Cap the Cartesian displacement to max_move per atom.
+    // The LBFGS step capping operates on SOAP components which don't
+    // directly constrain Cartesian motion; this safeguard prevents
+    // atoms from moving into unphysical configurations.
+    double maxMove = params.optimizer_options.max_move;
+    auto dR_cont = dR.contiguous();
+    auto dR_ptr = dR_cont.data_ptr<double>();
+    double maxAtomDisp = 0.0;
+    for (int a = 0; a < soap_neb_->atoms; a++) {
+      double disp = std::sqrt(dR_ptr[3 * a + 0] * dR_ptr[3 * a + 0] +
+                              dR_ptr[3 * a + 1] * dR_ptr[3 * a + 1] +
+                              dR_ptr[3 * a + 2] * dR_ptr[3 * a + 2]);
+      if (disp > maxAtomDisp)
+        maxAtomDisp = disp;
+    }
+    double scale = 1.0;
+    if (maxAtomDisp > maxMove) {
+      scale = maxMove / maxAtomDisp;
+    }
+
+    // Update Cartesian positions
+    const AtomMatrix &curPos = soap_neb_->path[i]->getPositions();
+    AtomMatrix newPos(soap_neb_->atoms, 3);
+    for (int a = 0; a < soap_neb_->atoms; a++) {
+      newPos(a, 0) = curPos(a, 0) + scale * dR_ptr[3 * a + 0];
+      newPos(a, 1) = curPos(a, 1) + scale * dR_ptr[3 * a + 1];
+      newPos(a, 2) = curPos(a, 2) + scale * dR_ptr[3 * a + 2];
+    }
+    soap_neb_->path[i]->setPositions(newPos);
+  }
+
+  // Recompute SOAP descriptors (without Jacobians) for getPositions consistency
+  soap_neb_->recomputeDescriptorsOnly();
+
+  fpeh.restore_fpe();
+}
+
+VectorXd SoapSpaceNEBObjectiveFunction::getPositions() {
+  int D = soap_neb_->descriptor_dim_;
+  VectorXd pos(D * soap_neb_->numImages);
+
+  for (long i = 1; i <= soap_neb_->numImages; i++) {
+    auto &S_i = soap_neb_->soap_descriptors_[i];
+    auto S_ptr = S_i.contiguous().data_ptr<double>();
+    for (int d = 0; d < D; d++) {
+      pos[(i - 1) * D + d] = S_ptr[d];
+    }
+  }
+
+  return pos;
+}
+
+int SoapSpaceNEBObjectiveFunction::degreesOfFreedom() {
+  return soap_neb_->descriptor_dim_ * soap_neb_->numImages;
+}
+
+bool SoapSpaceNEBObjectiveFunction::isConverged() {
+  return getConvergence() < params.neb_options.force_tolerance;
+}
+
+double SoapSpaceNEBObjectiveFunction::getConvergence() {
+  return soap_neb_->convergenceForce();
+}
+
+VectorXd SoapSpaceNEBObjectiveFunction::difference(VectorXd a, VectorXd b) {
+  // No PBC in SOAP descriptor space
+  return a - b;
 }
 
 #endif // WITH_FEATOMIC

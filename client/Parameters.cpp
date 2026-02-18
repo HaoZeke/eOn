@@ -357,6 +357,7 @@ Parameters::Parameters() {
 
   // [SOAP NEB] //
   soap_neb_options.enabled = false;
+  soap_neb_options.soap_space_optimizer = false;
   soap_neb_options.cutoff_radius = 6.0;
   soap_neb_options.smoothing_width = 0.5;
   soap_neb_options.density_width = 0.3;
@@ -1181,6 +1182,9 @@ int Parameters::load(FILE *file) {
     const std::string soap_neb_section = "SOAP NEB";
     soap_neb_options.enabled =
         ini.GetValueB(soap_neb_section, "enabled", soap_neb_options.enabled);
+    soap_neb_options.soap_space_optimizer =
+        ini.GetValueB(soap_neb_section, "soap_space_optimizer",
+                       soap_neb_options.soap_space_optimizer);
     soap_neb_options.cutoff_radius = ini.GetValueF(
         soap_neb_section, "cutoff_radius", soap_neb_options.cutoff_radius);
     soap_neb_options.smoothing_width = ini.GetValueF(
