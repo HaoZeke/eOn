@@ -12,6 +12,7 @@
 #ifdef WITH_FEATOMIC
 
 #include "SoapNudgedElasticBand.h"
+#include "fpe_handler.h"
 
 #include <spdlog/spdlog.h>
 
@@ -93,12 +94,14 @@ void SoapNudgedElasticBand::recomputeSoapData() {
     torch::Tensor positions, types, cell, pbc;
     matterToTensors(*path[i], positions, types, cell, pbc);
 
-    soap_descriptors_[i] = soap_engine_.compute(positions, types, cell, pbc);
-
-    // Only compute Jacobians for intermediate images (needed for projection)
     if (i >= 1 && i <= numImages) {
+      // Intermediate images: computeJacobian also produces the descriptor
       soap_jacobians_[i] =
           soap_engine_.computeJacobian(positions, types, cell, pbc);
+      soap_descriptors_[i] = soap_engine_.lastDescriptor();
+    } else {
+      // Endpoints: only need descriptor
+      soap_descriptors_[i] = soap_engine_.compute(positions, types, cell, pbc);
     }
   }
 }
@@ -106,6 +109,10 @@ void SoapNudgedElasticBand::recomputeSoapData() {
 // --- SOAP-space NEB force update ---
 
 void SoapNudgedElasticBand::updateForces() {
+  // featomic / torch / metatomic trigger harmless FE_INVALID
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
+
   // 1. Update Cartesian forces for all intermediate images
   for (long i = 1; i <= numImages; i++) {
     path[i]->getForces();
@@ -251,6 +258,8 @@ void SoapNudgedElasticBand::updateForces() {
 
   // Flag that forces are fresh
   movedAfterForceCall = false;
+
+  fpeh.restore_fpe();
 }
 
 #endif // WITH_FEATOMIC

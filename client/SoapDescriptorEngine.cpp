@@ -12,6 +12,7 @@
 #ifdef WITH_FEATOMIC
 
 #include "SoapDescriptorEngine.h"
+#include "fpe_handler.h"
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
@@ -49,8 +50,12 @@ SoapDescriptorEngine::SoapDescriptorEngine(double cutoff,
 }})",
       cutoff_, smoothing_width_, density_width_, max_angular_, max_radial_);
 
+  // featomic triggers harmless FE_INVALID during radial basis precomputation
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
   calculator_ = torch::make_intrusive<featomic_torch::CalculatorHolder>(
       "soap_power_spectrum", params_json);
+  fpeh.restore_fpe();
 
   auto log = spdlog::get("combi");
   if (log) {
@@ -66,34 +71,23 @@ torch::Tensor SoapDescriptorEngine::compute(torch::Tensor positions,
                                              torch::Tensor types,
                                              torch::Tensor cell,
                                              torch::Tensor pbc) {
-  // Create a fresh leaf tensor for autograd.  We always detach+clone so that
-  // register_autograd sees a leaf with requires_grad=true, and we can later
-  // read .grad() from this exact tensor in computeJacobian().
-  auto pos =
-      positions.to(torch::kFloat64).to(torch::kCPU).detach().clone();
-  pos.requires_grad_(true);
-  last_positions_leaf_ = pos;
+  // featomic / torch operations produce harmless FE_INVALID
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
 
+  auto pos = positions.to(torch::kFloat64).to(torch::kCPU).detach().clone();
   auto typ = types.to(torch::kInt32).to(torch::kCPU);
   auto cel = cell.to(torch::kFloat64).to(torch::kCPU);
   auto pb = pbc.to(torch::kBool).to(torch::kCPU);
 
-  // Create metatomic System (same pattern as MetatomicPotential)
   auto system =
       torch::make_intrusive<metatomic_torch::SystemHolder>(typ, pos, cel, pb);
 
-  // Set up calculator options: request position gradients
+  // Descriptor-only: no gradients needed
   auto options =
       torch::make_intrusive<featomic_torch::CalculatorOptionsHolder>();
-  options->gradients = {"positions"};
 
-  // Compute SOAP descriptors
-  auto tensor_map =
-      calculator_->compute({system}, options);
-
-  // Register autograd to connect positions->descriptor graph
-  tensor_map = featomic_torch::register_autograd(
-      {system}, tensor_map, {"positions"});
+  auto tensor_map = calculator_->compute({system}, options);
 
   // Extract and average over atoms
   // The TensorMap has blocks keyed by (species_1, species_2) pairs.
@@ -101,32 +95,27 @@ torch::Tensor SoapDescriptorEngine::compute(torch::Tensor positions,
   auto keys = tensor_map->keys();
   int64_t n_blocks = keys->count();
 
-  // Collect per-atom descriptors from all blocks
   std::vector<torch::Tensor> block_means;
-  int64_t total_props = 0;
 
   for (int64_t b = 0; b < n_blocks; b++) {
     auto block =
         metatensor_torch::TensorMapHolder::block_by_id(tensor_map, b);
     auto values = block->values(); // [n_atoms_in_block, n_components, n_props]
 
-    // Reshape to [n_atoms, -1] by flattening component and property dimensions
     auto n_samples = values.size(0);
     auto flat = values.reshape({n_samples, -1}); // [n_atoms, D_block]
 
-    // Sum over atoms in this block (some blocks may have different atoms)
     auto block_sum = flat.sum(0); // [D_block]
     block_means.push_back(block_sum);
-    total_props += flat.size(1);
   }
 
-  // Concatenate all block contributions and divide by number of atoms
   auto descriptor = torch::cat(block_means, 0); // [D_total]
   int64_t n_atoms = positions.size(0);
   descriptor = descriptor / static_cast<double>(n_atoms);
 
   descriptor_dim_ = static_cast<int>(descriptor.size(0));
 
+  fpeh.restore_fpe();
   return descriptor;
 }
 
@@ -134,35 +123,80 @@ torch::Tensor SoapDescriptorEngine::computeJacobian(torch::Tensor positions,
                                                       torch::Tensor types,
                                                       torch::Tensor cell,
                                                       torch::Tensor pbc) {
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
+
   int64_t n_atoms = positions.size(0);
   int64_t n_cart = 3 * n_atoms;
 
-  // compute() creates a fresh leaf in last_positions_leaf_ and builds
-  // the autograd graph through register_autograd.
-  auto descriptor = compute(positions, types, cell, pbc);
-  int64_t D = descriptor.size(0);
+  auto pos = positions.to(torch::kFloat64).to(torch::kCPU).detach().clone();
+  auto typ = types.to(torch::kInt32).to(torch::kCPU);
+  auto cel = cell.to(torch::kFloat64).to(torch::kCPU);
+  auto pb = pbc.to(torch::kBool).to(torch::kCPU);
 
-  // Collect gradients from the leaf tensor that compute() actually used.
-  auto &pos = last_positions_leaf_;
+  auto system =
+      torch::make_intrusive<metatomic_torch::SystemHolder>(typ, pos, cel, pb);
 
-  // Build Jacobian row by row: J[d, :] = d(S_d) / d(R_flat)
-  auto jacobian = torch::zeros({D, n_cart}, torch::kFloat64);
+  auto options =
+      torch::make_intrusive<featomic_torch::CalculatorOptionsHolder>();
+  options->gradients = {"positions"};
 
-  for (int64_t d = 0; d < D; d++) {
-    // Zero gradients from previous iteration
-    if (pos.grad().defined()) {
-      pos.grad().zero_();
+  auto tensor_map = calculator_->compute({system}, options);
+
+  // Extract the Jacobian directly from featomic's analytic gradient blocks
+  // instead of doing D individual backward() calls through autograd.
+  auto keys = tensor_map->keys();
+  int64_t n_blocks = keys->count();
+
+  std::vector<torch::Tensor> block_descs;
+  std::vector<torch::Tensor> block_jacs;
+
+  for (int64_t b = 0; b < n_blocks; b++) {
+    auto block =
+        metatensor_torch::TensorMapHolder::block_by_id(tensor_map, b);
+    auto values = block->values();
+    auto n_samples = values.size(0);
+    auto flat = values.reshape({n_samples, -1});
+    int64_t D_block = flat.size(1);
+
+    block_descs.push_back(flat.sum(0)); // [D_block]
+
+    // Position gradient block: values [n_grad, 3, ...components..., n_props]
+    // For power spectrum (no extra components): [n_grad, 3, n_props]
+    // Samples columns: ["sample", "structure", "atom"] or ["sample", "atom"]
+    auto grad_block =
+        metatensor_torch::TensorBlockHolder::gradient(block, "positions");
+    auto grad_values = grad_block->values();
+    auto grad_samples = grad_block->samples();
+    int64_t n_grad = grad_values.size(0);
+
+    auto grad_flat = grad_values.reshape({n_grad, 3, -1}); // [n_grad, 3, D_block]
+
+    // Find the "atom" column in gradient samples (always last)
+    int atom_col = static_cast<int>(grad_samples->names().size()) - 1;
+    auto samples_tensor = grad_samples->values(); // [n_grad, n_cols] int32
+
+    // Accumulate: J_block[d, 3*atom + xyz] = sum over grad samples with that atom
+    auto J_block = torch::zeros({D_block, n_cart}, torch::kFloat64);
+
+    for (int64_t g = 0; g < n_grad; g++) {
+      int64_t atom_idx = samples_tensor[g][atom_col].item<int32_t>();
+      for (int xyz = 0; xyz < 3; xyz++) {
+        J_block.index({torch::indexing::Slice(), 3 * atom_idx + xyz}) +=
+            grad_flat.index({g, xyz, torch::indexing::Slice()});
+      }
     }
 
-    // Backprop through the d-th descriptor component
-    descriptor[d].backward({}, /*retain_graph=*/true);
-
-    if (pos.grad().defined()) {
-      // grad is [N, 3], flatten to [3N]
-      jacobian[d] = pos.grad().reshape({-1}).clone();
-    }
+    block_jacs.push_back(J_block);
   }
 
+  // Concatenate blocks and normalize by atom count
+  auto jacobian = torch::cat(block_jacs, 0) / static_cast<double>(n_atoms);
+  last_descriptor_ =
+      torch::cat(block_descs, 0) / static_cast<double>(n_atoms);
+  descriptor_dim_ = static_cast<int>(last_descriptor_.size(0));
+
+  fpeh.restore_fpe();
   return jacobian;
 }
 
