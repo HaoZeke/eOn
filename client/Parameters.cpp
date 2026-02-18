@@ -355,6 +355,14 @@ Parameters::Parameters() {
   neb_options.endpoints.minimize = true;
   neb_options.endpoints.use_path_file = false;
 
+  // [SOAP NEB] //
+  soap_neb_options.enabled = false;
+  soap_neb_options.cutoff_radius = 6.0;
+  soap_neb_options.smoothing_width = 0.5;
+  soap_neb_options.density_width = 0.3;
+  soap_neb_options.max_angular = 4;
+  soap_neb_options.max_radial = 6;
+
   // [Dynamics] //
   dynamics_options.time_step_input = 1.0;
   dynamics_options.time_input = 1000.0;
@@ -1168,6 +1176,21 @@ int Parameters::load(FILE *file) {
     neb_options.endpoints.use_path_file =
         ini.GetValueB(neb_section, "minimize_endpoints_for_ipath",
                       neb_options.endpoints.use_path_file);
+
+    // [SOAP NEB] //
+    const std::string soap_neb_section = "SOAP NEB";
+    soap_neb_options.enabled =
+        ini.GetValueB(soap_neb_section, "enabled", soap_neb_options.enabled);
+    soap_neb_options.cutoff_radius = ini.GetValueF(
+        soap_neb_section, "cutoff_radius", soap_neb_options.cutoff_radius);
+    soap_neb_options.smoothing_width = ini.GetValueF(
+        soap_neb_section, "smoothing_width", soap_neb_options.smoothing_width);
+    soap_neb_options.density_width = ini.GetValueF(
+        soap_neb_section, "density_width", soap_neb_options.density_width);
+    soap_neb_options.max_angular = ini.GetValueL(
+        soap_neb_section, "max_angular", soap_neb_options.max_angular);
+    soap_neb_options.max_radial = ini.GetValueL(soap_neb_section, "max_radial",
+                                                soap_neb_options.max_radial);
 
     // [Dynamics] //
 
