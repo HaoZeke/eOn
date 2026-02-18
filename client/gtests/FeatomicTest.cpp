@@ -221,14 +221,7 @@ TEST_CASE_METHOD(
     "[FeatomicTest]") {
   SetUp();
 
-  // First verify the autograd graph is connected
-  auto descriptor = engine_->compute(positions_, types_, cell_, pbc_);
-  INFO("descriptor.requires_grad() = " << descriptor.requires_grad());
-  INFO("descriptor.grad_fn() defined = "
-       << (descriptor.grad_fn() != nullptr));
-  REQUIRE(descriptor.requires_grad());
-
-  // Now compute the full Jacobian
+  // Compute the full Jacobian (also produces the descriptor via gradient blocks)
   auto jacobian =
       engine_->computeJacobian(positions_, types_, cell_, pbc_);
 

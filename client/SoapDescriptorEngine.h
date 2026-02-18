@@ -35,7 +35,6 @@ public:
                        double density_width, int max_angular, int max_radial);
 
   /// Compute the averaged SOAP descriptor for a configuration.
-  /// positions must have requires_grad=true if you intend to compute gradients.
   /// Returns: D-dimensional 1D tensor.
   torch::Tensor compute(torch::Tensor positions, // [N,3] f64
                          torch::Tensor types,     // [N] i32
@@ -43,7 +42,8 @@ public:
                          torch::Tensor pbc);      // [3] bool
 
   /// Compute the full Jacobian J = dS_avg/dR, shape [D, 3N].
-  /// Uses torch::autograd for each component of the averaged descriptor.
+  /// Extracts analytic gradients from featomic's gradient blocks.
+  /// Also stores the descriptor, accessible via lastDescriptor().
   torch::Tensor computeJacobian(torch::Tensor positions, // [N,3] f64
                                  torch::Tensor types,     // [N] i32
                                  torch::Tensor cell,      // [3,3] f64
@@ -52,6 +52,9 @@ public:
   /// Dimension of the averaged SOAP descriptor.
   /// Only valid after at least one compute() call.
   int descriptorDim() const { return descriptor_dim_; }
+
+  /// Access the descriptor computed during the last computeJacobian() call.
+  const torch::Tensor &lastDescriptor() const { return last_descriptor_; }
 
 private:
   torch::intrusive_ptr<featomic_torch::CalculatorHolder> calculator_;
@@ -62,9 +65,8 @@ private:
   int max_radial_;
   int descriptor_dim_{0};
 
-  /// The leaf positions tensor from the last compute() call.
-  /// Used by computeJacobian() to collect gradients from the correct tensor.
-  torch::Tensor last_positions_leaf_;
+  /// Descriptor from the last computeJacobian() call.
+  torch::Tensor last_descriptor_;
 };
 
 #endif // WITH_FEATOMIC
