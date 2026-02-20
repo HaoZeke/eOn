@@ -24,16 +24,18 @@
 SoapNudgedElasticBand::SoapNudgedElasticBand(
     std::shared_ptr<Matter> initialPassed, std::shared_ptr<Matter> finalPassed,
     const Parameters &parametersPassed, std::shared_ptr<Potential> potPassed)
-    : NudgedElasticBand(initialPassed, finalPassed, parametersPassed, potPassed),
+    : NudgedElasticBand(initialPassed, finalPassed, parametersPassed,
+                        potPassed),
       soap_engine_(parametersPassed.soap_neb_options.cutoff_radius,
                    parametersPassed.soap_neb_options.smoothing_width,
                    parametersPassed.soap_neb_options.density_width,
                    parametersPassed.soap_neb_options.max_angular,
                    parametersPassed.soap_neb_options.max_radial) {
   soap_log_ = spdlog::get("combi");
-  SPDLOG_LOGGER_INFO(soap_log_, "[SoapNEB] Initialized SOAP-space NEB with "
-                                 "cutoff={}, l_max={}, n_max={}, "
-                                 "soap_space_optimizer={}",
+  SPDLOG_LOGGER_INFO(soap_log_,
+                     "[SoapNEB] Initialized SOAP-space NEB with "
+                     "cutoff={}, l_max={}, n_max={}, "
+                     "soap_space_optimizer={}",
                      parametersPassed.soap_neb_options.cutoff_radius,
                      parametersPassed.soap_neb_options.max_angular,
                      parametersPassed.soap_neb_options.max_radial,
@@ -68,10 +70,10 @@ SoapNudgedElasticBand::createObjectiveFunction() {
 // --- Helper: Matter -> torch tensors ---
 
 void SoapNudgedElasticBand::matterToTensors(const Matter &m,
-                                             torch::Tensor &positions,
-                                             torch::Tensor &types,
-                                             torch::Tensor &cell,
-                                             torch::Tensor &pbc) const {
+                                            torch::Tensor &positions,
+                                            torch::Tensor &types,
+                                            torch::Tensor &cell,
+                                            torch::Tensor &pbc) const {
   int nAtoms = m.numberOfAtoms();
 
   // Positions: [N, 3] f64
@@ -91,7 +93,7 @@ void SoapNudgedElasticBand::matterToTensors(const Matter &m,
   // Cell: [3, 3] f64
   Matrix3d cellMat = m.getCell();
   cell = torch::from_blob(const_cast<double *>(cellMat.data()), {3, 3},
-                           torch::kFloat64)
+                          torch::kFloat64)
              .clone();
 
   // PBC: check if cell norms are non-negligible
@@ -126,7 +128,8 @@ void SoapNudgedElasticBand::recomputeSoapData() {
   }
 }
 
-// --- Recompute descriptors only (no Jacobians) for setPositions consistency ---
+// --- Recompute descriptors only (no Jacobians) for setPositions consistency
+// ---
 
 void SoapNudgedElasticBand::recomputeDescriptorsOnly() {
   soap_descriptors_.resize(numImages + 2);
@@ -207,8 +210,10 @@ void SoapNudgedElasticBand::updateForces() {
       // At an extremum: energy-weighted bisection
       double energyDiffPrev = energyPrev - energy;
       double energyDiffNext = energyNext - energy;
-      double minDE = std::min(std::abs(energyDiffPrev), std::abs(energyDiffNext));
-      double maxDE = std::max(std::abs(energyDiffPrev), std::abs(energyDiffNext));
+      double minDE =
+          std::min(std::abs(energyDiffPrev), std::abs(energyDiffNext));
+      double maxDE =
+          std::max(std::abs(energyDiffPrev), std::abs(energyDiffNext));
 
       if (energyDiffPrev > energyDiffNext) {
         tau_S = diff_next * minDE + diff_prev * maxDE;
@@ -231,10 +236,19 @@ void SoapNudgedElasticBand::updateForces() {
 
     // Project Cartesian force into SOAP space: F_S = J @ f_cart
     AtomMatrix forceCart = path[i]->getForces(); // [N, 3]
-    auto f_cart_flat =
-        torch::from_blob(const_cast<double *>(forceCart.data()),
-                         {3 * atoms}, torch::kFloat64)
-            .clone();
+    auto f_cart_flat = torch::from_blob(const_cast<double *>(forceCart.data()),
+                                        {3 * atoms}, torch::kFloat64)
+                           .clone();
+
+    // Bounding the Cartesian force norm prevents infinite gradients from
+    // steric clashes (linear paths) from poisoning the SOAP optimizer
+    // XXX(rg): Should be modifiable
+    double max_f_norm = 10.0;
+    double f_norm = f_cart_flat.norm().item<double>();
+    if (f_norm > max_f_norm) {
+      f_cart_flat.mul_(max_f_norm / f_norm);
+    }
+
     auto F_S = torch::mv(J_i, f_cart_flat); // D-vector
 
     // Force components in SOAP space
@@ -349,8 +363,8 @@ void SoapSpaceNEBObjectiveFunction::setPositions(VectorXd x) {
   for (long i = 1; i <= soap_neb_->numImages; i++) {
     // Extract target SOAP descriptor for this image
     auto S_new_eigen = x.segment((i - 1) * D, D);
-    auto S_new = torch::from_blob(const_cast<double *>(S_new_eigen.data()),
-                                   {D}, torch::kFloat64)
+    auto S_new = torch::from_blob(const_cast<double *>(S_new_eigen.data()), {D},
+                                  torch::kFloat64)
                      .clone();
 
     // Current descriptor and Jacobian
@@ -365,11 +379,11 @@ void SoapSpaceNEBObjectiveFunction::setPositions(VectorXd x) {
     // Tikhonov regularization prevents amplification of near-null-space
     // directions (translations, rotations, permutational equivalences).
     // ΔR = (J^T J + λI)^{-1} J^T ΔS
-    auto JtJ = torch::mm(J_i.t(), J_i);             // [3N, 3N]
+    auto JtJ = torch::mm(J_i.t(), J_i); // [3N, 3N]
     // λ controls regularization strength: larger λ → more conservative
     // Cartesian steps, effectively a trust region in Cartesian space.
     auto reg = 1e-2 * torch::eye(nCart, torch::kFloat64);
-    auto Jt_dS = torch::mv(J_i.t(), dS);            // [3N]
+    auto Jt_dS = torch::mv(J_i.t(), dS);                   // [3N]
     auto dR = torch::mv(torch::inverse(JtJ + reg), Jt_dS); // [3N]
 
     // Cap the Cartesian displacement to max_move per atom.
