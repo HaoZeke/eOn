@@ -16,7 +16,7 @@
     <link href="../_static/favicons/android-chrome-512x512.png" sizes="512x512" rel="icon" type="image/png">
     <link href="../_static/favicons/apple-touch-icon.png" sizes="180x180" rel="icon" type="image/png">
     <link href="../_static/favicons/site.webmanifest" rel="icon">
-    <meta property="article:modified_time" content="2026-01-27T04:40:10+00:00" />
+    <meta property="article:modified_time" content="2026-03-08T09:15:01+00:00" />
     <title>Installation &#8212; eOn</title>
   
   
@@ -50,7 +50,7 @@
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
-    <script src="../_static/documentation_options.js?v=459f4610"></script>
+    <script src="../_static/documentation_options.js?v=207c9c78"></script>
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
@@ -70,7 +70,7 @@
     <link rel="prev" title="eOn Team" href="../team.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Jan 27, 2026"/>
+    <meta name="docbuild:last-update" content="Mar 08, 2026"/>
   </head>
   
   
@@ -276,6 +276,18 @@
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../releases/index.html">Releases</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../releases/changelog.html">Changelog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../releases/v2.12.0/index.html">[v2.12.0] - 2026-03-08</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../releases/v2.12.0/release-notes.html">Release notes</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../releases/v2.11.2/index.html">[v2.11.2] - 2026-03-02</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../releases/v2.11.2/release-notes.html">Release notes</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../releases/v2.11.1/index.html">[v2.11.1] - 2026-03-01</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../releases/v2.11.1/release-notes.html">Release notes</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="../releases/v2.11.0/index.html">[v2.11.0] - 2026-02-24</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l3"><a class="reference internal" href="../releases/v2.11.0/release-notes.html">Release notes</a></li>
 </ul>
@@ -516,8 +528,16 @@ micromamba<span class="w"> </span>install<span class="w"> </span>-c<span class="
 </pre></div>
 </div>
 <p>At this point any of the many examples should be good to go.</p>
+<p>The conda package is a maximalist build with the following potentials and
+features enabled:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../user_guide/metatomic_pot.html"><span class="std std-doc">Metatomic</span></a> (machine-learned potentials via libtorch)</p></li>
+<li><p><a class="reference external" href="https://xtb-docs.readthedocs.io/">xTB</a> (semi-empirical tight-binding)</p></li>
+<li><p><a class="reference internal" href="../user_guide/ase_pot.html"><span class="std std-doc">ASE</span></a> (any ASE calculator as an eOn potential)</p></li>
+<li><p><a class="reference internal" href="../user_guide/serve_mode.html"><span class="std std-doc">Serve mode</span></a> (rgpot-compatible RPC server)</p></li>
+</ul>
 <p>The server is accessed through <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">eon.server</span></code>, and the <code class="docutils literal notranslate"><span class="pre">eonclient</span></code>
-binary is automatically made available in the activated environment..</p>
+binary is automatically made available in the activated environment.</p>
 <div class="versionchanged">
 <p><span class="versionmodified changed">Changed in version 2.0: </span>While reading older documentation, calls to <code class="docutils literal notranslate"><span class="pre">eon</span></code> must now be <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">eon.server</span></code>.</p>
 </div>
@@ -587,7 +607,6 @@ License</a>.</p>
 <div class="versionadded">
 <p><span class="versionmodified added">Added in version 2.0: </span></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">cxxopts</span></code> :: MIT License</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">magic_enum</span></code> :: MIT License</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">catch2</span></code> :: Boost Software License, Version 1.0</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ApprovalTests.cpp</span></code> :: Apache 2.0 License</p></li>
@@ -707,7 +726,7 @@ By the eOn developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Jan 27, 2026.
+  Last updated on Mar 08, 2026.
   <br/>
 </p>
   </div>
