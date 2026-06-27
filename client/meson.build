@@ -178,6 +178,7 @@ features_list = [
     ['WITH_ASE_NWCHEM', 'ASE-NWChem'],
     ['WITH_METATOMIC', 'Metatomic'],
     ['WITH_SERVE_MODE', 'Serve Mode'],
+    ['WITH_RGPOT', 'RGPot'],
     ['EMBED_PYTHON', 'Embedded Python'],
 ]
 
@@ -858,20 +859,29 @@ if get_option('with_ira')
     eonclib_sources += ['libs/IRA/IRAResource.cpp']
 endif
 
-if get_option('with_serve')
-    # rgpot-compatible RPC serve mode: wraps any eOn potential and serves it
-    # over Cap'n Proto RPC using the rgpot Potentials.capnp schema.
-    # Only links capnp-rpc and the generated schema (ptlrpc); does NOT link
-    # rgpot types to avoid the AtomMatrix name collision with eOn's Eigen.h.
-    serve_capnp_dep = dependency('capnp-rpc', required: true)
-    rgpot_serve_opts = {
+_rgpot_proj = []
+if get_option('with_rgpot') or get_option('with_serve')
+    rgpot_client_opts = {
         'with_rpc_client_only': true,
         'pure_lib': true,
         'with_tests': false,
         'with_examples': false,
     }
-    rgpot_proj = subproject('rgpot', default_options: rgpot_serve_opts)
-    ptlrpc_dep = rgpot_proj.get_variable('ptlrpc_dep')
+    _rgpot_proj = subproject('rgpot', default_options: rgpot_client_opts)
+endif
+
+if get_option('with_rgpot')
+    nwchempot_dep = _rgpot_proj.get_variable('nwchempot_dep')
+    cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
+    _deps += [nwchempot_dep, cpmdpot_dep]
+    _args += ['-DWITH_RGPOT']
+    subdir('potentials/RGPot')
+    potentials += [rgpot_eon]
+endif
+
+if get_option('with_serve')
+    serve_capnp_dep = dependency('capnp-rpc', required: true)
+    ptlrpc_dep = _rgpot_proj.get_variable('ptlrpc_dep')
     _args += ['-DWITH_SERVE_MODE']
     eonclib_sources += ['ServeMode.cpp', 'ServeRpcServer.cpp']
     _deps += [serve_capnp_dep, ptlrpc_dep]

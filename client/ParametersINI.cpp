@@ -191,6 +191,39 @@ int load_ini(INIReader &ini, Parameters &params) {
                        params.socket_nwchem_options.make_template_input);
   }
 
+  // [RGPot]
+  if (params.potential_options.potential == PotType::RGPot) {
+    params.rgpot_options.backend =
+        ini.Get("RGPot", "backend", params.rgpot_options.backend);
+    params.rgpot_options.basis =
+        ini.Get("RGPot", "basis", params.rgpot_options.basis);
+    params.rgpot_options.theory =
+        ini.Get("RGPot", "theory", params.rgpot_options.theory);
+    params.rgpot_options.scf_type =
+        ini.Get("RGPot", "scf_type", params.rgpot_options.scf_type);
+    params.rgpot_options.functional =
+        ini.Get("RGPot", "functional", params.rgpot_options.functional);
+    params.rgpot_options.cutoff_ry =
+        ini.GetReal("RGPot", "cutoff_ry", params.rgpot_options.cutoff_ry);
+    params.rgpot_options.charge =
+        ini.GetInteger("RGPot", "charge", params.rgpot_options.charge);
+    params.rgpot_options.multiplicity = ini.GetInteger(
+        "RGPot", "multiplicity", params.rgpot_options.multiplicity);
+    params.rgpot_options.engine_path =
+        ini.Get("RGPot", "engine_path", params.rgpot_options.engine_path);
+    params.rgpot_options.engine_library =
+        ini.Get("RGPot", "engine_library", params.rgpot_options.engine_library);
+    params.rgpot_options.engine_root =
+        ini.Get("RGPot", "engine_root", params.rgpot_options.engine_root);
+    params.rgpot_options.title =
+        ini.Get("RGPot", "title", params.rgpot_options.title);
+    params.rgpot_options.memory_mb =
+        ini.GetInteger("RGPot", "memory_mb", params.rgpot_options.memory_mb);
+    params.rgpot_options.scratch_dir =
+        ini.Get("RGPot", "scratch_dir", params.rgpot_options.scratch_dir);
+  }
+
+
   // [Debug] //
 
   params.debug_options.write_movies = ini.GetBoolean(

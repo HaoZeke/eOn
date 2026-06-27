@@ -39,6 +39,9 @@
 #ifndef IS_WINDOWS
 #include "potentials/SocketNWChem/SocketNWChemPot.h"
 #endif
+#ifdef WITH_RGPOT
+#include "potentials/RGPot/RGPot.h"
+#endif
 #include "potentials/ZBL/ZBLPot.h"
 
 // Fortran potentials: always compiled, loaded at runtime via dlopen
@@ -323,6 +326,12 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
 #ifndef IS_WINDOWS
   case PotType::SocketNWChem: {
     return (std::make_shared<SocketNWChemPot>(params));
+    break;
+  }
+#endif
+#ifdef WITH_RGPOT
+  case PotType::RGPot: {
+    return (std::make_shared<RGPot>(params));
     break;
   }
 #endif

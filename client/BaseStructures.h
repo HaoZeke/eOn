@@ -71,7 +71,8 @@ enum class PotType {
   ASE_NWCHEM,
   METATOMIC,
   ZBL,
-  SocketNWChem
+  SocketNWChem,
+  RGPot
 };
 
 enum class JobType {
