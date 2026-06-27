@@ -73,6 +73,7 @@ docs-mta = {features = ["docs", "develop", "metatomic"]}
 rel = {features = ["metatomic", "release"]}
 serve = {features = ["serve"]}
 dev-serve-mta = {features = ["serve", "metatomic", "develop"]}
+bench = {features = ["develop", "nwchem", "serve"]}
 # CI environments: minimal deps + specific potential for integration tests
 ci-lammps = {features = ["develop", "lammps"]}
 ci-xtb = {features = ["develop", "xtb"]}
