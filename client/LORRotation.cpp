@@ -155,20 +155,23 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
   };
   // Record Ritz C only when non-increasing (paper quadratic + translation).
-  // Strictly non-increasing (1e-4 float); unit test allows +0.5 only as FD slack
-  // on an already-monotone sequence — do not use +0.5 here or history can ramp up.
-  auto appendHistory = [&](double cn) {
+  // Strictly non-increasing (1e-4 float). Returns whether the sample was kept
+  // (callers must only trackBest on kept samples so ev == min(history)).
+  auto appendHistory = [&](double cn) -> bool {
     if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 1e-4) {
       curvatureHistory.push_back(cn);
+      return true;
     }
+    return false;
   };
 
   // --- Algorithm I start: H N, F_⊥ ---
   VectorXd HN = hessianAlong(N);
   applyMask(HN);
   double CN = N.dot(HN);
-  appendHistory(CN);
-  trackBest(CN, N, HN);
+  if (appendHistory(CN)) {
+    trackBest(CN, N, HN);
+  }
 
   VectorXd F = HN - CN * N;
   applyMask(F);
@@ -214,8 +217,9 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   VectorXd HP = HTheta;
 
   CN = N.dot(HN);
-  appendHistory(CN);
-  trackBest(CN, N, HN);
+  if (appendHistory(CN)) {
+    trackBest(CN, N, HN);
+  }
   F = HN - CN * N;
   applyMask(F);
   Fnorm = F.norm();
@@ -280,8 +284,9 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       N = Nnew;
       HN = HNnew;
       CN = cNew;
-      appendHistory(CN);
-      trackBest(CN, N, HN);
+      if (appendHistory(CN)) {
+    trackBest(CN, N, HN);
+  }
       F = HN - CN * N;
       applyMask(F);
       Fnorm = F.norm();
@@ -368,8 +373,9 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     HN = HNnew;
     HP = HPnew;
     CN = CNnew;
-    appendHistory(CN);
+    if (appendHistory(CN)) {
     trackBest(CN, N, HN);
+  }
     (void)Nprev;
     (void)HNprev;
     (void)CNprev;
