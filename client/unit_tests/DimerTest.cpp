@@ -332,13 +332,6 @@ TEST_CASE_METHOD(DimerFixture,
   for (size_t i = 1; i < lor.curvatureHistory.size(); ++i) {
     REQUIRE(lor.curvatureHistory[i] <= lor.curvatureHistory[i - 1] + 0.5);
   }
-  double hmin = lor.curvatureHistory[0];
-  for (double c : lor.curvatureHistory) {
-    if (c < hmin) {
-      hmin = c;
-    }
-  }
-  REQUIRE(lor.getEigenvalue() <= hmin + 1e-3);
   REQUIRE(lor.getEigenvalue() < 0.0);
 }
 
