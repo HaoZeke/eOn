@@ -19,6 +19,7 @@
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
+#include <limits>
 #include <cmath>
 
 using namespace eonc::helpers;
@@ -100,6 +101,8 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
 
   curvatureHistory.clear();
   convergedOnResidual = false;
+  double bestCN = std::numeric_limits<double>::infinity();
+  VectorXd bestN = N;
   statsRotations = 0;
   totalForceCalls = 0;
 
@@ -125,6 +128,10 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   applyMask(HN);
   double CN = N.dot(HN);
   curvatureHistory.push_back(CN);
+  if (CN < bestCN) {
+    bestCN = CN;
+    bestN = N;
+  }
 
   VectorXd F = HN - CN * N; // F_⊥ = (I - N Nᵀ) H N
   applyMask(F);
@@ -173,6 +180,10 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
 
   CN = N.dot(HN);
   curvatureHistory.push_back(CN);
+  if (CN < bestCN) {
+    bestCN = CN;
+    bestN = N;
+  }
   F = HN - CN * N;
   applyMask(F);
   Fnorm = F.norm();
@@ -195,37 +206,65 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     HTheta = hessianVector(VectorXd(), x0_r, Theta, freeMask, delta);
     applyMask(HTheta);
 
-    // Keep historical P as unit vector (paper: may be non-orthogonal to N, Θ)
-    VectorXd P3 = P;
-    const double pNrm = unitize(P3);
+    // Orthonormalize P against N, Θ for a well-conditioned 3×3 (paper allows
+    // non-ortho B; FD noise + GEP then blows up coefficients).
+    VectorXd P3 = P - N.dot(P) * N - Theta.dot(P) * Theta;
+    applyMask(P3);
     VectorXd HP3 = HP;
-    if (pNrm > 1e-14 && std::abs(pNrm - 1.0) > 1e-12) {
-      // P already unit from prior step; HP consistent with unit P
+    const double pNrm = P3.norm();
+    if (pNrm < 1e-8) {
+      // Degenerate P — fall back to 2×2 in span{N, Θ}
+      Eigen::Matrix2d A2b;
+      A2b(0, 0) = N.dot(HN);
+      A2b(0, 1) = N.dot(HTheta);
+      A2b(1, 0) = A2b(0, 1);
+      A2b(1, 1) = Theta.dot(HTheta);
+      Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> es2b(A2b);
+      Eigen::Vector2d c2 = es2b.eigenvectors().col(0);
+      a = c2(0);
+      b = c2(1);
+      VectorXd Nnew = a * N + b * Theta;
+      VectorXd HNnew = a * HN + b * HTheta;
+      const double nNew = unitize(Nnew);
+      if (nNew > 1e-14) {
+        HNnew /= nNew;
+      }
+      P = Theta;
+      HP = HTheta;
+      N = Nnew;
+      HN = HNnew;
+      CN = N.dot(HN);
+      curvatureHistory.push_back(CN);
+      if (CN < bestCN) {
+        bestCN = CN;
+        bestN = N;
+      }
+      F = HN - CN * N;
+      applyMask(F);
+      Fnorm = F.norm();
+      statsRotations = k;
+      continue;
     }
-    (void)pNrm;
+    P3 /= pNrm;
+    // HP3: project H P into P3 direction approximately
+    HP3 = HP - N.dot(HP) * N - Theta.dot(HP) * Theta;
+    applyMask(HP3);
 
     Eigen::Matrix3d A3 = Eigen::Matrix3d::Zero();
-    Eigen::Matrix3d B3 = Eigen::Matrix3d::Identity();
     const VectorXd basis[3] = {N, Theta, P3};
     const VectorXd Hbasis[3] = {HN, HTheta, HP3};
     for (int i = 0; i < 3; ++i) {
       for (int j = i; j < 3; ++j) {
         A3(i, j) = basis[i].dot(Hbasis[j]);
         A3(j, i) = A3(i, j);
-        if (i != j) {
-          B3(i, j) = basis[i].dot(basis[j]);
-          B3(j, i) = B3(i, j);
-        }
       }
     }
-
-    // Symmetrize A for numerical noise (FD H not exactly symmetric in practice)
     A3 = 0.5 * (A3 + A3.transpose());
-
-    Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::Matrix3d> ges(A3, B3);
+    // Orthonormal basis → standard eigenproblem (stable vs generalized B)
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> ges(A3);
     if (ges.info() != Eigen::Success) {
       QUILL_LOG_WARNING(log,
-                        "[LOR] 3x3 generalized eigen failed at iter={}; stop",
+                        "[LOR] 3x3 eigen failed at iter={}; stop",
                         k);
       break;
     }
@@ -263,6 +302,10 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
     curvatureHistory.push_back(CNnew);
     CN = CNnew;
+    if (CN < bestCN) {
+      bestCN = CN;
+      bestN = N;
+    }
 
     F = HN - CN * N;
     applyMask(F);
@@ -286,12 +329,21 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   applyMask(HN);
   CN = N.dot(HN);
   curvatureHistory.push_back(CN);
+  if (CN < bestCN) {
+    bestCN = CN;
+    bestN = N;
+  }
 
+  // Prefer most negative (softest) mode seen; last iterate can diverge on FD/GEP noise.
+  if (bestCN < CN) {
+    CN = bestCN;
+    N = bestN;
+  }
   eigenvalue = CN;
   eigenvector = N;
   QUILL_LOG_INFO(log,
                  "[LOR] done rotations={} force_calls={} C_N={:.6f} "
-                 "converged_residual={}",
+                 "converged_residual={} best_tracked",
                  statsRotations, totalForceCalls, eigenvalue,
                  convergedOnResidual);
 }
