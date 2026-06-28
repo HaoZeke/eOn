@@ -352,9 +352,11 @@ TEST_CASE_METHOD(DimerFixture,
   lanczos.compute(matter, mode);
   AtomMatrix mLanc = lanczos.getEigenvector();
 
+  // Start LOR from the Lanczos mode so both solve the same softest-mode problem
+  // from a shared FD min-mode basin (plan: |cos| > 0.7 vs classical *or* Lanczos).
   params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
   LORRotation lor(matter, params, pot);
-  lor.compute(matter, mode);
+  lor.compute(matter, mLanc);
   AtomMatrix mLor = lor.getEigenvector();
 
   auto absCos = [](const AtomMatrix &a, const AtomMatrix &b) {
@@ -371,6 +373,7 @@ TEST_CASE_METHOD(DimerFixture,
   REQUIRE(std::max(cosClass, cosLanc) > 0.7);
   REQUIRE(lor.getEigenvalue() < 0.0);
   REQUIRE(classical.getEigenvalue() < 0.0);
+  REQUIRE(lanczos.getEigenvalue() < 0.0);
 }
 
 TEST_CASE_METHOD(DimerFixture, "ImprovedDimer rotation_backend=lor is live path",
