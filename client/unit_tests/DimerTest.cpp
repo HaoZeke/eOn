@@ -299,8 +299,6 @@ TEST_CASE_METHOD(DimerFixedAtomFixture,
   REQUIRE(std::isfinite(eigenvalue));
 }
 
-} /* namespace tests */
-
 // --- LOR (Leng et al. JCP 2013) rotation backend ---
 
 TEST_CASE_METHOD(DimerFixture, "LOR rotation finds finite lowest curvature",
@@ -316,7 +314,7 @@ TEST_CASE_METHOD(DimerFixture, "LOR rotation finds finite lowest curvature",
   REQUIRE(std::isfinite(ev));
   REQUIRE(lor->totalForceCalls > 0);
   REQUIRE(lor->statsRotations >= 0);
-  // Softest-mode problem: curvature should not be a large positive on displaced LJ
+  // Softest mode on displaced LJ (same fixture as classic/improved dimer).
   REQUIRE(ev < 0.0);
 }
 
@@ -343,6 +341,7 @@ TEST_CASE_METHOD(DimerFixture,
                  "[dimer][lor][eigenmode]") {
   params.dimer_options.improved = true;
   params.dimer_options.max_iterations = 50;
+  params.dimer_options.rotations_max = 20;
 
   params.dimer_options.rotation_backend = DimerRotationBackend::Classical;
   ImprovedDimer classical(matter, params, pot);
@@ -368,8 +367,11 @@ TEST_CASE_METHOD(DimerFixture, "ImprovedDimer rotation_backend=lor is live path"
                  "[dimer][lor][eigenmode]") {
   params.dimer_options.improved = true;
   params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
+  params.dimer_options.rotations_max = 20;
   ImprovedDimer dimer(matter, params, pot);
   dimer.compute(matter, mode);
   REQUIRE(std::isfinite(dimer.getEigenvalue()));
   REQUIRE(dimer.getEigenvalue() < 0.0);
 }
+
+} /* namespace tests */
