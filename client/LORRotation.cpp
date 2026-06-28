@@ -156,7 +156,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   };
   // Record Ritz C only when non-increasing (paper quadratic + translation).
   auto appendHistory = [&](double cn) {
-    if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 1e-4) {
+    if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 0.5) {
       curvatureHistory.push_back(cn);
     }
   };
