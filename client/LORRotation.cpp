@@ -154,6 +154,12 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       bestHN = hnVec;
     }
   };
+  // Record Ritz C only when non-increasing (paper quadratic + translation).
+  auto appendHistory = [&](double cn) {
+    if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 1e-4) {
+      curvatureHistory.push_back(cn);
+    }
+  };
 
   // --- Algorithm I start: H N, F_⊥ ---
   VectorXd HN = hessianAlong(N);
