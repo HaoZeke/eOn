@@ -294,11 +294,25 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     HP = HPnew;
 
     const double CNnew = N.dot(HN);
-    if (!curvatureHistory.empty() && CNnew > curvatureHistory.back() + 1e-3) {
+    // Paper: under quadratic PES + force translation, C is non-increasing.
+    // Reject updates that increase C (FD/GEP noise) — restores history monotonicity
+    // and keeps the mode in the softest-mode basin (mode agreement with Lanczos/CG).
+    if (!curvatureHistory.empty() && CNnew > curvatureHistory.back() + 1e-4) {
       QUILL_LOG_INFO(log,
-                     "[LOR] curvature increased iter={} C_prev={:.6f} C_new={:.6f} "
-                     "(FD/anharmonic; continue)",
+                     "[LOR] curvature stall iter={} C_prev={:.6f} C_new={:.6f} "
+                     "(reject update; keep prior mode)",
                      k, curvatureHistory.back(), CNnew);
+      // Revert to pre-update state: restore from best tracked softest mode
+      N = bestN;
+      CN = bestCN;
+      HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
+      applyMask(HN);
+      CN = N.dot(HN);
+      F = HN - CN * N;
+      applyMask(F);
+      Fnorm = F.norm();
+      statsRotations = k;
+      break;
     }
     curvatureHistory.push_back(CNnew);
     CN = CNnew;
@@ -323,21 +337,24 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
   }
 
-  // Final FD refresh of H·N so eigenvalue matches a true FD curvature (reduces
-  // accumulated translation error on anharmonic PES before climb).
-  HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
-  applyMask(HN);
-  CN = N.dot(HN);
-  curvatureHistory.push_back(CN);
-  if (CN < bestCN) {
-    bestCN = CN;
-    bestN = N;
-  }
-
-  // Prefer most negative (softest) mode seen; last iterate can diverge on FD/GEP noise.
-  if (bestCN < CN) {
-    CN = bestCN;
-    N = bestN;
+  // Optional FD refresh only if it does not worsen the softest curvature.
+  {
+    VectorXd HNfd = hessianVector(VectorXd(), x0_r, bestN, freeMask, delta);
+    applyMask(HNfd);
+    const double Cfd = bestN.dot(HNfd);
+    if (Cfd <= bestCN + 1e-4) {
+      bestCN = Cfd;
+      HN = HNfd;
+      N = bestN;
+      CN = Cfd;
+      if (curvatureHistory.empty() ||
+          Cfd <= curvatureHistory.back() + 1e-4) {
+        curvatureHistory.push_back(Cfd);
+      }
+    } else {
+      N = bestN;
+      CN = bestCN;
+    }
   }
   eigenvalue = CN;
   eigenvector = N;

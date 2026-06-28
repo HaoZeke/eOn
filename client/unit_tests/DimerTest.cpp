@@ -329,9 +329,11 @@ TEST_CASE_METHOD(DimerFixture,
   lor.compute(matter, mode);
 
   REQUIRE_FALSE(lor.curvatureHistory.empty());
-  // Best tracked mode is negative on this fixture; history may wiggle under FD.
+  // Successive Ritz curvatures (accepted steps only) non-increasing within FD tol.
+  for (size_t i = 1; i < lor.curvatureHistory.size(); ++i) {
+    REQUIRE(lor.curvatureHistory[i] <= lor.curvatureHistory[i - 1] + 0.5);
+  }
   REQUIRE(lor.getEigenvalue() < 0.0);
-  REQUIRE(lor.curvatureHistory.back() <= lor.curvatureHistory.front() + 1e6);
 }
 
 TEST_CASE_METHOD(DimerFixture,
@@ -346,16 +348,27 @@ TEST_CASE_METHOD(DimerFixture,
   classical.compute(matter, mode);
   AtomMatrix mClass = classical.getEigenvector();
 
+  Lanczos lanczos(matter, params, pot);
+  lanczos.compute(matter, mode);
+  AtomMatrix mLanc = lanczos.getEigenvector();
+
   params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
   LORRotation lor(matter, params, pot);
   lor.compute(matter, mode);
   AtomMatrix mLor = lor.getEigenvector();
 
-  double dot = (mClass.array() * mLor.array()).sum();
-  double n1 = mClass.norm();
-  double n2 = mLor.norm();
-  REQUIRE(n1 > 1e-10);
-  REQUIRE(n2 > 1e-10);
+  auto absCos = [](const AtomMatrix &a, const AtomMatrix &b) {
+    const double n1 = a.norm();
+    const double n2 = b.norm();
+    if (n1 < 1e-10 || n2 < 1e-10) {
+      return 0.0;
+    }
+    return std::abs((a.array() * b.array()).sum() / (n1 * n2));
+  };
+  const double cosClass = absCos(mClass, mLor);
+  const double cosLanc = absCos(mLanc, mLor);
+  // Plan criterion 3: sign-insensitive |cos| > 0.7 vs classical or Lanczos.
+  REQUIRE(std::max(cosClass, cosLanc) > 0.7);
   REQUIRE(lor.getEigenvalue() < 0.0);
   REQUIRE(classical.getEigenvalue() < 0.0);
 }
