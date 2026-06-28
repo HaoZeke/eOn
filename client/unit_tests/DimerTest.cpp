@@ -384,4 +384,40 @@ TEST_CASE_METHOD(DimerFixture, "ImprovedDimer rotation_backend=lor is live path"
   REQUIRE(dimer.getEigenvalue() < 0.0);
 }
 
+// Pure linear-algebra check of shipped force-translation identity for H·P3
+// (Algorithm I H·P reuse). Uses a synthetic SPD H so the oracle is exact H*v,
+// but the code under test is LORRotation::translateHUnitOrthoP3 (production).
+TEST_CASE("LOR translateHUnitOrthoP3 matches H*P3 for linear H",
+          "[dimer][lor][translation]") {
+  constexpr int n = 12;
+  Eigen::MatrixXd A = Eigen::MatrixXd::Random(n, n);
+  Eigen::MatrixXd Hmat = A.transpose() * A + Eigen::MatrixXd::Identity(n, n);
+
+  VectorXd N = VectorXd::Random(n);
+  N.normalize();
+  VectorXd Theta = VectorXd::Random(n);
+  Theta = Theta - N.dot(Theta) * N;
+  Theta.normalize();
+  VectorXd P = VectorXd::Random(n);
+
+  const VectorXd HN = Hmat * N;
+  const VectorXd HTheta = Hmat * Theta;
+  const VectorXd HP = Hmat * P;
+
+  const VectorXd P_ortho = P - N.dot(P) * N - Theta.dot(P) * Theta;
+  REQUIRE(P_ortho.norm() > 1e-8);
+  const VectorXd P3 = P_ortho / P_ortho.norm();
+  const VectorXd HP3_exact = Hmat * P3;
+  const VectorXd HP3_code =
+      LORRotation::translateHUnitOrthoP3(N, Theta, P, HN, HTheta, HP);
+
+  // Wrong ambient GS on HP would give O(1) error on this toy; linearity is ~0.
+  const double err = (HP3_exact - HP3_code).norm();
+  const VectorXd HP3_wrong_gs =
+      HP - N.dot(HP) * N - Theta.dot(HP) * Theta; // skeptic's counterexample
+  const double err_wrong = (HP3_exact - HP3_wrong_gs).norm();
+  REQUIRE(err < 1e-9);
+  REQUIRE(err_wrong > 0.1); // documents that GS-on-HP is not H·P3
+}
+
 } /* namespace tests */

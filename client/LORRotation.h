@@ -50,6 +50,17 @@ public:
   // Last LOR curvature sequence (for unit tests / monotonicity checks)
   std::vector<double> curvatureHistory;
   bool convergedOnResidual{false};
+
+  /// Force-translation identity for H·P3 when P3 is the *unit* Gram-Schmidt
+  /// residual of P against orthonormal {N, Θ} and H is linear:
+  ///   P_ortho = P - (N·P) N - (Θ·P) Θ
+  ///   P3 = P_ortho / ||P_ortho||
+  ///   H P3 = (H P - (N·P) H N - (Θ·P) H Θ) / ||P_ortho||
+  /// (Not Gram-Schmidt on HP in ambient space.) Returns zero vector if
+  /// ||P_ortho|| is negligible. Shipped LOR 3×3 path uses this helper.
+  [[nodiscard]] static VectorXd translateHUnitOrthoP3(
+      const VectorXd &N, const VectorXd &Theta, const VectorXd &P,
+      const VectorXd &HN, const VectorXd &HTheta, const VectorXd &HP);
 };
 
 } // namespace eonc
