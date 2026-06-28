@@ -159,7 +159,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   VectorXd HN = hessianAlong(N);
   applyMask(HN);
   double CN = N.dot(HN);
-  curvatureHistory.push_back(CN);
+  appendHistory(CN);
   trackBest(CN, N, HN);
 
   VectorXd F = HN - CN * N;
@@ -206,7 +206,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   VectorXd HP = HTheta;
 
   CN = N.dot(HN);
-  curvatureHistory.push_back(CN);
+  appendHistory(CN);
   trackBest(CN, N, HN);
   F = HN - CN * N;
   applyMask(F);
@@ -272,7 +272,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       N = Nnew;
       HN = HNnew;
       CN = cNew;
-      curvatureHistory.push_back(CN);
+      appendHistory(CN);
       trackBest(CN, N, HN);
       F = HN - CN * N;
       applyMask(F);
@@ -360,7 +360,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     HN = HNnew;
     HP = HPnew;
     CN = CNnew;
-    curvatureHistory.push_back(CN);
+    appendHistory(CN);
     trackBest(CN, N, HN);
     (void)Nprev;
     (void)HNprev;
