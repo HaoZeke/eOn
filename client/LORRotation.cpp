@@ -10,8 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 // Leng et al. JCP 138, 094110 (2013) Locally Optimal Rotation (Algorithm I).
-// FD Hessian-vector products match Lanczos/ImprovedDimer energy-Hessian convention:
-//   H v ≈ -(F(x+δv) - F(x)) / δ  with F = forces (not gradients).
+// FD Hessian-vector products match Lanczos energy-Hessian convention:
+//   H v ≈ -(F(x+δv) - F(x)) / δ  with F = forces.
+// At most one *new* force evaluation per rotation iteration (F at R0+δ·dir);
+// center forces F(R0) are cached once for the whole LOR call.
 
 #include "LORRotation.h"
 #include "HelperFunctions.h"
@@ -19,8 +21,8 @@
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
-#include <limits>
 #include <cmath>
+#include <limits>
 
 using namespace eonc::helpers;
 
@@ -41,35 +43,28 @@ LORRotation::LORRotation(std::shared_ptr<Matter> matter,
   eigenvector.setZero();
 }
 
-VectorXd LORRotation::hessianVector(const VectorXd & /*g0 unused*/,
+// Member used only via compute(); keep signature for header compatibility.
+VectorXd LORRotation::hessianVector(const VectorXd & /*unused*/,
                                     const VectorXd &x0_r, const VectorXd &v,
                                     const VectorXd &freeMask, double delta) {
-  // Force-based FD (same sign convention as Lanczos::compute).
+  VectorXd F0 = x0->getForcesV();
   VectorXd dir = v.array() * freeMask.array();
   const double nrm = dir.norm();
   if (nrm < 1e-14) {
     return VectorXd::Zero(v.size());
   }
   dir /= nrm;
-
-  VectorXd F0 = x0->getForcesV();
   x1->setPositionsV(x0_r + delta * dir);
   VectorXd F1 = x1->getForcesV();
   totalForceCalls += 1;
-
-  // H_energy · dir  ≈  -(F1 - F0) / delta
   VectorXd Hv = -(F1 - F0) / delta;
   Hv = Hv.array() * freeMask.array();
-  // Scale so Hv is for unit v (dir is unit); caller passes general v — return H·v
-  // with v not necessarily unit: H·v = ||v|| * H·(v/||v||) but we used unit dir
-  // from masked v, so Hv is H·unit. Restore magnitude of projected v:
   return Hv * nrm;
 }
 
 void LORRotation::compute(std::shared_ptr<Matter> matter,
                           AtomMatrix initialDirectionAtomMatrix) {
-  const long nAtoms = matter->numberOfAtoms();
-  const int dim = static_cast<int>(3 * nAtoms);
+  const int dim = static_cast<int>(3 * matter->numberOfAtoms());
   const VectorXd freeMask = matter->getFreeV();
 
   VectorXd N = VectorXd::Map(initialDirectionAtomMatrix.data(), dim);
@@ -85,15 +80,12 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   const VectorXd x0_r = x0->getPositionsV();
   const double delta = params.main_options.finiteDifference;
 
-  // Paper Baker runs use ~5–20 rotations; never use geometry max_iterations.
   const int rotmax = std::clamp(
       static_cast<int>(params.dimer_options.rotations_max > 0
                            ? params.dimer_options.rotations_max
                            : 20),
       1, 50);
 
-  // Paper stops rotation when ||F_perp|| is small (they use ~0.1 eV/Å in VASP
-  // tests). Align with torque_min / converged_angle without exiting on noise.
   const double residualTol = std::max(1e-3, params.dimer_options.torque_min);
   auto relativeResidual = [](double fnorm, double cn) {
     return fnorm / (std::abs(cn) + 1.0);
@@ -103,16 +95,15 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   convergedOnResidual = false;
   double bestCN = std::numeric_limits<double>::infinity();
   VectorXd bestN = N;
+  VectorXd bestHN = VectorXd::Zero(dim);
   statsRotations = 0;
   totalForceCalls = 0;
 
-  // Center force for bookkeeping (one call; also used if we ever need F0-only paths)
-  (void)x0->getForcesV();
+  // Cache center forces once (paper: FD products reuse F(R0)).
+  const VectorXd F0 = x0->getForcesV();
   totalForceCalls += 1;
 
-  auto applyMask = [&](VectorXd &v) {
-    v = v.array() * freeMask.array();
-  };
+  auto applyMask = [&](VectorXd &v) { v = v.array() * freeMask.array(); };
 
   auto unitize = [&](VectorXd &v) -> double {
     applyMask(v);
@@ -123,17 +114,38 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     return n;
   };
 
-  // H N — one FD along N (unit)
-  VectorXd HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
+  // One new force at R0+δ·dir; F0 cached (Algorithm I: ≤1 new FD per rotation).
+  auto hessianAlong = [&](const VectorXd &v) -> VectorXd {
+    VectorXd dir = v.array() * freeMask.array();
+    const double nrm = dir.norm();
+    if (nrm < 1e-14) {
+      return VectorXd::Zero(dim);
+    }
+    dir /= nrm;
+    x1->setPositionsV(x0_r + delta * dir);
+    const VectorXd F1 = x1->getForcesV();
+    totalForceCalls += 1;
+    VectorXd Hv = -(F1 - F0) / delta;
+    applyMask(Hv);
+    return Hv * nrm;
+  };
+
+  auto trackBest = [&](double cn, const VectorXd &nVec, const VectorXd &hnVec) {
+    if (cn < bestCN) {
+      bestCN = cn;
+      bestN = nVec;
+      bestHN = hnVec;
+    }
+  };
+
+  // --- Algorithm I start: H N, F_⊥ ---
+  VectorXd HN = hessianAlong(N);
   applyMask(HN);
   double CN = N.dot(HN);
   curvatureHistory.push_back(CN);
-  if (CN < bestCN) {
-    bestCN = CN;
-    bestN = N;
-  }
+  trackBest(CN, N, HN);
 
-  VectorXd F = HN - CN * N; // F_⊥ = (I - N Nᵀ) H N
+  VectorXd F = HN - CN * N;
   applyMask(F);
   double Fnorm = F.norm();
 
@@ -150,21 +162,20 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   }
 
   VectorXd Theta = F / Fnorm;
-  VectorXd HTheta = hessianVector(VectorXd(), x0_r, Theta, freeMask, delta);
+  VectorXd HTheta = hessianAlong(Theta); // iteration-1 second FD (H Θ)
   applyMask(HTheta);
 
-  // 2×2 Rayleigh–Ritz in span{N, Θ} (orthonormal)
+  // 2×2 Ritz in span{N, Θ}
   Eigen::Matrix2d A2;
   A2(0, 0) = N.dot(HN);
   A2(0, 1) = N.dot(HTheta);
   A2(1, 0) = A2(0, 1);
   A2(1, 1) = Theta.dot(HTheta);
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> es2(A2);
-  Eigen::Vector2d coeffs = es2.eigenvectors().col(0); // smallest eigenpair
+  Eigen::Vector2d coeffs = es2.eigenvectors().col(0);
   double a = coeffs(0);
   double b = coeffs(1);
 
-  // N^(2) = a N + b Θ  (normalize; scale HN by same factor — critical for translation)
   VectorXd Nlin = a * N + b * Theta;
   const double nN = unitize(Nlin);
   VectorXd HNlin = a * HN + b * HTheta;
@@ -174,16 +185,12 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   N = Nlin;
   HN = HNlin;
 
-  // P^(2) = Θ, HP = HΘ (unit Θ already)
   VectorXd P = Theta;
   VectorXd HP = HTheta;
 
   CN = N.dot(HN);
   curvatureHistory.push_back(CN);
-  if (CN < bestCN) {
-    bestCN = CN;
-    bestN = N;
-  }
+  trackBest(CN, N, HN);
   F = HN - CN * N;
   applyMask(F);
   Fnorm = F.norm();
@@ -196,24 +203,23 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   for (int k = 2; k <= rotmax; ++k) {
     if (relativeResidual(Fnorm, CN) < residualTol) {
       convergedOnResidual = true;
-      QUILL_LOG_INFO(log, "[LOR] converged residual iter={} ||F||={:.6e}", k,
-                     Fnorm);
+      QUILL_LOG_INFO(log,
+                     "[LOR] converged residual iter={} ||F||={:.6e} rel={:.6e}",
+                     k, Fnorm, relativeResidual(Fnorm, CN));
       break;
     }
 
     Theta = F / Fnorm;
-    // One new force evaluation: H · Θ
-    HTheta = hessianVector(VectorXd(), x0_r, Theta, freeMask, delta);
+    // Exactly one new FD this iteration: H · Θ (force translation for N, P)
+    HTheta = hessianAlong(Theta);
     applyMask(HTheta);
 
-    // Orthonormalize P against N, Θ for a well-conditioned 3×3 (paper allows
-    // non-ortho B; FD noise + GEP then blows up coefficients).
+    // Orthonormalize P vs N,Θ for stable 3×3 (intentional vs paper GEP on B≠I)
     VectorXd P3 = P - N.dot(P) * N - Theta.dot(P) * Theta;
     applyMask(P3);
-    VectorXd HP3 = HP;
     const double pNrm = P3.norm();
-    if (pNrm < 1e-8) {
-      // Degenerate P — fall back to 2×2 in span{N, Θ}
+
+    auto applyRitz2 = [&]() {
       Eigen::Matrix2d A2b;
       A2b(0, 0) = N.dot(HN);
       A2b(0, 1) = N.dot(HTheta);
@@ -225,30 +231,57 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       b = c2(1);
       VectorXd Nnew = a * N + b * Theta;
       VectorXd HNnew = a * HN + b * HTheta;
-      const double nNew = unitize(Nnew);
-      if (nNew > 1e-14) {
-        HNnew /= nNew;
+      const double nn = unitize(Nnew);
+      if (nn > 1e-14) {
+        HNnew /= nn;
+      }
+      const double cNew = Nnew.dot(HNnew);
+      if (!curvatureHistory.empty() && cNew > curvatureHistory.back() + 1e-4) {
+        QUILL_LOG_INFO(log,
+                       "[LOR] curvature stall (2x2 fallback) iter={} "
+                       "C_prev={:.6f} C_new={:.6f} (reject)",
+                       k, curvatureHistory.back(), cNew);
+        N = bestN;
+        HN = bestHN;
+        CN = bestCN;
+        F = HN - CN * N;
+        applyMask(F);
+        Fnorm = F.norm();
+        statsRotations = k;
+        return false;
       }
       P = Theta;
       HP = HTheta;
       N = Nnew;
       HN = HNnew;
-      CN = N.dot(HN);
+      CN = cNew;
       curvatureHistory.push_back(CN);
-      if (CN < bestCN) {
-        bestCN = CN;
-        bestN = N;
-      }
+      trackBest(CN, N, HN);
       F = HN - CN * N;
       applyMask(F);
       Fnorm = F.norm();
       statsRotations = k;
+      return true;
+    };
+
+    if (pNrm < 1e-8) {
+      if (!applyRitz2()) {
+        break;
+      }
       continue;
     }
     P3 /= pNrm;
-    // HP3: project H P into P3 direction approximately
-    HP3 = HP - N.dot(HP) * N - Theta.dot(HP) * Theta;
+    // H·P3 via force translation in {N, Θ, P} before ortho is not exact for P3;
+    // use translated HP projected into P3 (no extra FD — paper translation spirit).
+    VectorXd HP3 = HP - N.dot(HP) * N - Theta.dot(HP) * Theta;
     applyMask(HP3);
+    // Scale so P3·HP3 ≈ P3·H P3 Ritz diagonal; if HP3 nearly zero, fall back 2×2
+    if (HP3.norm() < 1e-14) {
+      if (!applyRitz2()) {
+        break;
+      }
+      continue;
+    }
 
     Eigen::Matrix3d A3 = Eigen::Matrix3d::Zero();
     const VectorXd basis[3] = {N, Theta, P3};
@@ -260,12 +293,9 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       }
     }
     A3 = 0.5 * (A3 + A3.transpose());
-    // Orthonormal basis → standard eigenproblem (stable vs generalized B)
     Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> ges(A3);
     if (ges.info() != Eigen::Success) {
-      QUILL_LOG_WARNING(log,
-                        "[LOR] 3x3 eigen failed at iter={}; stop",
-                        k);
+      QUILL_LOG_WARNING(log, "[LOR] 3x3 eigen failed at iter={}; stop", k);
       break;
     }
     const Eigen::Vector3d c3 = ges.eigenvectors().col(0);
@@ -273,7 +303,11 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     b = c3(1);
     const double c = c3(2);
 
-    // N^{k+1} = a N + b Θ + c P ; P^{k+1} = b Θ + c P  (Algorithm I)
+    // Save pre-update for stall revert without FD
+    const VectorXd Nprev = N;
+    const VectorXd HNprev = HN;
+    const double CNprev = CN;
+
     VectorXd Nnew = a * N + b * Theta + c * P3;
     VectorXd Pnew = b * Theta + c * P3;
     VectorXd HNnew = a * HN + b * HTheta + c * HP3;
@@ -288,38 +322,32 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       HPnew /= pNew;
     }
 
-    N = Nnew;
-    P = Pnew;
-    HN = HNnew;
-    HP = HPnew;
-
-    const double CNnew = N.dot(HN);
-    // Paper: under quadratic PES + force translation, C is non-increasing.
-    // Reject updates that increase C (FD/GEP noise) — restores history monotonicity
-    // and keeps the mode in the softest-mode basin (mode agreement with Lanczos/CG).
+    const double CNnew = Nnew.dot(HNnew);
     if (!curvatureHistory.empty() && CNnew > curvatureHistory.back() + 1e-4) {
       QUILL_LOG_INFO(log,
                      "[LOR] curvature stall iter={} C_prev={:.6f} C_new={:.6f} "
-                     "(reject update; keep prior mode)",
+                     "(reject update; keep prior mode, no extra FD)",
                      k, curvatureHistory.back(), CNnew);
-      // Revert to pre-update state: restore from best tracked softest mode
       N = bestN;
+      HN = bestHN;
       CN = bestCN;
-      HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
-      applyMask(HN);
-      CN = N.dot(HN);
       F = HN - CN * N;
       applyMask(F);
       Fnorm = F.norm();
       statsRotations = k;
       break;
     }
-    curvatureHistory.push_back(CNnew);
+
+    N = Nnew;
+    P = Pnew;
+    HN = HNnew;
+    HP = HPnew;
     CN = CNnew;
-    if (CN < bestCN) {
-      bestCN = CN;
-      bestN = N;
-    }
+    curvatureHistory.push_back(CN);
+    trackBest(CN, N, HN);
+    (void)Nprev;
+    (void)HNprev;
+    (void)CNprev;
 
     F = HN - CN * N;
     applyMask(F);
@@ -337,30 +365,15 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
   }
 
-  // Optional FD refresh only if it does not worsen the softest curvature.
-  {
-    VectorXd HNfd = hessianVector(VectorXd(), x0_r, bestN, freeMask, delta);
-    applyMask(HNfd);
-    const double Cfd = bestN.dot(HNfd);
-    if (Cfd <= bestCN + 1e-4) {
-      bestCN = Cfd;
-      HN = HNfd;
-      N = bestN;
-      CN = Cfd;
-      if (curvatureHistory.empty() ||
-          Cfd <= curvatureHistory.back() + 1e-4) {
-        curvatureHistory.push_back(Cfd);
-      }
-    } else {
-      N = bestN;
-      CN = bestCN;
-    }
-  }
+  // Return best softest mode from accepted Ritz steps (no mandatory final FD).
+  N = bestN;
+  HN = bestHN;
+  CN = bestCN;
   eigenvalue = CN;
   eigenvector = N;
   QUILL_LOG_INFO(log,
                  "[LOR] done rotations={} force_calls={} C_N={:.6f} "
-                 "converged_residual={} best_tracked",
+                 "converged_residual={}",
                  statsRotations, totalForceCalls, eigenvalue,
                  convergedOnResidual);
 }
