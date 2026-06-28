@@ -43,6 +43,23 @@ LORRotation::LORRotation(std::shared_ptr<Matter> matter,
   eigenvector.setZero();
 }
 
+VectorXd LORRotation::translateHUnitOrthoP3(const VectorXd &N,
+                                            const VectorXd &Theta,
+                                            const VectorXd &P,
+                                            const VectorXd &HN,
+                                            const VectorXd &HTheta,
+                                            const VectorXd &HP) {
+  // P_ortho = (I - N Nᵀ - Θ Θᵀ) P  with {N, Θ} orthonormal
+  const VectorXd P_ortho = P - N.dot(P) * N - Theta.dot(P) * Theta;
+  const double pNrm = P_ortho.norm();
+  if (pNrm < 1e-14) {
+    return VectorXd::Zero(P.size());
+  }
+  // H P_ortho = HP - (N·P) HN - (Θ·P) HΘ  (linearity of H — not GS on HP)
+  const VectorXd HPortho = HP - N.dot(P) * HN - Theta.dot(P) * HTheta;
+  return HPortho / pNrm; // = H (P_ortho / ||P_ortho||) = H P3
+}
+
 // Member used only via compute(); keep signature for header compatibility.
 VectorXd LORRotation::hessianVector(const VectorXd & /*unused*/,
                                     const VectorXd &x0_r, const VectorXd &v,
@@ -271,11 +288,11 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       continue;
     }
     P3 /= pNrm;
-    // H·P3 via force translation in {N, Θ, P} before ortho is not exact for P3;
-    // use translated HP projected into P3 (no extra FD — paper translation spirit).
-    VectorXd HP3 = HP - N.dot(HP) * N - Theta.dot(HP) * Theta;
+    // H·P3 by force-translation linearity (not ambient GS on HP):
+    // H P3 = (HP - (N·P) HN - (Θ·P) HΘ) / ||P_ortho|| with P3 = P_ortho/||...||
+    VectorXd HP3 =
+        translateHUnitOrthoP3(N, Theta, P, HN, HTheta, HP);
     applyMask(HP3);
-    // Scale so P3·HP3 ≈ P3·H P3 Ritz diagonal; if HP3 nearly zero, fall back 2×2
     if (HP3.norm() < 1e-14) {
       if (!applyRitz2()) {
         break;
