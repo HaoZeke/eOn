@@ -230,7 +230,7 @@ public:
     bool remove_rotation{false};
     // Mode estimation for dimer: classical rotation loop, or FD min-mode
     // (Lanczos/Davidson) replacing constrained IDimerRot / Dimer::rotate.
-    std::string rotation_backend{"classical"}; // classical | lanczos | davidson
+    DimerRotationBackend rotation_backend{DimerRotationBackend::Classical};
   } dimer_options;
 
   // [GPR Dimer] //

@@ -14,6 +14,7 @@
 #include "Davidson.h"
 #include "EigenmodeStrategy.h"
 #include "ImprovedDimer.h"
+#include "LORRotation.h"
 #include "Lanczos.h"
 #include "Matter.h"
 #include "MinModeSaddleSearch.h"
@@ -299,3 +300,73 @@ TEST_CASE_METHOD(DimerFixedAtomFixture,
 }
 
 } /* namespace tests */
+
+// --- LOR (Leng et al. JCP 2013) rotation backend ---
+
+TEST_CASE_METHOD(DimerFixture, "LOR rotation finds finite lowest curvature",
+                 "[dimer][lor][eigenmode]") {
+  params.dimer_options.improved = true;
+  params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
+  params.dimer_options.max_iterations = 20;
+  auto lor = std::make_unique<LORRotation>(matter, params, pot);
+  lor->compute(matter, mode);
+
+  double ev = lor->getEigenvalue();
+  REQUIRE(std::isfinite(ev));
+  REQUIRE(lor->totalForceCalls > 0);
+  REQUIRE(lor->statsRotations >= 0);
+  // Softest-mode problem: curvature should not be a large positive on displaced LJ
+  REQUIRE(ev < 5.0);
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "LOR curvature history is non-increasing within tolerance",
+                 "[dimer][lor][eigenmode]") {
+  params.dimer_options.improved = true;
+  params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
+  params.dimer_options.max_iterations = 20;
+  LORRotation lor(matter, params, pot);
+  lor.compute(matter, mode);
+
+  REQUIRE_FALSE(lor.curvatureHistory.empty());
+  for (size_t i = 1; i < lor.curvatureHistory.size(); ++i) {
+    // Paper: C at k+1 <= C at k under quadratic + translation; allow FD noise
+    REQUIRE(lor.curvatureHistory[i] <=
+            lor.curvatureHistory[i - 1] + 0.5);
+  }
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "LOR mode agrees with classical ImprovedDimer (sign-insensitive)",
+                 "[dimer][lor][eigenmode]") {
+  params.dimer_options.improved = true;
+  params.dimer_options.max_iterations = 50;
+
+  params.dimer_options.rotation_backend = DimerRotationBackend::Classical;
+  ImprovedDimer classical(matter, params, pot);
+  classical.compute(matter, mode);
+  AtomMatrix mClass = classical.getEigenvector();
+
+  params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
+  LORRotation lor(matter, params, pot);
+  lor.compute(matter, mode);
+  AtomMatrix mLor = lor.getEigenvector();
+
+  double dot = (mClass.array() * mLor.array()).sum();
+  double n1 = mClass.norm();
+  double n2 = mLor.norm();
+  REQUIRE(n1 > 1e-10);
+  REQUIRE(n2 > 1e-10);
+  double cosine = std::abs(dot / (n1 * n2));
+  // Softest-mode agreement on LJ displaced cluster
+  REQUIRE(cosine > 0.7);
+}
+
+TEST_CASE_METHOD(DimerFixture, "ImprovedDimer rotation_backend=lor is live path",
+                 "[dimer][lor][eigenmode]") {
+  params.dimer_options.improved = true;
+  params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
+  ImprovedDimer dimer(matter, params, pot);
+  dimer.compute(matter, mode);
+  REQUIRE(std::isfinite(dimer.getEigenvalue()));
+}

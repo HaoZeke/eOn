@@ -13,9 +13,8 @@
 // An attempt to keep to the variable names in their 2008 paper has been made.
 
 #include "ImprovedDimer.h"
-#include "Davidson.h"
+#include "DimerRotationDispatch.h"
 #include "HelperFunctions.h"
-#include "Lanczos.h"
 #include "LowestEigenmode.h"
 #include "SafeMath.h"
 #include "eonExceptions.hpp"
@@ -103,32 +102,17 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
         log, "[IDimer] Initial tangent flipped due to high energy wall.");
   }
 
-  // Optional: replace constrained rotation (IDimerRot) with FD min-mode finder.
-  const std::string &rotBackend = params.dimer_options.rotation_backend;
-  if (rotBackend == "lanczos" || rotBackend == "davidson") {
-    AtomMatrix initMode =
-        AtomMatrix::Map(tau.data(), matter->numberOfAtoms(), 3);
-    if (rotBackend == "lanczos") {
-      QUILL_LOG_INFO(log, "[IDimerRot] rotation_backend=lanczos (FD min-mode; "
-                          "skipping classical constrained rotation loop)");
-      Lanczos solver(matter, params, pot);
-      solver.compute(matter, initMode);
-      C_tau = solver.getEigenvalue();
-      AtomMatrix ev = solver.getEigenvector();
-      tau = VectorXd::Map(ev.data(), 3 * matter->numberOfAtoms());
-      totalForceCalls += solver.totalForceCalls;
-      statsRotations = solver.statsRotations;
-    } else {
-      QUILL_LOG_INFO(log, "[IDimerRot] rotation_backend=davidson (FD min-mode; "
-                          "skipping classical constrained rotation loop)");
-      Davidson solver(matter, params, pot);
-      solver.compute(matter, initMode);
-      C_tau = solver.getEigenvalue();
-      AtomMatrix ev = solver.getEigenvector();
-      tau = VectorXd::Map(ev.data(), 3 * matter->numberOfAtoms());
-      totalForceCalls += solver.totalForceCalls;
-      statsRotations = solver.statsRotations;
-    }
+  // Optional: LOR / Lanczos / Davidson rotation backends (enum dispatch).
+  if (auto alt = runAlternativeRotation(params.dimer_options.rotation_backend,
+                                        matter, params, pot,
+                                        AtomMatrix::Map(tau.data(),
+                                                        matter->numberOfAtoms(),
+                                                        3),
+                                        static_cast<quill::Logger *>(log))) {
+    C_tau = alt->eigenvalue;
+    tau = VectorXd::Map(alt->eigenvector.data(), 3 * matter->numberOfAtoms());
+    totalForceCalls += alt->forceCalls;
+    statsRotations = alt->rotations;
     tau = tau.array() * matter->getFreeV().array();
     if (tau.norm() > 1e-10) {
       tau.normalize();
@@ -139,9 +123,6 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
     *matter = *x0;
     rotationDidConverge = true;
     foundNegativeCurvature = (C_tau < 0.0);
-    QUILL_LOG_INFO(log,
-                   "[IDimerRot] hybrid mode estimate C_tau={:.6f} backend={}",
-                   C_tau, rotBackend);
     return;
   }
 

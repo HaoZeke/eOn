@@ -10,9 +10,8 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "Dimer.h"
-#include "Davidson.h"
+#include "DimerRotationDispatch.h"
 #include "HelperFunctions.h"
-#include "Lanczos.h"
 #include "SafeMath.h"
 
 #include <cassert>
@@ -48,32 +47,16 @@ void Dimer::compute(std::shared_ptr<Matter> matter,
   eonc::safemath::safe_normalize_inplace(initialDirection);
   direction = initialDirection;
 
-  // Optional: replace classical torque rotation with FD min-mode finder.
-  const std::string &rotBackend = params.dimer_options.rotation_backend;
-  if (rotBackend == "lanczos" || rotBackend == "davidson") {
-    if (rotBackend == "lanczos") {
-      QUILL_LOG_INFO(log, "[DimerRot] rotation_backend=lanczos (FD min-mode; "
-                          "skipping classical constrained rotation loop)");
-      Lanczos solver(matter, params, pot);
-      solver.compute(matter, direction);
-      eigenvalue = solver.getEigenvalue();
-      direction = solver.getEigenvector();
-      totalForceCalls += solver.totalForceCalls;
-      statsRotations = solver.statsRotations;
-    } else {
-      QUILL_LOG_INFO(log, "[DimerRot] rotation_backend=davidson (FD min-mode; "
-                          "skipping classical constrained rotation loop)");
-      Davidson solver(matter, params, pot);
-      solver.compute(matter, direction);
-      eigenvalue = solver.getEigenvalue();
-      direction = solver.getEigenvector();
-      totalForceCalls += solver.totalForceCalls;
-      statsRotations = solver.statsRotations;
-    }
+  // Optional: LOR / Lanczos / Davidson (enum dispatch; classical falls through).
+  if (auto alt = runAlternativeRotation(params.dimer_options.rotation_backend,
+                                        matter, params, pot, direction,
+                                        static_cast<quill::Logger *>(log))) {
+    eigenvalue = alt->eigenvalue;
+    direction = alt->eigenvector;
+    totalForceCalls += alt->forceCalls;
+    statsRotations = alt->rotations;
     eonc::safemath::safe_normalize_inplace(direction);
     *matterCenter = *matter;
-    QUILL_LOG_INFO(log, "[DimerRot] hybrid mode estimate eigenvalue={:.6f}",
-                   eigenvalue);
     return;
   }
 

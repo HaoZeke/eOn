@@ -1536,9 +1536,13 @@ class DimerConfig(BaseModel):
     dimer_remove_rotation: bool = Field(
         default=False, description="Indicates if the rotation should be removed."
     )
-    rotation_backend: Literal["classical", "lanczos", "davidson"] = Field(
+    rotation_backend: Literal["classical", "lanczos", "davidson", "lor"] = Field(
         default="classical",
-        description="Mode estimation under dimer: classical constrained rotation, or lanczos/davidson FD min-mode replacing IDimerRot.",
+        description=(
+            "Mode estimation under dimer: classical constrained rotation; "
+            "lanczos/davidson FD min-mode; or lor (Leng et al. JCP 138, 094110 "
+            "2013 Locally Optimal Rotation) replacing IDimerRot."
+        ),
     )
     """
     Implements the method of :cite:t:`dm-melanderRemovingExternalDegrees2015`
