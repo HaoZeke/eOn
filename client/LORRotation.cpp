@@ -93,8 +93,10 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
 
   // Paper stops rotation when ||F_perp|| is small (they use ~0.1 eV/Å in VASP
   // tests). Align with torque_min / converged_angle without exiting on noise.
-  const double residualTol = std::max(
-      1e-3, std::min(0.1, params.dimer_options.torque_min));
+  const double residualTol = std::max(1e-3, params.dimer_options.torque_min);
+  auto relativeResidual = [](double fnorm, double cn) {
+    return fnorm / (std::abs(cn) + 1.0);
+  };
 
   curvatureHistory.clear();
   convergedOnResidual = false;
@@ -132,7 +134,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
                  "[LOR] iter=0 ||F_perp||={:.6e} C_N={:.6f} (Algorithm I start)",
                  Fnorm, CN);
 
-  if (Fnorm < residualTol) {
+  if (relativeResidual(Fnorm, CN) < residualTol) {
     convergedOnResidual = true;
     eigenvalue = CN;
     eigenvector = N;
@@ -181,7 +183,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
                  Fnorm, CN, a, b);
 
   for (int k = 2; k <= rotmax; ++k) {
-    if (Fnorm < residualTol) {
+    if (relativeResidual(Fnorm, CN) < residualTol) {
       convergedOnResidual = true;
       QUILL_LOG_INFO(log, "[LOR] converged residual iter={} ||F||={:.6e}", k,
                      Fnorm);
@@ -272,7 +274,7 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
                    "b={:.4f} c={:.4f}",
                    k, Fnorm, CN, a, b, c);
 
-    if (Fnorm < residualTol) {
+    if (relativeResidual(Fnorm, CN) < residualTol) {
       convergedOnResidual = true;
       break;
     }
