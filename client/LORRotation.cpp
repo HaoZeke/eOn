@@ -155,8 +155,10 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
   };
   // Record Ritz C only when non-increasing (paper quadratic + translation).
+  // Strictly non-increasing (1e-4 float); unit test allows +0.5 only as FD slack
+  // on an already-monotone sequence — do not use +0.5 here or history can ramp up.
   auto appendHistory = [&](double cn) {
-    if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 0.5) {
+    if (curvatureHistory.empty() || cn <= curvatureHistory.back() + 1e-4) {
       curvatureHistory.push_back(cn);
     }
   };
