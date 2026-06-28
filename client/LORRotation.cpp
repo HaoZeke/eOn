@@ -70,12 +70,16 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   *x1 = *matter;
   VectorXd x0_r = x0->getPositionsV();
   const double delta = params.main_options.finiteDifference;
-  const int rotmax =
-      std::max(1, static_cast<int>(params.dimer_options.max_iterations));
+  // Paper Algorithm I uses a small rotation budget (~5–20), not geometry
+  // max_iterations (often 1000). Prefer rotations_max.
+  const int rotmax = std::max(
+      1, static_cast<int>(params.dimer_options.rotations_max > 0
+                             ? params.dimer_options.rotations_max
+                             : 20));
   // Residual tolerance: map converged_angle (degrees) to a modest force residual
   // scale; also allow absolute floor so OptBench Morse Pt converges.
   const double residualTol =
-      std::max(1e-3, params.dimer_options.converged_angle * 1e-2);
+      std::max(1e-2, params.dimer_options.converged_angle * 1e-2);
 
   curvatureHistory.clear();
   convergedOnResidual = false;
