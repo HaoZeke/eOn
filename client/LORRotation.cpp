@@ -10,11 +10,15 @@
 ** https://github.com/TheochemUI/eOn
 */
 // Leng et al. JCP 138, 094110 (2013) Locally Optimal Rotation (Algorithm I).
+// FD Hessian-vector products match Lanczos/ImprovedDimer energy-Hessian convention:
+//   H v ≈ -(F(x+δv) - F(x)) / δ  with F = forces (not gradients).
 
 #include "LORRotation.h"
 #include "HelperFunctions.h"
+#include "SafeMath.h"
 
 #include <Eigen/Eigenvalues>
+#include <algorithm>
 #include <cmath>
 
 using namespace eonc::helpers;
@@ -36,28 +40,37 @@ LORRotation::LORRotation(std::shared_ptr<Matter> matter,
   eigenvector.setZero();
 }
 
-VectorXd LORRotation::hessianVector(const VectorXd &g0, const VectorXd &x0_r,
-                                    const VectorXd &v, const VectorXd &freeMask,
-                                    double delta) {
+VectorXd LORRotation::hessianVector(const VectorXd & /*g0 unused*/,
+                                    const VectorXd &x0_r, const VectorXd &v,
+                                    const VectorXd &freeMask, double delta) {
+  // Force-based FD (same sign convention as Lanczos::compute).
   VectorXd dir = v.array() * freeMask.array();
-  double nrm = dir.norm();
+  const double nrm = dir.norm();
   if (nrm < 1e-14) {
     return VectorXd::Zero(v.size());
   }
   dir /= nrm;
+
+  VectorXd F0 = x0->getForcesV();
   x1->setPositionsV(x0_r + delta * dir);
-  VectorXd g1 = -x1->getForcesV();
+  VectorXd F1 = x1->getForcesV();
   totalForceCalls += 1;
-  VectorXd Hv = (g1 - g0) / delta;
+
+  // H_energy · dir  ≈  -(F1 - F0) / delta
+  VectorXd Hv = -(F1 - F0) / delta;
   Hv = Hv.array() * freeMask.array();
-  return Hv;
+  // Scale so Hv is for unit v (dir is unit); caller passes general v — return H·v
+  // with v not necessarily unit: H·v = ||v|| * H·(v/||v||) but we used unit dir
+  // from masked v, so Hv is H·unit. Restore magnitude of projected v:
+  return Hv * nrm;
 }
 
 void LORRotation::compute(std::shared_ptr<Matter> matter,
                           AtomMatrix initialDirectionAtomMatrix) {
   const long nAtoms = matter->numberOfAtoms();
   const int dim = static_cast<int>(3 * nAtoms);
-  VectorXd freeMask = matter->getFreeV();
+  const VectorXd freeMask = matter->getFreeV();
+
   VectorXd N = VectorXd::Map(initialDirectionAtomMatrix.data(), dim);
   N = N.array() * freeMask.array();
   if (N.norm() < 1e-10) {
@@ -68,34 +81,51 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
 
   *x0 = *matter;
   *x1 = *matter;
-  VectorXd x0_r = x0->getPositionsV();
+  const VectorXd x0_r = x0->getPositionsV();
   const double delta = params.main_options.finiteDifference;
-  // Paper Algorithm I uses a small rotation budget (~5–20), not geometry
-  // max_iterations (often 1000). Prefer rotations_max.
-  const int rotmax = std::max(
-      1, static_cast<int>(params.dimer_options.rotations_max > 0
-                             ? params.dimer_options.rotations_max
-                             : 20));
-  // Residual tolerance: map converged_angle (degrees) to a modest force residual
-  // scale; also allow absolute floor so OptBench Morse Pt converges.
-  const double residualTol =
-      std::max(1e-2, params.dimer_options.converged_angle * 1e-2);
+
+  // Paper Baker runs use ~5–20 rotations; never use geometry max_iterations.
+  const int rotmax = std::clamp(
+      static_cast<int>(params.dimer_options.rotations_max > 0
+                           ? params.dimer_options.rotations_max
+                           : 20),
+      1, 50);
+
+  // Paper stops rotation when ||F_perp|| is small (they use ~0.1 eV/Å in VASP
+  // tests). Align with torque_min / converged_angle without exiting on noise.
+  const double residualTol = std::max(
+      1e-3, std::min(0.1, params.dimer_options.torque_min));
 
   curvatureHistory.clear();
   convergedOnResidual = false;
   statsRotations = 0;
   totalForceCalls = 0;
 
-  VectorXd g0 = -x0->getForcesV();
+  // Center force for bookkeeping (one call; also used if we ever need F0-only paths)
+  (void)x0->getForcesV();
   totalForceCalls += 1;
 
-  // H N via one FD along N
-  VectorXd HN = hessianVector(g0, x0_r, N, freeMask, delta);
+  auto applyMask = [&](VectorXd &v) {
+    v = v.array() * freeMask.array();
+  };
+
+  auto unitize = [&](VectorXd &v) -> double {
+    applyMask(v);
+    const double n = v.norm();
+    if (n > 1e-14) {
+      v /= n;
+    }
+    return n;
+  };
+
+  // H N — one FD along N (unit)
+  VectorXd HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
+  applyMask(HN);
   double CN = N.dot(HN);
   curvatureHistory.push_back(CN);
 
-  VectorXd F = HN - CN * N; // F_⊥ = (I - N N^T) H N
-  F = F.array() * freeMask.array();
+  VectorXd F = HN - CN * N; // F_⊥ = (I - N Nᵀ) H N
+  applyMask(F);
   double Fnorm = F.norm();
 
   QUILL_LOG_INFO(log,
@@ -111,81 +141,71 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
   }
 
   VectorXd Theta = F / Fnorm;
-  // H Theta — one FD (iteration-1 2×2 needs H on N and Theta; H N already done)
-  VectorXd HTheta = hessianVector(g0, x0_r, Theta, freeMask, delta);
+  VectorXd HTheta = hessianVector(VectorXd(), x0_r, Theta, freeMask, delta);
+  applyMask(HTheta);
 
-  // 2×2 Rayleigh problem in span{N, Theta} (orthonormal)
+  // 2×2 Rayleigh–Ritz in span{N, Θ} (orthonormal)
   Eigen::Matrix2d A2;
   A2(0, 0) = N.dot(HN);
   A2(0, 1) = N.dot(HTheta);
   A2(1, 0) = A2(0, 1);
   A2(1, 1) = Theta.dot(HTheta);
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> es2(A2);
-  Eigen::Vector2d coeffs = es2.eigenvectors().col(0); // smallest eigenvalue
+  Eigen::Vector2d coeffs = es2.eigenvectors().col(0); // smallest eigenpair
   double a = coeffs(0);
   double b = coeffs(1);
 
-  VectorXd P = Theta; // P^(2) = F-hat^(1)
-  VectorXd HP = HTheta;
-  N = a * N + b * Theta;
-  N = N.array() * freeMask.array();
-  if (N.norm() > 1e-14) {
-    N.normalize();
+  // N^(2) = a N + b Θ  (normalize; scale HN by same factor — critical for translation)
+  VectorXd Nlin = a * N + b * Theta;
+  const double nN = unitize(Nlin);
+  VectorXd HNlin = a * HN + b * HTheta;
+  if (nN > 1e-14) {
+    HNlin /= nN;
   }
-  // Force translation: H N_new = a H N + b H Theta (no new FD)
-  HN = a * HN + b * HTheta;
-  // Re-normalize HN projection consistency not required; recompute CN, F from HN
+  N = Nlin;
+  HN = HNlin;
+
+  // P^(2) = Θ, HP = HΘ (unit Θ already)
+  VectorXd P = Theta;
+  VectorXd HP = HTheta;
+
   CN = N.dot(HN);
-  // Paper guarantees CN non-increasing vs prior Ritz when quadratic; record
   curvatureHistory.push_back(CN);
   F = HN - CN * N;
-  F = F.array() * freeMask.array();
+  applyMask(F);
   Fnorm = F.norm();
   statsRotations = 1;
 
-  QUILL_LOG_INFO(log, "[LOR] iter=1 (2x2) ||F_perp||={:.6e} C_N={:.6f} a={:.4f} b={:.4f}",
+  QUILL_LOG_INFO(log,
+                 "[LOR] iter=1 (2x2) ||F_perp||={:.6e} C_N={:.6f} a={:.4f} b={:.4f}",
                  Fnorm, CN, a, b);
 
   for (int k = 2; k <= rotmax; ++k) {
     if (Fnorm < residualTol) {
       convergedOnResidual = true;
-      QUILL_LOG_INFO(log, "[LOR] converged residual iter={} ||F||={:.6e}", k, Fnorm);
+      QUILL_LOG_INFO(log, "[LOR] converged residual iter={} ||F||={:.6e}", k,
+                     Fnorm);
       break;
     }
 
     Theta = F / Fnorm;
-    // One new force: H · Theta (F_⊥ direction)
-    HTheta = hessianVector(g0, x0_r, Theta, freeMask, delta);
+    // One new force evaluation: H · Θ
+    HTheta = hessianVector(VectorXd(), x0_r, Theta, freeMask, delta);
+    applyMask(HTheta);
 
-    // Orthonormalize P against N, Theta for numerical stability of B
-    VectorXd Pwork = P;
-    Pwork = Pwork - N.dot(Pwork) * N - Theta.dot(Pwork) * Theta;
-    Pwork = Pwork.array() * freeMask.array();
-    double pNorm = Pwork.norm();
+    // Keep historical P as unit vector (paper: may be non-orthogonal to N, Θ)
     VectorXd P3 = P;
+    const double pNrm = unitize(P3);
     VectorXd HP3 = HP;
-    bool use3 = (pNorm > 1e-8);
-    if (use3) {
-      P3 = Pwork / pNorm;
-      // Translate HP into P3 direction is approximate; re-project HP along P3
-      // by translating in original P basis: HP3 ≈ HP projected — use FD-free
-      // translation HP was for old P; for P3 we use HP with Gram-Schmidt note:
-      // paper keeps P as linear combo; we translate HP with same (a,b,c) later.
-      // For matrix assembly use P (normalized historical), not GS P3, matching
-      // paper's B matrix with N·P and Theta·P possibly nonzero.
-      P3 = P;
-      if (P3.norm() > 1e-14) {
-        P3.normalize();
-      }
-      HP3 = HP;
+    if (pNrm > 1e-14 && std::abs(pNrm - 1.0) > 1e-12) {
+      // P already unit from prior step; HP consistent with unit P
     }
+    (void)pNrm;
 
-    // Build 3×3 A and B (generalized)
-    // basis V = [N, Theta, P]
     Eigen::Matrix3d A3 = Eigen::Matrix3d::Zero();
     Eigen::Matrix3d B3 = Eigen::Matrix3d::Identity();
-    VectorXd basis[3] = {N, Theta, P3};
-    VectorXd Hbasis[3] = {HN, HTheta, HP3};
+    const VectorXd basis[3] = {N, Theta, P3};
+    const VectorXd Hbasis[3] = {HN, HTheta, HP3};
     for (int i = 0; i < 3; ++i) {
       for (int j = i; j < 3; ++j) {
         A3(i, j) = basis[i].dot(Hbasis[j]);
@@ -197,52 +217,53 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       }
     }
 
+    // Symmetrize A for numerical noise (FD H not exactly symmetric in practice)
+    A3 = 0.5 * (A3 + A3.transpose());
+
     Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::Matrix3d> ges(A3, B3);
     if (ges.info() != Eigen::Success) {
-      QUILL_LOG_WARNING(log, "[LOR] 3x3 generalized eigen failed at iter={}; stop",
+      QUILL_LOG_WARNING(log,
+                        "[LOR] 3x3 generalized eigen failed at iter={}; stop",
                         k);
       break;
     }
-    Eigen::Vector3d c3 = ges.eigenvectors().col(0);
+    const Eigen::Vector3d c3 = ges.eigenvectors().col(0);
     a = c3(0);
     b = c3(1);
-    double c = c3(2);
+    const double c = c3(2);
 
-    // Update N and P (Algorithm I)
+    // N^{k+1} = a N + b Θ + c P ; P^{k+1} = b Θ + c P  (Algorithm I)
     VectorXd Nnew = a * N + b * Theta + c * P3;
     VectorXd Pnew = b * Theta + c * P3;
-    Nnew = Nnew.array() * freeMask.array();
-    Pnew = Pnew.array() * freeMask.array();
-    if (Nnew.norm() > 1e-14) {
-      Nnew.normalize();
-    }
-    if (Pnew.norm() > 1e-14) {
-      Pnew.normalize();
-    }
-
-    // Force translation (no FD for H N or H P)
     VectorXd HNnew = a * HN + b * HTheta + c * HP3;
     VectorXd HPnew = b * HTheta + c * HP3;
+
+    const double nNew = unitize(Nnew);
+    if (nNew > 1e-14) {
+      HNnew /= nNew;
+    }
+    const double pNew = unitize(Pnew);
+    if (pNew > 1e-14) {
+      HPnew /= pNew;
+    }
 
     N = Nnew;
     P = Pnew;
     HN = HNnew;
     HP = HPnew;
 
-    double CNnew = N.dot(HN);
-    // Stall detection: curvature not decreasing (within tol)
-    if (!curvatureHistory.empty() &&
-        CNnew > curvatureHistory.back() + 1e-4) {
+    const double CNnew = N.dot(HN);
+    if (!curvatureHistory.empty() && CNnew > curvatureHistory.back() + 1e-3) {
       QUILL_LOG_INFO(log,
-                     "[LOR] curvature stall iter={} C_prev={:.6f} C_new={:.6f}",
+                     "[LOR] curvature increased iter={} C_prev={:.6f} C_new={:.6f} "
+                     "(FD/anharmonic; continue)",
                      k, curvatureHistory.back(), CNnew);
-      // still accept update; paper claims monotonic under quadratic + translation
     }
     curvatureHistory.push_back(CNnew);
     CN = CNnew;
 
     F = HN - CN * N;
-    F = F.array() * freeMask.array();
+    applyMask(F);
     Fnorm = F.norm();
     statsRotations = k;
 
@@ -256,6 +277,13 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
       break;
     }
   }
+
+  // Final FD refresh of H·N so eigenvalue matches a true FD curvature (reduces
+  // accumulated translation error on anharmonic PES before climb).
+  HN = hessianVector(VectorXd(), x0_r, N, freeMask, delta);
+  applyMask(HN);
+  CN = N.dot(HN);
+  curvatureHistory.push_back(CN);
 
   eigenvalue = CN;
   eigenvector = N;

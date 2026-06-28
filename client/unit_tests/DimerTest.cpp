@@ -308,6 +308,7 @@ TEST_CASE_METHOD(DimerFixture, "LOR rotation finds finite lowest curvature",
   params.dimer_options.improved = true;
   params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
   params.dimer_options.max_iterations = 20;
+  params.dimer_options.rotations_max = 20;
   auto lor = std::make_unique<LORRotation>(matter, params, pot);
   lor->compute(matter, mode);
 
@@ -316,7 +317,7 @@ TEST_CASE_METHOD(DimerFixture, "LOR rotation finds finite lowest curvature",
   REQUIRE(lor->totalForceCalls > 0);
   REQUIRE(lor->statsRotations >= 0);
   // Softest-mode problem: curvature should not be a large positive on displaced LJ
-  REQUIRE(ev < 5.0);
+  REQUIRE(ev < 0.0);
 }
 
 TEST_CASE_METHOD(DimerFixture,
@@ -325,6 +326,7 @@ TEST_CASE_METHOD(DimerFixture,
   params.dimer_options.improved = true;
   params.dimer_options.rotation_backend = DimerRotationBackend::LOR;
   params.dimer_options.max_iterations = 20;
+  params.dimer_options.rotations_max = 20;
   LORRotation lor(matter, params, pot);
   lor.compute(matter, mode);
 
@@ -369,4 +371,5 @@ TEST_CASE_METHOD(DimerFixture, "ImprovedDimer rotation_backend=lor is live path"
   ImprovedDimer dimer(matter, params, pot);
   dimer.compute(matter, mode);
   REQUIRE(std::isfinite(dimer.getEigenvalue()));
+  REQUIRE(dimer.getEigenvalue() < 0.0);
 }
