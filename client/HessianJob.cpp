@@ -41,7 +41,8 @@ std::vector<std::string> HessianJob::run(void) {
     }
   }
   moved = moved.head(nMoved);
-  hessian.getFreqs(matter.get(), moved);
+  VectorXi mobile = moved;
+  hessian.getFreqs(matter.get(), mobile);
 
   std::string results_file("results.dat");
   returnFiles.push_back(results_file);

@@ -132,7 +132,22 @@ bool Hessian::calculate() {
   double t0, t1;
   eonc::helpers::getTime(&t0, nullptr, nullptr);
   QUILL_LOG_DEBUG(log, "[Hessian] calculating eigen values of the hessian\n");
-  Eigen::SelfAdjointEigenSolver<MatrixXd> es(hessian);
+  // SelfAdjointEigenSolver is only well-defined for ColMajor storage;
+
+  // RowMajor MatrixXd segfaulted on partial VTST blocks (size ~42).
+
+    if (!hessian.allFinite()) {
+    QUILL_LOG_ERROR(log, "[Hessian] non-finite entries after FD assembly; "
+                    "aborting FD Hessian");
+    return VectorXd();
+  }
+  using ColMajorXd =
+
+      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
+
+  ColMajorXd hessianCol = hessian;
+
+  Eigen::SelfAdjointEigenSolver<ColMajorXd> es(hessianCol);
   eonc::helpers::getTime(&t1, nullptr, nullptr);
   QUILL_LOG_DEBUG(log, "[Hessian] eigenvalue problem took {:.4e} seconds\n",
                   t1 - t0);
