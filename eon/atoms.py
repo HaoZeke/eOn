@@ -8,7 +8,15 @@ import logging
 logger = logging.getLogger('atoms')
 
 class Atoms:
-    """ The Atoms class. """
+    """ The Atoms class.
+
+    Optional fields populated when loading modern CON frames via readcon:
+      v:                (N,3) velocities if the frame has them, else None
+      f:                (N,3) forces if present, else None
+      energy_per_atom:  (N,) per-atom energies if present, else None
+      fixed_axes:       (N,3) bool per-axis fixed flags from readcon
+      frame_metadata:   dict of frame-level metadata (energy, time, …)
+    """
 
     def __init__(self, n_atoms):
         self.r = numpy.zeros((n_atoms,3))
@@ -16,6 +24,12 @@ class Atoms:
         self.box = numpy.zeros((3,3))
         self.names = ['']*n_atoms
         self.mass = numpy.zeros(n_atoms)
+        # Optional CON/readcon payload (None when unused / not in file).
+        self.v = None
+        self.f = None
+        self.energy_per_atom = None
+        self.fixed_axes = None
+        self.frame_metadata = None
 
     def __len__(self):
         '''
@@ -29,6 +43,17 @@ class Atoms:
         p.box = self.box.copy()
         p.names = self.names[:]
         p.mass = self.mass.copy()
+        p.v = None if self.v is None else self.v.copy()
+        p.f = None if self.f is None else self.f.copy()
+        p.energy_per_atom = (
+            None if self.energy_per_atom is None else self.energy_per_atom.copy()
+        )
+        p.fixed_axes = (
+            None if self.fixed_axes is None else self.fixed_axes.copy()
+        )
+        p.frame_metadata = (
+            None if self.frame_metadata is None else dict(self.frame_metadata)
+        )
         return p
 
     def free_r(self):

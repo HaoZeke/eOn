@@ -1,6 +1,13 @@
 
 '''
 Con(figuration) i/o library
+
+CON I/O is implemented on top of the modern **readcon** Python bindings
+(readcon-core): vectorized ``coords_array`` / velocities / forces, frame
+metadata, first-frame and streaming iterators, and optional gzip writes.
+Callers still use :func:`loadcon` / :func:`savecon` and an :class:`eon.atoms.Atoms`
+view; optional fields on ``Atoms`` (``v``, ``f``, ``energy_per_atom``,
+``frame_metadata``, ``fixed_axes``) carry full-frame payload when present.
 '''
 import configparser
 #from io import BytesIO as StringIO
@@ -53,24 +60,127 @@ def box_to_length_angle(box):
     return lengths, angles
 
 
+def _frame_metadata_dict(frame):
+    """Return a plain dict copy of frame.metadata when present."""
+    meta = getattr(frame, 'metadata', None)
+    if meta is None:
+        return None
+    try:
+        return dict(meta)
+    except TypeError:
+        return None
+
+
 def _frame_to_atoms(frame):
-    '''Convert a readcon.ConFrame to an eon Atoms object.'''
+    """Convert a :class:`readcon.ConFrame` to an eon :class:`atoms.Atoms`.
+
+    Uses vectorized ``coords_array`` / ``velocities_array`` / ``forces_array`` /
+    ``energies_array`` when available (readcon >= 0.13), falling back to
+    per-atom Python attributes for older wheels.
+    """
     num_atoms = len(frame)
     a = atoms.Atoms(num_atoms)
-    boxlengths = numpy.array(list(frame.cell))
-    boxangles = numpy.array(list(frame.angles))
+    boxlengths = numpy.asarray(frame.cell, dtype=float)
+    boxangles = numpy.asarray(frame.angles, dtype=float)
     a.box = length_angle_to_box(boxlengths, boxangles)
-    for i, atom in enumerate(frame.atoms):
-        a.r[i] = [atom.x, atom.y, atom.z]
+
+    # Positions: prefer contiguous ndarray from the bindings.
+    coords = None
+    if hasattr(frame, 'coords_array'):
+        try:
+            coords = numpy.asarray(frame.coords_array(), dtype=float)
+        except Exception:
+            coords = None
+    frame_atoms = list(frame.atoms)
+    if coords is not None and coords.shape == (num_atoms, 3):
+        a.r[:] = coords
+    else:
+        for i, atom in enumerate(frame_atoms):
+            a.r[i] = [atom.x, atom.y, atom.z]
+
+    fixed_axes = numpy.zeros((num_atoms, 3), dtype=bool)
+    for i, atom in enumerate(frame_atoms):
         a.names[i] = atom.symbol
-        a.mass[i] = atom.mass if atom.mass is not None else 0.0
-        a.free[i] = 0 if any(atom.fixed) else 1
+        mass = atom.mass
+        a.mass[i] = float(mass) if mass is not None else 0.0
+        fixed = list(atom.fixed) if atom.fixed is not None else [False, False, False]
+        if len(fixed) != 3:
+            fixed = [bool(fixed[0])] * 3 if fixed else [False, False, False]
+        fixed_axes[i] = fixed
+        # Legacy free flag: free if no axis is fixed.
+        a.free[i] = 0 if any(fixed) else 1
+    a.fixed_axes = fixed_axes
+
+    # Optional velocity / force / energy blocks.
+    if hasattr(frame, 'velocities_array'):
+        try:
+            vel = frame.velocities_array()
+            if vel is not None:
+                a.v = numpy.asarray(vel, dtype=float)
+        except Exception:
+            pass
+    if a.v is None and frame_atoms and getattr(frame_atoms[0], 'has_velocity', False):
+        a.v = numpy.zeros((num_atoms, 3))
+        for i, atom in enumerate(frame_atoms):
+            a.v[i] = [
+                atom.vx if atom.vx is not None else 0.0,
+                atom.vy if atom.vy is not None else 0.0,
+                atom.vz if atom.vz is not None else 0.0,
+            ]
+
+    if hasattr(frame, 'forces_array'):
+        try:
+            frc = frame.forces_array()
+            if frc is not None:
+                a.f = numpy.asarray(frc, dtype=float)
+        except Exception:
+            pass
+    if a.f is None and frame_atoms and getattr(frame_atoms[0], 'has_forces', False):
+        a.f = numpy.zeros((num_atoms, 3))
+        for i, atom in enumerate(frame_atoms):
+            a.f[i] = [
+                atom.fx if atom.fx is not None else 0.0,
+                atom.fy if atom.fy is not None else 0.0,
+                atom.fz if atom.fz is not None else 0.0,
+            ]
+
+    if hasattr(frame, 'energies_array'):
+        try:
+            eng = frame.energies_array()
+            if eng is not None:
+                a.energy_per_atom = numpy.asarray(eng, dtype=float)
+        except Exception:
+            pass
+    if a.energy_per_atom is None and frame_atoms and getattr(
+            frame_atoms[0], 'has_energy', False):
+        a.energy_per_atom = numpy.array(
+            [atom.energy if atom.energy is not None else 0.0 for atom in frame_atoms],
+            dtype=float,
+        )
+
+    a.frame_metadata = _frame_metadata_dict(frame)
     return a
 
 
+def _read_all_frames_path(path):
+    """All frames from a path (``read_all_frames`` or ``read_con``)."""
+    reader = getattr(readcon, 'read_all_frames', None) or readcon.read_con
+    return reader(path)
+
+
 def loadcons(filename):
-    frames = readcon.read_con(filename)
-    return [_frame_to_atoms(f) for f in frames]
+    """Load every frame in a multi-frame ``.con`` / ``.convel`` / ``.con.gz``."""
+    return [_frame_to_atoms(f) for f in _read_all_frames_path(filename)]
+
+
+def iter_cons(filename):
+    """Yield :class:`atoms.Atoms` for each frame (streaming via ``iter_con``)."""
+    if hasattr(readcon, 'iter_con'):
+        for frame in readcon.iter_con(filename):
+            yield _frame_to_atoms(frame)
+    else:
+        for frame in _read_all_frames_path(filename):
+            yield _frame_to_atoms(frame)
 
 
 def loadposcars(filename):
@@ -83,62 +193,185 @@ def loadposcars(filename):
             return p
 
 
-def loadcon(filein, reset = True):
-    '''
-    Load a con file
-        filein: may be either a filename or a file-like object
-    '''
+def loadcon(filein, reset=True):
+    """
+    Load the **first** frame of a con file.
+
+    ``filein`` may be a filename or a file-like object. Paths use
+    :func:`readcon.read_first_frame` (no full multi-frame parse). File-like
+    objects use :func:`readcon.read_con_string`.
+    """
     if hasattr(filein, 'readline'):
         content = filein.read()
         if reset:
-            filein.seek(0)
+            try:
+                filein.seek(0)
+            except Exception:
+                pass
         frames = readcon.read_con_string(content)
-    else:
-        frames = readcon.read_con(filein)
+        if not frames:
+            raise IOError("No frames found in con data")
+        return _frame_to_atoms(frames[0])
+
+    path = filein
+    if hasattr(readcon, 'read_first_frame'):
+        try:
+            return _frame_to_atoms(readcon.read_first_frame(path))
+        except Exception as exc:
+            # Fall back to full read for odd extensions / older edge cases.
+            logger.debug("read_first_frame failed for %s (%s); using read_con",
+                         path, exc)
+    frames = readcon.read_con(path)
     if not frames:
         raise IOError("No frames found in con data")
     return _frame_to_atoms(frames[0])
 
-def _atoms_to_frame(p):
-    '''Convert an eon Atoms object to a readcon.ConFrame.'''
+
+def loadcon_as_ase(filename):
+    """Load CON path as a list of ASE Atoms via readcon (requires ``ase``)."""
+    if hasattr(readcon, 'read_con_as_ase'):
+        return readcon.read_con_as_ase(filename)
+    raise RuntimeError("readcon.read_con_as_ase is not available in this wheel")
+
+
+def _atoms_to_frame(p, metadata=None):
+    """Convert an eon :class:`atoms.Atoms` to a :class:`readcon.ConFrame`.
+
+    Propagates optional velocities, forces, per-atom energies, per-axis fixed
+    flags, and frame metadata when present on ``p``.
+    """
     lengths, angles = box_to_length_angle(p.box)
     atom_list = []
-    for i in range(len(p)):
-        atom_list.append(readcon.Atom(
+    n = len(p)
+    use_fixed_axes = (
+        getattr(p, 'fixed_axes', None) is not None
+        and numpy.asarray(p.fixed_axes).shape == (n, 3)
+    )
+    use_v = getattr(p, 'v', None) is not None and numpy.asarray(p.v).shape == (n, 3)
+    use_f = getattr(p, 'f', None) is not None and numpy.asarray(p.f).shape == (n, 3)
+    use_e = (
+        getattr(p, 'energy_per_atom', None) is not None
+        and numpy.asarray(p.energy_per_atom).shape == (n,)
+    )
+    for i in range(n):
+        if use_fixed_axes:
+            fixed = [bool(p.fixed_axes[i, 0]), bool(p.fixed_axes[i, 1]),
+                     bool(p.fixed_axes[i, 2])]
+        else:
+            fixed = [p.free[i] == 0] * 3
+        kwargs = dict(
             symbol=p.names[i],
             x=float(p.r[i][0]),
             y=float(p.r[i][1]),
             z=float(p.r[i][2]),
-            fixed=[p.free[i] == 0] * 3,
+            fixed=fixed,
             atom_id=i + 1,
             mass=float(p.mass[i]),
-        ))
-    return readcon.ConFrame(
-        cell=list(lengths),
-        angles=list(angles),
+        )
+        if use_v:
+            kwargs['vx'] = float(p.v[i][0])
+            kwargs['vy'] = float(p.v[i][1])
+            kwargs['vz'] = float(p.v[i][2])
+        if use_f:
+            kwargs['fx'] = float(p.f[i][0])
+            kwargs['fy'] = float(p.f[i][1])
+            kwargs['fz'] = float(p.f[i][2])
+        if use_e:
+            kwargs['energy'] = float(p.energy_per_atom[i])
+        atom_list.append(readcon.Atom(**kwargs))
+
+    meta = metadata
+    if meta is None and getattr(p, 'frame_metadata', None) is not None:
+        meta = dict(p.frame_metadata)
+    frame_kwargs = dict(
+        cell=[float(x) for x in lengths],
+        angles=[float(x) for x in angles],
         atoms=atom_list,
         prebox_header=["Generated by eOn", ""],
     )
+    # metadata= supported on modern ConFrame; omit if constructor rejects it.
+    if meta:
+        try:
+            return readcon.ConFrame(metadata=meta, **frame_kwargs)
+        except TypeError:
+            pass
+    return readcon.ConFrame(**frame_kwargs)
 
 
-def savecon(fileout, p, w = 'w'):
-    '''
-    Save a con file
-        fileout: can be either a file name or a file-like object
-        p:       information (in the form of an atoms object) to save
-        w:       write/append flag
-    '''
-    frame = _atoms_to_frame(p)
+def _write_con_path(path, frames, precision=6, compression=None, canonical=None):
+    """Call :func:`readcon.write_con` with optional kwargs only if supported."""
+    kwargs = {'precision': precision}
+    if compression is not None:
+        kwargs['compression'] = compression
+    # canonical= added in newer wheels; ignore if unsupported.
+    if canonical is not None:
+        try:
+            readcon.write_con(path, frames, canonical=canonical, **kwargs)
+            return
+        except TypeError:
+            pass
+    readcon.write_con(path, frames, **kwargs)
+
+
+def savecon(fileout, p, w='w', precision=6, compression=None, canonical=None,
+            metadata=None):
+    """
+    Save a con file using readcon.
+
+    Parameters
+    ----------
+    fileout : str or file-like
+        Path or writable object.
+    p : atoms.Atoms
+        Configuration to write.
+    w : {'w', 'a'}
+        Write or append (append rewrites multi-frame via readcon for paths).
+    precision : int
+        Decimal precision for coordinates (passed to readcon).
+    compression : {None, 'gzip', 'none'}
+        Force compression mode for path writes (default: auto from ``.gz``).
+    canonical : bool or None
+        If True and supported by the installed readcon, write canonical CON.
+    metadata : dict or None
+        Optional frame metadata override (else ``p.frame_metadata``).
+    """
+    frame = _atoms_to_frame(p, metadata=metadata)
     if hasattr(fileout, 'write'):
-        text = readcon.write_con_string([frame])
+        text_kwargs = {'precision': precision}
+        try:
+            if canonical is not None:
+                text = readcon.write_con_string([frame], canonical=canonical,
+                                                **text_kwargs)
+            else:
+                text = readcon.write_con_string([frame], **text_kwargs)
+        except TypeError:
+            text = readcon.write_con_string([frame], precision=precision)
         fileout.write(text)
+        return
+
+    path = fileout
+    if w == 'a' and os.path.exists(path):
+        existing = list(_read_all_frames_path(path))
+        existing.append(frame)
+        _write_con_path(path, existing, precision=precision,
+                        compression=compression, canonical=canonical)
     else:
-        if w == 'a' and os.path.exists(fileout):
-            existing = readcon.read_con(fileout)
-            existing.append(frame)
-            readcon.write_con(fileout, existing)
-        else:
-            readcon.write_con(fileout, [frame])
+        _write_con_path(path, [frame], precision=precision,
+                        compression=compression, canonical=canonical)
+
+
+def savecons(fileout, atoms_list, precision=6, compression=None, canonical=None):
+    """Write a multi-frame CON trajectory in one readcon call."""
+    frames = [_atoms_to_frame(p) for p in atoms_list]
+    if hasattr(fileout, 'write'):
+        try:
+            text = readcon.write_con_string(frames, precision=precision)
+        except TypeError:
+            text = readcon.write_con_string(frames)
+        fileout.write(text)
+        return
+    _write_con_path(fileout, frames, precision=precision,
+                    compression=compression, canonical=canonical)
 
 
 def load_mode(modefilein):

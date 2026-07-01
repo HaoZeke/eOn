@@ -70,6 +70,18 @@ def make_movie(movie_type, path_root, states, separate_files=False):
         for atoms in atoms_list:
             io.saveposcar(movie_path, atoms, 'a')
         print("Saved %i frames to %s" % (len(atoms_list), movie_path))
+        # Also emit a multi-frame CON via readcon (metadata frame_index) for
+        # tools that prefer CON over multi-POSCAR append.
+        con_path = os.path.splitext(movie_path)[0] + ".con"
+        for i, a in enumerate(atoms_list):
+            a.frame_metadata = dict(a.frame_metadata or {})
+            a.frame_metadata.setdefault("frame_index", i)
+        try:
+            io.savecons(con_path, atoms_list)
+            print("Saved %i frames to %s (readcon multi-frame)" % (
+                len(atoms_list), con_path))
+        except Exception as exc:
+            print("Note: multi-frame CON write skipped (%s)" % exc)
 
 
 def get_trajectory(trajectory_path):
