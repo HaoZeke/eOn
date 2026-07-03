@@ -16,6 +16,7 @@
 #include "Matter.h"
 #include "SafeMath.h"
 
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -161,7 +162,9 @@ void apply_geometry(readcon::ConFrameBuilder &builder, Matter &m,
 
   // getForcesRaw() may trigger pot evaluation if recomputePotential is set;
   // only enter when the pot is already clean so we serialize cached forces.
-  if (!m.needsForceUpdate()) {
+  // Gated: force sections are opt-in ([Main] write_con_forces) because
+  // ASE-class readers reject frames that carry them.
+  if (eonc::io::write_con_forces() && !m.needsForceUpdate()) {
     builder.set_forces_from_flat(flat_row_major(m.getForcesRaw()));
   }
 
@@ -217,6 +220,20 @@ readcon::ConFrame frame_from_matter(Matter &m,
 } // namespace
 
 namespace eonc::io {
+
+namespace {
+// Process-wide opt-in for force sections in written frames; classic con
+// layout (no sections) keeps ASE-class readers working on our outputs.
+std::atomic<bool> g_write_con_forces{false};
+} // namespace
+
+void set_write_con_forces(bool enabled) noexcept {
+  g_write_con_forces.store(enabled, std::memory_order_relaxed);
+}
+
+bool write_con_forces() noexcept {
+  return g_write_con_forces.load(std::memory_order_relaxed);
+}
 
 ConFrameMetadata metadata_from_frame(const readcon::ConFrame &frame) {
   ConFrameMetadata meta;

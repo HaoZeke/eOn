@@ -555,7 +555,11 @@ TEST_CASE("ConFileIO force and energy sections round-trip via readcon API",
 
   auto tmppath = std::filesystem::temp_directory_path() / "_test_forces.con";
   const std::string tmpfile = tmppath.string();
+  // Force sections are opt-in ([Main] write_con_forces); this case verifies
+  // the co-load round-trip, so enable them for the write.
+  eonc::io::set_write_con_forces(true);
   REQUIRE(eonc::io::io_ok(m->matter2con(tmpfile, false)));
+  eonc::io::set_write_con_forces(false);
 
   // File should declare forces + energy via readcon metadata/sections.
   const auto frames = readcon::read_all_frames(tmpfile);

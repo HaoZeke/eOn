@@ -86,6 +86,15 @@ class MainConfig(BaseModel):
     write_log: bool = Field(
         default=True, description="Enable writing log to client.log file."
     )
+    write_con_forces: bool = Field(
+        default=False,
+        description=(
+            "Write 'Forces of Component' sections into .con outputs so"
+            " restarts co-load forces and energy without re-evaluating the"
+            " potential. Off by default: classic con readers (e.g. ASE's eon"
+            " parser) reject frames that carry force sections."
+        ),
+    )
     max_force_calls: int = Field(
         default=0,
         description="The maximum number of total force calls per job. The default, 0, means unlimited force calls. If this limit is reached, an error code 1017 is thrown and shows up in the client log.",

@@ -57,6 +57,10 @@ Main:
             kind: boolean
             default: True
 
+        write_con_forces:
+            kind: boolean
+            default: False
+
         max_force_calls:
             kind: int
             default: 0

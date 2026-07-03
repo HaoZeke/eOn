@@ -56,6 +56,10 @@ public:
     long maxForceCalls{0};
     bool removeNetForce{true};
     bool parallel{true}; // parallel force evaluation via std::jthread
+    /// Opt-in "Forces of Component" sections in written .con frames
+    /// (enables force+energy co-load on restart); classic readers such as
+    /// ASE's eon parser reject frames that carry them.
+    bool writeConForces{false};
   } main_options;
 
   // [Potential] //

@@ -84,6 +84,18 @@ struct ConFrameMetadata {
 /// Extract known frame-level fields from a parsed readcon frame.
 ConFrameMetadata metadata_from_frame(const readcon::ConFrame &frame);
 
+/**
+ * Whether written .con frames carry "Forces of Component" sections.
+ *
+ * Force sections enable force+energy co-loading on re-read (warm NEB
+ * restarts without re-evaluating the potential) but are not part of the
+ * classic con layout: external readers such as ASE's eon parser reject
+ * frames that carry them. Off unless [Main] write_con_forces enables it.
+ * Reading force-bearing frames is always supported regardless of this flag.
+ */
+void set_write_con_forces(bool enabled) noexcept;
+[[nodiscard]] bool write_con_forces() noexcept;
+
 // Reading
 [[nodiscard]] IoStatus con2matter(Matter &m, std::string filename);
 [[nodiscard]] IoStatus con2matter(Matter &m, const readcon::ConFrame &frame,
