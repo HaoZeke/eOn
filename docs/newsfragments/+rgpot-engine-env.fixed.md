@@ -1,1 +1,0 @@
-RgpotPot engine-path environment overrides are backend-scoped: `NWCHEMC_LIBRARY` / `RGPOT_NWCHEMC_ENGINE` apply only to the NWChem backend and `CPMDC_LIBRARY` / `RGPOT_CPMDC_ENGINE` only to the CPMD backend, so setting both no longer sends the NWChem engine library into a CPMD configure.

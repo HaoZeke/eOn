@@ -1,1 +1,0 @@
-The `examples/rgpot_cpmd_blyp` example and the rgpot-vs-SocketNWChem comparison scripts now use the shipped in-process `[RgpotPot]` configuration (backend / functional / cutoff_ry / engine_library) instead of the abandoned potserv host/port keys, which eonclient never read.
