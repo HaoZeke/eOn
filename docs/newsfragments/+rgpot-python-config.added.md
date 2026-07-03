@@ -1,0 +1,1 @@
+The `rgpot` potential is selectable from the Python configuration layer: `eon/config.yaml` gains an `[RgpotPot]` section and `eon.schema` a matching `RgpotPot` model, mirroring the C++ INI keys (backend, basis, theory, scf_type, functional, cutoff_ry, charge, multiplicity, engine paths, title, memory_mb, scratch_dir, input_block).
