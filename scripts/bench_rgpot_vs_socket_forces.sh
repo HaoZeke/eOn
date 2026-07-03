@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Timed multi-force loop for RgpotPot (requires potserv + engine).
+# Timed multi-force loop for RgpotPot (in-process; requires an engine library).
 # SocketNWChem path is only timed if NWCHEM_SOCKET_BENCH=1 and nwchem is available
 # (full i-PI harness is heavier; default documents that path as untimed here).
 set -euo pipefail
 OUT="${1:-bench_rgpot_vs_socket_forces.txt}"
 N_FORCE="${N_FORCE:-20}"
 TEST_BIN="${TEST_BIN:-}"
-HOST="${RGPOT_POTSERV_HOST:-127.0.0.1}"
-PORT="${RGPOT_POTSERV_PORT:-19111}"
 
 {
   echo "=== Timed force-loop comparison scaffold ==="
@@ -15,16 +13,17 @@ PORT="${RGPOT_POTSERV_PORT:-19111}"
   echo "Host: $(hostname)"
   echo "N_FORCE=$N_FORCE"
   echo
-  echo "--- RgpotPot (NWChem backend via potserv) ---"
+  echo "--- RgpotPot (in-process NWChem backend, dlopen libnwchemc) ---"
   if [[ -z "$TEST_BIN" || ! -x "$TEST_BIN" ]]; then
     echo "SKIP: set TEST_BIN to test_rgpot_pot (built with -Dwith_rgpot=true)"
+  elif [[ -z "${NWCHEMC_LIBRARY:-}${RGPOT_NWCHEMC_ENGINE:-}" ]]; then
+    echo "SKIP: set NWCHEMC_LIBRARY (or RGPOT_NWCHEMC_ENGINE) to an engine library"
   else
-    export RGPOT_POTSERV_HOST="$HOST" RGPOT_POTSERV_PORT="$PORT" RGPOT_BACKEND=NWChem
     # Warm-up
-    "$TEST_BIN" "[rgpot]" >/dev/null 2>&1 || true
+    "$TEST_BIN" "[nwchemc]" >/dev/null 2>&1 || true
     start=$(date +%s.%N)
     for ((i=0; i<N_FORCE; i++)); do
-      "$TEST_BIN" "[rgpot]" >/dev/null 2>&1
+      "$TEST_BIN" "[nwchemc]" >/dev/null 2>&1
     done
     end=$(date +%s.%N)
     python3 - <<PY
