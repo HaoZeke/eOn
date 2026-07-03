@@ -4,8 +4,11 @@
 #include "RgpotPot.h"
 #include "RGPotEngine.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 RgpotPot::RgpotPot(const Parameters &p)
     : Potential(PotType::RGPOT, p) {
@@ -36,10 +39,22 @@ RgpotPot::RgpotPot(const Parameters &p)
     opt.theory = e;
   if (const char *e = std::getenv("RGPOT_NWCHEM_SCF_TYPE"))
     opt.scf_type = e;
-  if (const char *e = std::getenv("NWCHEMC_LIBRARY"))
-    opt.engine_path = e;
-  else if (const char *e = std::getenv("RGPOT_NWCHEMC_ENGINE"))
-    opt.engine_path = e;
+  // Engine-path env overrides are backend-scoped: NWCHEMC_LIBRARY must not
+  // leak into a cpmdc configure (CPMDPot resolves CPMDC_LIBRARY itself).
+  std::string backend_lc = opt.backend;
+  std::transform(backend_lc.begin(), backend_lc.end(), backend_lc.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  if (backend_lc.rfind("nwchem", 0) == 0) {
+    if (const char *e = std::getenv("NWCHEMC_LIBRARY"))
+      opt.engine_path = e;
+    else if (const char *e = std::getenv("RGPOT_NWCHEMC_ENGINE"))
+      opt.engine_path = e;
+  } else if (backend_lc.rfind("cpmd", 0) == 0) {
+    if (const char *e = std::getenv("CPMDC_LIBRARY"))
+      opt.engine_path = e;
+    else if (const char *e = std::getenv("RGPOT_CPMDC_ENGINE"))
+      opt.engine_path = e;
+  }
 
   impl_ = std::make_unique<RGPotEngine>(opt);
   backend_ = impl_->backend();
