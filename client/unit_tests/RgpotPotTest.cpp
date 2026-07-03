@@ -74,8 +74,13 @@ TEST_CASE("RgpotPot in-process cpmdc force (no potserv)",
 #ifndef WITH_RGPOT
   SKIP("built without WITH_RGPOT");
 #else
-  REQUIRE(env_nonempty("CPMDC_LIBRARY") ||
-          env_nonempty("RGPOT_CPMDC_ENGINE") || env_nonempty("RGPOT_CPMD_ENGINE"));
+  // Engine is a runtime dlopen dep; packaging CI may build WITH_RGPOT without
+  // a local libcpmdc — skip rather than fail the default suite.
+  if (!(env_nonempty("CPMDC_LIBRARY") || env_nonempty("RGPOT_CPMDC_ENGINE") ||
+        env_nonempty("RGPOT_CPMD_ENGINE"))) {
+    SKIP("no CPMD embed library in environment "
+         "(set CPMDC_LIBRARY / RGPOT_CPMDC_ENGINE)");
+  }
 
   Parameters params{};
   params.potential_options.potential = PotType::RGPOT;
@@ -91,7 +96,7 @@ TEST_CASE("RgpotPot in-process cpmdc force (no potserv)",
   REQUIRE(pot->getType() == PotType::RGPOT);
 
   auto matter = std::make_shared<Matter>(pot, params);
-  REQUIRE(matter->con2matter("pos.con"));
+  REQUIRE(eonc::io::io_ok(matter->con2matter("pos.con")));
   REQUIRE(matter->numberOfAtoms() == 9);
 
   double energy = 0.0;
