@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Compare setup notes: SocketNWChem vs RgpotPot(NWChem). Times are wall-clock
-# for a single force call harness when servers are up.
+# for a single force call harness when an engine library is available.
 set -euo pipefail
 OUT="${1:-rgpot_nwchem_vs_socket.txt}"
 {
@@ -11,14 +11,14 @@ OUT="${1:-rgpot_nwchem_vs_socket.txt}"
   echo "  client/potentials/SocketNWChem/ and unit_tests/run_nwchem_test.sh"
   echo "  Requires nwchem on PATH and a .nwi with driver socket."
   echo
-  echo "RgpotPot NWChem: potserv hosts NWChemPot (dlopen libnwchemc)."
-  echo "  Start: NWCHEMC_LIBRARY=... potserv <port> NWChem"
-  echo "  eOn: potential=RGPOT backend=NWChem host/port -> Cap'n Proto configure+calculate"
-  echo "  Fake CI path: libnwchemc_fake_engine.so + tests/test_rpc_e2e style"
+  echo "RgpotPot NWChem: in-process NWChemPot (dlopen libnwchemc), no potserv."
+  echo "  eOn: potential=RGPOT, [RgpotPot] backend=NWChem -> capnp configure+calculate in-process"
+  echo "  Engine: NWCHEMC_LIBRARY=... (or RGPOT_NWCHEMC_ENGINE / [RgpotPot] engine_library)"
+  echo "  Fake CI path: rgpot's libnwchemc_fake_engine.so"
   echo
-  if [[ -n "${RGPOT_POTSERV_PORT:-}" ]]; then
-    echo "RGPOT_POTSERV_PORT=${RGPOT_POTSERV_PORT} (run test_rgpot_pot for timings)"
+  if [[ -n "${NWCHEMC_LIBRARY:-}${RGPOT_NWCHEMC_ENGINE:-}" ]]; then
+    echo "Engine library set (run test_rgpot_pot for timings)"
   else
-    echo "Set RGPOT_POTSERV_HOST/PORT and run: meson test -C <build> test_rgpot_pot --suite rgpot"
+    echo "Set NWCHEMC_LIBRARY and run: meson test -C <build> test_rgpot_pot --suite rgpot"
   fi
 } | tee "$OUT"

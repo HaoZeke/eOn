@@ -11,6 +11,7 @@
 */
 #include "ParametersINI.h"
 #include "BaseStructures.h"
+#include "ConFileIO.h"
 #include "EpiCenters.h"
 #include "HelperFunctions.h"
 #include "Parameters.h"
@@ -57,6 +58,10 @@ int load_ini(INIReader &ini, Parameters &params) {
       ini.GetBoolean("Main", "quiet", params.main_options.quiet);
   params.main_options.writeLog =
       ini.GetBoolean("Main", "write_log", params.main_options.writeLog);
+  params.main_options.writeConForces = ini.GetBoolean(
+      "Main", "write_con_forces", params.main_options.writeConForces);
+  // Process-wide io mode; same pattern as the RNG seeding below.
+  eonc::io::set_write_con_forces(params.main_options.writeConForces);
   params.main_options.finiteDifference = ini.GetReal(
       "Main", "finite_difference", params.main_options.finiteDifference);
   // Initialize random generator

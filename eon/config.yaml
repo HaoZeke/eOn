@@ -57,6 +57,10 @@ Main:
             kind: boolean
             default: True
 
+        write_con_forces:
+            kind: boolean
+            default: False
+
         max_force_calls:
             kind: int
             default: 0
@@ -100,6 +104,7 @@ Potential:
                 - pyamff
                 - python
                 - qsc
+                - rgpot
                 - socket_nwchem
                 - spce
                 - sw_si
@@ -1786,6 +1791,70 @@ SocketNWChemPot:
         make_template_input:
             kind: bool
             default: True
+
+################################################################################
+
+RgpotPot:
+    options:
+        backend:
+            kind: string
+            default: "nwchemc"
+
+        basis:
+            kind: string
+            default: "sto-3g"
+
+        theory:
+            kind: string
+            default: "scf"
+
+        scf_type:
+            kind: string
+            default: "rhf"
+
+        functional:
+            kind: string
+            default: "BLYP"
+
+        cutoff_ry:
+            kind: float
+            default: 70.0
+
+        charge:
+            kind: int
+            default: 0
+
+        multiplicity:
+            kind: int
+            default: 1
+
+        engine_path:
+            kind: string
+            default: ""
+
+        engine_library:
+            kind: string
+            default: ""
+
+        engine_root:
+            kind: string
+            default: ""
+
+        title:
+            kind: string
+            default: ""
+
+        memory_mb:
+            kind: int
+            default: 0
+
+        scratch_dir:
+            kind: string
+            default: ""
+
+        input_block:
+            kind: string
+            default: ""
 
 ################################################################################
 

@@ -116,8 +116,12 @@ TEST_CASE("VerifyForceBearingWrite", "[approval][confileio][modern]") {
   const double E = m->getPotentialEnergy();
   REQUIRE_FALSE(m->needsForceUpdate());
 
+  // Force sections are opt-in ([Main] write_con_forces); this case verifies
+  // the force-bearing surface, so enable it for the write below.
+  eonc::io::set_write_con_forces(true);
   const auto tmp = make_tmp_con("forces_energy");
   REQUIRE(eonc::io::io_ok(m->matter2con(tmp.string(), false)));
+  eonc::io::set_write_con_forces(false);
 
   std::ifstream in(tmp);
   std::string body((std::istreambuf_iterator<char>(in)),
@@ -143,6 +147,35 @@ TEST_CASE("VerifyForceBearingWrite", "[approval][confileio][modern]") {
   summary << "geometry_after_force_write:\n" << dump_geometry(*m2);
   REQUIRE(summary.str() ==
           read_master("ApproveConFileIO.VerifyForceBearingWrite.approved.txt"));
+}
+
+TEST_CASE("VerifyDefaultWriteHasNoForceSections",
+          "[approval][confileio][compat]") {
+  auto m = load_reactant();
+  (void)m->getPotentialEnergy();
+  REQUIRE_FALSE(m->needsForceUpdate());
+  REQUIRE_FALSE(eonc::io::write_con_forces());
+
+  const auto tmp = make_tmp_con("default_no_forces");
+  REQUIRE(eonc::io::io_ok(m->matter2con(tmp.string(), false)));
+
+  std::ifstream in(tmp);
+  std::string body((std::istreambuf_iterator<char>(in)),
+                   std::istreambuf_iterator<char>());
+
+  // Classic layout: no per-component force sections and no forces entry in
+  // the metadata sections list, so ASE-class readers keep parsing our output.
+  REQUIRE(body.find("Forces of Component") == std::string::npos);
+  REQUIRE(body.find("\"forces\"") == std::string::npos);
+
+  Parameters params;
+  params.potential_options.potential = PotType::LJ;
+  auto pot = eonc::helpers::makePotential(PotType::LJ, params);
+  auto m2 = std::make_shared<Matter>(pot, params);
+  REQUIRE(eonc::io::io_ok(m2->con2matter(tmp.string())));
+  fs::remove(tmp);
+  REQUIRE(m2->needsForceUpdate());
+  REQUIRE(dump_geometry(*m2) == dump_geometry(*m));
 }
 
 TEST_CASE("VerifyNebPathCloneWrite", "[approval][confileio][neb]") {

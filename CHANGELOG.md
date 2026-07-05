@@ -2,6 +2,57 @@
 
 <!-- towncrier release notes start -->
 
+## [2.16.0](https://github.com/TheochemUI/eOn/tree/2.16.0) - 2026-07-03
+
+### Added
+
+- Matter exposes `PbcConvention` (Legacy vs MinimumImage) for position wrapping, selectable without merging the historical `v3c_pbcs` branch (issue #176). ([#176](https://github.com/TheochemUI/eOn/issues/176))
+- ASE NWChem calculator takes `mpi_launcher` (`mpirun` default or `srun`) for Slurm-friendly execution (issue #193). ([#193](https://github.com/TheochemUI/eOn/issues/193))
+- Metatomic accepts explicit `energy_output` / `energy_uncertainty_output` keys when models use non-default output names (issue #215). ([#215](https://github.com/TheochemUI/eOn/issues/215))
+- Metatomic can apply a random SO(3) rotation per evaluation with
+  `random_rotation` (issue #287), rotating forces back to the lab frame. ([#287](https://github.com/TheochemUI/eOn/issues/287))
+- Metatomic can average energy and forces over `n_symmetry_rotations` random
+  rotations for approximate O(3) symmetrization (issue #292). ([#292](https://github.com/TheochemUI/eOn/issues/292))
+- Metatomic supports non-conservative forces via `non_conservative` and
+  `variant_force` / `force_output` (issue #296), matching metatomic-ase. ([#296](https://github.com/TheochemUI/eOn/issues/296))
+- In-process RgpotPot for NWChem/CPMD via rgpot (optional build); user guide and examples for BLYP/DFT XC blocks.
+- Metatomic exposes `deterministic` and `deterministic_strict` knobs for
+  reproducible PyTorch evaluation (JIT profiling off, deterministic algorithms).
+- Minimum-mode finding supports `min_mode_method = davidson`: Ritz subspace with FD Hessian-vector products and residual correction (alternative to dimer rotation minimization and Lanczos).
+- The `rgpot` potential is selectable from the Python configuration layer: `eon/config.yaml` gains an `[RgpotPot]` section and `eon.schema` a matching `RgpotPot` model, mirroring the C++ INI keys (backend, basis, theory, scf_type, functional, cutoff_ry, charge, multiplicity, engine paths, title, memory_mb, scratch_dir, input_block).
+
+### Changed
+
+- `Matter::getForcesFree` / `getForcesFreeV` are const, and `setPositionsFree`
+  applies PBC wrapping like `setPositions` so free-atom optimizers stay consistent
+  for TIP4P/SPCE and other PBC pots (issue #171). ([#171](https://github.com/TheochemUI/eOn/issues/171))
+- Metatomic potential requests per-atom outputs via ``sample_kind == "atom"``
+  instead of the removed ``get_per_atom`` / ``set_per_atom`` API. ([#362](https://github.com/TheochemUI/eOn/issues/362))
+- Build against metatomic-torch >=0.1.15 and metatensor-torch >=0.10, including
+  the renamed pip layout (`metatensor_torch/`) and `sample_kind` on ModelOutput.
+- Morse pair force hot path inlines the potential, uses inv-r scaling, and accumulates energy in a register (cachegrind: ~60% Ir in Morse::force on NEB Morse workloads).
+- `ConFileIO` targets readcon-core **0.13** with a nanobind-ready `IoStatus` enum
+  (replacing `bool` returns), bulk/zero-copy builder maps
+  (`positions_data` / `set_*_from_flat` / `set_atom_velocity`), and
+  `writeNebPath` using `ConFrameBuilder::clone()` so NEB bands write in one pass
+  without re-reading the movie file per image. Matter exposes atom-index and CON
+  header accessors for bindings.
+
+### Fixed
+
+- Min-mode saddle search no longer reports success (`STATUS_GOOD`) when the climb
+  objective is still unconverged (issue #20). ([#20](https://github.com/TheochemUI/eOn/issues/20))
+- Saddle and process search synthesize a missing `displacement.con` from `pos.con` plus `saddle_search.displace_magnitude` times a unit `direction.dat` mode (issue #79). ([#79](https://github.com/TheochemUI/eOn/issues/79))
+- Molecular QM potentials (NWChem socket, ASE-ORCA, ASE-NWChem) auto-disable PBC on
+  `Matter` attach and hard-fail if PBC is re-enabled, preventing wraps from tearing
+  non-centered molecules (issue #188). ([#188](https://github.com/TheochemUI/eOn/issues/188))
+- MCAMC `energy_level` superbasin scheme tracks a true run-wide minimum energy for increment scaling and no longer passes a generator into `min()` (issue #212). ([#212](https://github.com/TheochemUI/eOn/issues/212))
+- NEB with `initializer = file` and `initial_path_in` loads endpoints from the first and last path frames and no longer requires (or crashes on) separate `reactant.con` / `product.con` (issue #278). ([#278](https://github.com/TheochemUI/eOn/issues/278))
+- .con outputs are readable by classic con parsers again: "Forces of Component" sections are opt-in via `[Main] write_con_forces` (default off) instead of always written. ASE's eon reader rejects frames carrying force sections, which broke every ASE-based consumer of eOn-written con files (including the atomistic-cookbook eon-pet-neb example). Enable the knob to keep force+energy co-loading for warm restarts; reading force-bearing frames works regardless.
+- RgpotPot engine-path environment overrides are backend-scoped: `NWCHEMC_LIBRARY` / `RGPOT_NWCHEMC_ENGINE` apply only to the NWChem backend and `CPMDC_LIBRARY` / `RGPOT_CPMDC_ENGINE` only to the CPMD backend, so setting both no longer sends the NWChem engine library into a CPMD configure.
+- The `examples/rgpot_cpmd_blyp` example and the rgpot-vs-SocketNWChem comparison scripts now use the shipped in-process `[RgpotPot]` configuration (backend / functional / cutoff_ry / engine_library) instead of the abandoned potserv host/port keys, which eonclient never read.
+
+
 ## [2.15.0](https://github.com/TheochemUI/eOn/tree/2.15.0) - 2026-06-24
 
 ### Added
