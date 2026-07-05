@@ -114,20 +114,24 @@ jobs:
         python-version: '3.12'
     - name: Install build frontend
       run: python3 -m pip install --upgrade pip build
-    - name: Build sdist/wheel (meson-python)
+    - name: Install sdist build deps
+      # meson-python's sdist path runs a full meson setup; Eigen3 is the only
+      # hard dependency the runner image lacks (wrap fallbacks cover the rest).
+      run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+    - name: Build sdist (meson-python)
+      # sdist only: a runner-built wheel would carry a non-manylinux linux tag
+      # that PyPI rejects; binary distribution stays on conda-forge.
       run: |-
+        set -o pipefail
         python3 scripts/release_assert.py "${{ needs.gate.outputs.version }}" --require-changelog
-        if python3 -m build 2>&1 | tee "${RUNNER_TEMP}/pypi-build.log"; then
-          echo "build ok"
-        else
-          echo "::warning::python -m build failed (native deps missing on runner). Trying sdist via pip wheel isolation off."
-          exit 1
-        fi
+        python3 -m build --sdist 2>&1 | tee "${RUNNER_TEMP}/pypi-build.log"
         ls -la dist/
+        test -n "$(find dist -name '*.tar.gz' -print -quit)"
     - name: Publish to PyPI
+      # Auth is PyPI trusted publishing bound to this workflow + the release
+      # environment; no token secret involved.
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
         skip-existing: true
         verbose: true
   pypi-skip-rc:
