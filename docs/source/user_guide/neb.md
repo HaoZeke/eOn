@@ -28,6 +28,10 @@ For a step-by-step walkthrough contrasting ASE's NEB with eOn's advanced
 features (energy-weighted springs, dimer refinement), see the
 [atomistic-cookbook tutorial](https://atomistic-cookbook.org/examples/eon-pet-neb/eon-pet-neb.html)
 on oxadiazole formation with a PET-MAD metatomic potential.
+
+For a **built-in** Morse Pt NEB with current `rgpycrumbs eon plt-neb` 1D/2D
+figures (full history, 1:1 reaction-valley panel, structure strip), see
+{doc}`/tutorials/systems/morse_pt_neb`.
 ```
 
 ## Variants
