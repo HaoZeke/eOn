@@ -41,6 +41,23 @@ public:
   [[nodiscard]] const std::string &backend() const noexcept { return backend_; }
   [[nodiscard]] bool engineAvailable() const;
 
+  /// Block on multi-rank force collectives (non-zero MPI ranks only).
+  void mpiWorkerLoop() const;
+
+  static int mpiWorldSize();
+  static int mpiWorldRank();
+
+  /**
+   * Multi-rank driver pot (rank 0). Kept alive for the whole job so we do not
+   * destroy/finalize libnwchemc while workers sit in mpiWorkerLoop (that is an
+   * MPI deadlock: finalize/GA collectives vs Bcast of N).
+   * Potential factory returns this instance instead of constructing a second
+   * pot on rank 0.
+   */
+  static void setMpiDriverInstance(std::shared_ptr<RgpotPot> pot);
+  static std::shared_ptr<RgpotPot> mpiDriverInstance();
+  static void clearMpiDriverInstance();
+
 private:
   std::unique_ptr<RGPotEngine> impl_;
   std::string backend_;

@@ -41,6 +41,12 @@
 #include <sstream>
 #endif
 
+#if defined(WITH_RGPOT) && defined(WITH_RGPOT_MPI) && !defined(EONMPI)
+#include "potentials/Rgpot/RgpotPot.h"
+#include <cstdlib>
+#include <mpi.h>
+#endif
+
 #if defined WITH_ASE_ORCA || EMBED_PYTHON || WITH_ASE_NWCHEM
 #include "PyGuard.h"
 #endif
@@ -354,6 +360,78 @@ int main(int argc, char **argv) {
   }
 #endif
 
+#if defined(WITH_RGPOT) && defined(WITH_RGPOT_MPI) && !defined(EONMPI)
+  // RGPOT multi-rank DFT: mpirun -np N eonclient, potential=RGPOT in config.ini.
+  // Non-zero ranks only join force() collectives so libnwchemc/GA sees all ranks.
+  // Rank 0 continues into the normal job path below.
+  {
+    int mpi_inited = 0;
+    MPI_Initialized(&mpi_inited);
+    if (!mpi_inited) {
+      // Auto-detect common process managers so plain `mpirun -np N eonclient`
+      // works without an extra env flag.
+      const char *hint = std::getenv("RGPOT_MPI_EMBED");
+      const bool under_launcher =
+          hint != nullptr || std::getenv("OMPI_COMM_WORLD_SIZE") != nullptr ||
+          std::getenv("PMI_SIZE") != nullptr ||
+          std::getenv("PMI_RANK") != nullptr ||
+          std::getenv("SLURM_NPROCS") != nullptr ||
+          std::getenv("SLURM_NTASKS") != nullptr;
+      if (under_launcher) {
+        int provided = 0;
+        MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+        mpi_inited = 1;
+      }
+    }
+    if (mpi_inited) {
+      int rank = 0, size = 1;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      if (size > 1) {
+        Parameters mpi_params;
+        if (mpi_params.load("config.ini") != 0) {
+          QUILL_LOG_ERROR(logger, "RGPOT MPI: failed to load config.ini");
+          logger->flush_log();
+          MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+        if (mpi_params.potential_options.potential == PotType::RGPOT) {
+          // All ranks construct the engine together so GA/MPI init is collective.
+          // Must stay alive on rank 0 for the whole job: a stack pot that goes
+          // out of scope runs ~NWChemPot → nwchemc_finalize while workers are
+          // blocked in mpiWorkerLoop's MPI_Bcast — hard MPI deadlock (all ranks
+          // spin in epoll_wait at 100% CPU, no force progress).
+          auto bootstrap = std::make_shared<RgpotPot>(mpi_params);
+          if (!bootstrap->engineAvailable()) {
+            QUILL_LOG_ERROR(logger, "RGPOT MPI: engine unavailable on rank {}",
+                            rank);
+            logger->flush_log();
+            MPI_Abort(MPI_COMM_WORLD, 1);
+          }
+          MPI_Barrier(MPI_COMM_WORLD);
+          if (rank != 0) {
+            QUILL_LOG_INFO(logger,
+                           "RGPOT MPI worker rank {}/{} entering force pool",
+                           rank, size);
+            logger->flush_log();
+            bootstrap->mpiWorkerLoop();
+            bootstrap.reset();
+            MPI_Finalize();
+            quill::Backend::stop();
+            return 0;
+          }
+          QUILL_LOG_INFO(logger,
+                         "RGPOT MPI driver rank 0/{} (multi-rank DFT; pot held "
+                         "for job lifetime)",
+                         size);
+          logger->flush_log();
+          // Rank 0: keep pot alive; Potential factory returns this instance.
+          RgpotPot::setMpiDriverInstance(std::move(bootstrap));
+        }
+      }
+    }
+  }
+#endif
+
   eonc::enableFPE(); // from ExceptionsEON.h
 
   auto start_time = std::chrono::steady_clock::now();
@@ -513,6 +591,27 @@ int main(int argc, char **argv) {
 #ifndef __aarch64__
   print_memory_usage();
 #endif
+#endif
+
+#if defined(WITH_RGPOT) && defined(WITH_RGPOT_MPI) && !defined(EONMPI)
+  // Release multi-rank DFT workers blocked in force collectives, then drop
+  // the driver pot (finalize) only after workers have left the Bcast wait.
+  {
+    int mpi_inited = 0;
+    MPI_Initialized(&mpi_inited);
+    if (mpi_inited) {
+      int rank = 0, size = 1;
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      if (size > 1 && rank == 0) {
+        int stop = 0;
+        MPI_Bcast(&stop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        // Workers exit mpiWorkerLoop and finalize their ranks; free driver last.
+        RgpotPot::clearMpiDriverInstance();
+      }
+      MPI_Finalize();
+    }
+  }
 #endif
 
 #ifdef EONMPI

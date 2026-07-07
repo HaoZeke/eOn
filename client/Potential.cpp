@@ -331,6 +331,11 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
 #endif
 #ifdef WITH_RGPOT
   case PotType::RGPOT: {
+    // Multi-rank: reuse the driver pot constructed before workers entered the
+    // force pool. A second construct on rank 0 alone would destroy/finalize
+    // the first engine (or re-init GA) while workers wait on MPI_Bcast.
+    if (auto existing = RgpotPot::mpiDriverInstance())
+      return existing;
     return (std::make_shared<RgpotPot>(params));
     break;
   }

@@ -7,6 +7,11 @@
 #include <cstdlib>
 #include <iostream>
 
+namespace {
+// Process-lifetime holder for multi-rank rank-0 driver pot (see ClientEON).
+std::shared_ptr<RgpotPot> g_rgpot_mpi_driver;
+} // namespace
+
 RgpotPot::RgpotPot(const Parameters &p)
     : Potential(PotType::RGPOT, p) {
   RGPotEngineOptions opt;
@@ -56,3 +61,22 @@ void RgpotPot::force(long N, const double *R, const int *atomicNrs, double *F,
   (void)variance;
   impl_->force(N, R, atomicNrs, F, U, box);
 }
+
+void RgpotPot::mpiWorkerLoop() const {
+  if (!impl_)
+    throw std::runtime_error("RgpotPot::mpiWorkerLoop: no engine");
+  impl_->mpiWorkerLoop();
+}
+
+int RgpotPot::mpiWorldSize() { return RGPotEngine::mpiWorldSize(); }
+int RgpotPot::mpiWorldRank() { return RGPotEngine::mpiWorldRank(); }
+
+void RgpotPot::setMpiDriverInstance(std::shared_ptr<RgpotPot> pot) {
+  g_rgpot_mpi_driver = std::move(pot);
+}
+
+std::shared_ptr<RgpotPot> RgpotPot::mpiDriverInstance() {
+  return g_rgpot_mpi_driver;
+}
+
+void RgpotPot::clearMpiDriverInstance() { g_rgpot_mpi_driver.reset(); }
