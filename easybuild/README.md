@@ -1,6 +1,6 @@
 # EasyBuild packaging for eOn
 
-GROMACS/LAMMPS-style easyconfigs for contributing eOn to
+GROMACS / LAMMPS / Siesta-style easyconfigs for contributing eOn to
 [easybuild-easyconfigs](https://github.com/easybuilders/easybuild-easyconfigs).
 
 ## Primary product (conda-forge parity)
@@ -14,20 +14,18 @@ GROMACS/LAMMPS-style easyconfigs for contributing eOn to
 | `easyconfigs/q/quill/quill-11.1.0-GCCcore-13.3.0.eb` | C++ logging |
 | `easyconfigs/m/Meson/Meson-1.8.2-GCCcore-13.3.0.eb` | Meson ≥1.8 (2024a only ships 1.4.0) |
 
-Optional lite (core-only) leftover: `eOn-2.16.0-gfbf-2024a.eb` — not the primary.
+Optional lite leftover (not for submission): `eOn-2.16.0-gfbf-2024a-core.eb`.
 
-**Toolchain:** `foss/2024a` (matches PyTorch + GROMACS style). Feature flags match
-conda-forge `eon-feedstock` `build.sh`.
+**Toolchain:** `foss/2024a` (matches PyTorch + GROMACS/LAMMPS). Feature flags match
+conda-forge `eon-feedstock` `build.sh`. Multi-source stages `rgpot` and
+`readcon-core` into `subprojects/` (Siesta/QE style).
 
 CUDA torch is a **versionsuffix** sibling when needed (like GROMACS `-CUDA-…`),
 not a dozen option-off stubs.
 
 ## Prep with eb-stack (required workflow)
 
-eb-stack owns robot completeness and companion scaffolding:
-
 ```bash
-# From a checkout that has fixtures/eon_packaging (or this easyconfigs/ tree):
 eb-stack check-recipe \
   --recipe easyconfigs/e/eOn/eOn-2.16.0-foss-2024a.eb \
   --easyconfigs /path/to/easybuild-easyconfigs \
@@ -35,15 +33,15 @@ eb-stack check-recipe \
   --require-configopt=-Dwith_metatomic=true \
   --require-configopt=-Dwith_xtb=true \
   --require-configopt=-Dwith_serve=true \
-  --require-configopt=-Dwith_rgpot=true
+  --require-configopt=-Dwith_rgpot=true \
+  --require-configopt=-Dpip_metatomic=false
 
-# If deps are missing, scaffold draft companions into the overlay and re-run:
+# If deps are missing, scaffold drafts into the overlay and re-run:
 eb-stack check-recipe \
   --recipe easyconfigs/e/eOn/eOn-2.16.0-foss-2024a.eb \
   --easyconfigs /path/to/easybuild-easyconfigs \
   --easyconfigs easyconfigs \
   --scaffold-missing easyconfigs
-# Fill sources/checksums in scaffolds, then check-recipe again until OK.
 ```
 
 ## Build
@@ -63,6 +61,7 @@ Sanity:
 
 ```bash
 eonclient --help
-eonclient --features   # Metatomic/XTB/Serve should be enabled
+eonclient --version
+ldd $(which eonclient) | grep -Ei 'libxtb|metatomic|capnp|torch'
 python -c 'import eon'
 ```
