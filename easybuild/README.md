@@ -1,59 +1,68 @@
 # EasyBuild packaging for eOn
 
-Draft easyconfigs for contributing eOn to
+GROMACS/LAMMPS-style easyconfigs for contributing eOn to
 [easybuild-easyconfigs](https://github.com/easybuilders/easybuild-easyconfigs).
+
+## Primary product (conda-forge parity)
 
 | File | Role |
 |------|------|
-| `easyconfigs/q/quill/quill-11.1.0-GCCcore-13.3.0.eb` | C++ logging dependency (missing from upstream EB) |
-| `easyconfigs/m/Meson/Meson-1.8.2-GCCcore-13.3.0.eb` | Meson ≥1.8 for eOn `meson_version` floor (2024a only has 1.4.0) |
-| `easyconfigs/m/Meson/Meson-1.8.2_reenable-binutils-workaround.patch` | Upstream EB patch for Meson 1.8.2 |
-| `easyconfigs/e/eOn/eOn-2.16.0-gfbf-2024a.eb` | Core optimized eOn client + Python AKMC package |
+| `easyconfigs/e/eOn/eOn-2.16.0-foss-2024a.eb` | **Full default**: metatomic + xTB + serve + rgpot + Fortran/CuH2 |
+| `easyconfigs/m/metatensor/metatensor-0.1.17-GCCcore-13.3.0.eb` | Companion C library |
+| `easyconfigs/m/metatensor-torch/metatensor-torch-0.10.0-foss-2024a.eb` | Companion TorchScript bindings |
+| `easyconfigs/m/metatomic-torch/metatomic-torch-0.1.15-foss-2024a.eb` | Companion metatomic C++ API |
+| `easyconfigs/q/quill/quill-11.1.0-GCCcore-13.3.0.eb` | C++ logging |
+| `easyconfigs/m/Meson/Meson-1.8.2-GCCcore-13.3.0.eb` | Meson ≥1.8 (2024a only ships 1.4.0) |
 
-**Toolchain:** `gfbf/2024a` (GCC 13.3 + FlexiBLAS + FFTW; no MPI — core AKMC does not need OpenMPI).
+Optional lite (core-only) leftover: `eOn-2.16.0-gfbf-2024a.eb` — not the primary.
 
-**Core profile:** release build, Fortran pots, CuH2 on; optional engines
-(xTB, ARTn, metatomic, ASE-embedded, VASP/AMS, serve/RPC, parallel NEB)
-off. Full flag table and offline/EESSI notes live in the internal packaging
-doc (`Software/eOn/eon-easybuild-v2.16.0-packaging.org`).
+**Toolchain:** `foss/2024a` (matches PyTorch + GROMACS style). Feature flags match
+conda-forge `eon-feedstock` `build.sh`.
 
-## Pre-flight with eb-stack (recommended)
+CUDA torch is a **versionsuffix** sibling when needed (like GROMACS `-CUDA-…`),
+not a dozen option-off stubs.
 
-Before `eb --robot`, validate parse + robot coverage + packaging gates:
+## Prep with eb-stack (required workflow)
+
+eb-stack owns robot completeness and companion scaffolding:
 
 ```bash
+# From a checkout that has fixtures/eon_packaging (or this easyconfigs/ tree):
 eb-stack check-recipe \
-  --recipe easyconfigs/e/eOn/eOn-2.16.0-gfbf-2024a.eb \
+  --recipe easyconfigs/e/eOn/eOn-2.16.0-foss-2024a.eb \
   --easyconfigs /path/to/easybuild-easyconfigs \
   --easyconfigs easyconfigs \
-  --require-configopt=-Dwith_fortran=true \
-  --require-configopt=-Dwith_tests=false
+  --require-configopt=-Dwith_metatomic=true \
+  --require-configopt=-Dwith_xtb=true \
+  --require-configopt=-Dwith_serve=true \
+  --require-configopt=-Dwith_rgpot=true
+
+# If deps are missing, scaffold draft companions into the overlay and re-run:
+eb-stack check-recipe \
+  --recipe easyconfigs/e/eOn/eOn-2.16.0-foss-2024a.eb \
+  --easyconfigs /path/to/easybuild-easyconfigs \
+  --easyconfigs easyconfigs \
+  --scaffold-missing easyconfigs
+# Fill sources/checksums in scaffolds, then check-recipe again until OK.
 ```
 
-Expect all runtime/build deps found (including `quill` on `GCCcore-13.3.0`)
-and packaging gate OK (easyblock, moduleclass, checksums, configopts).
-
-## Build (developer)
+## Build
 
 ```bash
 export EASYBUILD_ROBOT_PATHS=$PWD/easyconfigs:$EASYBUILD_ROBOT_PATHS
+eb metatensor-0.1.17-GCCcore-13.3.0.eb --robot
+eb metatensor-torch-0.10.0-foss-2024a.eb --robot
+eb metatomic-torch-0.1.15-foss-2024a.eb --robot
 eb quill-11.1.0-GCCcore-13.3.0.eb --robot
 eb Meson-1.8.2-GCCcore-13.3.0.eb --robot
-# Release builds enable -O3 -flto=auto in client/meson.build; cap parallel
-# on memory-constrained builders:
-eb eOn-2.16.0-gfbf-2024a.eb --robot --parallel=4
+# LTO + fat deps: cap parallel on tight nodes
+eb eOn-2.16.0-foss-2024a.eb --robot --parallel=4
 ```
 
-Sanity (after module load):
+Sanity:
 
 ```bash
 eonclient --help
+eonclient --features   # Metatomic/XTB/Serve should be enabled
 python -c 'import eon'
 ```
-
-## Notes for reviewers
-
-- Companion **quill** recipe is required; not yet in upstream easyconfigs.
-- `configopts` is a single plain string (not `' '.join`) so tooling can gate flags.
-- `nlohmann_json` and `readcon-core` still come from Meson wraps (`Rust` builddep).
-- Portable: `native_arch=false`, `fast_math=false`, `use_mkl=false`.
