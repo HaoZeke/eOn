@@ -13,12 +13,14 @@ GROMACS / LAMMPS / Siesta-style easyconfigs for contributing eOn to
 | `easyconfigs/m/metatomic-torch/metatomic-torch-0.1.15-foss-2024a.eb` | Companion metatomic C++ API |
 | `easyconfigs/q/quill/quill-11.1.0-GCCcore-13.3.0.eb` | C++ logging |
 | `easyconfigs/m/Meson/Meson-1.8.2-GCCcore-13.3.0.eb` | Meson ≥1.8 (2024a only ships 1.4.0) |
+| `easyconfigs/r/Rust/Rust-1.88.0-GCCcore-13.3.0.eb` | Rust ≥1.88 for readcon-core 0.13.1 |
 
 Optional lite leftover (not for submission): `eOn-2.16.0-gfbf-2024a-core.eb`.
 
 **Toolchain:** `foss/2024a` (matches PyTorch + GROMACS/LAMMPS). Feature flags match
 conda-forge `eon-feedstock` `build.sh`. Multi-source stages `rgpot` and
-`readcon-core` into `subprojects/` (Siesta/QE style).
+`readcon-core`; preconfigopts `cargo cinstall`s readcon (feedstock cargo-c path;
+requires Rust ≥1.88 companion).
 
 CUDA torch is a **versionsuffix** sibling when needed (like GROMACS `-CUDA-…`),
 not a dozen option-off stubs.
@@ -53,6 +55,7 @@ eb metatensor-torch-0.10.0-foss-2024a.eb --robot
 eb metatomic-torch-0.1.15-foss-2024a.eb --robot
 eb quill-11.1.0-GCCcore-13.3.0.eb --robot
 eb Meson-1.8.2-GCCcore-13.3.0.eb --robot
+eb Rust-1.88.0-GCCcore-13.3.0.eb --robot
 # LTO + fat deps: cap parallel on tight nodes
 eb eOn-2.16.0-foss-2024a.eb --robot --parallel=4
 ```
