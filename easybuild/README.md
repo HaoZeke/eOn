@@ -6,6 +6,8 @@ Draft easyconfigs for contributing eOn to
 | File | Role |
 |------|------|
 | `easyconfigs/q/quill/quill-11.1.0-GCCcore-13.3.0.eb` | C++ logging dependency (missing from upstream EB) |
+| `easyconfigs/m/Meson/Meson-1.8.2-GCCcore-13.3.0.eb` | Meson ≥1.8 for eOn `meson_version` floor (2024a only has 1.4.0) |
+| `easyconfigs/m/Meson/Meson-1.8.2_reenable-binutils-workaround.patch` | Upstream EB patch for Meson 1.8.2 |
 | `easyconfigs/e/eOn/eOn-2.16.0-gfbf-2024a.eb` | Core optimized eOn client + Python AKMC package |
 
 **Toolchain:** `gfbf/2024a` (GCC 13.3 + FlexiBLAS + FFTW; no MPI — core AKMC does not need OpenMPI).
@@ -36,6 +38,7 @@ and packaging gate OK (easyblock, moduleclass, checksums, configopts).
 ```bash
 export EASYBUILD_ROBOT_PATHS=$PWD/easyconfigs:$EASYBUILD_ROBOT_PATHS
 eb quill-11.1.0-GCCcore-13.3.0.eb --robot
+eb Meson-1.8.2-GCCcore-13.3.0.eb --robot
 # Release builds enable -O3 -flto=auto in client/meson.build; cap parallel
 # on memory-constrained builders:
 eb eOn-2.16.0-gfbf-2024a.eb --robot --parallel=4
