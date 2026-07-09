@@ -2,6 +2,7 @@
 // clash.
 #include "RGPotEngine.h"
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdint>
@@ -14,6 +15,13 @@
 #include "rgpot/CPMDPot/CPMDPot.hpp"
 #include "rgpot/NWChemPot/NWChemPot.hpp"
 #include "rgpot/rpc/Potentials.capnp.h"
+
+// Multi-rank PEF: host owns MPI_Init; every rank in the PEF group enters
+// force() with the same geometry so libnwchemc/GA strong-scales.
+// Rank 0 drives eOn algorithms; other ranks sit in mpiWorkerLoop().
+#ifdef EONMPI
+#include <mpi.h>
+#endif
 
 namespace {
 
@@ -55,6 +63,10 @@ struct RGPotEngine::Impl {
 
 RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
     : impl_(std::make_unique<Impl>()) {
+#ifdef EONMPI
+  pe_comm_ =
+      (opt.pe_comm != MPI_COMM_NULL) ? opt.pe_comm : MPI_COMM_WORLD;
+#endif
   backend_ = to_lower(opt.backend);
   if (backend_ == "nwchem" || backend_ == "nwchemc" ||
       backend_ == "nwchempot") {
@@ -147,10 +159,38 @@ bool RGPotEngine::available() const {
   return false;
 }
 
-void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
-                        double *F, double *U, const double *box) const {
+int RGPotEngine::mpiWorldSize() {
+#ifdef EONMPI
+  int flag = 0;
+  MPI_Initialized(&flag);
+  if (!flag)
+    return 1;
+  int size = 1;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  return size;
+#else
+  return 1;
+#endif
+}
+
+int RGPotEngine::mpiWorldRank() {
+#ifdef EONMPI
+  int flag = 0;
+  MPI_Initialized(&flag);
+  if (!flag)
+    return 0;
+  int rank = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  return rank;
+#else
+  return 0;
+#endif
+}
+
+void RGPotEngine::forceLocal(long N, const double *R, const int *atomicNrs,
+                             double *F, double *U, const double *box) const {
   if (N <= 0)
-    throw std::runtime_error("RGPotEngine::force called with N <= 0");
+    throw std::runtime_error("RGPotEngine::forceLocal called with N <= 0");
 
   AtomMatrix positions(static_cast<int>(N), 3);
   for (long i = 0; i < N; ++i) {
@@ -176,4 +216,97 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
     F[3 * i + 1] = forces(ii, 1);
     F[3 * i + 2] = forces(ii, 2);
   }
+}
+
+void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
+                        double *F, double *U, const double *box) const {
+#ifdef EONMPI
+  int flag = 0;
+  MPI_Initialized(&flag);
+  int size = 1;
+  int rank = 0;
+  if (flag) {
+    MPI_Comm_size(pe_comm_, &size);
+    MPI_Comm_rank(pe_comm_, &rank);
+  }
+  if (size > 1) {
+    // Protocol (all PEF ranks must enter together):
+    //   1) Bcast N (int). N<=0 means shutdown for workers (mpiWorkerLoop).
+    //   2) Bcast R (3N doubles), atomicNrs (N ints), box (9 doubles) from root.
+    //   3) All ranks call forceLocal; root keeps U/F for eOn.
+    int n = (rank == 0) ? static_cast<int>(N) : 0;
+    MPI_Bcast(&n, 1, MPI_INT, 0, pe_comm_);
+    if (n <= 0) {
+      if (rank == 0)
+        throw std::runtime_error("RGPotEngine::force called with N <= 0");
+      return;
+    }
+    std::vector<double> rbuf(static_cast<size_t>(n) * 3u);
+    std::vector<int> zbuf(static_cast<size_t>(n));
+    double boxbuf[9];
+    if (rank == 0) {
+      if (R == nullptr || atomicNrs == nullptr || box == nullptr)
+        throw std::runtime_error(
+            "RGPotEngine::force: null input on PEF root rank");
+      std::copy(R, R + 3 * n, rbuf.begin());
+      std::copy(atomicNrs, atomicNrs + n, zbuf.begin());
+      std::copy(box, box + 9, boxbuf);
+    }
+    MPI_Bcast(rbuf.data(), n * 3, MPI_DOUBLE, 0, pe_comm_);
+    MPI_Bcast(zbuf.data(), n, MPI_INT, 0, pe_comm_);
+    MPI_Bcast(boxbuf, 9, MPI_DOUBLE, 0, pe_comm_);
+    std::vector<double> fbuf(static_cast<size_t>(n) * 3u);
+    double u = 0.0;
+    forceLocal(n, rbuf.data(), zbuf.data(), fbuf.data(), &u, boxbuf);
+    if (rank == 0) {
+      if (U)
+        *U = u;
+      if (F)
+        std::copy(fbuf.begin(), fbuf.end(), F);
+    }
+    return;
+  }
+#endif
+  forceLocal(N, R, atomicNrs, F, U, box);
+}
+
+void RGPotEngine::mpiWorkerLoop() const {
+#ifdef EONMPI
+  // Mirror force() collectives on non-zero ranks until rank 0 sends N<=0.
+  while (true) {
+    int n = 0;
+    MPI_Bcast(&n, 1, MPI_INT, 0, pe_comm_);
+    if (n <= 0)
+      break;
+    std::vector<double> rbuf(static_cast<size_t>(n) * 3u);
+    std::vector<int> zbuf(static_cast<size_t>(n));
+    double boxbuf[9];
+    MPI_Bcast(rbuf.data(), n * 3, MPI_DOUBLE, 0, pe_comm_);
+    MPI_Bcast(zbuf.data(), n, MPI_INT, 0, pe_comm_);
+    MPI_Bcast(boxbuf, 9, MPI_DOUBLE, 0, pe_comm_);
+    std::vector<double> fbuf(static_cast<size_t>(n) * 3u);
+    double u = 0.0;
+    forceLocal(n, rbuf.data(), zbuf.data(), fbuf.data(), &u, boxbuf);
+  }
+#else
+  throw std::runtime_error(
+      "RGPotEngine::mpiWorkerLoop: built without EONMPI");
+#endif
+}
+
+void RGPotEngine::mpiSignalStop() const {
+#ifdef EONMPI
+  int flag = 0;
+  MPI_Initialized(&flag);
+  if (!flag)
+    return;
+  int rank = 0;
+  MPI_Comm_rank(pe_comm_, &rank);
+  if (rank != 0)
+    return;
+  int n = 0;
+  MPI_Bcast(&n, 1, MPI_INT, 0, pe_comm_);
+#else
+  (void)0;
+#endif
 }

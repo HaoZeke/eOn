@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <memory>
 
+#ifdef WITH_RGPOT
+#include "potentials/Rgpot/RgpotPot.h"
+#endif
+
 using namespace Catch::Matchers;
 
 namespace tests {
@@ -115,6 +119,55 @@ TEST_CASE("RgpotPot in-process cpmdc force (no potserv)",
              matter->getCell().data());
   REQUIRE(std::isfinite(energy2));
   REQUIRE(std::abs(energy - energy2) < 1e-4);
+#endif
+}
+
+TEST_CASE("RgpotPot multi-rank driver instance is reused by makePotential",
+          "[PotTest][RGPOT][mpi-driver]") {
+#ifndef WITH_RGPOT
+  SKIP("built without WITH_RGPOT");
+#else
+  // Structural lifetime fix: rank 0 must not construct a second pot while
+  // workers sit in mpiWorkerLoop. Factory returns the held shared instance.
+  // No live NWChem required for the holder null path; engine path optional.
+  REQUIRE(RgpotPot::mpiDriverInstance() == nullptr);
+  RgpotPot::clearMpiDriverInstance();
+  REQUIRE(RgpotPot::mpiDriverInstance() == nullptr);
+
+  // mpiWorldSize is 1 without EONMPI / without MPI_Init — single-rank path.
+  REQUIRE(RgpotPot::mpiWorldSize() >= 1);
+  REQUIRE(RgpotPot::mpiWorldRank() >= 0);
+
+  if (!(env_nonempty("NWCHEMC_LIBRARY") ||
+        env_nonempty("RGPOT_NWCHEMC_ENGINE") ||
+        env_nonempty("RGPOT_NWCHEM_ENGINE"))) {
+    SKIP("no NWChem embed library; holder null path only");
+  }
+
+  Parameters params{};
+  params.potential_options.potential = PotType::RGPOT;
+  params.rgpot_options.backend = "nwchemc";
+  params.rgpot_options.basis = "sto-3g";
+  params.rgpot_options.theory = "scf";
+  params.rgpot_options.scf_type = "rhf";
+
+  auto driver = std::make_shared<RgpotPot>(params);
+  if (!driver->engineAvailable()) {
+    SKIP("engine not available at runtime");
+  }
+  RgpotPot::setMpiDriverInstance(driver);
+  REQUIRE(RgpotPot::mpiDriverInstance().get() == driver.get());
+
+  auto from_factory = eonc::helpers::makePotential(
+      params.potential_options.potential, params);
+  REQUIRE(from_factory.get() == driver.get());
+
+  RgpotPot::clearMpiDriverInstance();
+  REQUIRE(RgpotPot::mpiDriverInstance() == nullptr);
+  auto fresh = eonc::helpers::makePotential(
+      params.potential_options.potential, params);
+  REQUIRE(fresh.get() != driver.get());
+  REQUIRE(fresh != nullptr);
 #endif
 }
 

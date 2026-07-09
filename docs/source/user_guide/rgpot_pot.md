@@ -84,6 +84,35 @@ emitted automatically.
 | Engine process | External NWChem | `libnwchemc.so` / `libcpmdc.so` in eOn |
 | Multi-call SCF | Warm NWChem across POSDATA | nwchemc warm params cache (skip full RTDB reset when method blob unchanged) |
 
+## Multi-rank PEF (EONMPI + NWChem)
+
+When eOn is built with **`-Dwith_rgpot=true -Dwith_mpi=true`**, standalone
+multi-rank runs use **SPMD collective force** on the PEF group (default
+`MPI_COMM_WORLD`). Host owns `MPI_Init`; Cap'n Proto / `[RgpotPot]` INI do
+**not** carry MPI ranks.
+
+```{code-block} bash
+# Build
+meson setup bbdir-rgpot-mpi -Dwith_rgpot=true -Dwith_mpi=true
+meson compile -C bbdir-rgpot-mpi
+
+# Run: rank 0 = eOn job; ranks 1..P-1 = PEF workers (join force collectives)
+export EON_CLIENT_STANDALONE=1
+export NWCHEMC_LIBRARY=/path/to/libnwchemc.so
+export NWCHEM_TOP=/path/to/nwchem   # if required by the embed build
+mpirun -np P eonclient
+```
+
+| | Role |
+| --- | --- |
+| Rank 0 | Algorithm root (NEB/min/point job); owns geometry; keeps U,F |
+| Ranks 1..P-1 | Enter `mpiWorkerLoop`; broadcast geometry + engine force only |
+| Shutdown | Rank 0 broadcasts N≤0 so workers leave, then `MPI_Finalize` |
+
+This is **not** `MPIPot` (send/recv to an external potential rank). Every PEF
+rank calls the same in-process `RGPotEngine::force` path so libnwchemc/GA can
+strong-scale. Single-rank (`np=1` or no EONMPI) is unchanged.
+
 ## Implementation notes
 
 - `RgpotPot` (eOn `Potential`) owns an opaque `RGPotEngine` TU that includes
@@ -91,3 +120,5 @@ emitted automatically.
   with eOn's `Potential` class.
 - Forces and energies use eOn units (eV, eV/Å) after rgpot conversion from
   Hartree / Hartree·bohr⁻¹.
+- Multi-rank: rank 0 holds a shared driver pot for the job lifetime so
+  `nwchemc_finalize` does not race workers blocked in `MPI_Bcast`.

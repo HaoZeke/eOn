@@ -10,6 +10,11 @@
 #include <iostream>
 #include <string>
 
+namespace {
+// Process-lifetime holder for multi-rank rank-0 driver pot (see ClientEON).
+std::shared_ptr<RgpotPot> g_rgpot_mpi_driver;
+} // namespace
+
 RgpotPot::RgpotPot(const Parameters &p)
     : Potential(PotType::RGPOT, p) {
   RGPotEngineOptions opt;
@@ -29,6 +34,13 @@ RgpotPot::RgpotPot(const Parameters &p)
   opt.memory_mb = o.memory_mb;
   opt.scratch_dir = o.scratch_dir;
   opt.input_block = o.input_block;
+#ifdef EONMPI
+  // Prefer explicit PEF group (mirror LAMMPS MPIClientComm); else WORLD.
+  if (p.potential_options.MPIClientComm != MPI_COMM_NULL)
+    opt.pe_comm = p.potential_options.MPIClientComm;
+  else
+    opt.pe_comm = MPI_COMM_WORLD;
+#endif
 
   // Env overrides (CI / benchmarks)
   if (const char *e = std::getenv("RGPOT_BACKEND"))
@@ -60,6 +72,13 @@ RgpotPot::RgpotPot(const Parameters &p)
   backend_ = impl_->backend();
   std::cout << "RgpotPot: in-process rgpot backend=" << backend_
             << " (dlopen libnwchemc/libcpmdc, no potserv RPC)" << std::endl;
+#ifdef EONMPI
+  const int psz = RGPotEngine::mpiWorldSize();
+  if (psz > 1) {
+    std::cout << "RgpotPot: multi-rank PEF (EONMPI) world_size=" << psz
+              << " rank=" << RGPotEngine::mpiWorldRank() << std::endl;
+  }
+#endif
 }
 
 RgpotPot::~RgpotPot() = default;
@@ -71,3 +90,27 @@ void RgpotPot::force(long N, const double *R, const int *atomicNrs, double *F,
   (void)variance;
   impl_->force(N, R, atomicNrs, F, U, box);
 }
+
+void RgpotPot::mpiWorkerLoop() const {
+  if (!impl_)
+    throw std::runtime_error("RgpotPot::mpiWorkerLoop: no engine");
+  impl_->mpiWorkerLoop();
+}
+
+void RgpotPot::mpiSignalStop() const {
+  if (impl_)
+    impl_->mpiSignalStop();
+}
+
+int RgpotPot::mpiWorldSize() { return RGPotEngine::mpiWorldSize(); }
+int RgpotPot::mpiWorldRank() { return RGPotEngine::mpiWorldRank(); }
+
+void RgpotPot::setMpiDriverInstance(std::shared_ptr<RgpotPot> pot) {
+  g_rgpot_mpi_driver = std::move(pot);
+}
+
+std::shared_ptr<RgpotPot> RgpotPot::mpiDriverInstance() {
+  return g_rgpot_mpi_driver;
+}
+
+void RgpotPot::clearMpiDriverInstance() { g_rgpot_mpi_driver.reset(); }

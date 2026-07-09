@@ -41,6 +41,10 @@
 #include <sstream>
 #endif
 
+#if defined(WITH_RGPOT) && defined(EONMPI)
+#include "potentials/Rgpot/RgpotPot.h"
+#endif
+
 #if defined WITH_ASE_ORCA || EMBED_PYTHON || WITH_ASE_NWCHEM
 #include "PyGuard.h"
 #endif
@@ -345,6 +349,46 @@ int main(int argc, char **argv) {
       return 0;
     }
   }
+
+#if defined(WITH_RGPOT)
+  // Standalone multi-rank RGPOT PEF (SPMD collective force, not MPIPot):
+  //   EON_CLIENT_STANDALONE=1 mpirun -np P eonclient
+  // Rank 0 runs the eOn job; ranks 1..P-1 only join force() collectives so
+  // libnwchemc/GA sees the full PEF group. Cap'n Proto / INI do not carry ranks.
+  if (client_standalone &&
+      parameters.potential_options.potential == PotType::RGPOT && isize > 1) {
+    parameters.potential_options.MPIClientComm = MPI_COMM_WORLD;
+    // All ranks construct the engine together so GA/MPI init is collective.
+    // Must stay alive on rank 0 for the whole job: a stack pot that goes out
+    // of scope runs ~NWChemPot → nwchemc_finalize while workers are blocked
+    // in mpiWorkerLoop's MPI_Bcast — hard MPI deadlock.
+    auto bootstrap = std::make_shared<RgpotPot>(parameters);
+    if (!bootstrap->engineAvailable()) {
+      QUILL_LOG_ERROR(logger, "RGPOT PEF: engine unavailable on rank {}",
+                      irank);
+      logger->flush_log();
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (irank != 0) {
+      QUILL_LOG_INFO(logger,
+                     "RGPOT PEF worker rank {}/{} entering force pool", irank,
+                     isize);
+      logger->flush_log();
+      bootstrap->mpiWorkerLoop();
+      bootstrap.reset();
+      MPI_Finalize();
+      quill::Backend::stop();
+      return 0;
+    }
+    QUILL_LOG_INFO(logger,
+                   "RGPOT PEF driver rank 0/{} (multi-rank force; pot held "
+                   "for job lifetime)",
+                   isize);
+    logger->flush_log();
+    RgpotPot::setMpiDriverInstance(std::move(bootstrap));
+  }
+#endif // WITH_RGPOT
 #endif
 
 #ifndef EONMPI
@@ -516,6 +560,14 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef EONMPI
+#if defined(WITH_RGPOT)
+  // Release multi-rank PEF workers blocked in force collectives, then drop the
+  // driver pot (finalize) only after workers have left the Bcast wait.
+  if (auto driver = RgpotPot::mpiDriverInstance()) {
+    driver->mpiSignalStop();
+    RgpotPot::clearMpiDriverInstance();
+  }
+#endif
   // Clean shutdown for both the standalone single-rank case and the
   // client/server case; the standalone path previously aborted MPI_COMM_WORLD.
   MPI_Finalize();

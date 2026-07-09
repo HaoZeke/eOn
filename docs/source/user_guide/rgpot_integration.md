@@ -67,6 +67,18 @@ Runtime for direct mode: set `NWCHEMC_LIBRARY` / `RGPOT_NWCHEMC_ENGINE` (or
 `[RgpotPot] engine_path`) to a real `libnwchemc.so` built with NWChem embed
 support.
 
+### Multi-rank PEF (optional `-Dwith_mpi=true`)
+
+```{code-block} bash
+meson setup bbdir -Dwith_rgpot=true -Dwith_mpi=true
+EON_CLIENT_STANDALONE=1 NWCHEMC_LIBRARY=... NWCHEM_TOP=... \
+  mpirun -np P eonclient   # all ranks PEF; rank 0 runs the job
+```
+
+Host-owned MPI: eOn calls `MPI_Init`; every PEF rank enters collective
+`RgpotPot::force` with the same geometry. No MPI rank count in `[RgpotPot]`
+INI. See [RgpotPot multi-rank](project:rgpot_pot.md).
+
 ## Docs map
 
 - Direct pot: [RgpotPot](project:rgpot_pot.md)

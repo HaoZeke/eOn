@@ -75,7 +75,8 @@ public:
         ""}; // colon-separated dirs for Fortran potential .so files
     int MPIPotentialRank{-1};
 #ifdef EONMPI
-    MPI_Comm MPIClientComm;
+    /// PEF/LAMMPS group; MPI_COMM_NULL means unset (RgpotPot uses WORLD).
+    MPI_Comm MPIClientComm{MPI_COMM_NULL};
 #endif
   } potential_options;
 

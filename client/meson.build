@@ -342,6 +342,14 @@ if get_option('with_rgpot') and not is_windows
     cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
     _deps += [nwchempot_dep, cpmdpot_dep]
     _args += ['-DWITH_RGPOT']
+    # Multi-rank PEF force pool needs EONMPI on the pot library itself. Ensure
+    # MPI is linked and -DEONMPI is set before subdir (with_mpi block is later).
+    if get_option('with_mpi')
+        _rgpot_mpi = dependency('mpi')
+        _deps += [_rgpot_mpi]
+        _args += ['-DEONMPI']
+        message('RGPOT multi-rank PEF: enabled (EONMPI)')
+    endif
     subdir('potentials/Rgpot')
 endif
 
@@ -545,7 +553,11 @@ if get_option('with_mpi')
     potentials += [mpipot]
     _args += ['-DEONMPI']
     mpi_dep = dependency('mpi')
-    _deps += [mpi_dep]
+    # ClientEON EONMPI path embeds Python for the optional farm server rank
+    # (Py_Main / Py_Initialize). Link always so eonclient resolves those
+    # symbols even when with_ase_nwchem / with_ase_orca are off.
+    python_dep_mpi = py.dependency(embed: true, required: true)
+    _deps += [mpi_dep, python_dep_mpi]
 endif
 
 # Fortran potential C++ wrappers: always compiled (load Fortran libs at runtime)
