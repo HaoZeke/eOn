@@ -67,6 +67,17 @@ private:
   //! plane (n.v = 0) when a normal is supplied.
   void drawThermalVelocities(VectorXd &vel, const VectorXd *normal);
 
+  //! Eqs 14-17 symmetry restriction: if the configuration is closer
+  //! to another equivalent product half-line than to the primary one,
+  //! revert the position and reflect the velocity about the mirror
+  //! that maps the primary direction onto the offending one. Returns
+  //! true when a reflection was applied.
+  bool symmetryReflect(const VectorXd &xR, VectorXd &x, VectorXd &v,
+                       const VectorXd &xOld, const VectorXd *normal);
+
+  std::vector<VectorXd> m_symDirs; //!< p-hat_i, index 0 = primary
+  VectorXd m_symXR;                //!< reactant anchor R of the half-lines
+
   VectorXd m_masses3N;        //!< per-DOF masses of the free atoms (amu)
   double m_dt{0.0};           //!< integration step, internal units
   double m_kbt{0.0};          //!< k_B T (eV)

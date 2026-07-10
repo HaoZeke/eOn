@@ -504,6 +504,11 @@ public:
     double force_tol{0.005};     // eV/A convergence on plane force
     double s_init{0.05};         // starting fraction along the guideline
     long reactant_md_steps{20000}; // unconstrained reactant trajectory
+    // Comma-separated .con files of the OTHER symmetry-equivalent
+    // product minima (Eqs 13-17): sampling is confined to the
+    // subregion of the primary product by half-line distances with
+    // mirror velocity reflection at the boundaries.
+    std::string symmetry_products{""};
   } oh_tst_options;
 
   // [Thermostat] //

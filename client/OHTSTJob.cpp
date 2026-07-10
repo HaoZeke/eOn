@@ -60,6 +60,51 @@ void OHTSTJob::drawThermalVelocities(VectorXd &vel, const VectorXd *normal) {
   }
 }
 
+bool OHTSTJob::symmetryReflect(const VectorXd &xR, VectorXd &x, VectorXd &v,
+                               const VectorXd &xOld, const VectorXd *normal) {
+  if (m_symDirs.size() < 2) {
+    return false;
+  }
+  // Eq 15: distance from the configuration to each half-line
+  // l_i = { R + t p_i, t >= 0 }.
+  const VectorXd rel = x - xR;
+  const double rel2 = rel.squaredNorm();
+  double dPrimary = 0.0;
+  size_t closest = 0;
+  double dMin = 0.0;
+  for (size_t i = 0; i < m_symDirs.size(); ++i) {
+    const double proj = rel.dot(m_symDirs[i]);
+    const double d2 = std::max(0.0, rel2 - proj * proj);
+    const double d = std::sqrt(d2);
+    if (i == 0) {
+      dPrimary = d;
+      dMin = d;
+    } else if (d < dMin) {
+      dMin = d;
+      closest = i;
+    }
+  }
+  if (closest == 0 || dPrimary <= dMin) {
+    return false;
+  }
+  // Eqs 16-17: step back and reflect the velocity about the mirror
+  // that maps p_1 onto the offending p_i; the component of the mirror
+  // normal along the hyperplane normal is removed so the reflected
+  // velocity stays within the plane.
+  VectorXd q = m_symDirs[0] - m_symDirs[closest];
+  if (normal != nullptr) {
+    q -= (*normal) * normal->dot(q);
+  }
+  const double qn = q.norm();
+  if (qn < 1e-12) {
+    return false;
+  }
+  q /= qn;
+  x = xOld;
+  v -= 2.0 * v.dot(q) * q;
+  return true;
+}
+
 OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
                                               const VectorXd &gamma,
                                               const VectorXd &normal) {
@@ -84,10 +129,12 @@ OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
   avg.pos = VectorXd::Zero(x.size());
   long nAccum = 0;
 
+  VectorXd xPrev = x;
   for (long step = 0; step < equilSteps + sampleSteps; ++step) {
     // Velocity Verlet on the plane: forces and velocities projected,
     // positions corrected back onto the constraint (RATTLE for a
     // linear constraint is an exact projection).
+    xPrev = x;
     VectorXd a = fPlane.cwiseQuotient(m_masses3N);
     x += m_dt * v + 0.5 * m_dt * m_dt * a;
     x -= normal * normal.dot(x - gamma);
@@ -97,6 +144,13 @@ OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
     VectorXd aNew = fPlane.cwiseQuotient(m_masses3N);
     v += 0.5 * m_dt * (a + aNew);
     v -= normal * normal.dot(v);
+    // Eqs 14-17: keep the sampling in the primary product subregion.
+    if (symmetryReflect(m_symXR, x, v, xPrev, &normal)) {
+      x -= normal * normal.dot(x - gamma);
+      matter.setPositionsFreeV(x);
+      f = matter.getForcesFreeV();
+      fPlane = f - normal * normal.dot(f);
+    }
     // Andersen collisions keep the constrained ensemble canonical.
     if (uniformDraw() < m_andersenProb) {
       drawThermalVelocities(v, &normal);
@@ -147,6 +201,10 @@ double OHTSTJob::reactantQRatio(Matter &matter, const VectorXd &gammaR,
     f = matter.getForcesFreeV();
     VectorXd aNew = f.cwiseQuotient(m_masses3N);
     v += 0.5 * m_dt * (a + aNew);
+    if (symmetryReflect(m_symXR, x, v, xOld, nullptr)) {
+      matter.setPositionsFreeV(x);
+      f = matter.getForcesFreeV();
+    }
     if (uniformDraw() < m_andersenProb) {
       drawThermalVelocities(v, nullptr);
     }
@@ -217,6 +275,39 @@ std::vector<std::string> OHTSTJob::run(void) {
     throw std::runtime_error("oh_tst: reactant and product coincide");
   }
   const VectorXd u = diff / guideLen;
+
+  // Eqs 13-14: unit vectors to every symmetry-equivalent product;
+  // index 0 is the primary product the guideline points to.
+  m_symXR = xR;
+  m_symDirs.clear();
+  m_symDirs.push_back(u);
+  if (!params.oh_tst_options.symmetry_products.empty()) {
+    std::string rest = params.oh_tst_options.symmetry_products;
+    while (!rest.empty()) {
+      const auto comma = rest.find(',');
+      std::string fname = rest.substr(0, comma);
+      rest = (comma == std::string::npos) ? "" : rest.substr(comma + 1);
+      if (fname.empty()) {
+        continue;
+      }
+      Matter other(pot, params);
+      if (!other.con2matter(fname)) {
+        EONC_LOG_CRITICAL("OH-TST failed to load symmetry product {}", fname);
+        throw std::runtime_error("oh_tst: failed to load symmetry product");
+      }
+      VectorXd d = other.getPositionsFreeV() - xR;
+      AtomMatrix dm(AtomMatrix::Map(d.data(), d.size() / 3, 3));
+      dm = reactant->pbc(dm);
+      d = VectorXd::Map(dm.data(), d.size());
+      const double dn = d.norm();
+      if (dn > 1e-8) {
+        m_symDirs.push_back(d / dn);
+      }
+    }
+    EONC_LOG_INFO("[oh_tst] symmetry restriction active over {} product "
+                  "directions",
+                  m_symDirs.size());
+  }
 
   // Plane state: progression coordinate s, normal n, their conjugate
   // velocities, and the previous-iteration driving forces for the

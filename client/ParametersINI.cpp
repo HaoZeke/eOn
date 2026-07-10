@@ -887,6 +887,8 @@ int load_ini(INIReader &ini, Parameters &params) {
       ini.GetReal("OH_TST", "s_init", params.oh_tst_options.s_init);
   params.oh_tst_options.reactant_md_steps = ini.GetInteger(
       "OH_TST", "reactant_md_steps", params.oh_tst_options.reactant_md_steps);
+  params.oh_tst_options.symmetry_products = ini.Get(
+      "OH_TST", "symmetry_products", params.oh_tst_options.symmetry_products);
 
   // [Replica Exchange] //
 
