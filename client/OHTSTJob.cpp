@@ -317,8 +317,17 @@ std::vector<std::string> OHTSTJob::run(void) {
     diff = VectorXd::Map(d.data(), diff.size());
   }
   const double guideLen = diff.norm();
-  if (guideLen < 1e-8) {
-    throw std::runtime_error("oh_tst: reactant and product coincide");
+  EONC_LOG_INFO("[oh_tst] guideline length |P - R| = {:.4f} A over {} free "
+                "DOF",
+                guideLen, xR.size());
+  // A sub-Angstrom guideline is an on-site shuffle (dumbbell rotation,
+  // flicker partner): the plane progression has no room to climb and
+  // the run would "converge" at s = 0 measuring nothing.
+  if (guideLen < 0.5) {
+    EONC_LOG_CRITICAL("[oh_tst] guideline too short ({:.4f} A) -- pick a "
+                      "translation-class endpoint pair",
+                      guideLen);
+    throw std::runtime_error("oh_tst: degenerate guideline");
   }
   const VectorXd u = diff / guideLen;
 
@@ -599,6 +608,7 @@ std::vector<std::string> OHTSTJob::run(void) {
     fprintf(out, "%.8f delta_a_trans_eV\n", aTrans);
     fprintf(out, "%.8f delta_a_rot_eV\n", aRot);
     fprintf(out, "%.8f s_star_over_L\n", sBest / guideLen);
+    fprintf(out, "%.8f guideline_length_A\n", guideLen);
     fprintf(out, "%.8f normal_overlap_with_guideline\n", nBest.dot(u));
     fprintf(out, "%.8e effective_mass_amu\n", mu);
     fprintf(out, "%.8e q_ratio_per_A\n", qRatio);
