@@ -18,6 +18,7 @@
 #include "MinimizationJob.h"
 #include "MonteCarloJob.h"
 #include "NudgedElasticBandJob.h"
+#include "OHTSTJob.h"
 #include "ParallelReplicaJob.h"
 #include "Parameters.h"
 #include "PointJob.h"
@@ -104,6 +105,10 @@ std::unique_ptr<Job> makeJob(std::unique_ptr<Parameters> params) {
   }
   case Monte_Carlo: {
     return (std::make_unique<MonteCarloJob>(std::move(params)));
+    break;
+  }
+  case OH_TST: {
+    return (std::make_unique<OHTSTJob>(std::move(params)));
     break;
   }
 #ifdef WITH_GP_SURROGATE

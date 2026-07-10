@@ -356,6 +356,7 @@ eonclib_sources = [
     'ConjugateGradients.cpp',
     'Matter.cpp',
     'FiniteDifferenceJob.cpp',
+    'OHTSTJob.cpp',
     'Lanczos.cpp',
     'Davidson.cpp',
     'HessianJob.cpp',

@@ -485,6 +485,27 @@ public:
     double confidence{0.001};
   } tad_options;
 
+  // [OH_TST] //
+  // Optimized hyperplanar TST (Johannesson-Jonsson, JCP 115, 9644
+  // (2001)): reversible-work progression of a hyperplanar dividing
+  // surface with constrained thermostatted sampling.
+  struct oh_tst_options_t {
+    std::string reactant_filename{"pos.con"};
+    std::string product_filename{"product.con"};
+    double time_step{1.0};       // fs, constrained sampling dynamics
+    long equil_steps{200};       // per-plane equilibration steps
+    long sample_steps{800};      // per-plane averaging steps
+    long max_planes{200};        // plane-progression iterations
+    double plane_mass{50.0};     // m_s, inertia of the s coordinate
+    double alpha_rot{50.0};      // rotational inertia of the normal
+    double plane_time_step{0.1}; // Verlet step for (s, n) updates
+    double ds_max{0.1};          // A, clamp on per-iteration plane moves
+    double force_tol{0.005};     // eV/A convergence on plane force
+    double s_init{0.05};         // starting fraction along the guideline
+    double slab_width{0.1};      // A, residence slab (Eq 22)
+    long reactant_md_steps{20000}; // unconstrained reactant trajectory
+  } oh_tst_options;
+
   // [Thermostat] //
   struct thermostat_options_t {
     std::string kind{"none"};
