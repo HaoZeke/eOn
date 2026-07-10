@@ -19,6 +19,7 @@ struct RGPotEngineOptions {
   int memory_mb{0};
   std::string scratch_dir;
   std::string input_block; // optional NWChem inputBlocks text
+  std::string params_path; // optional serialized Cap'n Proto params message
 };
 
 /** Opaque rgpot-backed engine (nwchemc / cpmdc). No eOn Potential.h here. */

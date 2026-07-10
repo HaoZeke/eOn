@@ -29,6 +29,7 @@ RgpotPot::RgpotPot(const Parameters &p)
   opt.memory_mb = o.memory_mb;
   opt.scratch_dir = o.scratch_dir;
   opt.input_block = o.input_block;
+  opt.params_path = o.params_path;
 
   // Env overrides (CI / benchmarks)
   if (const char *e = std::getenv("RGPOT_BACKEND"))
@@ -39,6 +40,8 @@ RgpotPot::RgpotPot(const Parameters &p)
     opt.theory = e;
   if (const char *e = std::getenv("RGPOT_NWCHEM_SCF_TYPE"))
     opt.scf_type = e;
+  if (const char *e = std::getenv("RGPOT_PARAMS_PATH"))
+    opt.params_path = e;
   // Engine-path env overrides are backend-scoped: NWCHEMC_LIBRARY must not
   // leak into a cpmdc configure (CPMDPot resolves CPMDC_LIBRARY itself).
   std::string backend_lc = opt.backend;

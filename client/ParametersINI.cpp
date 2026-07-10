@@ -238,6 +238,8 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.Get(sec, "scratch_dir", params.rgpot_options.scratch_dir);
     params.rgpot_options.input_block =
         ini.Get(sec, "input_block", params.rgpot_options.input_block);
+    params.rgpot_options.params_path =
+        ini.Get(sec, "params_path", params.rgpot_options.params_path);
   }
 
   // [Debug] //

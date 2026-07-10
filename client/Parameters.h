@@ -143,6 +143,9 @@ public:
     int memory_mb{0};
     std::string scratch_dir{};
     std::string input_block{};
+    /// Serialized Cap'n Proto params message (full CPMDParams with
+    /// inputSections); overrides the scalar method keys above.
+    std::string params_path{};
   } rgpot_options;
 
   // [Structure Comparison] //
