@@ -344,8 +344,17 @@ std::vector<std::string> OHTSTJob::run(void) {
   const long nPlanes = params.oh_tst_options.max_planes;
   long plane = 0;
   bool converged = false;
+  // Sec IIC guideline refinement: after the translational force first
+  // changes sign the guideline is re-anchored every step through the
+  // previous plane's average position along the current normal, so a
+  // small rotational force no longer demands a huge s move (the
+  // failure mode that made small-inertia mechanism discovery diverge).
+  bool guidelineMoving = false;
+  VectorXd gOrigin = xR;
+  VectorXd gDir = u;
+  long rotOnlySteps = 0;
   for (; plane < nPlanes; ++plane) {
-    const VectorXd gamma = xR + s * u;
+    const VectorXd gamma = gOrigin + s * gDir;
     PlaneAverages avg = samplePlane(walker, gamma, n);
 
     // Driving forces: translation climbs against <F.n> (Eq 5 with the
@@ -357,6 +366,12 @@ std::vector<std::string> OHTSTJob::run(void) {
 
     if (plane == 0) {
       sideSign = (avg.fn < 0.0) ? -1 : 1;
+    } else if (!guidelineMoving &&
+               ((avg.fn < 0.0) ? -1 : 1) != sideSign) {
+      guidelineMoving = true;
+      EONC_LOG_DEBUG("[oh_tst] plane {}: translational force changed "
+                     "sign; guideline now follows <r> along the normal",
+                     plane);
     }
 
     // Reversible work (Eqs 18-19), trapezoid between consecutive
@@ -409,6 +424,18 @@ std::vector<std::string> OHTSTJob::run(void) {
     // free-energy maximum instead of oscillating over it ("the
     // velocity of the plane is zeroed if the plane has gone past the
     // maximum free energy position").
+    // Pure-rotation step (Sec IIC): right after a guideline change a
+    // spiked rotational force is relaxed at fixed s before the plane
+    // translates again.
+    const bool rotationOnly =
+        guidelineMoving &&
+        gRot.norm() * params.oh_tst_options.alpha_rot > 5.0 * fTol &&
+        rotOnlySteps < 10;
+    if (rotationOnly) {
+      ++rotOnlySteps;
+    } else {
+      rotOnlySteps = 0;
+    }
     if (havePrev) {
       vS += 0.5 * dtPlane * (gS + gSPrev);
     } else {
@@ -418,7 +445,13 @@ std::vector<std::string> OHTSTJob::run(void) {
       vS = 0.0;
     double ds = dtPlane * vS + 0.5 * dtPlane * dtPlane * gS;
     ds = std::clamp(ds, -dsMax, dsMax);
-    const double sNew = std::clamp(s + ds, 0.0, guideLen);
+    if (rotationOnly) {
+      ds = 0.0;
+      vS = 0.0;
+    }
+    const double sNew = guidelineMoving
+                            ? s + ds
+                            : std::clamp(s + ds, 0.0, guideLen);
 
     // Damped rotation (Eqs 9-10 with the Appendix A driving): the
     // angular velocity keeps only its projection along the current
@@ -448,7 +481,7 @@ std::vector<std::string> OHTSTJob::run(void) {
     }
     const VectorXd nOld = n;
     n = (n + dn).normalized();
-    if (n.dot(u) < 0.0) {
+    if (n.dot(gDir) < 0.0) {
       // Keep the normal pointing towards increasing s.
       n = -n;
     }
@@ -463,7 +496,20 @@ std::vector<std::string> OHTSTJob::run(void) {
     if (armLen > 1e-12 && armNewLen > 1e-12) {
       armNew *= armLen / armNewLen;
     }
-    const VectorXd gammaNew = xR + sNew * u;
+    VectorXd gammaNew;
+    if (guidelineMoving) {
+      // Re-anchor: the guideline passes through the previous plane's
+      // average position along the CURRENT normal; the progression
+      // restarts from s = 0 on the new line each iteration.
+      gOrigin = avg.pos;
+      gDir = n;
+      s = 0.0;
+      gammaNew = gOrigin + ds * gDir;
+      // ds was already consumed by the re-anchor.
+      gammaNew = gOrigin;
+    } else {
+      gammaNew = gOrigin + sNew * gDir;
+    }
     VectorXd xStart = gammaNew + armNew;
     xStart -= n * n.dot(xStart - gammaNew);
     walker.setPositionsFreeV(xStart);
@@ -475,7 +521,9 @@ std::vector<std::string> OHTSTJob::run(void) {
     gSPrev = gS;
     gRotPrev = gRot;
     havePrev = true;
-    s = sNew;
+    if (!guidelineMoving) {
+      s = sNew;
+    }
   }
   if (prog)
     fclose(prog);
