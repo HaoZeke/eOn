@@ -504,6 +504,13 @@ public:
     double force_tol{0.005};     // eV/A convergence on plane force
     double s_init{0.05};         // starting fraction along the guideline
     long reactant_md_steps{20000}; // unconstrained reactant trajectory
+    // Thermostat for the plane-constrained and reactant sampling:
+    // "andersen" (default) or "gle" (colored noise, Ceriotti-Bussi-
+    // Parrinello; drift matrix from gle_a_file, gle4md text layout,
+    // units of inverse internal time; a 1x1 [gamma] file degenerates
+    // to white-noise Langevin).
+    std::string thermostat{"andersen"};
+    std::string gle_a_file{""};
     // Comma-separated .con files of the OTHER symmetry-equivalent
     // product minima (Eqs 13-17): sampling is confined to the
     // subregion of the primary product by half-line distances with

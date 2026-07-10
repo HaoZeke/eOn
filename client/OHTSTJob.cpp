@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include <algorithm>
+#include <memory>
 #include <cmath>
 #include <cstdio>
 #include <stdexcept>
@@ -17,6 +18,7 @@
 
 #include "EonLogger.h"
 #include "HelperFunctions.h"
+#include "GleThermostat.h"
 #include "OHTSTJob.h"
 
 namespace eonc {
@@ -120,6 +122,22 @@ OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
   VectorXd v(x.size());
   drawThermalVelocities(v, &normal);
 
+  // Colored-noise option: an exact OU half-step before and after each
+  // Verlet step (the auxiliary momenta start fresh per sampling
+  // block); velocities re-project onto the plane after every kick.
+  std::unique_ptr<GleThermostat> gle;
+  if (params.oh_tst_options.thermostat == "gle") {
+    const MatrixXd a =
+        GleThermostat::loadDriftMatrix(params.oh_tst_options.gle_a_file);
+    gle = std::make_unique<GleThermostat>(a, m_kbt, 0.5 * m_dt, x.size());
+    if (!gle->valid()) {
+      EONC_LOG_CRITICAL("OH-TST gle thermostat unusable (gle_a_file = {})",
+                        params.oh_tst_options.gle_a_file);
+      throw std::runtime_error("oh_tst: gle thermostat unusable");
+    }
+  }
+  const auto gauss = [this]() { return gaussDraw(); };
+
   VectorXd f = matter.getForcesFreeV();
   VectorXd fPlane = f - normal * normal.dot(f);
 
@@ -135,6 +153,10 @@ OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
     // positions corrected back onto the constraint (RATTLE for a
     // linear constraint is an exact projection).
     xPrev = x;
+    if (gle) {
+      gle->apply(v, m_masses3N, gauss);
+      v -= normal * normal.dot(v);
+    }
     VectorXd a = fPlane.cwiseQuotient(m_masses3N);
     x += m_dt * v + 0.5 * m_dt * m_dt * a;
     x -= normal * normal.dot(x - gamma);
@@ -151,8 +173,11 @@ OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
       f = matter.getForcesFreeV();
       fPlane = f - normal * normal.dot(f);
     }
-    // Andersen collisions keep the constrained ensemble canonical.
-    if (uniformDraw() < m_andersenProb) {
+    if (gle) {
+      gle->apply(v, m_masses3N, gauss);
+      v -= normal * normal.dot(v);
+    } else if (uniformDraw() < m_andersenProb) {
+      // Andersen collisions keep the constrained ensemble canonical.
       drawThermalVelocities(v, &normal);
     }
     if (step >= equilSteps) {
@@ -189,12 +214,25 @@ double OHTSTJob::reactantQRatio(Matter &matter, const VectorXd &gammaR,
   VectorXd x = matter.getPositionsFreeV();
   VectorXd v(x.size());
   drawThermalVelocities(v, nullptr);
+  std::unique_ptr<GleThermostat> gle;
+  if (params.oh_tst_options.thermostat == "gle") {
+    const MatrixXd a =
+        GleThermostat::loadDriftMatrix(params.oh_tst_options.gle_a_file);
+    gle = std::make_unique<GleThermostat>(a, m_kbt, 0.5 * m_dt, x.size());
+    if (!gle->valid()) {
+      throw std::runtime_error("oh_tst: gle thermostat unusable");
+    }
+  }
+  const auto gauss = [this]() { return gaussDraw(); };
   VectorXd f = matter.getForcesFreeV();
   double side = normal.dot(x - gammaR);
   double crossingSum = 0.0;
   long counted = 0;
   for (long step = 0; step < equilSteps + steps; ++step) {
     const VectorXd xOld = x;
+    if (gle) {
+      gle->apply(v, m_masses3N, gauss);
+    }
     VectorXd a = f.cwiseQuotient(m_masses3N);
     x += m_dt * v + 0.5 * m_dt * m_dt * a;
     matter.setPositionsFreeV(x);
@@ -205,7 +243,9 @@ double OHTSTJob::reactantQRatio(Matter &matter, const VectorXd &gammaR,
       matter.setPositionsFreeV(x);
       f = matter.getForcesFreeV();
     }
-    if (uniformDraw() < m_andersenProb) {
+    if (gle) {
+      gle->apply(v, m_masses3N, gauss);
+    } else if (uniformDraw() < m_andersenProb) {
       drawThermalVelocities(v, nullptr);
     }
     const double sideNew = normal.dot(x - gammaR);
