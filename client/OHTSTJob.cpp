@@ -278,6 +278,12 @@ std::vector<std::string> OHTSTJob::run(void) {
   }
 
   const double temperature = params.main_options.temperature;
+  EONC_LOG_INFO("[oh_tst] thermostat = {}{}",
+                params.oh_tst_options.thermostat,
+                params.oh_tst_options.thermostat == "gle"
+                    ? std::string(" (drift: ") +
+                          params.oh_tst_options.gle_a_file + ")"
+                    : std::string());
   m_kbt = params.constants.kB * temperature;
   m_dt = params.oh_tst_options.time_step / params.constants.timeUnit;
   m_seedState = (params.main_options.randomSeed > 0)
