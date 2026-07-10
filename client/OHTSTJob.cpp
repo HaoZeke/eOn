@@ -24,13 +24,16 @@ namespace eonc {
 // Johannesson-Jonsson OH-TST (JCP 115, 9644 (2001)). The dividing
 // surface is the hyperplane n.(x - Gamma(s)) = 0 in the 3N_free
 // configuration space, with Gamma(s) = R + s*u on the straight
-// reactant->product guideline u = (P - R)/|P - R|. Free energy changes
-// are accumulated as reversible work while damped Verlet dynamics on
-// (s, n) climb to the maximum-free-energy plane.
+// reactant->product guideline u = (P - R)/|P - R|. Sign conventions
+// follow Appendix A: the plane translates along the driving force
+// -<F.n> and its normal is driven along +<(n.F) R/(alpha |R|^2)>
+// (verified to tilt the normal onto the ridge normal for a tilted-
+// ridge model), so both damped Verlet integrations climb the free
+// energy and settle where the mean forces vanish.
 
 double OHTSTJob::uniformDraw() {
-  // Deterministic LCG (numerical recipes ranqd1 flavour): the job must
-  // be reproducible for a given random_seed across MPI farm workers.
+  // Deterministic LCG: the job must be reproducible for a given
+  // random_seed across MPI farm workers.
   m_seedState = (1664525L * m_seedState + 1013904223L) & 0x7fffffffL;
   return static_cast<double>(m_seedState) / 2147483648.0;
 }
@@ -48,21 +51,21 @@ double OHTSTJob::gaussDraw() {
   return r * std::cos(2.0 * helpers::pi * u2);
 }
 
-void OHTSTJob::drawThermalVelocities(VectorXd &vel, const VectorXd &masses3N,
-                                     const VectorXd *normal) {
+void OHTSTJob::drawThermalVelocities(VectorXd &vel, const VectorXd *normal) {
   for (long k = 0; k < vel.size(); ++k) {
-    vel[k] = std::sqrt(m_kbt / masses3N[k]) * gaussDraw();
+    vel[k] = std::sqrt(m_kbt / m_masses3N[k]) * gaussDraw();
   }
   if (normal != nullptr) {
     vel -= (*normal) * normal->dot(vel);
   }
 }
 
-void OHTSTJob::samplePlane(Matter &matter, const VectorXd &gamma,
-                           const VectorXd &normal, double &avgFn,
-                           VectorXd &avgRot) {
+OHTSTJob::PlaneAverages OHTSTJob::samplePlane(Matter &matter,
+                                              const VectorXd &gamma,
+                                              const VectorXd &normal) {
   const long equilSteps = params.oh_tst_options.equil_steps;
   const long sampleSteps = params.oh_tst_options.sample_steps;
+  const double alphaRot = params.oh_tst_options.alpha_rot;
 
   // Constrain the current geometry exactly onto the plane.
   VectorXd x = matter.getPositionsFreeV();
@@ -70,13 +73,15 @@ void OHTSTJob::samplePlane(Matter &matter, const VectorXd &gamma,
   matter.setPositionsFreeV(x);
 
   VectorXd v(x.size());
-  drawThermalVelocities(v, m_masses3N, &normal);
+  drawThermalVelocities(v, &normal);
 
   VectorXd f = matter.getForcesFreeV();
   VectorXd fPlane = f - normal * normal.dot(f);
 
-  avgFn = 0.0;
-  avgRot = VectorXd::Zero(x.size());
+  PlaneAverages avg;
+  avg.rotNorm = VectorXd::Zero(x.size());
+  avg.rotRaw = VectorXd::Zero(x.size());
+  avg.pos = VectorXd::Zero(x.size());
   long nAccum = 0;
 
   for (long step = 0; step < equilSteps + sampleSteps; ++step) {
@@ -94,33 +99,48 @@ void OHTSTJob::samplePlane(Matter &matter, const VectorXd &gamma,
     v -= normal * normal.dot(v);
     // Andersen collisions keep the constrained ensemble canonical.
     if (uniformDraw() < m_andersenProb) {
-      drawThermalVelocities(v, m_masses3N, &normal);
+      drawThermalVelocities(v, &normal);
     }
     if (step >= equilSteps) {
       const double fn = normal.dot(f);
-      avgFn += fn;
-      avgRot.noalias() += fn * (x - gamma);
+      const VectorXd arm = x - gamma;
+      const double arm2 = arm.squaredNorm();
+      avg.fn += fn;
+      if (arm2 > 1e-16) {
+        avg.rotNorm.noalias() += (fn / (alphaRot * arm2)) * arm;
+      }
+      avg.rotRaw.noalias() += fn * arm;
+      avg.pos.noalias() += x;
       ++nAccum;
     }
   }
   if (nAccum > 0) {
-    avgFn /= static_cast<double>(nAccum);
-    avgRot /= static_cast<double>(nAccum);
+    const double inv = 1.0 / static_cast<double>(nAccum);
+    avg.fn *= inv;
+    avg.rotNorm *= inv;
+    avg.rotRaw *= inv;
+    avg.pos *= inv;
   }
+  return avg;
 }
 
-double OHTSTJob::reactantResidenceFraction(Matter &matter,
-                                           const VectorXd &gammaR,
-                                           const VectorXd &normal,
-                                           double slabWidth) {
+double OHTSTJob::reactantQRatio(Matter &matter, const VectorXd &gammaR,
+                                const VectorXd &normal) {
+  // Eq 22: Q^ZR/Q^R = (dt / t_tot) * sum over plane crossings of
+  // 1 / |(r_{i+1} - r_i).n|. The trajectory is unconstrained,
+  // thermostatted, and stays in the reactant basin by construction
+  // (it starts there and the barrier is >> kT).
   const long steps = params.oh_tst_options.reactant_md_steps;
   const long equilSteps = params.oh_tst_options.equil_steps;
   VectorXd x = matter.getPositionsFreeV();
   VectorXd v(x.size());
-  drawThermalVelocities(v, m_masses3N, nullptr);
+  drawThermalVelocities(v, nullptr);
   VectorXd f = matter.getForcesFreeV();
-  long inSlab = 0, counted = 0;
+  double side = normal.dot(x - gammaR);
+  double crossingSum = 0.0;
+  long counted = 0;
   for (long step = 0; step < equilSteps + steps; ++step) {
+    const VectorXd xOld = x;
     VectorXd a = f.cwiseQuotient(m_masses3N);
     x += m_dt * v + 0.5 * m_dt * m_dt * a;
     matter.setPositionsFreeV(x);
@@ -128,16 +148,21 @@ double OHTSTJob::reactantResidenceFraction(Matter &matter,
     VectorXd aNew = f.cwiseQuotient(m_masses3N);
     v += 0.5 * m_dt * (a + aNew);
     if (uniformDraw() < m_andersenProb) {
-      drawThermalVelocities(v, m_masses3N, nullptr);
+      drawThermalVelocities(v, nullptr);
     }
+    const double sideNew = normal.dot(x - gammaR);
     if (step >= equilSteps) {
-      if (std::fabs(normal.dot(x - gammaR)) < 0.5 * slabWidth) {
-        ++inSlab;
+      if (side * sideNew < 0.0) {
+        const double proj = std::fabs(normal.dot(x - xOld));
+        if (proj > 1e-14) {
+          crossingSum += 1.0 / proj;
+        }
       }
       ++counted;
     }
+    side = sideNew;
   }
-  return counted > 0 ? static_cast<double>(inSlab) / counted : 0.0;
+  return counted > 0 ? crossingSum / static_cast<double>(counted) : 0.0;
 }
 
 std::vector<std::string> OHTSTJob::run(void) {
@@ -194,23 +219,30 @@ std::vector<std::string> OHTSTJob::run(void) {
   const VectorXd u = diff / guideLen;
 
   // Plane state: progression coordinate s, normal n, their conjugate
-  // velocities. Damped (velocity-zeroing) Verlet climbs A(s, n).
+  // velocities, and the previous-iteration driving forces for the
+  // two-force velocity Verlet updates (Eqs 6-7 and 9-10).
   double s = params.oh_tst_options.s_init * guideLen;
   double vS = 0.0;
   VectorXd n = u;
   VectorXd omega = VectorXd::Zero(n.size());
   const double mS = params.oh_tst_options.plane_mass;
-  const double alphaRot = params.oh_tst_options.alpha_rot;
   const double dtPlane = params.oh_tst_options.plane_time_step;
   const double dsMax = params.oh_tst_options.ds_max;
+  const double dThetaMax = params.oh_tst_options.dtheta_max;
   const double fTol = params.oh_tst_options.force_tol;
 
   Matter walker(*reactant);
 
+  // Reversible-work accumulators and the previous plane's averages
+  // for the trapezoid rules of Eqs 18-19.
   double aTrans = 0.0, aRot = 0.0, aBest = 0.0, sBest = s;
   VectorXd nBest = n;
-  double sPrev = s, fnPrev = 0.0;
   bool havePrev = false;
+  double fnPrev = 0.0;
+  VectorXd rotRawPrev, posPrev, nPrev;
+  double gSPrev = 0.0;
+  VectorXd gRotPrev;
+  int sideSign = 0; // sign of <F.n> at plane 1 (grooming, Sec IIE)
 
   FILE *prog = fopen("oh_tst_progression.dat", "w");
   if (prog) {
@@ -223,23 +255,35 @@ std::vector<std::string> OHTSTJob::run(void) {
   bool converged = false;
   for (; plane < nPlanes; ++plane) {
     const VectorXd gamma = xR + s * u;
-    double avgFn = 0.0;
-    VectorXd avgRot;
-    samplePlane(walker, gamma, n, avgFn, avgRot);
+    PlaneAverages avg = samplePlane(walker, gamma, n);
 
-    // Translation: dA/ds = -<F.n> (n.u); reversible work accumulated
-    // over the distance actually moved (Eq 18).
-    const double fS = -avgFn * n.dot(u);
-    if (havePrev) {
-      aTrans += 0.5 * (fS + fnPrev) * (s - sPrev);
+    // Driving forces: translation climbs against <F.n> (Eq 5 with the
+    // reversed-force convention); the normal is driven along
+    // +<(n.F) R/(alpha |R|^2)> (Appendix A, Eq A1), projected onto
+    // the tangent space of the unit sphere.
+    const double gS = -avg.fn / mS;
+    VectorXd gRot = avg.rotNorm - n * n.dot(avg.rotNorm);
+
+    if (plane == 0) {
+      sideSign = (avg.fn < 0.0) ? -1 : 1;
     }
-    sPrev = s;
-    fnPrev = fS;
-    havePrev = true;
 
-    // Rotation: dA/dn = -<(F.n)(x - Gamma)> projected onto the plane
-    // (Eq 19 accumulates the corresponding work below).
-    VectorXd g = -(avgRot - n * n.dot(avgRot)) / alphaRot;
+    // Reversible work (Eqs 18-19), trapezoid between consecutive
+    // planes: the translational path is the piecewise-linear track of
+    // the average configuration <r>, and the rotational work pairs
+    // the unnormalized <(n.F) R> with the actual change of the
+    // normal. Grooming (Sec IIE): only planes on the reactant side of
+    // the ridge (same sign of <F.n> as plane 1) contribute.
+    if (havePrev) {
+      const bool sameSide = (fnPrev < 0.0 ? -1 : 1) == sideSign &&
+                            (avg.fn < 0.0 ? -1 : 1) == sideSign;
+      if (sameSide) {
+        const VectorXd fParMean = 0.5 * (fnPrev * nPrev + avg.fn * n);
+        aTrans += -fParMean.dot(avg.pos - posPrev);
+        const VectorXd rotMean = 0.5 * (rotRawPrev + avg.rotRaw);
+        aRot += rotMean.dot(n - nPrev);
+      }
+    }
 
     const double aTotal = aTrans + aRot;
     if (aTotal > aBest) {
@@ -249,52 +293,112 @@ std::vector<std::string> OHTSTJob::run(void) {
     }
     if (prog) {
       fprintf(prog, "%6ld %10.6f %14.6e %12.6f %12.6f %12.6f %10.6f\n", plane,
-              s / guideLen, avgFn, aTrans, aRot, aTotal, n.dot(u));
+              s / guideLen, avg.fn, aTrans, aRot, aTotal, n.dot(u));
       fflush(prog);
     }
     EONC_LOG_DEBUG("[oh_tst] plane {} s/L {:.4f} <F.n> {:.4e} A {:.4f} eV",
-                   plane, s / guideLen, avgFn, aTotal);
+                   plane, s / guideLen, avg.fn, aTotal);
 
-    if (std::fabs(fS) < fTol && g.norm() < fTol && plane > 2) {
+    if (plane > 2 && std::fabs(avg.fn) < fTol &&
+        gRot.norm() * params.oh_tst_options.alpha_rot < fTol) {
       converged = true;
+      // The converged plane is the optimal one even if sampling noise
+      // put an earlier plane marginally higher.
+      aBest = aTotal;
+      sBest = s;
+      nBest = n;
+      if (prog) {
+        fprintf(prog, "# converged at plane %ld\n", plane);
+      }
       break;
     }
 
-    // Damped Verlet on s (Eqs 5-7): zero the velocity when it opposes
-    // the climbing force so the plane settles at the maximum.
-    vS += dtPlane * fS / mS;
-    if (vS * fS < 0.0)
+    // Damped two-force Verlet on s (Eqs 6-7): the velocity is zeroed
+    // when it opposes the driving force, so the plane settles at the
+    // free-energy maximum instead of oscillating over it ("the
+    // velocity of the plane is zeroed if the plane has gone past the
+    // maximum free energy position").
+    if (havePrev) {
+      vS += 0.5 * dtPlane * (gS + gSPrev);
+    } else {
+      vS += dtPlane * gS;
+    }
+    if (vS * gS < 0.0)
       vS = 0.0;
-    double ds = dtPlane * vS;
+    double ds = dtPlane * vS + 0.5 * dtPlane * dtPlane * gS;
     ds = std::clamp(ds, -dsMax, dsMax);
-    s = std::clamp(s + ds, 0.0, guideLen);
+    const double sNew = std::clamp(s + ds, 0.0, guideLen);
 
-    // Damped rotation of the normal (Eqs 8-10): angular velocity in
-    // the tangent space of the unit sphere, zeroed on opposing torque,
-    // followed by renormalization; the rotational work advances A_rot.
-    omega += dtPlane * g;
+    // Damped rotation (Eqs 9-10 with the Appendix A driving): the
+    // angular velocity keeps only its projection along the current
+    // driving force while aligned with it, and is zeroed otherwise.
+    if (havePrev && gRotPrev.size() == gRot.size()) {
+      omega += 0.5 * dtPlane * (gRot + gRotPrev);
+    } else {
+      omega += dtPlane * gRot;
+    }
     omega -= n * n.dot(omega);
-    if (omega.dot(g) < 0.0)
+    const double gNorm = gRot.norm();
+    if (gNorm > 1e-14) {
+      const VectorXd gHat = gRot / gNorm;
+      const double along = omega.dot(gHat);
+      if (along > 0.0) {
+        omega = gHat * along;
+      } else {
+        omega.setZero();
+      }
+    } else {
       omega.setZero();
+    }
+    VectorXd dn = dtPlane * omega + 0.5 * dtPlane * dtPlane * gRot;
+    const double dTheta = dn.norm();
+    if (dTheta > dThetaMax) {
+      dn *= dThetaMax / dTheta;
+    }
     const VectorXd nOld = n;
-    n = (n + dtPlane * omega).normalized();
-    aRot += g.dot(n - nOld) * alphaRot;
+    n = (n + dn).normalized();
+    if (n.dot(u) < 0.0) {
+      // Keep the normal pointing towards increasing s.
+      n = -n;
+    }
+
+    // Eq 11-12 restart: place the walker in the new plane at the
+    // rotated image of the average arm, rescaled so rotation does not
+    // change the arm length.
+    VectorXd arm = avg.pos - gamma;
+    VectorXd armNew = arm - nOld * arm.dot(n - nOld);
+    const double armLen = arm.norm();
+    const double armNewLen = armNew.norm();
+    if (armLen > 1e-12 && armNewLen > 1e-12) {
+      armNew *= armLen / armNewLen;
+    }
+    const VectorXd gammaNew = xR + sNew * u;
+    VectorXd xStart = gammaNew + armNew;
+    xStart -= n * n.dot(xStart - gammaNew);
+    walker.setPositionsFreeV(xStart);
+
+    fnPrev = avg.fn;
+    nPrev = nOld;
+    rotRawPrev = avg.rotRaw;
+    posPrev = avg.pos;
+    gSPrev = gS;
+    gRotPrev = gRot;
+    havePrev = true;
+    s = sNew;
   }
   if (prog)
     fclose(prog);
 
   // Direction-dependent effective mass (Eq 24) and the one-sided
-  // thermal flux factor sqrt(kBT / 2 pi mu).
+  // thermal flux factor sqrt(kBT / 2 pi mu) (Eq 23).
   const double mu = (m_masses3N.array() * nBest.array().square()).sum();
   const double vFlux = std::sqrt(m_kbt / (2.0 * helpers::pi * mu));
 
-  // Configurational partition ratio by slice residence on an
-  // unconstrained reactant trajectory (Eq 22): Q^ZR/Q^R = f / delta.
+  // Q^ZR/Q^R at the FIRST plane of the progression (Z^R), whose
+  // reversible work to the optimal plane is what aBest measures.
   Matter rWalker(*reactant);
-  const double slab = params.oh_tst_options.slab_width;
-  const double fRes =
-      reactantResidenceFraction(rWalker, xR, nBest, slab);
-  const double qRatio = (slab > 0.0) ? fRes / slab : 0.0;
+  const VectorXd gammaR = xR + (params.oh_tst_options.s_init * guideLen) * u;
+  const double qRatio = reactantQRatio(rWalker, gammaR, u);
 
   // Rate in internal units (1/internal-time), then SI.
   const double kInternal = vFlux * qRatio * std::exp(-aBest / m_kbt);
@@ -307,10 +411,11 @@ std::vector<std::string> OHTSTJob::run(void) {
     fprintf(out, "%d converged\n", converged ? 1 : 0);
     fprintf(out, "%ld planes_used\n", plane);
     fprintf(out, "%.8f free_energy_barrier_eV\n", aBest);
+    fprintf(out, "%.8f delta_a_trans_eV\n", aTrans);
+    fprintf(out, "%.8f delta_a_rot_eV\n", aRot);
     fprintf(out, "%.8f s_star_over_L\n", sBest / guideLen);
     fprintf(out, "%.8f normal_overlap_with_guideline\n", nBest.dot(u));
     fprintf(out, "%.8e effective_mass_amu\n", mu);
-    fprintf(out, "%.8e residence_fraction\n", fRes);
     fprintf(out, "%.8e q_ratio_per_A\n", qRatio);
     fprintf(out, "%.8e rate_ohtst_per_s\n", kSI);
     fprintf(out, "%.4f temperature_K\n", temperature);

@@ -28,14 +28,14 @@ namespace eonc {
  * A hyperplanar dividing surface in the 3N-dimensional configuration
  * space, parameterized by a point on a reactant->product guideline and
  * a unit normal, is advanced by damped (velocity-zeroing) Verlet
- * dynamics on the plane position (Eqs 5-7) and orientation (Eqs 8-10),
- * driven by canonical-ensemble averages of the force sampled with
- * thermostatted dynamics constrained to the plane. The free-energy
- * profile follows from the reversible work (Eqs 18-19), the
- * direction-dependent effective mass enters the flux prefactor
- * (Eq 24), and the configurational partition-function ratio is
- * estimated by slice-residence counting on an unconstrained reactant
- * trajectory (Eq 22).
+ * dynamics on the plane position (Eqs 5-7) and orientation (Eqs 8-10,
+ * Appendix A), driven by canonical-ensemble averages of the force
+ * sampled with thermostatted dynamics constrained to the plane. The
+ * free-energy barrier follows from the translational and rotational
+ * reversible work (Eqs 18-19), the flux prefactor from the
+ * direction-dependent effective mass (Eqs 23-24), and the
+ * configuration-integral ratio from crossing statistics of an
+ * unconstrained reactant trajectory (Eq 22).
  */
 class OHTSTJob : public Job {
 
@@ -46,29 +46,34 @@ public:
   std::vector<std::string> run(void);
 
 private:
-  //! One thermostatted, plane-constrained sampling block; returns the
-  //! averaged normal force <F.n> and the averaged in-plane rotational
-  //! force vector <(F.n)(x - gamma)> over the sampling steps.
-  void samplePlane(Matter &matter, const VectorXd &gamma,
-                   const VectorXd &normal, double &avgFn, VectorXd &avgRot);
+  //! Canonical averages over one thermostatted, plane-constrained
+  //! sampling block.
+  struct PlaneAverages {
+    double fn{0.0};      //!< <F.n>
+    VectorXd rotNorm;    //!< <(n.F) R / (alpha |R|^2)>, drives rotation
+    VectorXd rotRaw;     //!< <(n.F) R>, integrand of Eq 19
+    VectorXd pos;        //!< <r>, anchors Eq 18 and the Eq 12 restart
+  };
 
-  //! Unconstrained reactant-basin trajectory; returns the fraction of
-  //! time spent within +/- slabWidth/2 of the reactant plane (Eq 22).
-  double reactantResidenceFraction(Matter &matter, const VectorXd &gammaR,
-                                   const VectorXd &normal, double slabWidth);
+  PlaneAverages samplePlane(Matter &matter, const VectorXd &gamma,
+                            const VectorXd &normal);
+
+  //! Eq 22: Q^ZR/Q^R from crossing statistics of an unconstrained
+  //! reactant-basin trajectory through the plane (gammaR, normal).
+  double reactantQRatio(Matter &matter, const VectorXd &gammaR,
+                        const VectorXd &normal);
 
   //! Maxwell-Boltzmann draw on the free DOF, then projection onto the
   //! plane (n.v = 0) when a normal is supplied.
-  void drawThermalVelocities(VectorXd &vel, const VectorXd &masses3N,
-                             const VectorXd *normal);
+  void drawThermalVelocities(VectorXd &vel, const VectorXd *normal);
 
-  VectorXd m_masses3N;     //!< per-DOF masses of the free atoms (amu)
-  double m_dt{0.0};        //!< integration step, internal units
-  double m_kbt{0.0};       //!< k_B T (eV)
+  VectorXd m_masses3N;        //!< per-DOF masses of the free atoms (amu)
+  double m_dt{0.0};           //!< integration step, internal units
+  double m_kbt{0.0};          //!< k_B T (eV)
   double m_andersenProb{0.0}; //!< per-step Andersen collision probability
-  long m_seedState{12345}; //!< LCG state for the thermostat draws
-  double uniformDraw();    //!< uniform (0,1)
-  double gaussDraw();      //!< standard normal (Box-Muller)
+  long m_seedState{12345};    //!< LCG state for the thermostat draws
+  double uniformDraw();       //!< uniform (0,1)
+  double gaussDraw();         //!< standard normal (Box-Muller)
   bool m_gaussHave{false};
   double m_gaussSpare{0.0};
 };

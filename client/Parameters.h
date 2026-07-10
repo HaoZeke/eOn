@@ -500,9 +500,9 @@ public:
     double alpha_rot{50.0};      // rotational inertia of the normal
     double plane_time_step{0.1}; // Verlet step for (s, n) updates
     double ds_max{0.1};          // A, clamp on per-iteration plane moves
+    double dtheta_max{0.05};     // rad, clamp on per-iteration rotations
     double force_tol{0.005};     // eV/A convergence on plane force
     double s_init{0.05};         // starting fraction along the guideline
-    double slab_width{0.1};      // A, residence slab (Eq 22)
     long reactant_md_steps{20000}; // unconstrained reactant trajectory
   } oh_tst_options;
 

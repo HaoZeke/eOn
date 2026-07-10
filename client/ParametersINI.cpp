@@ -879,12 +879,12 @@ int load_ini(INIReader &ini, Parameters &params) {
       "OH_TST", "plane_time_step", params.oh_tst_options.plane_time_step);
   params.oh_tst_options.ds_max =
       ini.GetReal("OH_TST", "ds_max", params.oh_tst_options.ds_max);
+  params.oh_tst_options.dtheta_max =
+      ini.GetReal("OH_TST", "dtheta_max", params.oh_tst_options.dtheta_max);
   params.oh_tst_options.force_tol =
       ini.GetReal("OH_TST", "force_tol", params.oh_tst_options.force_tol);
   params.oh_tst_options.s_init =
       ini.GetReal("OH_TST", "s_init", params.oh_tst_options.s_init);
-  params.oh_tst_options.slab_width =
-      ini.GetReal("OH_TST", "slab_width", params.oh_tst_options.slab_width);
   params.oh_tst_options.reactant_md_steps = ini.GetInteger(
       "OH_TST", "reactant_md_steps", params.oh_tst_options.reactant_md_steps);
 
