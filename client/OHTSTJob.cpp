@@ -554,14 +554,15 @@ std::vector<std::string> OHTSTJob::run(void) {
     VectorXd gammaNew;
     if (guidelineMoving) {
       // Re-anchor: the guideline passes through the previous plane's
-      // average position along the CURRENT normal; the progression
-      // restarts from s = 0 on the new line each iteration.
+      // average position along the CURRENT normal, and the plane
+      // ADVANCES by this iteration's ds along the fresh line. (A
+      // dead re-assignment here used to pin the plane at <r> forever:
+      // the walker drifted downhill and the trans-work integral ran
+      // away by ~20 eV per plane on the Cu doorway.)
       gOrigin = avg.pos;
       gDir = n;
-      s = 0.0;
-      gammaNew = gOrigin + ds * gDir;
-      // ds was already consumed by the re-anchor.
-      gammaNew = gOrigin;
+      s = ds;
+      gammaNew = gOrigin + s * gDir;
     } else {
       gammaNew = gOrigin + sNew * gDir;
     }
