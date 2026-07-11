@@ -460,6 +460,17 @@ std::vector<std::string> OHTSTJob::run(void) {
     EONC_LOG_DEBUG("[oh_tst] plane {} s/L {:.4f} <F.n> {:.4e} A {:.4f} eV",
                    plane, s / guideLen, avg.fn, aTotal);
 
+    // Divergence guard: reversible work beyond any physical barrier
+    // means the endpoints were not minimized (static relaxation
+    // forces leak into <F.n>) or the plane is chasing a drifting
+    // ensemble; 300 planes of that is pure waste.
+    if (aTotal > params.oh_tst_options.max_delta_a) {
+      EONC_LOG_CRITICAL(
+          "[oh_tst] accumulated work {:.2f} eV exceeds max_delta_a "
+          "{:.2f} eV at plane {} -- endpoints likely unminimized",
+          aTotal, params.oh_tst_options.max_delta_a, plane);
+      throw std::runtime_error("oh_tst: diverging reversible work");
+    }
     if (plane > 2 && std::fabs(avg.fn) < fTol &&
         gRot.norm() * params.oh_tst_options.alpha_rot < fTol) {
       converged = true;

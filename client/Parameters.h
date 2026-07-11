@@ -504,6 +504,7 @@ public:
     double force_tol{0.005};     // eV/A convergence on plane force
     double s_init{0.05};         // starting fraction along the guideline
     long reactant_md_steps{20000}; // unconstrained reactant trajectory
+    double max_delta_a{10.0};      // eV, divergence guard on the work
     // Thermostat for the plane-constrained and reactant sampling:
     // "andersen" (default) or "gle" (colored noise, Ceriotti-Bussi-
     // Parrinello; drift matrix from gle_a_file, gle4md text layout,

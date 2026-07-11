@@ -889,6 +889,8 @@ int load_ini(INIReader &ini, Parameters &params) {
       "OH_TST", "reactant_md_steps", params.oh_tst_options.reactant_md_steps);
   params.oh_tst_options.symmetry_products = ini.Get(
       "OH_TST", "symmetry_products", params.oh_tst_options.symmetry_products);
+  params.oh_tst_options.max_delta_a = ini.GetReal(
+      "OH_TST", "max_delta_a", params.oh_tst_options.max_delta_a);
   params.oh_tst_options.thermostat = toLowerCase(
       ini.Get("OH_TST", "thermostat", params.oh_tst_options.thermostat));
   params.oh_tst_options.gle_a_file =
