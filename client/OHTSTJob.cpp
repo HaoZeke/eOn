@@ -489,7 +489,12 @@ std::vector<std::string> OHTSTJob::run(void) {
           aTotal, params.oh_tst_options.max_delta_a, plane);
       throw std::runtime_error("oh_tst: diverging reversible work");
     }
-    if (plane > 2 && std::fabs(avg.fn) < fTol &&
+    // A stationary plane only counts as the variational maximum
+    // after the progression has actually climbed: the reactant basin
+    // bottom is also force-free, and a short guideline puts the first
+    // plane inside it. Two thermal energies of accumulated reversible
+    // work is the cheapest evidence of a ridge.
+    if (plane > 2 && aTotal > 2.0 * m_kbt && std::fabs(avg.fn) < fTol &&
         gRot.norm() * params.oh_tst_options.alpha_rot < fTol) {
       converged = true;
       // The converged plane is the optimal one even if sampling noise
