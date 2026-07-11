@@ -313,19 +313,25 @@ std::vector<std::string> OHTSTJob::run(void) {
   VectorXd diff = product->getPositionsFreeV() - xR;
   {
     AtomMatrix d(AtomMatrix::Map(diff.data(), diff.size() / 3, 3));
-    d = reactant->pbc(d);
-    // Rigid-translation alignment: state frames written by long
-    // campaigns (or AV re-embeddings) carry a uniform lattice drift
-    // that dwarfs the localized reaction coordinate in the 3N norm
-    // (150+ A observed against a ~3 A defect move). Removing the
-    // mean displacement leaves the physical guideline; a residual
-    // that is still global fails the length diagnostics downstream.
-    const Eigen::RowVector3d drift =
-        d.colwise().sum() / static_cast<double>(d.rows());
-    d.rowwise() -= drift;
+    // Rigid-translation alignment under PBC: AV-embedded state frames
+    // ride the defect (drift = one hop vector, a/2<011> observed), so
+    // atoms near cell boundaries min-image inconsistently until the
+    // drift is gone. Iterate min-image -> de-drift to the fixed point;
+    // the converged residual is the localized reaction coordinate.
+    Eigen::RowVector3d total_drift = Eigen::RowVector3d::Zero();
+    for (int pass = 0; pass < 6; ++pass) {
+      d = reactant->pbc(d);
+      const Eigen::RowVector3d drift =
+          d.colwise().sum() / static_cast<double>(d.rows());
+      d.rowwise() -= drift;
+      total_drift += drift;
+      if (drift.norm() < 1e-6) {
+        break;
+      }
+    }
     EONC_LOG_INFO("[oh_tst] rigid drift removed: ({:.4f}, {:.4f}, "
                   "{:.4f}) A per atom",
-                  drift[0], drift[1], drift[2]);
+                  total_drift[0], total_drift[1], total_drift[2]);
     diff = VectorXd::Map(d.data(), diff.size());
   }
   const double guideLen = diff.norm();
