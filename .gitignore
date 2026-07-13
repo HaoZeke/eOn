@@ -679,3 +679,10 @@ scripts/regression/.snakemake/
 scripts/regression/workdirs/
 
 .project-ctx.toml
+
+# Coverage (scripts/run_coverage_*.sh)
+/python_coverage.xml
+/cpp_lcov.info
+/fortran_lcov.info
+/bbdir-cov/
+*.profraw

@@ -1,0 +1,76 @@
+# Codecov multi-language coverage for eOn (TheochemUI).
+# Dashboard: https://app.codecov.io/gh/TheochemUI/eOn
+# Uploads: OIDC via .github/workflows/coverage.yml (soft-fail).
+
+codecov:
+  require_ci_to_pass: false
+  notify:
+    wait_for_ci: false
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+        target: auto
+        threshold: 2%
+    patch:
+      default:
+        informational: true
+        target: auto
+        threshold: 2%
+
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: auto
+        threshold: 2%
+        informational: true
+      - type: patch
+        target: auto
+        threshold: 2%
+        informational: true
+  individual_flags:
+    - name: python
+      paths:
+        - eon/**
+      carryforward: true
+    - name: cpp
+      paths:
+        - client/**
+      carryforward: true
+    - name: fortran
+      paths:
+        - client/potentials/**
+        - subprojects/fortcuh2/**
+      carryforward: true
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+  show_carryforward_flags: true
+
+ignore:
+  - "client/tests/**"
+  - "client/unit_tests/**"
+  - "client/thirdparty/**"
+  - "eon/tests/**"
+  - "tests/**"
+  - "docs/**"
+  - "examples/**"
+  - "benchmarks/**"
+  - "tools/**"
+  - "scripts/**"
+  - "ci/**"
+  - "condaEnvs/**"
+  - "subprojects/packagecache/**"
+  - "subprojects/packagefiles/**"
+  - "subprojects/highway*/**"
+  - "subprojects/nlohmann_json*/**"
+  - "subprojects/inih*/**"
+  - "bbdir*/**"
+  - "build*/**"
+  - "tmp_*/**"
