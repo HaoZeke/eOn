@@ -32,14 +32,8 @@ class Atoms:
         return p
 
     def free_r(self):
-        nfree = sum(self.free)
-        temp = numpy.zeros((nfree, 3))
-        index = 0
-        for i in range(len(self.r)):
-            if self.free[i]:
-                temp[index] = self.r[i]
-                index += 1
-        return temp
+        # Boolean mask — avoids Python-level atom loop on large systems.
+        return self.r[numpy.asarray(self.free, dtype=bool)]
 
     def append(self, r, free, name, mass):
         self.r = numpy.append(self.r, [r], 0)
@@ -87,23 +81,29 @@ def get_process_atoms(r, p, epsilon_r=0.2, nshells=1):
     Given the reactant and product configurations of a process, return
     the atoms that move significantly and their neighbors along the trajectory.
     '''
-    mobileAtoms = []
     r2p = per_atom_norm(p.r - r.r, r.box)
-    for i in range(len(r)):
-        if r2p[i] > epsilon_r:
-            mobileAtoms.append(i)
+    mobileAtoms = list(numpy.flatnonzero(r2p > epsilon_r))
     if len(mobileAtoms) == 0:
-        mobileAtoms.append(list(r2p).index(max(r2p)))
+        mobileAtoms = [int(numpy.argmax(r2p))]
+    # Vectorized neighbor shell around each mobile atom (same thresholds as before).
+    n = len(r)
+    mobile_set = set(mobileAtoms)
     neighborAtoms = []
+    neighbor_set = set()
+    ibox = numpy.linalg.inv(p.box)
     for atom in mobileAtoms:
         r1 = elements[r.names[atom]]["radius"]
-        for i in range(len(r)):
-            if i in mobileAtoms or i in neighborAtoms:
+        # (n, 3) displacements from this mobile atom to all atoms
+        dvec = pbc(p.r - p.r[atom], p.box, ibox)
+        dist = numpy.sqrt(numpy.sum(dvec * dvec, axis=1))
+        for i in range(n):
+            if i in mobile_set or i in neighbor_set:
                 continue
             r2 = elements[r.names[i]]["radius"]
-            maxDist = (r1 + r2) * (1.0 + 0.2)*nshells
-            if numpy.linalg.norm(pbc(p.r[atom] - p.r[i], p.box)) < maxDist:
+            maxDist = (r1 + r2) * (1.0 + 0.2) * nshells
+            if dist[i] < maxDist:
                 neighborAtoms.append(i)
+                neighbor_set.add(i)
     return mobileAtoms + neighborAtoms
 
 def identical(atoms1, atoms2):
@@ -153,15 +153,24 @@ def identical(atoms1, atoms2):
 
 
 def brute_neighbor_list(p, cutoff):
-    nl = []
+    """All-pairs neighbor list within *cutoff* (periodic).
+
+    Vectorized pairwise distances replace the historical O(N²) Python double loop.
+    """
+    n = len(p)
+    if n == 0:
+        return []
     ibox = numpy.linalg.inv(p.box)
-    for a in range(len(p)):
-        nl.append([])
-        for b in range(len(p)):
-            if b != a:
-                dist = numpy.linalg.norm(pbc(p.r[a] - p.r[b], p.box, ibox))
-                if dist < cutoff:
-                    nl[a].append(b)
+    # (n, n, 3) pairwise PBC displacements
+    d = p.r[:, None, :] - p.r[None, :, :]
+    # Flatten for pbc, then reshape
+    d_flat = d.reshape(n * n, 3)
+    d_pbc = pbc(d_flat, p.box, ibox).reshape(n, n, 3)
+    dist = numpy.sqrt(numpy.sum(d_pbc * d_pbc, axis=2))
+    numpy.fill_diagonal(dist, numpy.inf)
+    nl = []
+    for a in range(n):
+        nl.append(list(numpy.flatnonzero(dist[a] < cutoff)))
     return nl
 
 

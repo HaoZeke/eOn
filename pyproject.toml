@@ -56,7 +56,8 @@ dist = ['--include-subprojects']
 
 
 [project.scripts]
-eon-server = "eon.main:main"
+# Real CPython server entry (legacy target eon.main was never shipped).
+eon-server = "eon.server:main"
 
 [dependency-groups]
 docs = [
