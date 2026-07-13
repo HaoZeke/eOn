@@ -57,6 +57,10 @@ else
   STG=$(mktemp -d)
   trap 'rm -rf "$STG"' EXIT
   SRC="$ROOT/subprojects/fortcuh2"
+  if [[ ! -d "$SRC" ]]; then
+    echo "    cloning fortcuh2 wrap source"
+    git clone --depth 1 --branch v0.0.2       https://github.com/TheochemUI/fortran_cuh2_src.git "$SRC" || true
+  fi
   [[ -d "$SRC" ]] || { echo "missing $SRC"; exit 1; }
   gfortran -c -O0 -g --coverage -cpp -J"$STG" -I"$STG" \
     "$SRC"/eam_dat.f90 -o "$STG"/eam_dat.o

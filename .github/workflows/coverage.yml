@@ -80,16 +80,17 @@ jobs:
           cache-write: true
 
       - name: Install cbindgen
-        shell: bash
+        shell: pixi run bash -e {0}
         run: command -v cbindgen || cargo install cbindgen
 
       - name: Generate C++ coverage
+        shell: pixi run bash -e {0}
         env:
           EON_COV_BUILDDIR: bbdir-cov
         run: |
+          which meson
           bash scripts/run_coverage_cpp.sh cpp_lcov.info
           test -s cpp_lcov.info
-          # Fortran pots exercised by the same unit tests
           bash scripts/run_coverage_fortran.sh fortran_lcov.info || true
           ls -la cpp_lcov.info fortran_lcov.info 2>/dev/null || true
 
@@ -142,17 +143,17 @@ jobs:
           cache-write: true
 
       - name: Install cbindgen
-        shell: bash
+        shell: pixi run bash -e {0}
         run: command -v cbindgen || cargo install cbindgen
 
       - name: Generate Fortran coverage
+        shell: pixi run bash -e {0}
         env:
           EON_COV_BUILDDIR: bbdir-cov
         run: |
-          # Prefer full meson coverage tree so pot unit tests hit Fortran SOTs.
-          if [[ ! -d bbdir-cov ]]; then
-            bash scripts/run_coverage_cpp.sh /tmp/cpp_for_fort.info || true
-          fi
+          which meson gfortran
+          # Full meson coverage tree exercises pot Fortran via unit tests.
+          bash scripts/run_coverage_cpp.sh /tmp/cpp_for_fort.info || true
           bash scripts/run_coverage_fortran.sh fortran_lcov.info
           test -s fortran_lcov.info
           grep -E '^(SF:|DA:)' fortran_lcov.info | head -15
