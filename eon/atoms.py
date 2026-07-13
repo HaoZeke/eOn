@@ -82,7 +82,8 @@ def get_process_atoms(r, p, epsilon_r=0.2, nshells=1):
     the atoms that move significantly and their neighbors along the trajectory.
     '''
     r2p = per_atom_norm(p.r - r.r, r.box)
-    mobileAtoms = list(numpy.flatnonzero(r2p > epsilon_r))
+    # Plain Python ints: recycling metadata uses repr()/eval() without numpy.
+    mobileAtoms = [int(i) for i in numpy.flatnonzero(r2p > epsilon_r)]
     if len(mobileAtoms) == 0:
         mobileAtoms = [int(numpy.argmax(r2p))]
     # Vectorized neighbor shell around each mobile atom (same thresholds as before).
@@ -170,7 +171,7 @@ def brute_neighbor_list(p, cutoff):
     numpy.fill_diagonal(dist, numpy.inf)
     nl = []
     for a in range(n):
-        nl.append(list(numpy.flatnonzero(dist[a] < cutoff)))
+        nl.append([int(i) for i in numpy.flatnonzero(dist[a] < cutoff)])
     return nl
 
 
