@@ -35,9 +35,11 @@ jobs:
           cache-write: true
 
       - name: Structural Codecov config gate
+        shell: pixi run bash -e {0}
         run: bash scripts/check_codecov_config.sh
 
       - name: Generate python coverage
+        shell: pixi run bash -e {0}
         run: |
           bash scripts/run_coverage_python.sh python_coverage.xml
           test -s python_coverage.xml
