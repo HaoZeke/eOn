@@ -63,6 +63,49 @@ def test_get_process_atoms_includes_moved():
     assert len(idxs) >= 1
 
 
+def test_get_process_atoms_plain_python_ints():
+    """Indices must be built-in int so recycling metadata repr/eval works."""
+    r = _fcc_cell(3, a=3.0)
+    p = r.copy()
+    p.r[0] = p.r[0] + np.array([1.0, 0.0, 0.0])
+    idxs = at.get_process_atoms(r, p, epsilon_r=0.2, nshells=1)
+    assert idxs
+    assert all(type(i) is int for i in idxs)
+    assert not any(isinstance(i, np.integer) for i in idxs)
+
+
+def test_get_process_atoms_recycling_metadata_roundtrip():
+    """Mirrors recycling.write/read_recycling_metadata process_atoms path."""
+    r = _fcc_cell(3, a=3.0)
+    p = r.copy()
+    p.r[0] = p.r[0] + np.array([1.0, 0.0, 0.0])
+    process_atoms = at.get_process_atoms(r, p, epsilon_r=0.2, nshells=1)
+    line = "Indices of 'process' atoms = %s\n" % (repr(process_atoms),)
+    assert "np.int64" not in line
+    assert "numpy" not in line
+    parsed = eval(line.split("=")[1].strip())
+    assert parsed == process_atoms
+    assert all(type(i) is int for i in parsed)
+
+
+def test_get_process_atoms_fallback_argmax_plain_int():
+    """When no atom exceeds epsilon_r, argmax path still returns plain ints."""
+    r = _fcc_cell(2, a=3.0)
+    p = r.copy()
+    # Tiny displacement below epsilon
+    p.r[1] = p.r[1] + np.array([0.01, 0.0, 0.0])
+    idxs = at.get_process_atoms(r, p, epsilon_r=0.2, nshells=1)
+    assert idxs
+    assert all(type(i) is int for i in idxs)
+
+
+def test_brute_neighbor_list_plain_ints():
+    p = _fcc_cell(3, a=2.0)
+    nl = at.brute_neighbor_list(p, 2.1)
+    for neigh in nl:
+        assert all(type(i) is int for i in neigh)
+
+
 def test_per_atom_norm_shape():
     p = _fcc_cell(2)
     v = p.r - p.r[0]
