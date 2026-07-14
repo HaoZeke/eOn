@@ -7,6 +7,7 @@ py.install_sources(
         'atoms.py',
         'basinhopping.py',
         'communicator.py',
+        'communicator_inprocess.py',
         'config.py',
         'config.yaml',
         'displace.py',

@@ -354,15 +354,17 @@ class PathsConfig(BaseModel):
 class CommunicatorConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
-    type: Literal["local", "cluster", "mpi"] = Field(
+    type: Literal["local", "local_lib", "inprocess", "cluster", "mpi"] = Field(
         default="local",
         description="Communicator type",
     )
     """
     Options:
-     - 'local': The local communicator runs the calculations on the same computer that the server is run on.
-     - 'cluster': A job scheduler can be used to run jobs through user supplied shell scripts.
-     - 'mpi': Allows for the server and clients to run as a MPI job.
+     - 'local': Subprocess ``eonclient`` on the same machine (file-based jobs).
+     - 'local_lib' / 'inprocess': In-process ``pyeonclient.Matter`` (no client binary;
+       requires ``-Dwith_pyeonclient=true``). Structures stay Matter end-to-end.
+     - 'cluster': Job scheduler via user shell scripts.
+     - 'mpi': Server and clients as an MPI job.
     """
     jobs_per_bundle: int = Field(
         default=1,
