@@ -1,4 +1,7 @@
-"""Structure (server) <-> Matter (client) without ASE."""
+"""Structure (server) ↔ Matter (client) without requiring ASE.
+
+ASE converters live in :mod:`pyeonclient.ase_bridge` (optional dependency).
+"""
 
 from __future__ import annotations
 
@@ -46,13 +49,11 @@ def _symbol_to_z(sym: str) -> int:
     t = s[:1].upper() + s[1:].lower()
     if t in _SYMBOL_Z:
         return _SYMBOL_Z[t]
-    # Fall back to eon.atoms.elements int keys (symbol -> entry -> reverse)
     try:
         from eon.atoms import elements
 
         info = elements.get(s) or elements.get(t)
         if info is not None:
-            # elements is also keyed by Z; find matching symbol
             for k, v in elements.items():
                 if isinstance(k, int) and v is info:
                     return int(k)
@@ -112,3 +113,8 @@ def matter_to_structure(matter: Any) -> Any:
     z = np.asarray(matter.atomic_numbers, dtype=np.int64).reshape(-1)
     s.names = [_z_to_symbol(int(z[i])) for i in range(n)]
     return s
+
+
+# PEP-style aliases used by tools / notebooks
+to_structure = matter_to_structure
+from_structure = structure_to_matter

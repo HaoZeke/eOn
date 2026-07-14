@@ -58,6 +58,7 @@ pyeonclient_sources = files(
     'bind/bind_parameters.cpp',
     'bind/bind_potential.cpp',
     'bind/bind_matter.cpp',
+    'bind/bind_jobs.cpp',
 )
 
 _nb_incs = [
@@ -136,6 +137,7 @@ py.install_sources(
     [
         'pyeonclient/__init__.py',
         'pyeonclient/bridge.py',
+        'pyeonclient/ase_bridge.py',
     ],
     pure: false,
     subdir: 'pyeonclient',

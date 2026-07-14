@@ -133,3 +133,33 @@ class Structure:
 
 # Back-compat name used throughout the server
 Atoms = Structure
+
+
+def structure_to_ase(structure: "Structure", *, pbc: bool = True):
+    """Optional ASE export (requires ase + pyeonclient.ase_bridge)."""
+    from pyeonclient.ase_bridge import structure_to_ase as _f
+
+    return _f(structure, pbc=pbc)
+
+
+def ase_to_structure(atoms):
+    """Optional ASE import (requires ase + pyeonclient.ase_bridge)."""
+    from pyeonclient.ase_bridge import ase_to_structure as _f
+
+    return _f(atoms)
+
+
+# Methods on Structure for ergonomics
+def _structure_to_ase(self, *, pbc: bool = True):
+    return structure_to_ase(self, pbc=pbc)
+
+
+Structure.to_ase = _structure_to_ase  # type: ignore[attr-defined]
+
+
+def _structure_from_ase(cls, atoms):
+    return ase_to_structure(atoms)
+
+
+Structure.from_ase = classmethod(_structure_from_ase)  # type: ignore[attr-defined, assignment]
+
