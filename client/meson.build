@@ -240,12 +240,15 @@ quill_dep = dependency('quill', required: true)
 _deps += quill_dep
 _args += ['-DQUILL_DISABLE_NON_PREFIXED_MACROS']
 
-inireader_dep = dependency('INIReader', required: false)
+# Always use the inih wrap as a *static* library. Shared libINIReader.so is
+# not on the manylinux allowlist and breaks auditwheel repair for pyeonclient.
+inireader_dep = dependency('INIReader', required: false, static: true)
 if not inireader_dep.found()
     inireader_dep = dependency(
         'inireader',
         fallback: ['inih', 'INIReader_dep'],
         required: true,
+        static: true,
         default_options: ['default_library=static'],
     )
 endif
