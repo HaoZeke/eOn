@@ -3,7 +3,6 @@ option('with_newpot', type : 'boolean', value : false)
 option('with_water', type : 'boolean', value : false)
 option('with_ams', type : 'boolean', value : false)
 option('with_mpi', type : 'boolean', value : false)
-option('with_pybind11', type : 'boolean', value : false, description: '(unused) for python bindings')
 option('with_gprd', type : 'boolean', value : false)
 option('with_vasp', type : 'boolean', value : false)
 option('with_fortran', type : 'boolean', value : true)
@@ -38,3 +37,7 @@ option('ira_includedir', type : 'string', value : '', description : 'Path to ira
 option('torch_path', type : 'string', value : '', description: 'path to Torch, either provide this or torch_version for pip')
 option('torch_version', type : 'string', value : '2.9', description: 'path to Torch')
 option('pip_metatomic', type : 'boolean', value : false, description: 'use pip versions of torch, metatensor, torch, and metatomic')
+
+# Python nanobind bindings for client Matter / Parameters / Potential
+option('with_pyeonclient', type : 'boolean', value : false,
+       description : 'Build pyeonclient (nanobind only; stable ABI abi3 on 3.12+, free-threaded when Py_GIL_DISABLED)')

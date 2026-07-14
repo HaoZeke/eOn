@@ -17,6 +17,12 @@ py.install_sources(
         '__init__.py',
         'locking.py',
         'server.py',
+        'structure.py',
+        'geometry/__init__.py',
+        'geometry/cell.py',
+        'geometry/neighbors.py',
+        'geometry/pbc.py',
+        'geometry/process.py',
         'schema.py',
         # TODO(rg): Spin mcamc out and use as a dependency
         # This will only use the python variant for now
@@ -25,6 +31,7 @@ py.install_sources(
         'movie.py',
         'mpiwait.py',
         'parallelreplica.py',
+        'pyeonclient_bridge.py',
         'prstatelist.py',
         'prstate.py',
         'recycling.py',

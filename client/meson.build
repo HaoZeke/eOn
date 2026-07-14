@@ -974,6 +974,12 @@ eclib_dep = declare_dependency(
     dependencies: _exe_deps,
 )
 
+
+# --------------------- pyeonclient (nanobind)
+if get_option('with_pyeonclient')
+    subdir('python')
+endif
+
 # ---------------------- Executable
 
 ec = executable(
