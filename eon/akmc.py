@@ -19,7 +19,6 @@ from pathlib import Path
 numpy.seterr(divide="raise", over="raise", under="print", invalid="raise")
 
 from eon.version import version
-from eon.config import config as EON_CONFIG  # process-edge default only (main/CLI)
 from eon.config import ConfigClass
 from eon import communicator
 from eon import locking
@@ -30,7 +29,9 @@ from eon import atoms
 from eon import superbasinscheme
 from eon import askmc
 from eon import movie
-def akmc(config: ConfigClass = EON_CONFIG, steps=0):
+def akmc(config: ConfigClass = None, steps=0):
+    if config is None:
+        raise TypeError("akmc requires a ConfigClass instance")
     """Poll for status of AKMC clients and possibly make KMC steps.
 
     Returns the number of KMC steps in the current run at the end of
@@ -136,7 +137,9 @@ def akmc(config: ConfigClass = EON_CONFIG, steps=0):
 
     return steps
 
-def get_akmc_metadata(config: ConfigClass = EON_CONFIG):
+def get_akmc_metadata(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_akmc_metadata requires a ConfigClass instance")
     if not os.path.isdir(config.path_results):
         os.makedirs(config.path_results)
     # read in metadata
@@ -167,7 +170,9 @@ def write_akmc_metadata(parser, current_state_num, time, previous_state_num, pre
     parser.set('Simulation Information', 'first_run', str(False))
     parser.set('Simulation Information', 'previous_temperature', str(previous_temperature))
 
-def get_statelist(kT, config: ConfigClass = EON_CONFIG):
+def get_statelist(kT, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_statelist requires a ConfigClass instance")
     initial_state_path = os.path.join(config.path_root, "pos.con")
     return akmcstatelist.AKMCStateList(
         kT,
@@ -194,7 +199,9 @@ def get_superbasin_scheme(states, config):
     return superbasining
 
 
-def kmc_step(current_state, states, time, kT, superbasining, steps=0, config: ConfigClass = EON_CONFIG):
+def kmc_step(current_state, states, time, kT, superbasining, steps=0, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("kmc_step requires a ConfigClass instance")
     t1 = unix_time.time()
     previous_state = current_state
     # If the Chatterjee & Voter superbasin acceleration method is being used
@@ -357,7 +364,9 @@ def kmc_step(current_state, states, time, kT, superbasining, steps=0, config: Co
     return current_state, previous_state, time, steps
 
 
-def main(config: ConfigClass = EON_CONFIG):
+def main(config: ConfigClass = None):
+    if config is None:
+        config = ConfigClass()
     optpar = optparse.OptionParser(usage = "usage: %prog [options] config.ini")
     optpar.add_option("-C", "--continuous", action="store_true", dest="continuous", default=False, help="don't quit")
     optpar.add_option("-R", "--reset", action="store_true", dest="reset", default = False, help="reset the aKMC simulation, discarding all data")

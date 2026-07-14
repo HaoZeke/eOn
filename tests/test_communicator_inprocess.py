@@ -28,16 +28,16 @@ def _lj_pos_con() -> StringIO:
 
 
 def test_get_communicator_inprocess(tmp_path, monkeypatch):
-    from eon.config import config
+    from eon.config import ConfigClass
     from eon import communicator as comm
 
-    if hasattr(comm.get_communicator, "comm"):
-        del comm.get_communicator.comm
+    comm.reset_communicators()
 
-    config.comm_type = "inprocess"
-    config.path_scratch = str(tmp_path / "scratch")
-    config.comm_job_bundle_size = 1
-    c = comm.get_communicator()
+    cfg = ConfigClass()
+    cfg.comm_type = "inprocess"
+    cfg.path_scratch = str(tmp_path / "scratch")
+    cfg.comm_job_bundle_size = 1
+    c = comm.get_communicator(cfg)
     assert type(c).__name__ == "LocalInProcess"
 
 

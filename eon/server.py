@@ -16,7 +16,6 @@ from io import StringIO
 from typing import Callable, Optional
 
 from eon.config import ConfigClass
-from eon.config import config as EON_CONFIG
 
 
 def select_job_runner(job: str) -> Optional[Callable[[ConfigClass], None]]:
@@ -88,7 +87,7 @@ def server(config: ConfigClass | None = None) -> None:
     passing it explicitly.
     """
     if config is None:
-        config = EON_CONFIG
+        config = ConfigClass()
     config.init()
     _warn_pos_con_in_potfiles(config)
 

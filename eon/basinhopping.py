@@ -15,7 +15,6 @@ import random
 from eon import version
 from eon import atoms
 from eon import communicator
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass
 from eon import fileio as io
 from eon import locking
@@ -138,7 +137,9 @@ class BHStates:
 
         return added
 
-def basinhopping(config: ConfigClass = EON_CONFIG):
+def basinhopping(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("basinhopping requires a ConfigClass instance")
     logger.info('Eon version: %s', version)
     # First of all, does the root directory even exist?
     if not os.path.isdir(config.path_root):
@@ -263,7 +264,9 @@ def register_results(comm, bhstates, config):
 
     logger.info("%i (result) searches processed", num_registered)
 
-def main(config: ConfigClass = EON_CONFIG):
+def main(config: ConfigClass = None):
+    if config is None:
+        config = ConfigClass()
     optpar = optparse.OptionParser(usage="usage: %prog [options] config.ini")
     optpar.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False,help="only write to the log file")
     optpar.add_option("-n", "--no-submit", action="store_true", dest="no_submit", default=False,help="don't submit searches; only register finished results")

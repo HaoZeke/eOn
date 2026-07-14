@@ -14,7 +14,6 @@ import shutil
 import sys
 
 from eon import version
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass
 from eon import atoms
 from eon import communicator
@@ -22,7 +21,9 @@ from eon import fileio as io
 from eon import locking
 from eon import prstatelist
 
-def parallelreplica(config: ConfigClass = EON_CONFIG):
+def parallelreplica(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("parallelreplica requires a ConfigClass instance")
     logger.info('Eon version: %s', version)
     # First of all, does the root directory even exist?
     if not os.path.isdir(config.path_root):
@@ -60,7 +61,9 @@ def parallelreplica(config: ConfigClass = EON_CONFIG):
     parser.write(open(metafile, 'w'))
     io.save_prng_state()
 
-def step(current_time, current_state, states, transition, config: ConfigClass = EON_CONFIG):
+def step(current_time, current_state, states, transition, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("step requires a ConfigClass instance")
     next_state = states.get_product_state(current_state.number, transition['process_id'])
     next_state.zero_time()
     dynamics = io.Dynamics(os.path.join(config.path_results, "dynamics.txt"))
@@ -75,11 +78,15 @@ def step(current_time, current_state, states, transition, config: ConfigClass = 
 
     return current_state, previous_state
 
-def get_statelist(config: ConfigClass = EON_CONFIG):
+def get_statelist(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_statelist requires a ConfigClass instance")
     initial_state_path = os.path.join(config.path_root, 'pos.con')
     return prstatelist.PRStateList(initial_state_path, config=config)
 
-def get_pr_metadata(config: ConfigClass = EON_CONFIG):
+def get_pr_metadata(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_pr_metadata requires a ConfigClass instance")
     if not os.path.isdir(config.path_results):
         os.makedirs(config.path_results)
     metafile = os.path.join(config.path_results, 'info.txt')
@@ -112,7 +119,9 @@ def write_pr_metadata(parser, current_state_num, time, wuid):
     parser.set('Simulation Information', 'time_simulated', str(time))
     parser.set('Simulation Information', 'current_state', str(current_state_num))
 
-def make_searches(comm, current_state, wuid, config: ConfigClass = EON_CONFIG):
+def make_searches(comm, current_state, wuid, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("make_searches requires a ConfigClass instance")
     reactant = current_state.get_reactant()
     #XXX:what if the user changes the bundle size?
     num_in_buffer = comm.get_queue_size()*config.comm_job_bundle_size
@@ -153,7 +162,9 @@ def make_searches(comm, current_state, wuid, config: ConfigClass = EON_CONFIG):
     logger.info("Created " + str(num_to_make) + " searches")
     return wuid
 
-def register_results(comm, current_state, states, config: ConfigClass = EON_CONFIG):
+def register_results(comm, current_state, states, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("register_results requires a ConfigClass instance")
     logger.info("Registering results")
     if os.path.isdir(config.path_jobs_in):
         shutil.rmtree(config.path_jobs_in)
@@ -257,7 +268,9 @@ def register_results(comm, current_state, states, config: ConfigClass = EON_CONF
         logger.info("Average speedup is  %f", speedup/num_registered)
     return num_registered, transition, speedup
 
-def main(config: ConfigClass = EON_CONFIG):
+def main(config: ConfigClass = None):
+    if config is None:
+        config = ConfigClass()
     optpar = optparse.OptionParser(usage="usage: %prog [options] config.ini")
     optpar.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False,help="only write to the log file")
     optpar.add_option("-n", "--no-submit", action="store_true", dest="no_submit", default=False,help="don't submit searches; only register finished results")

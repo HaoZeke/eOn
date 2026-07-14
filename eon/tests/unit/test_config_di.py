@@ -126,5 +126,23 @@ class TestModifyConfigUsesPathArg(unittest.TestCase):
             self.assertIn("999", text)
 
 
+
+
+class TestAkmcRequiresConfig(unittest.TestCase):
+    def test_akmc_without_config_raises(self):
+        from eon import akmc
+        with self.assertRaises(TypeError):
+            akmc.akmc()
+
+    def test_basinhopping_without_config_raises(self):
+        from eon import basinhopping
+        with self.assertRaises(TypeError):
+            basinhopping.basinhopping()
+
+    def test_parallelreplica_without_config_raises(self):
+        from eon import parallelreplica
+        with self.assertRaises(TypeError):
+            parallelreplica.parallelreplica()
+
 if __name__ == "__main__":
     unittest.main()

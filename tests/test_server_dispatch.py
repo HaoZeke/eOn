@@ -72,19 +72,23 @@ def test_python_m_eon_server_help_exits_clean(tmp_path, monkeypatch):
 def test_get_communicator_local_interface(tmp_path, monkeypatch):
     """Local communicator is selected via real get_communicator()."""
     from eon import communicator
-    from eon.config import config
+    from eon.config import ConfigClass
 
-    # Reset cached communicator
-    if hasattr(communicator.get_communicator, "comm"):
-        del communicator.get_communicator.comm
+    communicator.reset_communicators()
 
-    config.comm_type = "local"
-    config.path_scratch = str(tmp_path / "scratch")
-    config.comm_local_client = "eonclient"
-    config.comm_local_ncpus = 1
-    config.comm_job_bundle_size = 1
+    # Dummy absolute client path so Local accepts the binary location.
+    client = tmp_path / "eonclient"
+    client.write_text("#!/bin/sh\n")
+    client.chmod(0o755)
 
-    comm = communicator.get_communicator()
+    cfg = ConfigClass()
+    cfg.comm_type = "local"
+    cfg.path_scratch = str(tmp_path / "scratch")
+    cfg.comm_local_client = str(client)
+    cfg.comm_local_ncpus = 1
+    cfg.comm_job_bundle_size = 1
+
+    comm = communicator.get_communicator(cfg)
     assert comm is not None
     assert hasattr(comm, "submit_jobs")
     assert hasattr(comm, "get_results")
