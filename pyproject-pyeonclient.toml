@@ -74,11 +74,26 @@ test-command = "pytest {package}/tests/test_pyeonclient_matter.py -q --tb=line -
 # test-skip free-threaded if tests hang; keep minimal smoke
 
 [tool.cibuildwheel.linux]
+# manylinux containers run as root; pin CARGO_HOME so host $HOME is never baked in.
 before-all = """
-  yum install -y eigen3-devel || yum install -y eigen3 || true
-  # manylinux images: install build tools
+  yum install -y eigen3-devel gcc-gfortran || yum install -y eigen3 gcc-gfortran || true
+  export CARGO_HOME=/root/.cargo
+  export PATH="/root/.cargo/bin:$PATH"
   command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-  source $HOME/.cargo/env || true
-  cargo install cbindgen || true
+  . /root/.cargo/env
+  command -v cbindgen || cargo install cbindgen
+  # quill is not packaged in manylinux images; install system-wide for pkg-config/cmake
+  if ! pkg-config --exists quill 2>/dev/null; then
+    rm -rf /tmp/quill-src /tmp/quill-build
+    curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz
+    mkdir -p /tmp/quill-src && tar -xzf /tmp/quill.tgz -C /tmp/quill-src --strip-components=1
+    cmake -S /tmp/quill-src -B /tmp/quill-build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DQUILL_BUILD_TESTS=OFF \
+      -DQUILL_BUILD_EXAMPLES=OFF
+    cmake --build /tmp/quill-build -j$(nproc)
+    cmake --install /tmp/quill-build
+  fi
 """
-environment = { PATH = "$HOME/.cargo/bin:$PATH", CARGO_HOME = "$HOME/.cargo" }
+environment = { PATH = "/root/.cargo/bin:$PATH", CARGO_HOME = "/root/.cargo", PKG_CONFIG_PATH = "/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH", CMAKE_PREFIX_PATH = "/usr/local" }
