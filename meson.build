@@ -67,8 +67,10 @@ if py_embed
     _deps += declare_dependency(compile_args: '-I' + incdir_numpy)
 endif
 
-# Client binary
+# Client binary / libs (+ optional pyeonclient)
 subdir('client')
 
-# eon main package
-subdir('eon')
+# eon main package (AKMC server). Skip for standalone pyeonclient wheels.
+if get_option('install_eon_server')
+    subdir('eon')
+endif

@@ -52,6 +52,7 @@ build-backend = "mesonpy"
 [tool.meson-python.args]
 setup = [
     "-Dwith_pyeonclient=true",
+    "-Dinstall_eon_server=false",
     "-Dwith_tests=false",
     "-Dwith_ase=false",
     "-Dwith_metatomic=false",

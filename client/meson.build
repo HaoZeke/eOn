@@ -992,7 +992,8 @@ ec = executable(
     link_args: _linkargs,
     build_rpath: ':'.join(_runtime_rpath),
     install_rpath: ':'.join(_runtime_rpath),
-    install: true,
+    # Standalone pyeonclient wheels only need the extension + shared libs.
+    install: get_option('install_eon_server'),
 )
 
 if get_option('with_tests')
