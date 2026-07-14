@@ -1,3 +1,9 @@
+"""Pydantic models for eOn configuration (docs / validation).
+
+For Main, Potential, Optimizer, Structure Comparison, and Process Search,
+field names must match schema/eon_params.capnp (Capn Proto L0 SSoT).
+Parity is enforced by tests/test_params_ssot.py.
+"""
 from pydantic import (
     BaseModel,
     Field,

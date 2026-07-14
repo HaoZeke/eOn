@@ -1,3 +1,9 @@
+# Covered groups (Main, Potential, Optimizer, Structure Comparison,
+# Process Search): field names/defaults are parity-gated against
+# schema/eon_params.capnp (L0 SSoT). Regenerate catalog via
+# tools/params_ssot/codegen.py after editing the .capnp schema.
+# Do not add keys to those sections without updating the Cap'n Proto SSoT.
+
 
 ################################################################################
 
