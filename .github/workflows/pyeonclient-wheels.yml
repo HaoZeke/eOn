@@ -43,22 +43,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Stable ABI (one wheel for all GIL CPython >= 3.12)
+          # Stable ABI (one wheel for all GIL CPython >= 3.12) → cp312-abi3-manylinux_*
           - name: abi3-manylinux
             os: ubuntu-22.04
             python: "3.12"
             free_threaded: false
             cibw_build: "cp312-manylinux_x86_64"
+            allow_limited_api: true
           - name: cp313t-manylinux
             os: ubuntu-22.04
             python: "3.13"
             free_threaded: true
             cibw_build: "cp313t-manylinux_x86_64"
+            # free-threaded: no stable ABI; disable package limited-api default
+            allow_limited_api: false
           - name: cp314t-manylinux
             os: ubuntu-22.04
             python: "3.14"
             free_threaded: true
             cibw_build: "cp314t-manylinux_x86_64"
+            allow_limited_api: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -89,6 +93,8 @@ jobs:
           CIBW_ARCHS: native
           # Free-threaded: enable when building *t tags
           CIBW_ENABLE: ${{ matrix.free_threaded && 'cpython-freethreading' || '' }}
+          # Free-threaded builds must not claim abi3 (pyproject limited-api=true).
+          CIBW_CONFIG_SETTINGS: ${{ matrix.free_threaded && 'setup-args=-Dpython.allow_limited_api=false' || '' }}
           # Pin cargo under /root in manylinux; quill installed under /usr/local in before-all.
           CIBW_ENVIRONMENT: >-
             PATH=/root/.cargo/bin:$PATH
@@ -118,7 +124,7 @@ jobs:
             pip install -U pip nanobind numpy meson ninja meson-python
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: python -c "import pyeonclient as p; print(p.__version__, p.Matter)"
-          # abi3: meson sets limited_api; wheel should be tagged abi3 when built on 3.12
+          # GIL matrix row: limited-api=true → cp312-abi3-manylinux_*; freethreaded rows disable it.
 
       - uses: actions/upload-artifact@v4
         with:

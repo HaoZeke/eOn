@@ -48,6 +48,12 @@ requires = [
 ]
 build-backend = "mesonpy"
 
+# Declare limited API so meson-python tags the GIL wheel as abi3 (not cp312-cp312).
+# Free-threaded builds must override with -Dpython.allow_limited_api=false (see
+# pyeonclient-wheels.yml free_threaded matrix entries).
+[tool.meson-python]
+limited-api = true
+
 # Build the C++ client library + pyeonclient extension only (no full pot matrix).
 [tool.meson-python.args]
 setup = [
