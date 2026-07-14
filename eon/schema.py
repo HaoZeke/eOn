@@ -1441,23 +1441,23 @@ class LBFGSConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
     lbfgs_memory: int = Field(
-        default=5,
+        default=20,
         description="Number of previous gradients and positions to store for the LBFGS method.",
     )
     lbfgs_inverse_curvature: float = Field(
-        default=1e-3, description="Initial inverse curvature value for LBFGS."
+        default=0.01, description="Initial inverse curvature value for LBFGS."
     )
     lbfgs_max_inverse_curvature: float = Field(
-        default=1e-2, description="Maximum inverse curvature value for LBFGS."
+        default=0.0, description="Maximum inverse curvature value for LBFGS."
     )
     lbfgs_auto_scale: bool = Field(
         default=True, description="If true, auto-scale the inverse curvature in LBFGS."
     )
     lbfgs_angle_reset: bool = Field(
-        default=False, description="If true, reset the LBFGS angle."
+        default=True, description="If true, reset the LBFGS angle."
     )
     lbfgs_distance_reset: bool = Field(
-        default=False, description="If true, reset the LBFGS distance."
+        default=True, description="If true, reset the LBFGS distance."
     )
 
 
@@ -1474,10 +1474,10 @@ class CGConfig(BaseModel):
         default=False, description="If true, perform a line search in CG."
     )
     cg_line_converged: float = Field(
-        default=1e-4, description="Convergence criterion for the line search in CG."
+        default=0.1, description="Convergence criterion for the line search in CG."
     )
     cg_max_iter_before_reset: int = Field(
-        default=20, description="Maximum number of iterations before reset in CG."
+        default=0, description="Maximum number of iterations before reset in CG."
     )
     cg_max_iter_line_search: int = Field(
         default=10,
@@ -1489,7 +1489,7 @@ class SDConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
     sd_alpha: float = Field(default=0.1, description="Alpha value for SD.")
-    sd_twopoint: bool = Field(
+    sd_two_point: bool = Field(
         default=False, description="If true, use the two-point method in SD."
     )
 

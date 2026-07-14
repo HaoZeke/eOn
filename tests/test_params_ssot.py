@@ -290,3 +290,132 @@ def test_codegen_header_exists_and_mentions_temperature():
     assert "MAIN_TEMPERATURE" in h
     assert "300.0" in h
     assert "AUTO-GENERATED" in h
+
+
+# --- Nested Optimizer docs models (LBFGS/CG/QuickMin/SD) ---
+
+# Map pydantic model field name -> (ssot_section, ssot_snake) or special
+_NESTED_OPT_MODELS = {
+    "LBFGSConfig": {
+        # all fields are flat aliases under Optimizer.*
+        "fields_from_flat_aliases": True,
+        "alias_prefix": "lbfgs_",
+        "ssot_section": "Optimizer.LBFGS",
+    },
+    "CGConfig": {
+        "fields_from_flat_aliases": True,
+        "alias_prefix": "cg_",
+        "ssot_section": "Optimizer.CG",
+        # flat key mapping for non-prefix-simple renames already in catalog
+    },
+    "QuickMinConfig": {
+        "fields_from_flat_aliases": True,
+        "alias_prefix": "qm_",
+        "ssot_section": "Optimizer.Quickmin",
+        "extra_allowed": {
+            # shared with Optimizer.time_step (same SSoT scalar)
+            "time_step": ("Optimizer", "time_step"),
+        },
+    },
+    "SDConfig": {
+        "fields_from_flat_aliases": True,
+        "alias_prefix": "sd_",
+        "ssot_section": "Optimizer.SD",
+    },
+}
+
+
+def _flat_alias_default_map() -> dict[str, object]:
+    from eon import params_ssot
+
+    return {
+        a["flat_key"]: a["default"]
+        for a in params_ssot.catalog().get("flat_aliases", [])
+        if a.get("yaml_section") == "Optimizer" and a.get("default") is not None
+    }
+
+
+def test_parity_nested_optimizer_model_fields_subset_of_ssot():
+    """LBFGS/CG/QuickMin/SD pydantic models invent no keys outside SSoT/aliases."""
+    from eon import params_ssot
+
+    flat_keys = {a["flat_key"] for a in params_ssot.catalog().get("flat_aliases", [])}
+    ssot_opt = {f["snake"] for f in params_ssot.scalar_fields("Optimizer")}
+
+    for model_name, meta in _NESTED_OPT_MODELS.items():
+        fields = _pydantic_model_fields(REPO / "eon" / "schema.py", model_name)
+        fields = {k for k in fields if k[0].islower()}
+        extra_allowed = set((meta.get("extra_allowed") or {}).keys())
+        allowed = set(flat_keys) | ssot_opt | extra_allowed
+        # also allow unprefixed names that match nested SSoT snakes under section
+        nested = {f["snake"] for f in params_ssot.scalar_fields(meta["ssot_section"])}
+        allowed |= nested
+        bad = fields - allowed
+        assert not bad, f"{model_name} fields not in SSoT/aliases: {bad}"
+
+
+def test_parity_nested_optimizer_model_defaults_match_ssot():
+    """Defaults on nested optimizer pydantic models match Cap'n Proto SSoT."""
+    from eon import params_ssot
+
+    schema_text = (REPO / "eon" / "schema.py").read_text()
+    flat_defaults = _flat_alias_default_map()
+    opt_defaults = params_ssot.defaults_for("Optimizer")
+
+    # Parse Field(default=...) for each nested model via AST for reliability
+    tree = ast.parse(schema_text)
+
+    def field_defaults(class_name: str) -> dict[str, object]:
+        out = {}
+        for node in tree.body:
+            if not (isinstance(node, ast.ClassDef) and node.name == class_name):
+                continue
+            for stmt in node.body:
+                if not isinstance(stmt, ast.AnnAssign) or not isinstance(stmt.target, ast.Name):
+                    continue
+                name = stmt.target.id
+                # Field(default=X, ...)
+                if isinstance(stmt.value, ast.Call):
+                    for kw in stmt.value.keywords:
+                        if kw.arg == "default":
+                            out[name] = ast.literal_eval(kw.value)
+                elif stmt.value is not None:
+                    try:
+                        out[name] = ast.literal_eval(stmt.value)
+                    except Exception:
+                        pass
+        return out
+
+    for model_name, meta in _NESTED_OPT_MODELS.items():
+        got = field_defaults(model_name)
+        assert got, f"no defaults parsed for {model_name}"
+        for fname, fdefault in got.items():
+            if fname in (meta.get("extra_allowed") or {}):
+                sec, snake = meta["extra_allowed"][fname]
+                exp = params_ssot.defaults_for(sec)[snake]
+            elif fname in flat_defaults:
+                exp = flat_defaults[fname]
+            else:
+                # try nested section snake without prefix
+                nested_defs = params_ssot.defaults_for(meta["ssot_section"])
+                # strip known prefixes
+                bare = fname
+                for pref in ("lbfgs_", "cg_", "qm_", "sd_"):
+                    if bare.startswith(pref):
+                        bare = bare[len(pref):]
+                        break
+                # cg_max_iter_line_search -> line_search_max_iter via flat alias reverse
+                if fname in flat_defaults:
+                    exp = flat_defaults[fname]
+                elif bare in nested_defs:
+                    exp = nested_defs[bare]
+                elif fname in opt_defaults:
+                    exp = opt_defaults[fname]
+                else:
+                    raise AssertionError(
+                        f"{model_name}.{fname} default {fdefault!r} has no SSoT mapping"
+                    )
+            assert fdefault == exp or (
+                isinstance(exp, float) and float(fdefault) == float(exp)
+            ), f"{model_name}.{fname} default {fdefault!r} != SSoT {exp!r}"
+
