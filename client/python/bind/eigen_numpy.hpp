@@ -65,6 +65,8 @@ inline VectorXi vectori_from_numpy_i64(const NpI64 &arr) {
 }
 
 // Own a heap buffer so the ndarray remains valid after return.
+// Call sites must use nb::rv_policy::move (or automatic): property getters
+// default to reference_internal, which conflicts with a capsule owner.
 template <typename EigenT>
 inline nb::ndarray<nb::numpy, double, nb::c_contig>
 matrix_to_numpy(const EigenT &m) {

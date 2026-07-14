@@ -25,8 +25,8 @@ def test_matter_to_ase_roundtrip(pot_params):
     pot, params = pot_params
     m = pc.Matter(pot, params)
     m.resize(2)
-    m.positions = np.array([[0.0, 0.0, 0.0], [1.1, 0.0, 0.0]])
     m.cell = np.eye(3) * 15.0
+    m.positions = np.array([[0.0, 0.0, 0.0], [1.1, 0.0, 0.0]])
     m.masses = np.array([1.0, 12.0])
     m.atomic_numbers = np.array([1, 6], dtype=np.int64)
     m.fixed = np.array([1, 0], dtype=np.int64)
@@ -68,8 +68,8 @@ def test_matter_to_conframe_roundtrip(pot_params):
     pot, params = pot_params
     m = pc.Matter(pot, params)
     m.resize(1)
-    m.positions = np.array([[1.0, 2.0, 3.0]])
     m.cell = np.eye(3) * 8.0
+    m.positions = np.array([[1.0, 2.0, 3.0]])
     m.masses = np.array([1.0])
     m.atomic_numbers = np.array([1], dtype=np.int64)
     m.fixed = np.array([0], dtype=np.int64)

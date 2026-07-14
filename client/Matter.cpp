@@ -433,6 +433,11 @@ void Matter::computePotential() const {
 // [-0.5,0.5) via floor (same MIC as eonc::pbc::apply for differences).
 void Matter::applyPeriodicBoundary() {
   assertIsolatedMoleculeLayoutSafe();
+  // Unset / singular cell (default after Matter construct is Zero) — do not
+  // wipe coordinates; callers set the cell before wrapping makes sense.
+  if (std::abs(cell.determinant()) < 1e-30) {
+    return;
+  }
   positions =
       eonc::pbc::applyPositions(positions, cell, cellInverse, pbcConvention);
 }

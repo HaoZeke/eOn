@@ -51,7 +51,8 @@ def get_communicator(config: ConfigClass = EON_CONFIG):
                                    config.comm_script_submit_job_cmd)
     elif config.comm_type in ('local_lib', 'inprocess', 'local_inprocess'):
         from eon.communicator_inprocess import LocalInProcess
-        comm = LocalInProcess(config.path_scratch, config.comm_job_bundle_size, config=config)
+        bundle = getattr(config, 'comm_job_bundle_size', 1)
+        comm = LocalInProcess(config.path_scratch, bundle, config=config)
     elif config.comm_type=='local':
         comm = Local(config.path_scratch, config.comm_local_client,
                                   config.comm_local_ncpus, config.comm_job_bundle_size)

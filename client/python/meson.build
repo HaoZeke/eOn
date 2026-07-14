@@ -23,9 +23,18 @@ import nanobind, pathlib, sys, sysconfig
 p = pathlib.Path(nanobind.__file__).resolve().parent
 cands = [p / "src" / "nb_combined.cpp", p / "nb_combined.cpp"]
 comb = next(c for c in cands if c.is_file())
+# nanobind 2.x vendors tsl/robin_map under ext/robin_map/include
+robin = p / "ext" / "robin_map" / "include"
+if not (robin / "tsl" / "robin_map.h").is_file():
+    # older layouts / system installs
+    for alt in (p / "include", pathlib.Path(nanobind.include_dir())):
+        if (alt / "tsl" / "robin_map.h").is_file():
+            robin = alt
+            break
 ft = bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
 ver = sys.version_info
 print(nanobind.include_dir())
+print(robin)
 print(comb)
 print("1" if ft else "0")
 print(f"{ver.major}.{ver.minor}")
@@ -41,15 +50,20 @@ if _nb_probe.returncode() != 0
 endif
 _nb_lines = _nb_probe.stdout().strip().split('\n')
 _nb_include = _nb_lines[0]
-_nb_combined = _nb_lines[1]
-_nb_free_threaded = _nb_lines[2] == '1'
-_nb_version = _nb_lines[4]
+_nb_robin = _nb_lines[1]
+_nb_combined = _nb_lines[2]
+_nb_free_threaded = _nb_lines[3] == '1'
+_nb_version = _nb_lines[5]
 
 message('pyeonclient: nanobind @0@'.format(_nb_version))
 message('pyeonclient: free-threaded interpreter = @0@'.format(_nb_free_threaded))
+message('pyeonclient: robin_map include = @0@'.format(_nb_robin))
 
 nanobind_dep = declare_dependency(
-    include_directories: include_directories(_nb_include, is_system: true),
+    include_directories: [
+        include_directories(_nb_include, is_system: true),
+        include_directories(_nb_robin, is_system: true),
+    ],
 )
 
 pyeonclient_sources = files(
@@ -94,7 +108,7 @@ else
     # Stable ABI abi3 when Python >= 3.12
     _use_abi3 = py.language_version().version_compare('>=3.12')
     if _use_abi3
-        _nb_cpp_args += ['-DPy_LIMITED_API=0x030C0000']
+        # limited_api sets -DPy_LIMITED_API; do not also define it in cpp_args
         message('pyeonclient: STABLE_ABI build (abi3, Py_LIMITED_API=3.12)')
         py.extension_module(
             '_core',

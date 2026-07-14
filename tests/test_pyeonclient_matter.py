@@ -37,8 +37,9 @@ def pot(lj_params):
 def matter_h2(pot, lj_params):
     m = pc.Matter(pot, lj_params)
     m.resize(2)
-    m.positions = np.array([[0.0, 0.0, 0.0], [1.1, 0.0, 0.0]], dtype=np.float64)
+    # Cell before positions (default cell is Zero; PBC wrap needs a real cell).
     m.cell = np.eye(3, dtype=np.float64) * 20.0
+    m.positions = np.array([[0.0, 0.0, 0.0], [1.1, 0.0, 0.0]], dtype=np.float64)
     m.masses = np.array([1.008, 1.008], dtype=np.float64)
     m.atomic_numbers = np.array([1, 1], dtype=np.int64)
     m.fixed = np.array([0, 0], dtype=np.int64)

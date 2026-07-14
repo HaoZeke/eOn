@@ -36,6 +36,7 @@ def test_get_communicator_inprocess(tmp_path, monkeypatch):
 
     config.comm_type = "inprocess"
     config.path_scratch = str(tmp_path / "scratch")
+    config.comm_job_bundle_size = 1
     c = comm.get_communicator()
     assert type(c).__name__ == "LocalInProcess"
 

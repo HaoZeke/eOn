@@ -36,6 +36,7 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro("n_fixed", &Matter::numberOfFixedAtoms)
 
       // --- positions ---
+      // rv_policy::move: capsule-owned ndarrays (see eigen_numpy.hpp)
       .def_prop_rw(
           "positions",
           [](const Matter &self) {
@@ -44,12 +45,14 @@ void bind_matter(nb::module_ &m) {
           [](Matter &self, const NpF64 &arr) {
             self.setPositions(atom_matrix_from_numpy(arr));
           },
+          nb::rv_policy::move,
           "Cartesian positions, shape (n, 3) float64")
       .def_prop_ro(
           "positions_free",
           [](const Matter &self) {
             return matrix_to_numpy(self.getPositionsFree());
-          })
+          },
+          nb::rv_policy::move)
       .def("set_positions_free",
            [](Matter &self, const NpF64 &arr) {
              self.setPositionsFree(atom_matrix_from_numpy(arr));
@@ -63,6 +66,7 @@ void bind_matter(nb::module_ &m) {
           [](Matter &self, const NpF64 &arr) {
             self.setCell(matrix3_from_numpy(arr));
           },
+          nb::rv_policy::move,
           "Cell matrix (3, 3) row-vector lattice")
 
       // --- velocities ---
@@ -73,7 +77,8 @@ void bind_matter(nb::module_ &m) {
           },
           [](Matter &self, const NpF64 &arr) {
             self.setVelocities(atom_matrix_from_numpy(arr));
-          })
+          },
+          nb::rv_policy::move)
 
       // --- forces (const getters; may evaluate potential) ---
       .def_prop_ro(
@@ -81,17 +86,20 @@ void bind_matter(nb::module_ &m) {
           [](const Matter &self) {
             return matrix_to_numpy(self.getForces());
           },
+          nb::rv_policy::move,
           "Forces with fixed atoms zeroed as appropriate")
       .def_prop_ro(
           "forces_raw",
           [](const Matter &self) {
             return matrix_to_numpy(self.getForcesRaw());
-          })
+          },
+          nb::rv_policy::move)
       .def_prop_ro(
           "forces_free",
           [](const Matter &self) {
             return matrix_to_numpy(self.getForcesFree());
-          })
+          },
+          nb::rv_policy::move)
       .def("set_forces",
            [](Matter &self, const NpF64 &arr) {
              self.setForces(atom_matrix_from_numpy(arr));
@@ -106,7 +114,8 @@ void bind_matter(nb::module_ &m) {
           },
           [](Matter &self, const NpF64 &arr) {
             self.setMasses(vector_from_numpy(arr));
-          })
+          },
+          nb::rv_policy::move)
       .def_prop_rw(
           "atomic_numbers",
           [](const Matter &self) {
@@ -115,6 +124,7 @@ void bind_matter(nb::module_ &m) {
           [](Matter &self, const NpI64 &arr) {
             self.setAtomicNrs(vectori_from_numpy_i64(arr));
           },
+          nb::rv_policy::move,
           "Atomic numbers (Z), int64 array length n")
       .def(
           "get_fixed",
@@ -147,6 +157,7 @@ void bind_matter(nb::module_ &m) {
                             static_cast<int>(arr.data()[i]) ? 1 : 0);
             }
           },
+          nb::rv_policy::move,
           "Fixed flags (1=fixed, 0=free), length n")
 
       // --- free mask ---
@@ -155,6 +166,7 @@ void bind_matter(nb::module_ &m) {
           [](const Matter &self) {
             return matrix_to_numpy(self.getFree());
           },
+          nb::rv_policy::move,
           "Nx3 free mask (1 free, 0 fixed)")
 
       // --- energy / mechanics ---
@@ -177,7 +189,8 @@ void bind_matter(nb::module_ &m) {
           [](const Matter &self, const NpF64 &diff) {
             return matrix_to_numpy(self.pbc(atom_matrix_from_numpy(diff)));
           },
-          nb::arg("diff"), "Minimum-image map for displacement array (n,3)")
+          nb::arg("diff"), nb::rv_policy::move,
+          "Minimum-image map for displacement array (n,3)")
       .def("apply_periodic_boundary_if_enabled",
            &Matter::applyPeriodicBoundaryIfEnabled)
 

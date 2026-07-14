@@ -86,8 +86,10 @@ def structure_to_matter(structure: Any, potential: Any, parameters: Any) -> Any:
     n = len(structure)
     m = Matter(potential, parameters)
     m.resize(n)
-    m.positions = np.ascontiguousarray(structure.r, dtype=np.float64)
+    # Cell before positions: default Matter cell is Zero; with PBC on, setting
+    # positions first would wrap through a singular cell.
     m.cell = np.ascontiguousarray(structure.box, dtype=np.float64)
+    m.positions = np.ascontiguousarray(structure.r, dtype=np.float64)
     m.masses = np.ascontiguousarray(structure.mass, dtype=np.float64)
     free = np.asarray(structure.free, dtype=np.float64).reshape(-1)
     m.fixed = (free < 0.5).astype(np.int64)

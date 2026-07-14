@@ -64,8 +64,9 @@ def ase_to_matter(
     n = len(atoms)
     m = Matter(potential, parameters)
     m.resize(n)
-    m.positions = np.ascontiguousarray(atoms.get_positions(), dtype=np.float64)
+    # Cell before positions (default Matter cell is Zero; PBC wrap needs it).
     m.cell = np.ascontiguousarray(np.asarray(atoms.get_cell()), dtype=np.float64)
+    m.positions = np.ascontiguousarray(atoms.get_positions(), dtype=np.float64)
     m.masses = np.ascontiguousarray(atoms.get_masses(), dtype=np.float64)
     m.atomic_numbers = np.ascontiguousarray(
         atoms.get_atomic_numbers(), dtype=np.int64
