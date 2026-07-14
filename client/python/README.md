@@ -1,3 +1,10 @@
+## Install
+
+```bash
+pip install pyeonclient
+pip install 'pyeonclient[ase]'  # optional
+```
+
 # pyeonclient
 
 Nanobind-only bindings for the eOn C++ client library (`libeonclib`).

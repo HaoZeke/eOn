@@ -1,0 +1,83 @@
+[project]
+name = "pyeonclient"
+version = "0.2.0"
+description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs)"
+authors = [
+    {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
+]
+readme = "client/python/README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26.4",
+    "readcon>=0.8.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Free Threading :: 2 - Beta",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+keywords = ["eOn", "AKMC", "nanobind", "Matter", "atomistic"]
+
+[project.optional-dependencies]
+ase = ["ase>=3.22"]
+
+[project.urls]
+Homepage = "https://github.com/TheochemUI/eOn"
+Documentation = "https://theochemuieon.readthedocs.io/"
+Repository = "https://github.com/TheochemUI/eOn"
+Issues = "https://github.com/TheochemUI/eOn/issues"
+Changelog = "https://github.com/TheochemUI/eOn/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = [
+    "meson-python>=0.16",
+    "meson>=1.3",
+    "ninja",
+    "numpy>=1.26.4",
+    "nanobind>=2.2",
+]
+build-backend = "mesonpy"
+
+# Build the C++ client library + pyeonclient extension only (no full pot matrix).
+[tool.meson-python.args]
+setup = [
+    "-Dwith_pyeonclient=true",
+    "-Dwith_tests=false",
+    "-Dwith_ase=false",
+    "-Dwith_metatomic=false",
+    "-Dwith_xtb=false",
+    "-Dwith_serve=false",
+    "-Dwith_fortran=true",
+    "-Dwith_cuh2=true",
+    "-Dwrap_mode=forcefallback",
+]
+install = ["--skip-subprojects"]
+dist = ["--include-subprojects"]
+
+[tool.cibuildwheel]
+# Three artifacts: abi3 (GIL 3.12+), free-threaded 3.13t, free-threaded 3.14t.
+build-frontend = "build[uv]"
+skip = ["pp*", "*-win32", "*-manylinux_i686", "*-musllinux*"]
+test-requires = ["pytest", "numpy"]
+test-command = "pytest {package}/tests/test_pyeonclient_matter.py -q --tb=line -k 'not fixture or fixture'"
+# test-skip free-threaded if tests hang; keep minimal smoke
+
+[tool.cibuildwheel.linux]
+before-all = """
+  yum install -y eigen3-devel || yum install -y eigen3 || true
+  # manylinux images: install build tools
+  command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  source $HOME/.cargo/env || true
+  cargo install cbindgen || true
+"""
+environment = { PATH = "$HOME/.cargo/bin:$PATH", CARGO_HOME = "$HOME/.cargo" }

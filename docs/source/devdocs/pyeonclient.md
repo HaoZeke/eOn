@@ -72,3 +72,7 @@ results (Structure + results.dat fields)
 
 File-based `local` / `cluster` remain for HPC; geometry on disk is still
 readcon `.con` when those paths are used.
+
+## PyPI
+
+See [pyeonclient-pypi](pyeonclient-pypi.md) for the standalone package and wheel matrix.

@@ -1,0 +1,166 @@
+# Standalone PyPI package: pyeonclient
+# Artifacts (3 wheels):
+#   1. abi3          — GIL CPython 3.12+ (built on 3.12, Limited API)
+#   2. cp313t        — free-threaded CPython 3.13
+#   3. cp314t        — free-threaded CPython 3.14
+#
+# Publish: tag pyeonclient-v* or workflow_dispatch with publish=true
+# Requires PyPI Trusted Publisher for project "pyeonclient" (environment: pypi-pyeonclient).
+name: pyeonclient wheels
+concurrency:
+  group: pyeonclient-wheels-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish built wheels to PyPI"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "pyeonclient-v*"
+  pull_request:
+    paths:
+      - "client/python/**"
+      - "client/**/*.cpp"
+      - "client/**/*.h"
+      - "pyproject-pyeonclient.toml"
+      - ".github/workflows/pyeonclient-wheels.yml"
+      - "scripts/pyeonclient_*.sh"
+      - "subprojects/readcon-core.wrap"
+      - "meson.build"
+      - "meson_options.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Stable ABI (one wheel for all GIL CPython >= 3.12)
+          - name: abi3-manylinux
+            os: ubuntu-22.04
+            python: "3.12"
+            free_threaded: false
+            cibw_build: "cp312-manylinux_x86_64"
+          - name: cp313t-manylinux
+            os: ubuntu-22.04
+            python: "3.13"
+            free_threaded: true
+            cibw_build: "cp313t-manylinux_x86_64"
+          - name: cp314t-manylinux
+            os: ubuntu-22.04
+            python: "3.14"
+            free_threaded: true
+            cibw_build: "cp314t-manylinux_x86_64"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: false
+
+      - name: Activate pyeonclient pyproject
+        run: bash scripts/pyeonclient_prepare_pyproject.sh
+
+      - name: Install host build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential gfortran cmake pkg-config \
+            libeigen3-dev ninja-build \
+            python3-pip
+          # cbindgen for readcon-core wrap
+          cargo install cbindgen 2>/dev/null || \
+            (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+             . "$HOME/.cargo/env" && cargo install cbindgen)
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - uses: pypa/cibuildwheel@v2.23.3
+        env:
+          CIBW_BUILD: ${{ matrix.cibw_build }}
+          CIBW_BUILD_FRONTEND: build
+          CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
+          CIBW_ARCHS: native
+          # Free-threaded: enable when building *t tags
+          CIBW_ENABLE: ${{ matrix.free_threaded && 'cpython-freethreading' || '' }}
+          CIBW_ENVIRONMENT: >-
+            PATH=$HOME/.cargo/bin:$PATH
+            CARGO_HOME=$HOME/.cargo
+          CIBW_BEFORE_ALL_LINUX: |
+            yum install -y eigen3-devel || true
+            command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            . "$HOME/.cargo/env" || true
+            command -v cbindgen || cargo install cbindgen
+          CIBW_BEFORE_BUILD: |
+            pip install -U pip nanobind numpy meson ninja meson-python
+          CIBW_TEST_REQUIRES: pytest numpy
+          CIBW_TEST_COMMAND: python -c "import pyeonclient as p; print(p.__version__, p.Matter)"
+          # abi3: meson sets limited_api; wheel should be tagged abi3 when built on 3.12
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyeonclient-${{ matrix.name }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  # Optional pure sdist (source; users need compilers)
+  sdist:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Activate pyeonclient pyproject
+        run: bash scripts/pyeonclient_prepare_pyproject.sh
+      - name: Host deps for meson-python sdist
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libeigen3-dev gfortran ninja-build
+          cargo install cbindgen 2>/dev/null || true
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: |
+          python -m pip install -U pip build nanobind numpy meson ninja meson-python
+          python -m build --sdist
+          ls -la dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyeonclient-sdist
+          path: dist/*.tar.gz
+
+  publish:
+    needs: [build, sdist]
+    if: >-
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/pyeonclient-v')
+      || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-pyeonclient
+      url: https://pypi.org/p/pyeonclient
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Flatten artifacts
+        run: |
+          mkdir -p upload
+          find dist -type f \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp -v {} upload/ \;
+          ls -la upload/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: upload/
+          skip-existing: true
+          verbose: true
