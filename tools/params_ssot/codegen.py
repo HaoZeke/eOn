@@ -5,9 +5,7 @@ Outputs (relative to repo root):
   schema/eon_params_catalog.json
   eon/_params_ssot_catalog.py
   client/generated/ParametersSSOTDefaults.h
-
-Does not require pycapnp: parses the .capnp text for field ordinals, types,
-and defaults. Nested structs become dotted paths (e.g. optimizer.lbfgs.memory).
+  client/generated/ParametersSSOTFieldIndex.inc
 """
 from __future__ import annotations
 
@@ -19,7 +17,6 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 CAPNP = REPO / "schema" / "eon_params.capnp"
 
-# Map capnp struct name -> catalog section key (INI-ish)
 SECTION_MAP = {
     "MainOptions": "Main",
     "PotentialOptions": "Potential",
@@ -32,7 +29,27 @@ SECTION_MAP = {
     "OptimizerSdOptions": "Optimizer.SD",
 }
 
-# camelCase / lower first field names -> snake_case used by INI/JSON/Python
+# Nested SSoT path → flat config.ini / config.yaml option name (historical)
+# Used only for Optimizer nested knobs that clients write under [Optimizer] flat
+# or [LBFGS]/[CG] sections with prefixed keys.
+FLAT_ALIASES: dict[str, str] = {
+    "Optimizer.LBFGS.memory": "lbfgs_memory",
+    "Optimizer.LBFGS.inverse_curvature": "lbfgs_inverse_curvature",
+    "Optimizer.LBFGS.max_inverse_curvature": "lbfgs_max_inverse_curvature",
+    "Optimizer.LBFGS.auto_scale": "lbfgs_auto_scale",
+    "Optimizer.LBFGS.angle_reset": "lbfgs_angle_reset",
+    "Optimizer.LBFGS.distance_reset": "lbfgs_distance_reset",
+    "Optimizer.CG.no_overshooting": "cg_no_overshooting",
+    "Optimizer.CG.knock_out_max_move": "cg_knock_out_max_move",
+    "Optimizer.CG.line_search": "cg_line_search",
+    "Optimizer.CG.line_converged": "cg_line_converged",
+    "Optimizer.CG.line_search_max_iter": "cg_max_iter_line_search",
+    "Optimizer.CG.max_iter_before_reset": "cg_max_iter_before_reset",
+    "Optimizer.Quickmin.steepest_descent": "qm_steepest_descent",
+    "Optimizer.SD.alpha": "sd_alpha",
+    "Optimizer.SD.two_point": "sd_two_point",
+}
+
 FIELD_SNAKE = {
     "randomSeed": "random_seed",
     "writeLog": "write_log",
@@ -87,7 +104,6 @@ FIELD_SNAKE = {
 def to_snake(name: str) -> str:
     if name in FIELD_SNAKE:
         return FIELD_SNAKE[name]
-    # generic camelCase
     s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
@@ -110,68 +126,32 @@ def parse_default(raw: str | None, type_name: str):
 
 
 def parse_capnp(text: str) -> dict:
-    """Return {struct: [{name, ordinal, type, default, snake}]}"""
     structs: dict[str, list] = {}
-    # strip comments
     lines = []
     for line in text.splitlines():
-        if "#" in line:
-            # keep string hashes? rare in this file
-            if '"' not in line.split("#")[0]:
-                line = line.split("#")[0]
+        if "#" in line and '"' not in line.split("#")[0]:
+            line = line.split("#")[0]
         lines.append(line)
     body = "\n".join(lines)
-
-    struct_re = re.compile(
-        r"struct\s+(\w+)\s*\{([^}]*)\}", re.S
-    )
+    struct_re = re.compile(r"struct\s+(\w+)\s*\{([^}]*)\}", re.S)
     field_re = re.compile(
-        r"(\w+)\s+@(\d+)\s*:\s*([A-Za-z0-9_.]+)"
-        r"(?:\s*=\s*([^;]+))?\s*;",
+        r"(\w+)\s+@(\d+)\s*:\s*([A-Za-z0-9_.]+)(?:\s*=\s*([^;]+))?\s*;",
         re.S,
     )
     for m in struct_re.finditer(body):
         sname = m.group(1)
-        if sname == "EonParameters":
-            # root only stores nested refs; skip nested field types without defaults
-            fields = []
-            for fm in field_re.finditer(m.group(2)):
-                fname, ord_, typ, default = fm.groups()
-                fields.append(
-                    {
-                        "name": fname,
-                        "ordinal": int(ord_),
-                        "type": typ,
-                        "default": parse_default(default, typ) if default else None,
-                        "snake": to_snake(fname),
-                    }
-                )
-            structs[sname] = fields
-            continue
         fields = []
         for fm in field_re.finditer(m.group(2)):
             fname, ord_, typ, default = fm.groups()
-            # skip nested struct members without scalar default (lbfgs @7 :OptimizerLbfgsOptions)
-            if typ in SECTION_MAP or typ.endswith("Options"):
-                if default is None and typ[0].isupper():
-                    fields.append(
-                        {
-                            "name": fname,
-                            "ordinal": int(ord_),
-                            "type": typ,
-                            "default": None,
-                            "snake": to_snake(fname),
-                            "nested": True,
-                        }
-                    )
-                    continue
+            nested = typ[0].isupper() and typ.endswith("Options") and default is None
             fields.append(
                 {
                     "name": fname,
                     "ordinal": int(ord_),
                     "type": typ,
-                    "default": parse_default(default, typ) if default else None,
+                    "default": None if nested else parse_default(default, typ),
                     "snake": to_snake(fname),
+                    **({"nested": True} if nested else {}),
                 }
             )
         structs[sname] = fields
@@ -200,10 +180,42 @@ def build_catalog(structs: dict) -> dict:
                 for f in fields
             ],
         }
+
+    # Flat aliases for Optimizer nested → historical yaml/ini option names
+    flat_aliases = []
+    for path, flat in FLAT_ALIASES.items():
+        # path like Optimizer.LBFGS.memory
+        parts = path.split(".")
+        sec = ".".join(parts[:-1])  # Optimizer.LBFGS
+        snake = parts[-1]
+        default = None
+        if sec in sections:
+            for f in sections[sec]["fields"]:
+                if f["snake"] == snake and not f.get("nested"):
+                    default = f["default"]
+                    break
+        flat_aliases.append(
+            {
+                "flat_key": flat,
+                "ssot_path": path,
+                "yaml_section": "Optimizer",
+                "default": default,
+            }
+        )
+
+    # Server config.yaml dispatcher defaults that intentionally differ from
+    # client runtime Parameters defaults for the same SSoT field.
+    server_yaml_default_overrides = {
+        "Main.job": "akmc",  # eon-server default job; client default process_search
+        "Potential.ext_pot_path": "ext_pot",  # yaml relative path without ./
+    }
+
     return {
         "source": "schema/eon_params.capnp",
         "schema_version": 1,
         "sections": sections,
+        "flat_aliases": flat_aliases,
+        "server_yaml_default_overrides": server_yaml_default_overrides,
     }
 
 
@@ -245,7 +257,6 @@ def emit_cpp_header(catalog: dict) -> str:
             return f"{float(v)}"
         return str(int(v))
 
-    # Flat constants for Main/Potential etc
     for sec, data in catalog["sections"].items():
         safe = re.sub(r"[^A-Za-z0-9]+", "_", sec)
         for f in data["fields"]:
@@ -261,6 +272,28 @@ def emit_cpp_header(catalog: dict) -> str:
     return "\n".join(lines)
 
 
+def emit_field_index(catalog: dict) -> str:
+    """C++ initializer list for unordered_set field_index()."""
+    ids = []
+    for sec, data in catalog["sections"].items():
+        for f in data["fields"]:
+            if f.get("nested"):
+                continue
+            ids.append(f"{sec}.{f['snake']}")
+    # also flat aliases under Optimizer for ssot_has_field convenience
+    for a in catalog.get("flat_aliases", []):
+        ids.append(f"Optimizer.{a['flat_key']}")
+    ids = sorted(set(ids))
+    lines = [
+        "// AUTO-GENERATED from schema/eon_params.capnp — do not edit.",
+        "// Include inside a std::unordered_set<std::string> initializer.",
+    ]
+    for i in ids:
+        lines.append(f'    "{i}",')
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main() -> int:
     text = CAPNP.read_text(encoding="utf-8")
     structs = parse_capnp(text)
@@ -272,20 +305,22 @@ def main() -> int:
     out_json = REPO / "schema" / "eon_params_catalog.json"
     out_py = REPO / "eon" / "_params_ssot_catalog.py"
     out_h = REPO / "client" / "generated" / "ParametersSSOTDefaults.h"
-    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_idx = REPO / "client" / "generated" / "ParametersSSOTFieldIndex.inc"
     out_h.parent.mkdir(parents=True, exist_ok=True)
 
     out_json.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
     out_py.write_text(emit_python(catalog))
     out_h.write_text(emit_cpp_header(catalog))
+    out_idx.write_text(emit_field_index(catalog))
     print("wrote", out_json.relative_to(REPO))
     print("wrote", out_py.relative_to(REPO))
     print("wrote", out_h.relative_to(REPO))
+    print("wrote", out_idx.relative_to(REPO))
     nfields = sum(
         len([f for f in s["fields"] if not f.get("nested")])
         for s in catalog["sections"].values()
     )
-    print(f"sections={len(catalog['sections'])} scalar_fields={nfields}")
+    print(f"sections={len(catalog['sections'])} scalar_fields={nfields} aliases={len(catalog['flat_aliases'])}")
     return 0
 
 

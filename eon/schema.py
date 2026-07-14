@@ -535,7 +535,7 @@ class PotentialConfig(BaseModel):
         default=0.25, description="Polling period for MPI potential."
     )
     # TODO(rg): move these around
-    lammps_logging: bool = Field(default=True, description="Logging LAMMPS calls.")
+    lammps_logging: bool = Field(default=False, description="Logging LAMMPS calls.")
     lammps_threads: int = Field(default=0, description="LAMMPS threads.")
     ext_pot_path: str = Field(
         default="ext_pot", description="Path for the external potential."
@@ -1405,7 +1405,7 @@ class OptimizerConfig(BaseModel):
         description="Maximum distance that an atom may be moved in a single optimization step (Angstroms).",
     )
     time_step: float = Field(
-        default=0.25,
+        default=1.0,
         description="The dynamical timestep for the quickmin algorithm (fs).",
     )
     max_iterations: int = Field(

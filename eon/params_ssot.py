@@ -6,11 +6,19 @@ the Cap'n Proto schema and regenerating.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Set
 
 from eon._params_ssot_catalog import CATALOG
 
-COVERED_SECTIONS = frozenset(CATALOG["sections"].keys())
+COVERED_YAML_SECTIONS = frozenset(
+    {
+        "Main",
+        "Potential",
+        "Optimizer",
+        "Structure Comparison",
+        "Process Search",
+    }
+)
 
 
 def catalog() -> dict:
@@ -45,3 +53,62 @@ def all_field_ids() -> List[str]:
 
 def has_field(section: str, key: str) -> bool:
     return f"{section}.{key}" in set(all_field_ids())
+
+
+def allowed_yaml_keys(section: str) -> Set[str]:
+    """Keys allowed under config.yaml for a covered section.
+
+    Includes top-level SSoT scalars for that section, plus Optimizer flat
+    aliases declared in the catalog.
+    """
+    keys: Set[str] = set()
+    if section in CATALOG["sections"]:
+        for f in scalar_fields(section):
+            keys.add(f["snake"])
+    # Nested Optimizer.* contribute only via flat_aliases under Optimizer
+    if section == "Optimizer":
+        for a in CATALOG.get("flat_aliases", []):
+            if a.get("yaml_section") == "Optimizer":
+                keys.add(a["flat_key"])
+    # Main client-only fields may be absent from yaml
+    return keys
+
+
+def yaml_default_map(section: str) -> Dict[str, Any]:
+    """Expected defaults for yaml keys (SSoT scalars + flat aliases).
+
+    Applies ``server_yaml_default_overrides`` for fields where the server
+    dispatcher config intentionally differs from client Parameters defaults
+    (documented in the catalog; still one authoring SSoT for the field).
+    """
+    out: Dict[str, Any] = {}
+    if section in CATALOG["sections"]:
+        out.update(defaults_for(section))
+    if section == "Optimizer":
+        for a in CATALOG.get("flat_aliases", []):
+            if a.get("yaml_section") == "Optimizer" and a.get("default") is not None:
+                out[a["flat_key"]] = a["default"]
+    for path, val in CATALOG.get("server_yaml_default_overrides", {}).items():
+        sec, key = path.split(".", 1)
+        if sec == section:
+            out[key] = val
+    return out
+
+
+def normalize_yaml_default(val: Any) -> Any:
+    """Normalize config.yaml default strings to Python values."""
+    if isinstance(val, dict) and "default" in val:
+        val = val["default"]
+    if isinstance(val, str):
+        low = val.lower()
+        if low in ("true", "t", "yes"):
+            return True
+        if low in ("false", "f", "no"):
+            return False
+        try:
+            if "." in val or "e" in low:
+                return float(val)
+            return int(val)
+        except ValueError:
+            return val
+    return val

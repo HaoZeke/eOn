@@ -1,4 +1,96 @@
 {
+  "flat_aliases": [
+    {
+      "default": 20,
+      "flat_key": "lbfgs_memory",
+      "ssot_path": "Optimizer.LBFGS.memory",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 0.01,
+      "flat_key": "lbfgs_inverse_curvature",
+      "ssot_path": "Optimizer.LBFGS.inverse_curvature",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 0.0,
+      "flat_key": "lbfgs_max_inverse_curvature",
+      "ssot_path": "Optimizer.LBFGS.max_inverse_curvature",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": true,
+      "flat_key": "lbfgs_auto_scale",
+      "ssot_path": "Optimizer.LBFGS.auto_scale",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": true,
+      "flat_key": "lbfgs_angle_reset",
+      "ssot_path": "Optimizer.LBFGS.angle_reset",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": true,
+      "flat_key": "lbfgs_distance_reset",
+      "ssot_path": "Optimizer.LBFGS.distance_reset",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": false,
+      "flat_key": "cg_no_overshooting",
+      "ssot_path": "Optimizer.CG.no_overshooting",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": false,
+      "flat_key": "cg_knock_out_max_move",
+      "ssot_path": "Optimizer.CG.knock_out_max_move",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": false,
+      "flat_key": "cg_line_search",
+      "ssot_path": "Optimizer.CG.line_search",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 0.1,
+      "flat_key": "cg_line_converged",
+      "ssot_path": "Optimizer.CG.line_converged",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 10,
+      "flat_key": "cg_max_iter_line_search",
+      "ssot_path": "Optimizer.CG.line_search_max_iter",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 0,
+      "flat_key": "cg_max_iter_before_reset",
+      "ssot_path": "Optimizer.CG.max_iter_before_reset",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": false,
+      "flat_key": "qm_steepest_descent",
+      "ssot_path": "Optimizer.Quickmin.steepest_descent",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": 0.1,
+      "flat_key": "sd_alpha",
+      "ssot_path": "Optimizer.SD.alpha",
+      "yaml_section": "Optimizer"
+    },
+    {
+      "default": false,
+      "flat_key": "sd_two_point",
+      "ssot_path": "Optimizer.SD.two_point",
+      "yaml_section": "Optimizer"
+    }
+  ],
   "schema_version": 1,
   "sections": {
     "Main": {
@@ -456,6 +548,10 @@
       ],
       "struct": "StructureComparisonOptions"
     }
+  },
+  "server_yaml_default_overrides": {
+    "Main.job": "akmc",
+    "Potential.ext_pot_path": "ext_pot"
   },
   "source": "schema/eon_params.capnp"
 }

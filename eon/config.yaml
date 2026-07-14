@@ -130,7 +130,7 @@ Potential:
 
         lammps_logging:
             kind: boolean
-            default: true
+            default: false
 
         lammps_threads:
             kind: int
@@ -1568,38 +1568,6 @@ Optimizer:
 
     options:
 
-        convergence_metric:
-            kind: string
-            default: norm
-            values:
-                - norm
-                - max_atom
-                - max_component
-
-        converged_force:
-            kind: float
-            default: 0.01
-
-        max_move:
-            kind: float
-            default: 0.2
-
-        time_step:
-            kind: float
-            default: 0.25
-
-        max_time_step:
-            kind: float
-            default: 1.0
-
-        variable_time_step:
-            kind: boolean
-            default: False
-
-        max_iterations:
-            kind: int
-            default: 1000
-
         opt_method:
             kind: string
             default: cg
@@ -1609,6 +1577,37 @@ Optimizer:
                 - qm
                 - lbfgs
                 - fire
+                - sd
+
+        convergence_metric:
+            kind: string
+            default: norm
+            values:
+                - norm
+                - max_atom
+                - max_component
+
+        max_iterations:
+            kind: int
+            default: 1000
+
+        max_move:
+            kind: float
+            default: 0.2
+
+        converged_force:
+            kind: float
+            default: 0.01
+
+        time_step:
+            kind: float
+            default: 1.0
+
+        max_time_step:
+            kind: float
+            default: 2.5
+
+        # Flat aliases for nested Optimizer.* (from eon_params.capnp)
 
         lbfgs_memory:
             kind: int
@@ -1620,47 +1619,55 @@ Optimizer:
 
         lbfgs_max_inverse_curvature:
             kind: float
-            default: 0.1
+            default: 0.0
 
         lbfgs_auto_scale:
-            kind: bool
-            default: false
+            kind: boolean
+            default: true
 
         lbfgs_angle_reset:
-            kind: bool
+            kind: boolean
             default: true
 
         lbfgs_distance_reset:
-            kind: bool
+            kind: boolean
             default: true
 
-        qm_steepest_descent:
-            kind: bool
-            default: False
-
         cg_no_overshooting:
-            kind: bool
-            default: False
+            kind: boolean
+            default: false
 
         cg_knock_out_max_move:
-            kind: bool
-            default: False
+            kind: boolean
+            default: false
 
         cg_line_search:
-            kind: bool
-            default: False
-
-        cg_max_iter_line_search:
-            kind: int
-            default: 5
-
-        cg_max_iter_before_reset:
-            kind: int
-            default: 10
+            kind: boolean
+            default: false
 
         cg_line_converged:
             kind: float
             default: 0.1
+
+        cg_max_iter_line_search:
+            kind: int
+            default: 10
+
+        cg_max_iter_before_reset:
+            kind: int
+            default: 0
+
+        qm_steepest_descent:
+            kind: boolean
+            default: false
+
+        sd_alpha:
+            kind: float
+            default: 0.1
+
+        sd_two_point:
+            kind: boolean
+            default: false
 
 ################################################################################
 
