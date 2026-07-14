@@ -91,7 +91,9 @@ jobs:
           CIBW_BUILD_FRONTEND: build
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
           CIBW_ARCHS: native
-          # Free-threaded: enable when building *t tags
+          # manylinux_2_28 has modern GCC; freethreading numpy needs it
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          # Free-threaded: enable when building *t tags (cibuildwheel 2.23)
           CIBW_ENABLE: ${{ matrix.free_threaded && 'cpython-freethreading' || '' }}
           # Free-threaded builds must not claim abi3 (pyproject limited-api=true).
           CIBW_CONFIG_SETTINGS: ${{ matrix.free_threaded && 'setup-args=-Dpython.allow_limited_api=false' || '' }}
@@ -121,10 +123,11 @@ jobs:
               cmake --install /tmp/quill-build
             fi
           CIBW_BEFORE_BUILD: |
-            pip install -U pip nanobind numpy meson ninja meson-python
+            pip install -U pip nanobind meson ninja meson-python
+            pip install --only-binary=:all: numpy || pip install numpy
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: python -c "import pyeonclient as p; print(p.__version__, p.Matter)"
-          # GIL matrix row: limited-api=true → cp312-abi3-manylinux_*; freethreaded rows disable it.
+          # GIL: limited-api=true → cp312-abi3-manylinux_*; freethreaded: *t tags, no limited-api.
 
       - uses: actions/upload-artifact@v4
         with:
