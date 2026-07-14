@@ -10,8 +10,6 @@ Geometry kernels
     :mod:`eon.geometry`. This module re-exports them for compatibility and
     keeps structure-matching / CNA helpers plus the element table.
 """
-from eon.config import config
-
 import numpy
 import logging
 logger = logging.getLogger("atoms")
@@ -33,41 +31,48 @@ from eon.geometry import (  # noqa: F401
 
 # --- structure comparison / CNA (unchanged algorithms) ---
 
-def match(a,b,eps_r,neighbor_cutoff,indistinguishable):
-    if len(a)!=len(b):
+def match(a, b, eps_r, neighbor_cutoff, indistinguishable,
+          check_rotation=False, use_identical=False):
+    if len(a) != len(b):
         return False
 
-    if config.comp_check_rotation:
-        if indistinguishable and config.comp_use_identical:
-            return get_mappings(a,b,eps_r,neighbor_cutoff)
+    if check_rotation:
+        if indistinguishable and use_identical:
+            return get_mappings(a, b, eps_r, neighbor_cutoff)
         else:
-            return rot_match(a,b)
+            return rot_match(a, b, eps_r)
     else:
-        if indistinguishable and config.comp_use_identical:
-            return identical(a,b)
+        if indistinguishable and use_identical:
+            return identical(a, b)
         else:
-            diff = pbc(a.r-b.r, a.box)
+            diff = pbc(a.r - b.r, a.box)
             return numpy.max(numpy.sum(diff**2.0, axis=1)) < eps_r**2.0
             #return max(per_atom_norm(a.r-b.r, a.box))<eps_r
 
 
-def point_energy_match(file_a, energy_a, file_b, energy_b):
+def point_energy_match(file_a, energy_a, file_b, energy_b, eps_e, eps_r,
+                       neighbor_cutoff, check_rotation=False, use_identical=False):
     import eon.fileio as io
-    if abs(energy_a - energy_b) > config.comp_eps_e:
+    if abs(energy_a - energy_b) > eps_e:
         return False
     a = io.loadcon(file_a)
     b = io.loadcon(file_b)
-    if match(a, b, config.comp_eps_r, config.comp_neighbor_cutoff, False):
+    if match(a, b, eps_r, neighbor_cutoff, False,
+             check_rotation=check_rotation, use_identical=use_identical):
         return True
 
-def points_energies_match(file_a, energy_a, files_b, energies_b):
+def points_energies_match(file_a, energy_a, files_b, energies_b, eps_e, eps_r,
+                          neighbor_cutoff, check_rotation=False, use_identical=False):
     for i in range(len(files_b)):
-        if point_energy_match(file_a, energy_a, files_b[i], energies_b[i]):
+        if point_energy_match(file_a, energy_a, files_b[i], energies_b[i],
+                              eps_e, eps_r, neighbor_cutoff,
+                              check_rotation=check_rotation,
+                              use_identical=use_identical):
             return i
     return None
 
 
-def rot_match(a, b):
+def rot_match(a, b, eps_r):
     if not (a.free.all() and b.free.all()):
         logger.warning("Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly")
     acm = sum(a.r)/len(a)
@@ -84,7 +89,7 @@ def rot_match(a, b):
         R = numpy.dot(U, V)
     ta_r = numpy.dot(ta_r, R)
     dist = max(numpy.linalg.norm(ta_r - tb_r, axis=1))
-    return dist < config.comp_eps_r
+    return dist < eps_r
 
     ''' Quaternion algorithm
     ta = a.copy()

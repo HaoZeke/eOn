@@ -344,5 +344,7 @@ class ConfigClass:
 
         del parser
 
-# XXX(rg): Very leaky global state here because.........?
+# Process-edge default instance for CLI / ``python -m eon`` only.
+# Library code must take ConfigClass via parameter injection (see epic eOn-gmhl).
+# Prefer: cfg = ConfigClass(); cfg.init(path); runner(cfg)
 config = ConfigClass()

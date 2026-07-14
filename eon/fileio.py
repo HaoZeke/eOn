@@ -17,7 +17,6 @@ import os
 import pickle as pickle
 import readcon
 
-from eon.config import config
 from eon.geometry.cell import box_to_length_angle, length_angle_to_box
 from eon.structure import Structure
 
@@ -166,7 +165,7 @@ def save_results_dat(fileout, results):
 
 def modify_config(config_path, changes):
     parser = configparser.ConfigParser()
-    parser.read(config.config_path)
+    parser.read(config_path)
     for change in changes:
         parser.set(*change)
     config_str_io = StringIO()

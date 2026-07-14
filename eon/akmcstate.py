@@ -9,7 +9,6 @@ logger = logging.getLogger('state')
 
 import numpy
 
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 from eon import atoms
 from eon import fileio as io
@@ -24,8 +23,10 @@ class AKMCState(state.State):
     processtable_line = "%7d %16.5f %11.5e %9d %16.5f %17.5e %8.5f %12.5e %7d\n"
 
     def __init__(self, statepath, statenumber, statelist, previous_state_num = -1,
-                 reactant_path = None, config: ConfigClass = EON_CONFIG):
+                 reactant_path = None, config: ConfigClass = None):
         """ Creates a new State, with lazily loaded data. """
+        if config is None:
+            raise TypeError("akmcstate requires a ConfigClass instance")
         self.config = config
         if self.config.akmc_server_side_process_search:
             self.search_result_header = "%8s %10s %10s %10s %10s %10s %10s    %s\n" % ("searchid", "type", "barrier",
@@ -61,7 +62,7 @@ class AKMCState(state.State):
                 p2 = io.loadcon(self.proc_saddle_path(id))
                 self.con_cache[id] = p2
 
-            if atoms.match(p1, p2, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, False):
+            if atoms.match(p1, p2, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, False, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                 return id
         return None
 

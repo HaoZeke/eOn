@@ -5,12 +5,11 @@ import numpy
 from eon.mcamc import mcamc
 import logging
 logger = logging.getLogger('superbasin')
-from eon.config import config
 
 
 class Superbasin:
 
-    def __init__(self, path, id, state_list=None, get_state=None):
+    def __init__(self, path, id, state_list=None, get_state=None, config=None):
         """Initialize superbasin.
 
         Must pass either state_list or get_state:
@@ -20,6 +19,9 @@ class Superbasin:
         """
         if (state_list is None) == (get_state is None):
             raise ValueError('Superbasin must either have a list of states or a reference to get_state of a StateList')
+        if config is None:
+            raise TypeError("Superbasin requires a ConfigClass instance")
+        self.config = config
         self.id = int(id)
         self.path = os.path.join(path, str(self.id))
         # Get the states.
@@ -155,12 +157,12 @@ class Superbasin:
 
         """
         # Do not filter states if superbasin_confidence is disabled.
-        if not config.sb_superbasin_confidence:
+        if not self.config.sb_superbasin_confidence:
             for state in self.states:
                 yield state
             return
         # The code for an enabled superbasin_confidence feature follows.
-        if config.saddle_method == "dynamics":
+        if self.config.saddle_method == "dynamics":
             # Use time spent in dynamics.
             try:
                 max_time = max(state.get_time()
@@ -207,7 +209,7 @@ class Superbasin:
         # state happens to have no exit but another one has, we will
         # never find anything. When we sort by time spent searching,
         # though, we will cycle the search through all states.
-        if config.saddle_method == "dynamics":
+        if self.config.saddle_method == "dynamics":
             return sorted(self._get_filtered_states(),
                           key=lambda state: (state.get_confidence(self), state.get_time())
                           )[0]

@@ -1,4 +1,3 @@
-
 import subprocess
 import os
 import shutil
@@ -8,15 +7,14 @@ import numpy
 import logging
 logger = logging.getLogger('kdb')
 
-from eon.config import config
 from eon import fileio as io
 
-def insert(state, process_id):
+def insert(state, process_id, config):
     try:
         from kdb import aselite
         from kdb import local_db
         from kdb import local_insert
-    except:
+    except Exception:
         logger.error('Python module kdb not found, kdb will not be used.')
         return
     logger.debug("KDB inserting process")
@@ -30,12 +28,12 @@ def insert(state, process_id):
     insert_sub_class.insert(reactant, saddle, product, mode=mode, nf=params['nf'],
                dc=params['dc'], mac=params['mac'], kdbname=config.kdb_name)
 
-def query(state):
+def query(state, config):
     try:
         from kdb import aselite
         from kdb import local_db
         from kdb import local_query
-    except:
+    except Exception:
         logger.error('Python module kdb not found, kdb will not be used.')
         return
     if os.path.isdir(os.path.join(config.kdb_scratch_path, "kdbmatches")):
@@ -53,7 +51,7 @@ def query(state):
                           nodupes = config.kdb_nodupes, kdbname=config.kdb_name,
                           dc=params['dc'], nf=params['nf'])
 
-def make_suggestion():
+def make_suggestion(config):
     if os.path.isdir(os.path.join(config.kdb_scratch_path, "kdbmatches")):
         dones = glob.glob(os.path.join(config.kdb_scratch_path, "kdbmatches",".done_*"))
         if len(dones) > 0:

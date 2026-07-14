@@ -6,17 +6,18 @@ logger = logging.getLogger('statelist')
 import os
 
 from eon import atoms
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 
 class StateList:
     """ The StateList class.  Serves as an interface to State objects and StateList metadata. """
-    def __init__(self, StateClass, initial_state = None, config: ConfigClass = EON_CONFIG):
+    def __init__(self, StateClass, initial_state = None, config: ConfigClass = None):
         ''' Check to see if state_path exists and that state zero exists.
             Initializes state zero when passed a initial_state only if state
             zero doesn't already exist. '''
 
+        if config is None:
+            raise TypeError("statelist requires a ConfigClass instance")
         self.config = config
         self.path = self.config.path_states
         self.epsilon_e = self.config.comp_eps_e
@@ -88,7 +89,7 @@ class StateList:
                 pnew = st.get_process_product(process_id)
                 for id in energetically_close:
                     p = self.get_state(id).get_reactant()
-                    if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True):
+                    if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                         if id == state_number:
                             logging.warning("State %i process %i leads back to initial state",
                                             state_number, process_id)

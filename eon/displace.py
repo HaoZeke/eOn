@@ -12,7 +12,9 @@ from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 class DisplacementManager:
-    def __init__(self, reactant, moved_atoms, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, moved_atoms, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("DisplacementManager requires a ConfigClass instance")
         self.config = config
         self.reactant = reactant
         if self.config.displace_random_weight > 0:

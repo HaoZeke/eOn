@@ -19,7 +19,7 @@ from pathlib import Path
 numpy.seterr(divide="raise", over="raise", under="print", invalid="raise")
 
 from eon.version import version
-from eon.config import config as EON_CONFIG # NOTE: Since it is a global object..
+from eon.config import config as EON_CONFIG  # process-edge default only (main/CLI)
 from eon.config import ConfigClass
 from eon import communicator
 from eon import locking
@@ -64,10 +64,10 @@ def akmc(config: ConfigClass = EON_CONFIG, steps=0):
     kT = config.main_temperature/11604.5 #in eV
 
     # Load metadata, the state list, and the current state.
-    start_state_num, time, previous_state_num, first_run, previous_temperature = get_akmc_metadata()
+    start_state_num, time, previous_state_num, first_run, previous_temperature = get_akmc_metadata(config)
 
 
-    states = get_statelist(kT)
+    states = get_statelist(kT, config=config)
     current_state = states.get_state(start_state_num)
 
     # --- START: DYNAMIC ATOM LIST SCRIPT EXECUTION ---
@@ -113,11 +113,12 @@ def akmc(config: ConfigClass = EON_CONFIG, steps=0):
         sb = None
         explore_state = current_state
 
-    state_explorer = explorer.get_minmodexplorer()(states, previous_state, explore_state, superbasin=sb)
+    state_explorer = explorer.get_minmodexplorer(config)(
+        states, previous_state, explore_state, superbasin=sb, config=config)
     state_explorer.explore()
 
     # Take a KMC step, if it's time.
-    current_state, previous_state, time, steps = kmc_step(current_state, states, time, kT, superbasining, steps)
+    current_state, previous_state, time, steps = kmc_step(current_state, states, time, kT, superbasining, steps, config=config)
 
     # Write out metadata.
     metafile = os.path.join(config.path_results, 'info.txt')
@@ -178,12 +179,18 @@ def get_statelist(kT, config: ConfigClass = EON_CONFIG):
     )
 
 def get_superbasin_scheme(states, config):
+    kT = config.main_temperature / 11604.5
     if config.sb_scheme == 'transition_counting':
-        superbasining = superbasinscheme.TransitionCounting(config.sb_path, states, config.main_temperature / 11604.5, config.sb_tc_ntrans)
+        superbasining = superbasinscheme.TransitionCounting(
+            config.sb_path, states, kT, config.sb_tc_ntrans, config=config)
     elif config.sb_scheme == 'energy_level':
-        superbasining = superbasinscheme.EnergyLevel(config.sb_path, states, config.main_temperature / 11604.5, config.sb_el_energy_increment)
+        superbasining = superbasinscheme.EnergyLevel(
+            config.sb_path, states, kT, config.sb_el_energy_increment, config=config)
     elif config.sb_scheme == 'rate':
-        superbasining = superbasinscheme.RateThreshold(config.sb_path, states, config.main_temperature / 11604.5, config.sb_rt_rate_threshold)
+        superbasining = superbasinscheme.RateThreshold(
+            config.sb_path, states, kT, config.sb_rt_rate_threshold, config=config)
+    else:
+        raise ValueError(f"Unknown superbasin scheme: {config.sb_scheme}")
     return superbasining
 
 
@@ -416,7 +423,7 @@ def main(config: ConfigClass = EON_CONFIG):
         optpar.error("Options %s are mutually exclusive" % ", ".join(offending_options))
 
     if len(options.movie_type) > 0:
-        states = get_statelist(config.main_temperature / 11604.5)
+        states = get_statelist(config.main_temperature / 11604.5, config=config)
         movie.make_movie(options.movie_type, config.path_root, states,
                          options.separate_movie_files)
         sys.exit(0)
@@ -432,9 +439,9 @@ def main(config: ConfigClass = EON_CONFIG):
         sys.exit(1)
 
     if options.print_status:
-        states = get_statelist(config.main_temperature / 11604.5)
+        states = get_statelist(config.main_temperature / 11604.5, config=config)
         start_state_num, time, previous_state_num, first_run, previous_temperature =\
-            get_akmc_metadata()
+            get_akmc_metadata(config)
         current_state = states.get_state(start_state_num)
         if config.sb_on:
             sb_scheme = get_superbasin_scheme(states)
@@ -471,7 +478,7 @@ def main(config: ConfigClass = EON_CONFIG):
         print("Percentage bad saddles: %.1f" % (float(current_state.get_bad_saddle_count())/float(max(current_state.get_bad_saddle_count() + current_state.get_good_saddle_count(), 1)) * 100))
         print()
 
-        comm = communicator.get_communicator()
+        comm = communicator.get_communicator(config)
         print("Saddle Searches")
         print("---------------")
         print("Searches in queue:", comm.get_queue_size())
@@ -587,7 +594,7 @@ def main(config: ConfigClass = EON_CONFIG):
             # define a wait method.
             if config.comm_type == 'mpi':
                 from eon.mpiwait import mpiwait
-                wait = mpiwait
+                wait = lambda: mpiwait(config.mpi_poll_period)
             elif options.continuous:
                 if config.comm_type == "local":
                     # In local, everything is synchronous, so no need to wait here.

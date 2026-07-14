@@ -15,7 +15,8 @@ import random
 from eon import version
 from eon import atoms
 from eon import communicator
-from eon.config import config
+from eon.config import config as EON_CONFIG
+from eon.config import ConfigClass
 from eon import fileio as io
 from eon import locking
 from eon.version import version
@@ -70,20 +71,21 @@ from eon.version import version
 #        return numpy.array( ((a,0,0),(0,a,0),(0,0,a)) )
 
 class BHStates:
-    def __init__(self):
-        if not os.path.isdir(config.path_states):
-            os.mkdir(config.path_states)
+    def __init__(self, config: ConfigClass):
+        self.config = config
+        if not os.path.isdir(self.config.path_states):
+            os.mkdir(self.config.path_states)
 
-        state_table_path = os.path.join(config.path_states, 'state_table')
+        state_table_path = os.path.join(self.config.path_states, 'state_table')
         self.energy_table = io.Table(state_table_path, ['state', 'energy', 'repeats'])
 
     def get_random_minimum(self):
         if len(self.energy_table.rows) == 0: return None
-        N = config.bh_initial_state_pool_size
+        N = self.config.bh_initial_state_pool_size
         self.energy_table.rows.sort(key=lambda r:-r['energy'])
         lowest_N = self.energy_table.rows[:N]
         i = random.choice(lowest_N)['state']
-        f = open(os.path.join(config.path_states, str(i), 'minimum.con'))
+        f = open(os.path.join(self.config.path_states, str(i), 'minimum.con'))
         return StringIO(f.read())
 
     def add_state(self, result_files, result_info):
@@ -94,16 +96,16 @@ class BHStates:
 
         if len(self.energy_table) != 0:
             for row in self.energy_table:
-                if abs(energy-row['energy']) < config.comp_eps_e:
+                if abs(energy-row['energy']) < self.config.comp_eps_e:
                     energetically_close.append(row['state'])
             if len(energetically_close) != 0:
                 a1 = io.loadcon(result_files['min.con'])
                 for state_number in energetically_close:
-                    state_con_path = os.path.join(config.path_states,
+                    state_con_path = os.path.join(self.config.path_states,
                                                   str(state_number),
                                                   'minimum.con')
                     a2 = io.loadcon(state_con_path)
-                    if atoms.match(a1, a2, config.comp_eps_r, config.comp_neighbor_cutoff, True):
+                    if atoms.match(a1, a2, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                         logger.info("Found a repeat of state %i", state_number)
                         added = False
                         for row in self.energy_table.rows:
@@ -120,7 +122,7 @@ class BHStates:
             self.energy_table.rows.sort(key=lambda r:-r['energy'])
             self.energy_table.write()
 
-            state_path = os.path.join(config.path_states, str(state_number))
+            state_path = os.path.join(self.config.path_states, str(state_number))
             os.mkdir(state_path)
 
             result_files['minimum.con'] = result_files['min.con']
@@ -136,7 +138,7 @@ class BHStates:
 
         return added
 
-def basinhopping():
+def basinhopping(config: ConfigClass = EON_CONFIG):
     logger.info('Eon version: %s', version)
     # First of all, does the root directory even exist?
     if not os.path.isdir(config.path_root):
@@ -144,7 +146,7 @@ def basinhopping():
         sys.exit(1)
 
     # load metadata
-    bhstates = BHStates()
+    bhstates = BHStates(config)
 
     if os.path.isfile("wuid.dat"):
         wuid_file = open("wuid.dat")
@@ -154,13 +156,13 @@ def basinhopping():
         wuid = 0
 
     # get communicator
-    comm = communicator.get_communicator()
+    comm = communicator.get_communicator(config)
 
     # Register all the results. There is  no need to ever discard found
     # processes like we do with akmc. There is no confidence to calculate.
-    register_results(comm, bhstates)
+    register_results(comm, bhstates, config)
 
-    wuid = make_searches(comm, wuid, bhstates)
+    wuid = make_searches(comm, wuid, bhstates, config)
 
     wuid_file = open("wuid.dat","w")
     wuid_file.write("%i\n" % wuid)
@@ -168,7 +170,7 @@ def basinhopping():
 
     io.save_prng_state()
 
-def make_searches(comm, wuid, bhstates):
+def make_searches(comm, wuid, bhstates, config: ConfigClass):
     num_in_buffer = comm.get_queue_size()*config.comm_job_bundle_size
     logger.info("%i searches in the queue" % num_in_buffer)
     num_to_make = max(config.comm_job_buffer_size - num_in_buffer, 0)
@@ -225,7 +227,7 @@ def make_searches(comm, wuid, bhstates):
     logger.info( str(num_to_make) + " searches created")
     return wuid
 
-def register_results(comm, bhstates):
+def register_results(comm, bhstates, config):
     logger.info("Registering results")
     if os.path.isdir(config.path_jobs_in):
         shutil.rmtree(config.path_jobs_in)
@@ -261,7 +263,7 @@ def register_results(comm, bhstates):
 
     logger.info("%i (result) searches processed", num_registered)
 
-def main():
+def main(config: ConfigClass = EON_CONFIG):
     optpar = optparse.OptionParser(usage="usage: %prog [options] config.ini")
     optpar.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False,help="only write to the log file")
     optpar.add_option("-n", "--no-submit", action="store_true", dest="no_submit", default=False,help="don't submit searches; only register finished results")
@@ -332,9 +334,9 @@ def main():
         if config.comm_type == 'mpi':
             from eon.mpiwait import mpiwait
             while True:
-                mpiwait()
-                basinhopping()
-        basinhopping()
+                mpiwait(config.mpi_poll_period)
+                basinhopping(config)
+        basinhopping(config)
     else:
         logger.warning("Couldn't get lock")
         sys.exit(1)

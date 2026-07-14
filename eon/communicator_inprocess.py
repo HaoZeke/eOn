@@ -95,10 +95,8 @@ class LocalInProcess(Communicator):
     """Run client work in-process via Matter (nanobind), not a subprocess."""
 
     def __init__(self, scratchpath, bundle_size=1, config=None):
-        from eon.config import config as EON_CONFIG
-
         if config is None:
-            config = EON_CONFIG
+            raise TypeError("LocalInProcess requires a ConfigClass instance")
         Communicator.__init__(self, scratchpath, bundle_size, config=config)
         self._pc = _require_pyeonclient()
         self._finished: list[dict] = []
