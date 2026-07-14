@@ -59,10 +59,13 @@ message('pyeonclient: nanobind @0@'.format(_nb_version))
 message('pyeonclient: free-threaded interpreter = @0@'.format(_nb_free_threaded))
 message('pyeonclient: robin_map include = @0@'.format(_nb_robin))
 
+# Use -isystem compile_args (not include_directories) so absolute paths under a
+# project-local .pixi env are allowed; Meson forbids abs include_directories
+# into the source tree.
 nanobind_dep = declare_dependency(
-    include_directories: [
-        include_directories(_nb_include, is_system: true),
-        include_directories(_nb_robin, is_system: true),
+    compile_args: [
+        '-isystem' + _nb_include,
+        '-isystem' + _nb_robin,
     ],
 )
 

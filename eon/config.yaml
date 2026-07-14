@@ -1223,6 +1223,9 @@ Communicator:
             values:
                 - cluster
                 - local
+                - local_lib
+                - inprocess
+                - local_inprocess
                 - mpi
 
         client_path:
