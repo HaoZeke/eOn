@@ -1,0 +1,1 @@
+Parameter field graph for Main, Potential, Optimizer, Structure Comparison, and Process Search is authored in ``schema/eon_params.capnp`` (Cap'n Proto L0 SSoT) with INI/JSON adapters; parity tests gate ``config.yaml`` / ``eon.schema`` against the catalog.
