@@ -141,6 +141,7 @@ described in the subsequent sections.
 kdb
 rgpot_integration
 rgpot_pot
+rgpot_metatomic
 serve_mode
 ```
 

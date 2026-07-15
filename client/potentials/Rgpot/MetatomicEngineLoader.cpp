@@ -62,15 +62,24 @@ MetatomicEngineLoader::MetatomicEngineLoader(const MetatomicEngineOptions &opt) 
   add_dirs(std::getenv("EON_POTENTIALS_PATH"));
   add_dirs(std::getenv("RGPOT_ENGINE_PATH"));
 
+  std::string last_dlerr;
   for (const auto &p : paths) {
     m_lib = open_lib(p.c_str());
     if (m_lib)
       break;
+#ifndef _WIN32
+    if (const char *e = dlerror())
+      last_dlerr = e;
+#endif
   }
-  if (!m_lib)
-    throw std::runtime_error(
+  if (!m_lib) {
+    std::string msg =
         "RGPOT(metatomic): libmetatomic_engine.so not found "
-        "(set RGPOT_METATOMIC_ENGINE or EON_POTENTIALS_PATH)");
+        "(set RGPOT_METATOMIC_ENGINE or EON_POTENTIALS_PATH)";
+    if (!last_dlerr.empty())
+      msg += std::string("; last dlerror: ") + last_dlerr;
+    throw std::runtime_error(msg);
+  }
 
   auto abi = reinterpret_cast<int (*)()>(load_sym(m_lib, "rgpot_mta_abi_version"));
   m_create = reinterpret_cast<create_fn>(load_sym(m_lib, "rgpot_mta_create"));
@@ -101,10 +110,12 @@ MetatomicEngineLoader::MetatomicEngineLoader(const MetatomicEngineOptions &opt) 
 }
 
 MetatomicEngineLoader::~MetatomicEngineLoader() {
+  // Destroy the pot while the engine is still mapped. Do not dlclose
+  // libmetatomic_engine.so: torch/metatomic static teardown after dlclose
+  // routinely SEGV on process exit.
   if (m_pot && m_destroy)
     m_destroy(m_pot);
   m_pot = nullptr;
-  close_lib(m_lib);
   m_lib = nullptr;
 }
 
