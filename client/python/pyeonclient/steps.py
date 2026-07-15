@@ -38,6 +38,7 @@ from pyeonclient._core import (
     Matter,
     Parameters,
     Potential,
+    PotType,
     RunStatus,
     append_results_timing,
     get_process_times,
@@ -284,3 +285,65 @@ def neb_workdir(
         files.append("_potcalls.json")
         append_timing("results.dat", t0)
     return files
+
+
+def rgpot_metatomic_workdir(
+    workdir: str | Path,
+    *,
+    engine_path: str | Path | None = None,
+    model_path: str | Path | None = None,
+    pos: str = "pos.con",
+) -> list[str]:
+    """Minimization via ``potential=RGPOT`` + ``backend=metatomic`` (dlopen engine).
+
+    Thin-host path: host links Rgpot + loads ``libmetatomic_engine.so`` at
+    runtime. Overwrites/extends config.ini fields if *engine_path* / *model_path*
+    are given, then runs :func:`run_job_in_directory`.
+    """
+    work = Path(workdir).resolve()
+    with chdir(work):
+        params = load_parameters("config.ini") if Path("config.ini").is_file() else Parameters()
+        params.potential = PotType.RGPOT
+        params.job = JobType.Minimization
+        params.rgpot_backend = "metatomic"
+        if engine_path is not None:
+            params.rgpot_engine_path = str(Path(engine_path).resolve())
+        if model_path is not None:
+            params.rgpot_model_path = str(Path(model_path).resolve())
+            # also set Metatomic section for dual-read in RgpotPot
+            params.metatomic_model_path = params.rgpot_model_path
+        # Prefer Job path (RgpotPot) over Matter.relax (native Metatomic only)
+        t0 = steady_clock_now()
+        files = run_job(params)
+        write_potcall_summary("_potcalls.json")
+        if "_potcalls.json" not in files:
+            files.append("_potcalls.json")
+        append_timing("results.dat", t0)
+        return files
+
+
+def rgpot_metatomic_neb_workdir(
+    workdir: str | Path,
+    *,
+    engine_path: str | Path | None = None,
+    model_path: str | Path | None = None,
+) -> list[str]:
+    """NEB via RGPOT metatomic engine (same Job composition as eonclient)."""
+    work = Path(workdir).resolve()
+    with chdir(work):
+        params = load_parameters("config.ini")
+        params.potential = PotType.RGPOT
+        params.rgpot_backend = "metatomic"
+        if engine_path is not None:
+            params.rgpot_engine_path = str(Path(engine_path).resolve())
+        if model_path is not None:
+            p = str(Path(model_path).resolve())
+            params.rgpot_model_path = p
+            params.metatomic_model_path = p
+        t0 = steady_clock_now()
+        files = run_job(params)
+        write_potcall_summary("_potcalls.json")
+        if "_potcalls.json" not in files:
+            files.append("_potcalls.json")
+        append_timing("results.dat", t0)
+        return files

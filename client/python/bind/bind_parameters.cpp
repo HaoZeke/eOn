@@ -328,7 +328,85 @@ void bind_parameters(nb::module_ &m) {
           [](eonc::Parameters &s, bool v) {
             s.neb_options.mmf_peaks.enabled = v;
           })
+      // --- RgpotPot (incl. backend=metatomic → libmetatomic_engine) ---
+      .def_prop_rw(
+          "rgpot_backend",
+          [](const eonc::Parameters &s) { return s.rgpot_options.backend; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.backend = v;
+          })
+      .def_prop_rw(
+          "rgpot_engine_path",
+          [](const eonc::Parameters &s) { return s.rgpot_options.engine_path; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.engine_path = v;
+          })
+      .def_prop_rw(
+          "rgpot_engine_library",
+          [](const eonc::Parameters &s) {
+            return s.rgpot_options.engine_library;
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.engine_library = v;
+          })
+      .def_prop_rw(
+          "rgpot_model_path",
+          [](const eonc::Parameters &s) { return s.rgpot_options.model_path; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.model_path = v;
+          })
+      .def_prop_rw(
+          "rgpot_device",
+          [](const eonc::Parameters &s) { return s.rgpot_options.device; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.device = v;
+          })
+      .def_prop_rw(
+          "rgpot_length_unit",
+          [](const eonc::Parameters &s) {
+            return s.rgpot_options.length_unit;
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.length_unit = v;
+          })
+      .def_prop_rw(
+          "rgpot_check_consistency",
+          [](const eonc::Parameters &s) {
+            return s.rgpot_options.check_consistency;
+          },
+          [](eonc::Parameters &s, bool v) {
+            s.rgpot_options.check_consistency = v;
+          })
+      .def_prop_rw(
+          "rgpot_uncertainty_threshold",
+          [](const eonc::Parameters &s) {
+            return s.rgpot_options.uncertainty_threshold;
+          },
+          [](eonc::Parameters &s, double v) {
+            s.rgpot_options.uncertainty_threshold = v;
+          })
+      .def_prop_rw(
+          "rgpot_torch_determinism_strict",
+          [](const eonc::Parameters &s) {
+            return s.rgpot_options.torch_determinism_strict;
+          },
+          [](eonc::Parameters &s, bool v) {
+            s.rgpot_options.torch_determinism_strict = v;
+          })
+      .def_prop_rw(
+          "rgpot_basis",
+          [](const eonc::Parameters &s) { return s.rgpot_options.basis; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.basis = v;
+          })
+      .def_prop_rw(
+          "rgpot_theory",
+          [](const eonc::Parameters &s) { return s.rgpot_options.theory; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.rgpot_options.theory = v;
+          })
       // --- Structure comparison ---
+
 
       .def_prop_rw(
           "comp_eps_r",

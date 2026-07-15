@@ -79,6 +79,8 @@ from pyeonclient.steps import (  # noqa: E402
     run_job_in_directory,
     write_minimization_results,
     neb_workdir,
+    rgpot_metatomic_workdir,
+    rgpot_metatomic_neb_workdir,
 )
 
 to_ase = matter_to_ase
@@ -121,6 +123,8 @@ __all__ = [
     "neb_load_path_from_files",
     "neb_read_file_paths",
     "neb_workdir",
+    "rgpot_metatomic_workdir",
+    "rgpot_metatomic_neb_workdir",
     "neb_write_results",
     "pot_registry_total_force_calls",
     "pot_type_from_name",
