@@ -1,64 +1,64 @@
-# pyeonclient on PyPI (standalone package)
+# pyeonclient on PyPI
 
-`pyeonclient` is a **separate** PyPI project from `eon-akmc`.
+`pyeonclient` is a **separate** PyPI project from `eon-akmc`. Distribution follows
+the **torch model**: wheels and sdist on PyPI; optional fat Metatomic builds
+against **PyPI torch**, not a conda-forge gate.
 
 | Project | Import | Contents |
 |---------|--------|----------|
-| `eon-akmc` | `eon` | Server (AKMC); no client binary |
-| `pyeonclient` | `pyeonclient` | Nanobind Matter/Parameters/Potential/Jobs |
+| `eon-akmc` | `eon` | Server (AKMC) |
+| `pyeonclient` | `pyeonclient` | Client core: Matter, Parameters, Potential, Jobs, NEB, RGPOT |
 
-## Wheel matrix (exactly three manylinux wheels)
+## Wheel variants
 
-| Artifact | Tag | Notes |
-|----------|-----|--------|
-| Stable ABI | `cp312-abi3-manylinux_*` | Built on 3.12; works on GIL CPython ≥ 3.12 |
-| Free-threaded 3.13 | `cp313t-manylinux_*` | `Py_GIL_DISABLED` |
-| Free-threaded 3.14 | `cp314t-manylinux_*` | `Py_GIL_DISABLED` |
+| Variant | Meson | Torch in wheel NEEDED? | Use |
+|---------|-------|------------------------|-----|
+| **base** (default CI) | `with_rgpot=true`, `with_metatomic=false` | No | LJ/EMT/… + **RGPOT** (dlopen engines) |
+| **metatomic** | `with_metatomic=true`, `with_rgpot=true` | Yes (links libtorch stack) | Fat Metatomic pot + engine |
 
-Meson selects abi3 vs `NB_FREE_THREADED` from the build interpreter
-(`sysconfig.Py_GIL_DISABLED`). There is no free-threaded stable ABI yet.
+```bash
+pip install pyeonclient                 # base
+pip install 'pyeonclient[metatomic]'    # runtime torch stack (extras only)
+# fat linked extension:
+PYEONCLIENT_VARIANT=metatomic ./scripts/pyeonclient_build_wheel.sh
+```
 
-## Source layout
+Probes::
+
+    import pyeonclient as pc
+    pc.built_with_rgpot()
+    pc.built_with_metatomic()
+
+## Matrix (GIL + free-threaded)
+
+| Artifact | Tag |
+|----------|-----|
+| Stable ABI base | `cp312-abi3-manylinux_*` |
+| Free-threaded 3.13t | `cp313t-manylinux_*` |
+| Free-threaded 3.14t | `cp314t-manylinux_*` |
+| Metatomic (optional CI) | same abi3 tag, built with `pip install torch` in manylinux |
+
+## Files
 
 | File | Role |
 |------|------|
-| `pyproject-pyeonclient.toml` | Package identity for `pyeonclient` |
-| `pyproject.toml` | Unchanged `eon-akmc` identity |
+| `pyproject-pyeonclient.toml` | Package identity, extras, default meson args |
 | `scripts/pyeonclient_prepare_pyproject.sh` | Swap root pyproject for builds |
-| `.github/workflows/pyeonclient-wheels.yml` | Build 3 wheels + sdist; publish |
+| `scripts/pyeonclient_build_wheel.sh` | Local base/metatomic wheel build |
+| `.github/workflows/pyeonclient-wheels.yml` | CI wheels + sdist + publish |
 
 ## Release
 
 1. Bump `version` in `pyproject-pyeonclient.toml` and
-   `client/python/bind/module.cpp` `__version__` (keep lockstep).
-2. Tag: `git tag -s pyeonclient-v0.2.0 -m "pyeonclient 0.2.0"`
-3. Push tag → workflow builds wheels and publishes via Trusted Publishing.
+   `client/python/bind/module.cpp` `__version__` (lockstep).
+2. Tag: `git tag -s pyeonclient-v0.3.0 -m "pyeonclient 0.3.0"`
+3. Push tag → workflow builds and publishes via Trusted Publishing.
 
-### One-time PyPI Trusted Publisher setup
+## Cookbook / RGPOT metatomic
 
-On [pypi.org](https://pypi.org):
+- **Fat**: `built_with_metatomic()` True → `potential = Metatomic`.
+- **Thin host**: base wheel + `potential = RGPOT`, `backend = metatomic`,
+  `engine_path` / `RGPOT_METATOMIC_ENGINE` → `libmetatomic_engine.so`
+  (engine may be produced by a metatomic-variant build).
 
-1. Create project **`pyeonclient`** (or first upload creates it).
-2. Publishing → Trusted publishers → GitHub:
-   - Owner: `TheochemUI` (or fork)
-   - Repository: `eOn`
-   - Workflow: `pyeonclient-wheels.yml`
-   - Environment: `pypi-pyeonclient`
-
-Also create the GitHub Environment `pypi-pyeonclient` (protection rules as desired).
-
-## Local build
-
-```bash
-./scripts/pyeonclient_prepare_pyproject.sh
-python -m pip install -U build nanobind numpy meson ninja
-python -m build   # sdist + wheel for *this* interpreter
-./scripts/pyeonclient_prepare_pyproject.sh restore
-```
-
-## Install
-
-```bash
-pip install pyeonclient           # abi3 or matching free-threaded wheel
-pip install 'pyeonclient[ase]'    # optional ASE converters
-```
+Neither path requires conda-forge.

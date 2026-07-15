@@ -1,7 +1,7 @@
 [project]
 name = "pyeonclient"
-version = "0.2.0"
-description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs)"
+version = "0.3.0"
+description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs, NEB, RGPOT)"
 authors = [
     {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
 ]
@@ -26,10 +26,26 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
 ]
-keywords = ["eOn", "AKMC", "nanobind", "Matter", "atomistic"]
+keywords = ["eOn", "AKMC", "nanobind", "Matter", "metatomic", "NEB", "rgpot"]
 
 [project.optional-dependencies]
+# Runtime Python deps only — same idea as torch extras, not a recompile.
 ase = ["ase>=3.22"]
+# Metatomic stack from PyPI (install torch first or let pip resolve).
+# Does NOT inject WITH_METATOMIC into a prebuilt wheel; use the metatomic
+# wheel artifact or a from-source build (see README).
+metatomic = [
+    "torch>=2.3",
+    "metatensor>=0.1.0",
+    "metatensor-torch>=0.6.0",
+    "metatomic-torch>=0.1.0",
+    "vesin>=0.1.0",
+]
+# Cookbook-ish helper stack (config writing lives in rgpycrumbs).
+cookbook = [
+    "pyeonclient[metatomic,ase]",
+    "rgpycrumbs>=0.1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/TheochemUI/eOn"
@@ -48,13 +64,12 @@ requires = [
 ]
 build-backend = "mesonpy"
 
-# Declare limited API so meson-python tags the GIL wheel as abi3 (not cp312-cp312).
-# Free-threaded builds must override with -Dpython.allow_limited_api=false (see
-# pyeonclient-wheels.yml free_threaded matrix entries).
 [tool.meson-python]
 limited-api = true
 
-# Build the C++ client library + pyeonclient extension only (no full pot matrix).
+# Default PyPI wheel: RGPOT linked (dlopen engines at runtime), no torch NEEDED.
+# Metatomic-linked wheels: override setup-args with -Dwith_metatomic=true
+# (see scripts/pyeonclient_build_wheel.sh and pyeonclient-wheels.yml).
 [tool.meson-python.args]
 setup = [
     "-Dwith_pyeonclient=true",
@@ -62,6 +77,7 @@ setup = [
     "-Dwith_tests=false",
     "-Dwith_ase=false",
     "-Dwith_metatomic=false",
+    "-Dwith_rgpot=true",
     "-Dwith_xtb=false",
     "-Dwith_serve=false",
     "-Dwith_fortran=true",
@@ -72,15 +88,12 @@ install = ["--skip-subprojects"]
 dist = ["--include-subprojects"]
 
 [tool.cibuildwheel]
-# Three artifacts: abi3 (GIL 3.12+), free-threaded 3.13t, free-threaded 3.14t.
 build-frontend = "build[uv]"
 skip = ["pp*", "*-win32", "*-manylinux_i686", "*-musllinux*"]
 test-requires = ["pytest", "numpy"]
-test-command = "pytest {package}/tests/test_pyeonclient_matter.py -q --tb=line -k 'not fixture or fixture'"
-# test-skip free-threaded if tests hang; keep minimal smoke
+test-command = "python -c \"import pyeonclient as p; assert p.built_with_rgpot(); print(p.__version__, p.built_with_metatomic(), p.built_with_rgpot())\""
 
 [tool.cibuildwheel.linux]
-# manylinux containers run as root; pin CARGO_HOME so host $HOME is never baked in.
 before-all = """
   yum install -y eigen3-devel gcc-gfortran || yum install -y eigen3 gcc-gfortran || true
   export CARGO_HOME=/root/.cargo
@@ -88,7 +101,6 @@ before-all = """
   command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
   . /root/.cargo/env
   command -v cbindgen || cargo install cbindgen
-  # quill is not packaged in manylinux images; install system-wide for pkg-config/cmake
   if ! pkg-config --exists quill 2>/dev/null; then
     rm -rf /tmp/quill-src /tmp/quill-build
     curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz

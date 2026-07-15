@@ -19,7 +19,28 @@ NB_MODULE(_core, m) {
   m.doc() =
       "eOn client core via nanobind: Matter, Parameters, Potential, Jobs. "
       "Stable ABI (abi3) or free-threaded; ConFileIO/readcon for .con I/O.";
-  m.attr("__version__") = "0.2.0";
+  m.attr("__version__") = "0.3.0";
+
+  m.def(
+      "built_with_metatomic",
+      []() {
+#ifdef WITH_METATOMIC
+        return true;
+#else
+        return false;
+#endif
+      },
+      "True if this wheel/extension was compiled with -Dwith_metatomic=true");
+  m.def(
+      "built_with_rgpot",
+      []() {
+#ifdef WITH_RGPOT
+        return true;
+#else
+        return false;
+#endif
+      },
+      "True if compiled with -Dwith_rgpot=true (RGPOT pot / engine dlopen)");
 
   eonc::pybind::bind_enums(m);
   eonc::pybind::bind_parameters(m);

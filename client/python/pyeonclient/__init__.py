@@ -49,6 +49,8 @@ try:
         neb_linear_path,
         neb_write_results,
         pot_registry_total_force_calls,
+        built_with_metatomic,
+        built_with_rgpot,
     )
 except ImportError as e:  # pragma: no cover
     raise ImportError(
@@ -139,5 +141,7 @@ __all__ = [
     "to_structure",
     "write_minimization_results",
     "write_potcall_summary",
+    "built_with_metatomic",
+    "built_with_rgpot",
     "__version__",
 ]

@@ -1,9 +1,39 @@
 ## Install
 
 ```bash
+# Base wheel (PyPI): RGPOT pot linked; no torch in DT_NEEDED
 pip install pyeonclient
-pip install 'pyeonclient[ase]'  # optional
+
+# Runtime deps for Metatomic *models* (torch from PyPI — same as torch itself)
+pip install 'pyeonclient[metatomic]'
+
+# Optional ASE converters
+pip install 'pyeonclient[ase]'
 ```
+
+Feature probes on a built extension::
+
+    import pyeonclient as pc
+    pc.built_with_rgpot()       # True on default PyPI wheels
+    pc.built_with_metatomic()   # True only on metatomic wheels / from-source fat builds
+
+### Metatomic-linked wheel (from source, torch-style)
+
+Prebuilt manylinux *base* wheels omit linked Metatomic (size/CUDA matrix).
+To link Metatomic (fat pot + engine) against **your** PyPI torch::
+
+```bash
+pip install torch metatomic-torch metatensor-torch vesin
+pip install -U build nanobind numpy meson ninja meson-python
+# from a git checkout of eOn:
+PYEONCLIENT_VARIANT=metatomic ./scripts/pyeonclient_build_wheel.sh
+pip install dist/pyeonclient-*.whl
+```
+
+RGPOT metatomic (dlopen ``libmetatomic_engine.so``) works on **base** wheels when
+the engine is built separately and pointed at with ``[RgpotPot] engine_path`` /
+``RGPOT_METATOMIC_ENGINE``.
+
 
 # pyeonclient
 
