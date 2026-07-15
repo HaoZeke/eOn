@@ -237,7 +237,7 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.rgpot_options.scratch_dir =
         ini.Get(sec, "scratch_dir", params.rgpot_options.scratch_dir);
     params.rgpot_options.input_block =
-
+        ini.Get(sec, "input_block", params.rgpot_options.input_block);
     params.rgpot_options.model_path =
         ini.Get(sec, "model_path", params.rgpot_options.model_path);
     params.rgpot_options.device =
@@ -249,11 +249,11 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.rgpot_options.check_consistency = ini.GetBoolean(
         sec, "check_consistency", params.rgpot_options.check_consistency);
     params.rgpot_options.uncertainty_threshold = ini.GetReal(
-        sec, "uncertainty_threshold", params.rgpot_options.uncertainty_threshold);
+        sec, "uncertainty_threshold",
+        params.rgpot_options.uncertainty_threshold);
     params.rgpot_options.torch_determinism_strict = ini.GetBoolean(
         sec, "torch_determinism_strict",
         params.rgpot_options.torch_determinism_strict);
-        ini.Get(sec, "input_block", params.rgpot_options.input_block);
   }
 
   // [Debug] //
