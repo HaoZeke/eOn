@@ -85,7 +85,12 @@ def test_neb_compute_cookbook_metatomic(tmp_path):
     assert "GOOD" in text
     assert "time_seconds" in text
     assert (work / "neb.dat").is_file()
+    assert (work / "neb.con").is_file(), "neb.con required for cookbook plots"
+    assert (work / "sp.con").is_file()
     assert (work / "_potcalls.json").is_file()
+    # peaks written when OCI extrema exist (cookbook golden has peak00/01)
+    peaks = list(work.glob("peak*_pos.con"))
+    assert len(peaks) >= 1, "expected MMF peak pos files for oxadiazole NEB"
     # parity vs golden
     golden = COOK_ROOT / "results.dat"
     if golden.is_file():

@@ -3,19 +3,23 @@
 */
 #include "Matter.h"
 #include "NEBInitialPaths.hpp"
+#include "NEBSplineExtrema.h"
 #include "NudgedElasticBand.h"
 #include "Parameters.h"
 #include "Potential.h"
 #include "PotRegistry.h"
 #include "eigen_numpy.hpp"
 
+#include <magic_enum/magic_enum.hpp>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <cmath>
 #include <format>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -206,8 +210,7 @@ void bind_neb(nb::module_ &m) {
       nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
       "Linear interpolate n_intermediate images between endpoints");
 
-  // Write results.dat / neb.dat / sp.con from a finished band (NEBJob::saveData
-  // logic, callable as a Python step).
+  // Full NEBJob::saveData artifact set (callable as a Python step).
   m.def(
       "neb_write_results",
       [](NudgedElasticBand &neb, const Parameters &params,
@@ -258,21 +261,76 @@ void bind_neb(nb::module_ &m) {
           }
         }
         returnFiles.emplace_back("results.dat");
-        // neb.dat via printImageData
-        neb.printImageData(true, std::numeric_limits<size_t>::max());
-        returnFiles.emplace_back("neb.dat");
-        // saddle image
-        std::string sp = "sp.con";
+
+        // Multi-frame path (neb.con) — required by cookbook plots
+        const std::string nebFilename = "neb.con";
+        if (!eonc::io::io_ok(eonc::neb::writePathCon(
+                neb.path, neb.tangent, neb.eigenmode_solvers, neb.numImages,
+                params.debug_options.estimate_neb_eigenvalues, nebFilename))) {
+          throw std::runtime_error("neb_write_results: failed neb.con");
+        }
+        returnFiles.push_back(nebFilename);
+
+        // Discrete saddle
+        const std::string sp = "sp.con";
         if (!eonc::io::io_ok(
                 neb.path[neb.maxEnergyImage]->matter2con(sp)))
           throw std::runtime_error("neb_write_results: failed sp.con");
         returnFiles.push_back(sp);
+
+        // MMF peaks (same filters as NEBJob::saveData)
+        if (params.neb_options.mmf_peaks.enabled && neb.numExtrema > 0) {
+          int peakCount = 0;
+          for (long i = 0; i < neb.numExtrema; i++) {
+            double relativeEnergy =
+                neb.extremumEnergy[static_cast<size_t>(i)] -
+                neb.path[0]->getPotentialEnergy();
+            if (!(neb.extremumCurvature[static_cast<size_t>(i)] < 0 &&
+                  relativeEnergy > params.neb_options.mmf_peaks.tolerance))
+              continue;
+            double posFraction = neb.extremumPosition[static_cast<size_t>(i)];
+            int leftIdx = static_cast<int>(std::floor(posFraction));
+            double f = posFraction - leftIdx;
+            if (leftIdx < 0 || leftIdx >= neb.numImages + 1)
+              continue;
+            Matter peakPos = eonc::helpers::neb_paths::interpolateImage(
+                *neb.path[static_cast<size_t>(leftIdx)],
+                *neb.path[static_cast<size_t>(leftIdx + 1)], f);
+            std::string peakPosFile =
+                std::format("peak{:02d}_pos.con", peakCount);
+            if (!eonc::io::io_ok(peakPos.matter2con(peakPosFile)))
+              throw std::runtime_error("neb_write_results: " + peakPosFile);
+            returnFiles.push_back(peakPosFile);
+            AtomMatrix peakMode =
+                (1.0 - f) * (*neb.tangent[static_cast<size_t>(leftIdx)]) +
+                f * (*neb.tangent[static_cast<size_t>(leftIdx + 1)]);
+            peakMode.normalize();
+            std::string peakModeFile =
+                std::format("peak{:02d}_mode.dat", peakCount);
+            {
+              std::ofstream modeOut(peakModeFile);
+              if (!modeOut)
+                throw std::runtime_error("neb_write_results: " + peakModeFile);
+              for (long row = 0; row < peakMode.rows(); ++row) {
+                modeOut << std::format("{:12.6f} {:12.6f} {:12.6f}\n",
+                                       peakMode(row, 0), peakMode(row, 1),
+                                       peakMode(row, 2));
+              }
+            }
+            returnFiles.push_back(peakModeFile);
+            peakCount++;
+          }
+        }
+
+        // neb.dat (+ per-iteration neb_###.dat already written during compute)
+        returnFiles.emplace_back("neb.dat");
+        neb.printImageData(true, std::numeric_limits<size_t>::max());
         return returnFiles;
       },
       nb::arg("neb"), nb::arg("parameters"),
       nb::arg("force_calls_neb") = 0,
-      "Write results.dat + neb.dat + sp.con from a computed NEB (NEBJob "
-      "saveData subset)");
+      "Write full NEBJob::saveData artifact set: results.dat, neb.con, "
+      "sp.con, peaks, neb.dat");
 
   m.def(
       "pot_registry_total_force_calls",
