@@ -28,6 +28,7 @@ def _write_min_workdir(tmp: Path, model: str, pos_src: Path | None) -> Path:
     else:
         # 2-atom fallback only if no cookbook pos (test still exercises MTA pot)
         pytest.skip("need cookbook pos.con or EON_PET_MAD_POS")
+    # Same Optimizer block as atomistic-cookbook examples/eon-pet-neb
     (work / "config.ini").write_text(
         "[Main]\n"
         "job = minimization\n"
@@ -38,7 +39,7 @@ def _write_min_workdir(tmp: Path, model: str, pos_src: Path | None) -> Path:
         f"model_path = {model}\n"
         "device = cpu\n"
         "[Optimizer]\n"
-        "max_iterations = 5\n"
+        "max_iterations = 2000\n"
         "opt_method = lbfgs\n"
         "max_move = 0.1\n"
         "converged_force = 0.01\n"
