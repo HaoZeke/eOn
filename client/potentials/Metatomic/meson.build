@@ -9,7 +9,10 @@ metatomic_pot = library(
     ],
     dependencies: mta_plugin_deps,
     cpp_args: _args + ['-DEON_MTA_BUILD'],
-    link_with: [eclib],
+    # Host already provides Potential/PotRegistry via libeonclib; leave those
+    # unresolved so dlopen(RTLD_GLOBAL) binds to the process-wide symbols.
+    link_with: [eoncbase],
+    link_args: ['-Wl,--allow-shlib-undefined'],
     include_directories: _incdirs,
     build_rpath: ':'.join(_runtime_rpath),
     install_rpath: ':'.join(_runtime_rpath),

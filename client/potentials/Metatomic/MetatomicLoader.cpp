@@ -31,8 +31,20 @@ bool MetatomicLoader::try_load() {
   const char *candidates[] = {"libmetatomic_pot.so", nullptr};
 #endif
 
+  // RTLD_GLOBAL without DEEPBIND so MetatomicPotential's Potential/PotRegistry
+  // symbols bind to the already-loaded host libeonclib (single registry).
+  auto open_mta = [](const char *name) -> dynlib::Handle {
+#if defined(__linux__)
+    return ::dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+#elif defined(_WIN32)
+    return dynlib::open(name);
+#else
+    return ::dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+#endif
+  };
+
   for (const char **p = candidates; *p; ++p) {
-    m_handle = dynlib::open(*p);
+    m_handle = open_mta(*p);
     if (m_handle)
       break;
   }
@@ -43,7 +55,7 @@ bool MetatomicLoader::try_load() {
         if (!full.empty() && full.back() != '/' && full.back() != '\\')
           full += '/';
         full += *p;
-        m_handle = dynlib::open(full.c_str());
+        m_handle = open_mta(full.c_str());
         if (m_handle)
           break;
       }
@@ -65,7 +77,9 @@ bool MetatomicLoader::try_load() {
                  "symbols\n";
     dynlib::close(m_handle);
     m_handle = {};
-    create = destroy = force = nullptr;
+    create = nullptr;
+    destroy = nullptr;
+    force = nullptr;
     abi_version = nullptr;
     return false;
   }
@@ -75,7 +89,9 @@ bool MetatomicLoader::try_load() {
               << " host=" << EON_MTA_ABI_VERSION << "\n";
     dynlib::close(m_handle);
     m_handle = {};
-    create = destroy = force = nullptr;
+    create = nullptr;
+    destroy = nullptr;
+    force = nullptr;
     abi_version = nullptr;
     return false;
   }
