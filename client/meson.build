@@ -126,9 +126,13 @@ if get_option('buildtype') != 'release'
     _args += ['-DEON_CHECKS=TRUE']
 endif
 
-# Release optimization flags
+# Release optimization flags.
+# Do NOT pass -flto here: compile-only LTO without matching link flags breaks
+# shared pot plugins (liblammps_pot etc.) with undefined std::__format symbols
+# under GCC+sccache. Use Meson's -Db_lto=true when full LTO is wanted (it
+# applies LTO to both compile and link).
 if get_option('buildtype') == 'release' or get_option('buildtype') == 'debugoptimized'
-    _opt_args = cppc.get_supported_arguments(['-O3', '-flto=auto'])
+    _opt_args = cppc.get_supported_arguments(['-O3'])
     _args += _opt_args
     if get_option('native_arch')
         _args += cppc.get_supported_arguments(['-march=native'])

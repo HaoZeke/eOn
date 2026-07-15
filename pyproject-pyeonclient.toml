@@ -83,6 +83,7 @@ setup = [
     "-Dwith_fortran=true",
     "-Dwith_cuh2=true",
     "-Dwrap_mode=forcefallback",
+    "-Db_lto=false",
 ]
 install = ["--skip-subprojects"]
 dist = ["--include-subprojects"]

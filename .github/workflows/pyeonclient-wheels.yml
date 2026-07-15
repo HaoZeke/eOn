@@ -184,6 +184,21 @@ jobs:
           CIBW_TEST_COMMAND: |
             python -c "import pyeonclient as p; print(p.__version__, 'mta', p.built_with_metatomic(), 'rgpot', p.built_with_rgpot()); assert p.built_with_rgpot()"
 
+      - name: Tag metatomic wheels with local version (never collide with base)
+        if: steps.gate.outputs.skip != 'true' && matrix.variant == 'metatomic'
+        run: |
+          # PyPI forbids local versions; these stay as GH artifacts only.
+          mkdir -p wheelhouse-tagged
+          for w in wheelhouse/*.whl; do
+            base=$(basename "$w")
+            # pyeonclient-0.3.0-... -> pyeonclient-0.3.0+metatomic-...
+            tagged=$(echo "$base" | sed -E 's/^(pyeonclient-[0-9]+\.[0-9]+\.[0-9]+)-/\1+metatomic-/')
+            cp -v "$w" "wheelhouse-tagged/$tagged"
+          done
+          rm -f wheelhouse/*.whl
+          mv wheelhouse-tagged/* wheelhouse/
+          ls -la wheelhouse/
+
       - uses: actions/upload-artifact@v4
         if: steps.gate.outputs.skip != 'true'
         with:
@@ -234,11 +249,25 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: Flatten artifacts
+      - name: Flatten artifacts (PyPI = base only; exclude +metatomic)
         run: |
           mkdir -p upload
-          find dist -type f \( -name '*.whl' -o -name '*.tar.gz' \) -exec cp -v {} upload/ \;
+          # sdist always
+          find dist -type f -name '*.tar.gz' -exec cp -v {} upload/ \;
+          # base wheels only — never publish local-version metatomic binaries
+          find dist -type f -name '*.whl' ! -name '*+metatomic*' -exec cp -v {} upload/ \;
+          echo "=== upload set (must not contain +metatomic) ==="
           ls -la upload/
+          if ls upload/*+metatomic* 1>/dev/null 2>&1; then
+            echo "refusing to publish metatomic local-version wheels to PyPI" >&2
+            exit 1
+          fi
+          # detect filename collisions (same basename twice)
+          if [[ "$(ls upload | sort | uniq -d | wc -l)" -ne 0 ]]; then
+            echo "duplicate basenames in upload/" >&2
+            ls upload | sort | uniq -d
+            exit 1
+          fi
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

@@ -2,18 +2,16 @@
 # Build a pyeonclient wheel for the *current* interpreter (PyPI-style).
 #
 # Variants (env):
-#   PYEONCLIENT_VARIANT=base        # default: with_rgpot, no torch link
-#   PYEONCLIENT_VARIANT=metatomic   # with_metatomic + with_rgpot (needs torch
-#                                   # + metatomic-torch on the build env)
+#   PYEONCLIENT_VARIANT=base        # default: with_rgpot, no torch link → PyPI
+#   PYEONCLIENT_VARIANT=metatomic   # with_metatomic + with_rgpot; wheel tagged
+#                                   # 0.X.Y+metatomic (GitHub artifacts / local;
+#                                   # not flattened onto PyPI as 0.X.Y)
 #
-# Examples (same idea as building against a local torch install):
+# Examples:
 #   pip install -U build nanobind numpy meson ninja meson-python
-#   pip install 'torch' 'metatomic-torch' 'metatensor-torch' 'vesin'  # CPU ok
+#   PYEONCLIENT_VARIANT=base ./scripts/pyeonclient_build_wheel.sh
+#   pip install torch metatomic-torch metatensor-torch vesin
 #   PYEONCLIENT_VARIANT=metatomic ./scripts/pyeonclient_build_wheel.sh
-#
-# Override any meson flag:
-#   PYEONCLIENT_SETUP_ARGS='-Dwith_metatomic=true -Dtorch_path=$CONDA_PREFIX' \
-#     ./scripts/pyeonclient_build_wheel.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -21,10 +19,60 @@ VARIANT="${PYEONCLIENT_VARIANT:-base}"
 
 bash scripts/pyeonclient_prepare_pyproject.sh
 
-cleanup() { bash scripts/pyeonclient_prepare_pyproject.sh restore || true; }
+cleanup() {
+  # restore version rewrite if any
+  if [[ -f pyproject-pyeonclient.toml.bak-version ]]; then
+    mv -f pyproject-pyeonclient.toml.bak-version pyproject-pyeonclient.toml
+    # re-activate after restore if still in prepare mode
+    if [[ -f pyproject.eon-akmc.toml.bak ]]; then
+      cp -a pyproject-pyeonclient.toml pyproject.toml
+    fi
+  fi
+  bash scripts/pyeonclient_prepare_pyproject.sh restore || true
+}
 trap cleanup EXIT
 
 python -m pip install -U pip build nanobind 'numpy>=1.26.4' meson ninja meson-python
+
+# readcon-core wrap needs cbindgen (same as manylinux before-all)
+export PATH="${HOME}/.cargo/bin:/root/.cargo/bin:${PATH:-}"
+if ! command -v cbindgen >/dev/null 2>&1; then
+  if command -v cargo >/dev/null 2>&1; then
+    cargo install cbindgen
+  else
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    # shellcheck disable=SC1091
+    source "${HOME}/.cargo/env"
+    cargo install cbindgen
+  fi
+fi
+command -v cbindgen
+command -v rustc || true
+
+# Metatomic builds: PEP 440 local version so filenames never clobber base 0.X.Y
+# wheels in a shared wheelhouse. Local versions are NOT uploaded to PyPI.
+if [[ "$VARIANT" == "metatomic" ]]; then
+  cp -a pyproject-pyeonclient.toml pyproject-pyeonclient.toml.bak-version
+  python3 - <<'PY'
+from pathlib import Path
+p = Path("pyproject-pyeonclient.toml")
+t = p.read_text()
+# version = "0.3.0" -> version = "0.3.0+metatomic"
+import re
+t2, n = re.subn(
+    r'(?m)^version = "([^"+]+)"\s*$',
+    r'version = "\1+metatomic"',
+    t,
+    count=1,
+)
+if n != 1:
+    raise SystemExit(f"failed to rewrite version (n={n})")
+p.write_text(t2)
+print("version ->", re.search(r'^version = "(.*)"', t2, re.M).group(1))
+PY
+  # re-copy into active pyproject
+  cp -a pyproject-pyeonclient.toml pyproject.toml
+fi
 
 SETUP_ARGS=(
   "-Dwith_pyeonclient=true"
@@ -37,6 +85,8 @@ SETUP_ARGS=(
   "-Dwith_cuh2=true"
   "-Dwith_rgpot=true"
   "-Dwrap_mode=forcefallback"
+  # Explicit: manylinux/PyPI wheels never need LTO; avoids GCC format LTO traps
+  "-Db_lto=false"
 )
 
 case "$VARIANT" in
@@ -44,11 +94,11 @@ case "$VARIANT" in
     SETUP_ARGS+=("-Dwith_metatomic=false")
     ;;
   metatomic)
-    SETUP_ARGS+=("-Dwith_metatomic=true" "-Dpip_metatomic=true")
-    # Prefer an existing torch install for headers/libs
+    SETUP_ARGS+=("-Dwith_metatomic=true")
     if [[ -n "${TORCH_PATH:-}" ]]; then
-      SETUP_ARGS+=("-Dtorch_path=${TORCH_PATH}")
-      SETUP_ARGS+=("-Dpip_metatomic=false")
+      SETUP_ARGS+=("-Dtorch_path=${TORCH_PATH}" "-Dpip_metatomic=false")
+    else
+      SETUP_ARGS+=("-Dpip_metatomic=true")
     fi
     python -c "import torch; print('torch', torch.__version__)" || {
       echo "metatomic variant needs torch on PYTHONPATH (pip install torch)" >&2
@@ -71,16 +121,24 @@ for a in "${SETUP_ARGS[@]}"; do
   CFG+=(--config-setting="setup-args=${a}")
 done
 
+rm -rf dist build
 echo "building pyeonclient variant=${VARIANT} args=${SETUP_ARGS[*]}"
-python -m build --wheel "${CFG[@]}"
+python -m build --wheel "${CFG[@]}" 2>&1
 ls -la dist/
 python - <<'PY'
-import glob, zipfile, sys
+import glob, zipfile, sys, os
 whls = sorted(glob.glob("dist/*.whl"))
 if not whls:
     sys.exit("no wheel produced")
-print("wheel", whls[-1])
-with zipfile.ZipFile(whls[-1]) as z:
-    names = [n for n in z.namelist() if "pyeonclient" in n][:20]
+whl = whls[-1]
+print("wheel", whl)
+variant = os.environ.get("PYEONCLIENT_VARIANT", "base")
+if variant == "metatomic" and "+metatomic" not in whl:
+    sys.exit(f"metatomic wheel filename missing +metatomic local version: {whl}")
+if variant == "base" and "+metatomic" in whl:
+    sys.exit(f"base wheel must not use +metatomic local version: {whl}")
+with zipfile.ZipFile(whl) as z:
+    names = [n for n in z.namelist() if n.startswith("pyeonclient/")][:15]
     print("sample members", names)
+print("WHEEL_BUILD_OK", whl)
 PY
