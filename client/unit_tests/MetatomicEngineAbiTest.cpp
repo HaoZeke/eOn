@@ -1,4 +1,5 @@
 #include "catch2/catch_amalgamated.hpp"
+#include <cstdlib>
 #include <dlfcn.h>
 #include <string>
 
