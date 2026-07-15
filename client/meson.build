@@ -779,11 +779,18 @@ if get_option('with_metatomic')
             include_directories: include_directories('thirdparty/vesin'),
         )
     endif
-    _deps += [vesin_dep, mts_dep, torch_deps]
-    subdir('potentials/Metatomic')
-    potentials += [metatomic_pot]
+    # Plugin-only deps: do NOT add torch/metatomic to host eonclib/eonclient.
+    # Host loads libmetatomic_pot.so at runtime via C ABI (MetatomicDynPot).
+    mta_plugin_deps = _deps + [vesin_dep, mts_dep, torch_deps]
     _args += ['-DWITH_METATOMIC']
+    # subdir + library after eclib (see below)
 endif
+
+# Host-side Metatomic always compiled (dlopen plugin); no torch in eonclib.
+eonclib_sources += [
+    'potentials/Metatomic/MetatomicDynPot.cpp',
+    'potentials/Metatomic/MetatomicLoader.cpp',
+]
 
 if get_option('with_parallel_neb')
     tbb_dep = dependency('tbb', required : true)
@@ -967,6 +974,12 @@ eclib = library(
 
 _linkto += eclib
 
+# Metatomic pot plugin (dlopen): build after eclib so MetatomicPotential can
+# link Potential/Parameters from libeonclib without pulling torch into the host.
+if get_option('with_metatomic')
+    subdir('potentials/Metatomic')
+endif
+
 # Full deps including readcon link_args (for executables and tests only)
 _exe_deps = _deps + [readcon_dep]
 
@@ -1100,6 +1113,10 @@ if get_option('with_tests')
         foreach sub : _fortran_pot_subdirs
             _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / sub
         endforeach
+    endif
+    # Metatomic C-ABI plugin lives next to MetatomicPotential sources in the build tree.
+    if get_option('with_metatomic')
+        _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / 'Metatomic'
     endif
     _test_env = environment()
     if _fortran_pot_dirs.length() > 0
