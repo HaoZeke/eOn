@@ -987,7 +987,7 @@ if get_option('with_metatomic')
         ],
         dependencies: mta_plugin_deps,
         cpp_args: _args + ['-DRGPOT_MTA_ENGINE_BUILD'],
-        link_with: [eclib],
+        link_with: [eclib, eoncbase],
         include_directories: _incdirs,
         build_rpath: ':'.join(_runtime_rpath),
         install_rpath: ':'.join(_runtime_rpath),
