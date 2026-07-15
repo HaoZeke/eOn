@@ -52,3 +52,19 @@ pytest tests/test_pyeonclient_matter.py -v
 Bottom-up surface: **Matter**, **Parameters**, **Potential**, enums/I/O —
 not a thin job wrapper. Jobs and communicators layer on Matter later.
 `.con` I/O uses ConFileIO / readcon-core (same path as `eonclient`).
+
+
+## Cookbook / workdir jobs
+
+For the same layout as ``eonclient`` (``config.ini`` + ``pos.con`` / NEB files)::
+
+    python scripts/run_eon_workdir_pyeonclient.py /path/to/workdir
+
+Or in Python::
+
+    import pyeonclient as pc
+    pc.run_job_in_directory("/path/to/workdir", pc.Parameters())
+
+Metatomic requires a fat build (``-Dwith_metatomic=true``). That remains the
+conda-forge packaging path; the atomistic-cookbook ``eon-pet-neb`` example
+prefers pyeonclient when importable.
