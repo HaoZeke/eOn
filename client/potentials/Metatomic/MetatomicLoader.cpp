@@ -10,6 +10,10 @@
 #include <iostream>
 #include <vector>
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 namespace eonc {
 
 MetatomicLoader &MetatomicLoader::instance() {
