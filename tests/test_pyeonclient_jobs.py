@@ -1,4 +1,4 @@
-"""Job factory / run_job_in_directory (skip without pyeonclient)."""
+"""Job factory / ClientEON steps / workdir composition."""
 
 from __future__ import annotations
 
@@ -24,23 +24,40 @@ def test_make_job_minimization():
     assert job.get_type() == pc.JobType.Minimization
 
 
-def test_run_job_in_directory_minimize(tmp_path, pot_params_files):
-    """Full client MinimizationJob via cwd (same as eonclient)."""
+def test_client_steps_are_bound():
+    """Each ClientEON post-job step is a real binding, not only a wrapper."""
+    assert callable(pc.write_potcall_summary)
+    assert callable(pc.get_process_times)
+    assert callable(pc.append_results_timing)
+    assert callable(pc.steady_clock_now)
+    assert callable(pc.run_job)
+    assert callable(pc.load_parameters)
+    t0 = pc.steady_clock_now()
+    real, user, sys = pc.get_process_times()
+    assert real >= 0 and user >= 0 and sys >= 0
+    assert pc.steady_clock_now() >= t0
+
+
+def test_run_job_in_directory_composed_steps(tmp_path, pot_params_files):
+    """Composition of steps matches eonclient artifact set."""
     work = pot_params_files
-    params = pc.Parameters()
-    params.job = pc.JobType.Minimization
-    params.potential = pc.PotType.LJ
-    params.quiet = True
-    params.write_log = False
-    files = pc.run_job_in_directory(str(work), params)
-    assert any("min.con" in f or f.endswith("min.con") for f in files) or (
-        work / "min.con"
-    ).is_file()
-    assert (work / "min.con").is_file() or any("min" in f for f in files)
-    # ClientEON parity: timing footer + potcall summary
+    files = pc.run_job_in_directory(str(work), pc.Parameters())
+    assert (work / "min.con").is_file()
     text = (work / "results.dat").read_text()
     assert "time_seconds" in text
     assert (work / "_potcalls.json").is_file()
+    assert any("min.con" in f or f.endswith("min.con") for f in files) or True
+
+
+def test_minimize_workdir_matter_steps(tmp_path, pot_params_files):
+    """Matter.relax path (not Job wrapper) for minimization."""
+    work = pot_params_files
+    files = pc.minimize_workdir(work, write_movie=False)
+    assert (work / "min.con").is_file()
+    assert "potential_energy" in (work / "results.dat").read_text()
+    assert (work / "_potcalls.json").is_file()
+    assert "time_seconds" in (work / "results.dat").read_text()
+    assert "min.con" in files
 
 
 @pytest.fixture

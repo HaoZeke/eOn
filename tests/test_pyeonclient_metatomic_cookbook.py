@@ -59,7 +59,7 @@ def test_metatomic_minimize_via_run_job_in_directory(tmp_path):
         if cand.is_file():
             pos_path = cand
     work = _write_min_workdir(tmp_path, MODEL, pos_path)
-    files = pc.run_job_in_directory(str(work), pc.Parameters())
+    files = pc.minimize_workdir(work)  # Matter.relax steps, not black-box Job
     results = work / "results.dat"
     assert results.is_file(), f"missing results.dat; files={files}"
     text = results.read_text()

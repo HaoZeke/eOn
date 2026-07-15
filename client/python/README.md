@@ -68,3 +68,21 @@ Or in Python::
 Metatomic requires a fat build (``-Dwith_metatomic=true``). That remains the
 conda-forge packaging path; the atomistic-cookbook ``eon-pet-neb`` example
 prefers pyeonclient when importable.
+
+
+## ClientEON steps (compose in Python)
+
+Do not treat the client as a single black box. Bound steps::
+
+    params = pc.load_parameters("config.ini")   # or Parameters().load(...)
+    t0 = pc.steady_clock_now()
+    files = pc.run_job(params)                 # make_job + Job.run + drop
+    pc.write_potcall_summary()
+    pc.append_timing("results.dat", t0)
+
+Minimization via Matter (no Job wrapper)::
+
+    pc.minimize_workdir("min_reactant")  # con2matter → relax → results → potcalls → timing
+
+NEB still uses ``Job.run`` (NudgedElasticBandJob) composed with the same potcall
+and timing steps via ``run_job_in_directory`` / ``run_eon_cwd``.

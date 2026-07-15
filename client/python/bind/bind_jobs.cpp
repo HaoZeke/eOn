@@ -1,3 +1,14 @@
+/*
+** Job factory + ClientEON pipeline steps (each step bound separately).
+**
+** ClientEON sequence (bind each, compose in Python):
+**   1. Parameters.load(config.ini)
+**   2. make_job / make_potential + Matter
+**   3. job.run()  OR  Matter.con2matter → relax → matter2con
+**   4. destroy job/potential handles (Python GC / del)
+**   5. write_potcall_summary()
+**   6. append_results_timing(...)
+*/
 #include "HelperFunctions.h"
 #include "Job.h"
 #include "Parameters.h"
@@ -6,10 +17,10 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
 #include <chrono>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
@@ -19,42 +30,16 @@
 namespace eonc::pybind {
 namespace nb = nanobind;
 
-namespace {
-
-/** Mirror ClientEON post-job side effects that jobs themselves do not write. */
-void append_client_postamble(std::vector<std::string> &files,
-                             std::chrono::steady_clock::time_point start) {
-  // Potential must be destroyed so PotRegistry records force-call tallies.
-  PotRegistry::get().write_summary();
-  files.emplace_back("_potcalls.json");
-
-  const auto end = std::chrono::steady_clock::now();
-  const std::chrono::duration<double> elapsed = end - start;
-  double utime = 0, stime = 0, rtime = 0;
-  eonc::helpers::getTime(&rtime, &utime, &stime);
-
-  std::ofstream result_file("results.dat", std::ios::app);
-  if (!result_file.is_open())
-    throw std::runtime_error("failed to append timing to results.dat");
-  result_file << "time_seconds " << elapsed.count() << "\n";
-#ifndef _WIN32
-  result_file << "user_time " << utime << "\n";
-  result_file << "system_time " << stime << "\n";
-#endif
-}
-
-} // namespace
-
 void bind_jobs(nb::module_ &m) {
-  nb::class_<eonc::Job>(m, "Job", "Abstract eOn client job")
+  nb::class_<eonc::Job>(m, "Job", "Abstract eOn client job (Minimization, NEB, …)")
       .def("get_type", &eonc::Job::getType)
       .def(
           "run",
           [](eonc::Job &self) { return self.run(); },
-          "Run the job in the *current working directory* (config.ini, "
-          "pos.con, …). Returns list of output filenames produced. "
-          "Does not append ClientEON timing / potcall summary — prefer "
-          "run_job_in_directory for eonclient parity.");
+          "Run this job in the *current* working directory. Writes job "
+          "artifacts (min.con / neb.dat / results.dat body). Does **not** "
+          "write _potcalls.json or timing — call write_potcall_summary and "
+          "append_results_timing after destroying the Job.");
 
   m.def(
       "make_job",
@@ -66,44 +51,56 @@ void bind_jobs(nb::module_ &m) {
         return std::shared_ptr<eonc::Job>(std::move(job));
       },
       nb::arg("parameters"),
-      "Construct a Job from Parameters.main.job (copies Parameters).");
+      "Construct a Job from Parameters.main.job (copies Parameters + builds "
+      "Potential).");
+
+  // --- ClientEON post-job steps (explicit, not buried in a black box) ---
 
   m.def(
-      "run_job_in_directory",
-      [](const std::string &workdir, eonc::Parameters params) {
-        namespace fs = std::filesystem;
-        const fs::path dir(workdir);
-        if (!fs::is_directory(dir))
-          throw std::invalid_argument("not a directory: " + workdir);
-
-        const fs::path prev = fs::current_path();
-        fs::current_path(dir);
-        try {
-          const fs::path ini = dir / "config.ini";
-          if (fs::is_regular_file(ini)) {
-            if (params.load(ini.string()) != 0)
-              throw std::runtime_error("failed to load " + ini.string());
-          }
-          const auto start = std::chrono::steady_clock::now();
-          auto job =
-              eonc::helpers::makeJob(std::make_unique<eonc::Parameters>(params));
-          if (!job)
-            throw std::runtime_error("unknown job type for makeJob");
-          auto files = job->run();
-          // Destroy Potential before potcall summary (same order as ClientEON).
-          job.reset();
-          append_client_postamble(files, start);
-          fs::current_path(prev);
-          return files;
-        } catch (...) {
-          fs::current_path(prev);
-          throw;
-        }
+      "write_potcall_summary",
+      [](const std::string &path) {
+        PotRegistry::get().write_summary(path);
+        return path;
       },
-      nb::arg("workdir"), nb::arg("parameters"),
-      "chdir to workdir, optionally reload config.ini, makeJob, run, then "
-      "append ClientEON-equivalent timing and _potcalls.json. Returns output "
-      "filenames.");
+      nb::arg("path") = "_potcalls.json",
+      "Write PotRegistry force-call summary (call after Job/Potential are "
+      "destroyed so tallies are recorded).");
+
+  m.def(
+      "get_process_times",
+      []() {
+        double real = 0, user = 0, sys = 0;
+        eonc::helpers::getTime(&real, &user, &sys);
+        return nb::make_tuple(real, user, sys);
+      },
+      "Return (real, user, system) process times in seconds (same as "
+      "ClientEON).");
+
+  m.def(
+      "append_results_timing",
+      [](const std::string &path, double elapsed_seconds, double user_time,
+         double system_time) {
+        std::ofstream out(path, std::ios::app);
+        if (!out.is_open())
+          throw std::runtime_error("append_results_timing: cannot open " + path);
+        out << "time_seconds " << elapsed_seconds << "\n";
+#ifndef _WIN32
+        out << "user_time " << user_time << "\n";
+        out << "system_time " << system_time << "\n";
+#endif
+      },
+      nb::arg("path") = "results.dat", nb::arg("elapsed_seconds"),
+      nb::arg("user_time") = 0.0, nb::arg("system_time") = 0.0,
+      "Append ClientEON timing footer to results.dat.");
+
+  m.def(
+      "steady_clock_now",
+      []() {
+        using clock = std::chrono::steady_clock;
+        return std::chrono::duration<double>(clock::now().time_since_epoch())
+            .count();
+      },
+      "Monotonic seconds for measuring wall time around job steps.");
 }
 
 } // namespace eonc::pybind

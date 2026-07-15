@@ -155,6 +155,7 @@ py.install_sources(
         'pyeonclient/__init__.py',
         'pyeonclient/bridge.py',
         'pyeonclient/ase_bridge.py',
+        'pyeonclient/steps.py',
     ],
     pure: false,
     subdir: 'pyeonclient',
