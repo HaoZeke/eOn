@@ -11,6 +11,7 @@ void bind_parameters(nb::module_ &m);
 void bind_potential(nb::module_ &m);
 void bind_matter(nb::module_ &m);
 void bind_jobs(nb::module_ &m);
+void bind_neb(nb::module_ &m);
 
 } // namespace eonc::pybind
 
@@ -25,4 +26,5 @@ NB_MODULE(_core, m) {
   eonc::pybind::bind_potential(m);
   eonc::pybind::bind_matter(m);
   eonc::pybind::bind_jobs(m);
+  eonc::pybind::bind_neb(m);
 }

@@ -76,6 +76,7 @@ pyeonclient_sources = files(
     'bind/bind_potential.cpp',
     'bind/bind_matter.cpp',
     'bind/bind_jobs.cpp',
+    'bind/bind_neb.cpp',
 )
 
 _nb_incs = [

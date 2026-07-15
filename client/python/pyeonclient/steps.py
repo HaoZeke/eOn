@@ -192,3 +192,95 @@ def run_job_in_directory(
 def run_eon_cwd() -> list[str]:
     """Cookbook helper: run whatever job config.ini requests in cwd."""
     return run_job_in_directory(Path("."), Parameters())
+
+
+def neb_workdir(
+    workdir: str | Path = ".",
+    *,
+    reactant: str = "reactant.con",
+    product: str = "product.con",
+) -> list[str]:
+    """Compose NEB steps in *workdir* using :class:`NudgedElasticBand`.
+
+    Steps (explicit)::
+
+        load_parameters
+        make_potential
+        load endpoint Matter (or path-list endpoints when init=FILE)
+        NudgedElasticBand(initial, final, params, pot)
+        pot_registry_total_force_calls  # baseline
+        neb.compute()
+        find_extrema if GOOD
+        neb_write_results
+        del neb / pot
+        write_potcall_summary
+        append_timing
+    """
+    from pyeonclient._core import (
+        NudgedElasticBand,
+        NEBStatus,
+        neb_write_results,
+        pot_registry_total_force_calls,
+    )
+
+    work = Path(workdir).resolve()
+    files: list[str] = []
+    with chdir(work):
+        t0 = steady_clock_now()
+        params = load_parameters("config.ini")
+        pot = make_potential(params.potential, params)
+
+        initial = Matter(pot, params)
+        final = Matter(pot, params)
+        # Endpoints: path list first/last when FILE init, else reactant/product
+        init_method = getattr(params, "neb_init_method", None)
+        path_in = getattr(params, "neb_initial_path", "") or ""
+        if path_in and Path(path_in).is_file():
+            from pyeonclient._core import neb_read_file_paths
+
+            plist = neb_read_file_paths(path_in)
+            if len(plist) < 2:
+                raise RuntimeError("NEB path list needs >= 2 frames")
+            st0 = initial.con2matter(plist[0])
+            st1 = final.con2matter(plist[-1])
+        else:
+            st0 = initial.con2matter(reactant)
+            st1 = final.con2matter(product)
+        from pyeonclient._core import io_ok
+
+        if not io_ok(st0):
+            raise RuntimeError("failed to load NEB reactant frame")
+        if not io_ok(st1):
+            raise RuntimeError("failed to load NEB product frame")
+
+        if getattr(params, "neb_minimize_endpoints", False):
+            initial.relax(
+                quiet=bool(getattr(params, "quiet", False)),
+                write_movie=bool(getattr(params, "write_movies", False)),
+                checkpoint=bool(getattr(params, "checkpoint", False)),
+                prefix_movie="react_neb",
+                prefix_checkpoint="react_neb",
+            )
+            final.relax(
+                quiet=bool(getattr(params, "quiet", False)),
+                write_movie=bool(getattr(params, "write_movies", False)),
+                checkpoint=bool(getattr(params, "checkpoint", False)),
+                prefix_movie="prod_neb",
+                prefix_checkpoint="prod_neb",
+            )
+
+        neb = NudgedElasticBand(initial, final, params, pot)
+        f0 = pot_registry_total_force_calls()
+        status = neb.compute()
+        f_neb = pot_registry_total_force_calls() - f0
+        if status == NEBStatus.GOOD:
+            neb.find_extrema()
+        files.extend(neb_write_results(neb, params, f_neb))
+        del neb
+        del initial
+        del final
+        del pot
+        write_potcall_summary("_potcalls.json")
+        files.append("_potcalls.json")
+        append_timing("results.dat", t0)
+    return files

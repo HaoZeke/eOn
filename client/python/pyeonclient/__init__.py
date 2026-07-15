@@ -42,6 +42,13 @@ try:
         pot_type_name,
         steady_clock_now,
         write_potcall_summary,
+        NudgedElasticBand,
+        NEBStatus,
+        neb_read_file_paths,
+        neb_load_path_from_files,
+        neb_linear_path,
+        neb_write_results,
+        pot_registry_total_force_calls,
     )
 except ImportError as e:  # pragma: no cover
     raise ImportError(
@@ -71,6 +78,7 @@ from pyeonclient.steps import (  # noqa: E402
     run_job,
     run_job_in_directory,
     write_minimization_results,
+    neb_workdir,
 )
 
 to_ase = matter_to_ase
@@ -82,6 +90,8 @@ __all__ = [
     "JobType",
     "Matter",
     "NEBInit",
+    "NEBStatus",
+    "NudgedElasticBand",
     "OptType",
     "Parameters",
     "PbcConvention",
@@ -107,6 +117,12 @@ __all__ = [
     "matter_to_conframe",
     "matter_to_structure",
     "minimize_workdir",
+    "neb_linear_path",
+    "neb_load_path_from_files",
+    "neb_read_file_paths",
+    "neb_workdir",
+    "neb_write_results",
+    "pot_registry_total_force_calls",
     "pot_type_from_name",
     "pot_type_name",
     "run_eon_cwd",
