@@ -99,9 +99,9 @@
 #include "potentials/ASE_NWCHEM/ASE_NWCHEM.h"
 #endif
 
-// Metatomic: host uses MetatomicDynPot (dlopen libmetatomic_pot C ABI).
-// Torch / MetatomicPotential live only in the plugin .so.
-#include "potentials/Metatomic/MetatomicDynPot.h"
+#ifdef WITH_METATOMIC
+#include "potentials/Metatomic/MetatomicPotential.h"
+#endif
 
 #ifdef WITH_WATER
 #include "potentials/Water/Water.hpp"
@@ -313,10 +313,12 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
     break;
   }
 #endif
+#ifdef WITH_METATOMIC
   case PotType::METATOMIC: {
-    return (std::make_shared<eonc::MetatomicDynPot>(params));
+    return (std::make_shared<MetatomicPotential>(params));
     break;
   }
+#endif
   case PotType::ZBL: {
     return (std::make_shared<ZBLPot>(params));
     break;

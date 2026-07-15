@@ -779,18 +779,21 @@ if get_option('with_metatomic')
             include_directories: include_directories('thirdparty/vesin'),
         )
     endif
-    # Plugin-only deps: do NOT add torch/metatomic to host eonclib/eonclient.
-    # Host loads libmetatomic_pot.so at runtime via C ABI (MetatomicDynPot).
+    # Fat Metatomic (potential = Metatomic) + deps for RGPOT engine .so.
     mta_plugin_deps = _deps + [vesin_dep, mts_dep, torch_deps]
+    _deps += [vesin_dep, mts_dep, torch_deps]
     _args += ['-DWITH_METATOMIC']
-    # subdir + library after eclib (see below)
+    metatomic_pot = library(
+        'metatomic_pot',
+        'potentials/Metatomic/MetatomicPotential.cpp',
+        dependencies: _deps,
+        cpp_args: _args,
+        link_with: _linkto,
+        include_directories: _incdirs,
+        install: true,
+    )
+    potentials += [metatomic_pot]
 endif
-
-# Host-side Metatomic always compiled (dlopen plugin); no torch in eonclib.
-eonclib_sources += [
-    'potentials/Metatomic/MetatomicDynPot.cpp',
-    'potentials/Metatomic/MetatomicLoader.cpp',
-]
 
 if get_option('with_parallel_neb')
     tbb_dep = dependency('tbb', required : true)
@@ -974,10 +977,23 @@ eclib = library(
 
 _linkto += eclib
 
-# Metatomic pot plugin (dlopen): build after eclib so MetatomicPotential can
-# link Potential/Parameters from libeonclib without pulling torch into the host.
+# RGPOT-metatomic engine (slow path); fat pot already in potentials above.
 if get_option('with_metatomic')
-    subdir('potentials/Metatomic')
+    metatomic_engine = library(
+        'metatomic_engine',
+        [
+            'potentials/Metatomic/MetatomicPotential.cpp',
+            'potentials/Metatomic/MetatomicEngineAbi.cpp',
+        ],
+        dependencies: mta_plugin_deps,
+        cpp_args: _args + ['-DRGPOT_MTA_ENGINE_BUILD'],
+        link_with: [eclib],
+        include_directories: _incdirs,
+        build_rpath: ':'.join(_runtime_rpath),
+        install_rpath: ':'.join(_runtime_rpath),
+        install: true,
+        gnu_symbol_visibility: 'default',
+    )
 endif
 
 # Full deps including readcon link_args (for executables and tests only)
@@ -1090,6 +1106,7 @@ if get_option('with_tests')
     endif
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
+        test_array += [['test_mta_engine_abi', 'MetatomicEngineAbiTest.cpp', '']]
     endif
     if get_option('with_xtb')
         test_array += [['test_xtb', 'XTBTest.cpp', 'sulfolene']]
@@ -1116,6 +1133,7 @@ if get_option('with_tests')
     endif
     # Metatomic C-ABI plugin lives next to MetatomicPotential sources in the build tree.
     if get_option('with_metatomic')
+        _fortran_pot_dirs += meson.project_build_root() / 'client'
         _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / 'Metatomic'
     endif
     _test_env = environment()

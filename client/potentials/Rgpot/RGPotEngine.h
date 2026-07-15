@@ -19,9 +19,17 @@ struct RGPotEngineOptions {
   int memory_mb{0};
   std::string scratch_dir;
   std::string input_block; // optional NWChem inputBlocks text
+  // Metatomic (RGPOT backend=metatomic): model + optional engine .so path
+  std::string model_path;
+  std::string device{"cpu"};
+  std::string length_unit{"angstrom"};
+  std::string extensions_directory;
+  bool check_consistency{false};
+  double uncertainty_threshold{-1.0};
+  bool torch_determinism_strict{false};
 };
 
-/** Opaque rgpot-backed engine (nwchemc / cpmdc). No eOn Potential.h here. */
+/** Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic). No eOn Potential.h here. */
 class RGPotEngine {
 public:
   explicit RGPotEngine(const RGPotEngineOptions &opt);

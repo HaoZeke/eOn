@@ -127,7 +127,7 @@ public:
   // [RgpotPot] — in-process rgpot NWChemPot / CPMDPot (dlopen engines; no
   // potserv)
   struct rgpot_options_t {
-    /// "nwchemc" or "cpmdc" (also accepts nwchem / cpmd / NWChem / CPMD)
+    /// "nwchemc", "cpmdc", or "metatomic"
     std::string backend{"nwchemc"};
     std::string basis{"sto-3g"};
     std::string theory{"scf"};
@@ -143,6 +143,14 @@ public:
     int memory_mb{0};
     std::string scratch_dir{};
     std::string input_block{};
+    // Metatomic backend (dlopen libmetatomic_engine.so)
+    std::string model_path{};
+    std::string device{"cpu"};
+    std::string length_unit{"angstrom"};
+    std::string extensions_directory{};
+    bool check_consistency{false};
+    double uncertainty_threshold{-1.0};
+    bool torch_determinism_strict{false};
   } rgpot_options;
 
   // [Structure Comparison] //

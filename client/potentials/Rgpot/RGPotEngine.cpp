@@ -13,6 +13,7 @@
 
 #include "rgpot/CPMDPot/CPMDPot.hpp"
 #include "rgpot/NWChemPot/NWChemPot.hpp"
+#include "MetatomicEngineLoader.h"
 #include "rgpot/rpc/Potentials.capnp.h"
 
 namespace {
@@ -47,10 +48,11 @@ bool looks_like_dft_xc(const std::string &s) {
 } // namespace
 
 struct RGPotEngine::Impl {
-  enum class Backend { Nwchemc, Cpmdc };
+  enum class Backend { Nwchemc, Cpmdc, Metatomic };
   Backend backend{Backend::Nwchemc};
   std::unique_ptr<rgpot::NWChemPot> nwchem;
   std::unique_ptr<rgpot::CPMDPot> cpmd;
+  std::unique_ptr<MetatomicEngineLoader> metatomic;
 };
 
 RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
@@ -129,9 +131,28 @@ RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
       throw std::runtime_error(
           "RGPOT(cpmdc): engine not available (set CPMDC_LIBRARY / "
           "RGPOT_CPMDC_ENGINE or [RgpotPot] engine_path)");
+  } else if (backend_ == "metatomic" || backend_ == "mta" ||
+             backend_ == "metatomicpot") {
+    backend_ = "metatomic";
+    impl_->backend = Impl::Backend::Metatomic;
+    MetatomicEngineOptions mopt;
+    mopt.model_path = opt.model_path;
+    mopt.device = opt.device;
+    mopt.length_unit = opt.length_unit;
+    mopt.extensions_directory = opt.extensions_directory;
+    mopt.check_consistency = opt.check_consistency;
+    mopt.uncertainty_threshold = opt.uncertainty_threshold;
+    mopt.engine_path = !opt.engine_path.empty() ? opt.engine_path
+                                                : opt.engine_library;
+    mopt.torch_determinism_strict = opt.torch_determinism_strict;
+    impl_->metatomic = std::make_unique<MetatomicEngineLoader>(mopt);
+    if (!impl_->metatomic->available())
+      throw std::runtime_error(
+          "RGPOT(metatomic): engine not available (set RGPOT_METATOMIC_ENGINE "
+          "or [RgpotPot] engine_path to libmetatomic_engine.so)");
   } else {
     throw std::runtime_error("RGPOT: unknown backend '" + opt.backend +
-                             "' (expected nwchemc or cpmdc)");
+                             "' (expected nwchemc, cpmdc, or metatomic)");
   }
 }
 
@@ -144,6 +165,8 @@ bool RGPotEngine::available() const {
     return impl_->nwchem->available();
   if (impl_->backend == Impl::Backend::Cpmdc && impl_->cpmd)
     return impl_->cpmd->available();
+  if (impl_->backend == Impl::Backend::Metatomic && impl_->metatomic)
+    return impl_->metatomic->available();
   return false;
 }
 
@@ -161,6 +184,11 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
   }
   std::vector<int> atmtypes(atomicNrs, atomicNrs + N);
   const auto cell = box_from_row_major(box);
+
+  if (impl_->backend == Impl::Backend::Metatomic) {
+    impl_->metatomic->force(N, R, atomicNrs, F, U, nullptr, box);
+    return;
+  }
 
   std::pair<double, AtomMatrix> result;
   if (impl_->backend == Impl::Backend::Nwchemc)
