@@ -66,6 +66,8 @@ def test_metatomic_minimize_via_run_job_in_directory(tmp_path):
     assert "potential_energy" in text
     assert "METATOMIC" in text or "metatomic" in text.lower()
     assert "GOOD" in text  # cookbook converges under these Optimizer settings
+    assert "time_seconds" in text  # ClientEON-equivalent postamble
+    assert (work / "_potcalls.json").is_file()
     # parse energy
     energy = None
     for line in text.splitlines():

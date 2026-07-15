@@ -37,6 +37,10 @@ def test_run_job_in_directory_minimize(tmp_path, pot_params_files):
         work / "min.con"
     ).is_file()
     assert (work / "min.con").is_file() or any("min" in f for f in files)
+    # ClientEON parity: timing footer + potcall summary
+    text = (work / "results.dat").read_text()
+    assert "time_seconds" in text
+    assert (work / "_potcalls.json").is_file()
 
 
 @pytest.fixture
