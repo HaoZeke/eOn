@@ -101,7 +101,7 @@ jobs:
           sudo apt-get install -y \
             build-essential gfortran cmake pkg-config \
             libeigen3-dev ninja-build \
-            python3-pip
+            python3-pip patchelf
           cargo install cbindgen 2>/dev/null || \
             (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
              . "$HOME/.cargo/env" && cargo install cbindgen)
@@ -153,12 +153,26 @@ jobs:
             PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
             CMAKE_PREFIX_PATH=/usr/local
           CIBW_BEFORE_ALL_LINUX: |
-            yum install -y eigen3-devel gcc-gfortran || true
+            yum install -y eigen3-devel gcc-gfortran patchelf || true
             export CARGO_HOME=/root/.cargo
             export PATH="/root/.cargo/bin:$PATH"
             command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             . /root/.cargo/env
             command -v cbindgen || cargo install cbindgen
+            # Cap'n Proto (RGPOT / ptlrpc) — vendored into the wheel by auditwheel
+            if ! pkg-config --exists capnp 2>/dev/null; then
+              rm -rf /tmp/capnp-src /tmp/capnp-build
+              curl -fsSL -o /tmp/capnp.tgz \
+                https://capnproto.org/capnproto-c++-1.0.2.tar.gz
+              mkdir -p /tmp/capnp-src && tar -xzf /tmp/capnp.tgz -C /tmp/capnp-src --strip-components=1
+              cmake -S /tmp/capnp-src -B /tmp/capnp-build \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr/local \
+                -DBUILD_TESTING=OFF
+              cmake --build /tmp/capnp-build -j$(nproc)
+              cmake --install /tmp/capnp-build
+              ldconfig || true
+            fi
             if ! pkg-config --exists quill 2>/dev/null; then
               rm -rf /tmp/quill-src /tmp/quill-build
               curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz
@@ -172,7 +186,7 @@ jobs:
               cmake --install /tmp/quill-build
             fi
           CIBW_BEFORE_BUILD: |
-            pip install -U pip nanobind meson ninja meson-python
+            pip install -U pip nanobind meson ninja meson-python auditwheel
             pip install --only-binary=:all: numpy || pip install numpy
             if [[ "${{ matrix.variant }}" == "metatomic" ]]; then
               # CPU torch from PyPI (not conda-forge)
@@ -180,9 +194,15 @@ jobs:
                 || pip install 'torch' --index-url https://download.pytorch.org/whl/cpu
               pip install 'metatensor' 'metatensor-torch' 'metatomic-torch' 'vesin' || true
             fi
+          # Vendor libcapnp/libkj (not on manylinux allowlist) + strip host RPATH.
+          # auditwheel when it works; our repair script always runs as the portableizer.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            bash -c 'auditwheel repair -w {dest_dir} {wheel} 2>/dev/null
+            || cp -f {wheel} {dest_dir}/;
+            bash scripts/pyeonclient_repair_wheel.sh {dest_dir}/pyeonclient-*.whl'
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: |
-            python -c "import pyeonclient as p; print(p.__version__, 'mta', p.built_with_metatomic(), 'rgpot', p.built_with_rgpot()); assert p.built_with_rgpot()"
+            python -c "import pyeonclient as p, pathlib, subprocess; print(p.__version__, 'mta', p.built_with_metatomic(), 'rgpot', p.built_with_rgpot()); assert p.built_with_rgpot(); core=next(pathlib.Path(p.__file__).parent.glob('_core*.so')); out=subprocess.check_output(['readelf','-d',str(core)],text=True); assert 'libtorch' not in out; print('NEEDED_OK')"
 
       - name: Tag metatomic wheels with local version (never collide with base)
         if: steps.gate.outputs.skip != 'true' && matrix.variant == 'metatomic'

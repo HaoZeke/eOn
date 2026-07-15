@@ -57,6 +57,13 @@ def test_build_wheel_script_variants_disambiguated():
     # metatomic wheels must not share the bare PyPI version basename
     assert "+metatomic" in text
     assert "base wheel must not use +metatomic" in text or "local version" in text
+    # portable PyPI: vendor capnp / strip host RPATH (torch-style)
+    assert "pyeonclient_repair_wheel" in text
+    repair = ROOT / "scripts" / "pyeonclient_repair_wheel.sh"
+    assert repair.is_file()
+    rtext = repair.read_text()
+    assert "patchelf" in rtext
+    assert "libcapnp" in rtext or "vendor" in rtext
 
 
 def test_workflow_publish_excludes_metatomic_local_version():
@@ -166,6 +173,14 @@ def test_base_wheel_build_and_import(tmp_path):
             "out = subprocess.check_output(['readelf', '-d', str(cores[0])], text=True)\n"
             "print(out)\n"
             "assert 'libtorch' not in out and 'libc10' not in out\n"
+            # portable: no build-host absolute RUNPATH/RPATH
+            "assert '/home/' not in out and '/pixi/envs' not in out\n"
+            # if capnp is NEEDED it must be loadable without host LD_LIBRARY_PATH
+            "import os\n"
+            "env = {k: v for k, v in os.environ.items() if k not in ('LD_LIBRARY_PATH', 'LIBRARY_PATH')}\n"
+            "ldd = subprocess.check_output(['ldd', str(cores[0])], text=True, env=env)\n"
+            "print(ldd)\n"
+            "assert 'not found' not in ldd, ldd\n"
             "print('BASE_WHEEL_INSTALL_OK')\n",
         ],
         capture_output=True,

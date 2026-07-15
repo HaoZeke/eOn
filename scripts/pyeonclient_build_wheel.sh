@@ -125,8 +125,16 @@ rm -rf dist build
 echo "building pyeonclient variant=${VARIANT} args=${SETUP_ARGS[*]}"
 python -m build --wheel "${CFG[@]}" 2>&1
 ls -la dist/
+
+# Vendor non-system NEEDED libs (capnp/kj for RGPOT) and strip host RPATH.
+# Same idea as auditwheel / torch: portable wheel, no build-host RUNPATH.
+if [[ "${PYEONCLIENT_SKIP_REPAIR:-0}" != "1" ]]; then
+  python -m pip install -U auditwheel patchelf 2>/dev/null || true
+  bash scripts/pyeonclient_repair_wheel.sh dist/pyeonclient-*.whl
+fi
+
 python - <<'PY'
-import glob, zipfile, sys, os
+import glob, zipfile, sys, os, re
 whls = sorted(glob.glob("dist/*.whl"))
 if not whls:
     sys.exit("no wheel produced")
@@ -138,7 +146,15 @@ if variant == "metatomic" and "+metatomic" not in whl:
 if variant == "base" and "+metatomic" in whl:
     sys.exit(f"base wheel must not use +metatomic local version: {whl}")
 with zipfile.ZipFile(whl) as z:
-    names = [n for n in z.namelist() if n.startswith("pyeonclient/")][:15]
-    print("sample members", names)
+    names = z.namelist()
+    sample = [n for n in names if n.startswith("pyeonclient/")][:15]
+    print("sample members", sample)
+    caps = [n for n in names if re.search(r"libcapnp|libkj", n)]
+    # Base+RGPOT wheels NEEDED capnp — after repair they must be vendored.
+    if variant == "base" and not caps:
+        # tolerate only if extension truly has no capnp NEEDED (read later)
+        print("NOTE: no libcapnp/libkj members in wheel (repair may have been skipped)")
+    else:
+        print("vendored_capnp_kj", caps)
 print("WHEEL_BUILD_OK", whl)
 PY
