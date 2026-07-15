@@ -65,6 +65,7 @@ def test_metatomic_minimize_via_run_job_in_directory(tmp_path):
     text = results.read_text()
     assert "potential_energy" in text
     assert "METATOMIC" in text or "metatomic" in text.lower()
+    assert "GOOD" in text  # cookbook converges under these Optimizer settings
     # parse energy
     energy = None
     for line in text.splitlines():
