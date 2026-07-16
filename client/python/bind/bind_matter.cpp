@@ -219,6 +219,8 @@ void bind_matter(nb::module_ &m) {
           [](Matter &self, bool quiet, bool write_movie, bool checkpoint,
              const std::string &prefix_movie,
              const std::string &prefix_checkpoint) {
+            // RGPOT metatomic engines need the GIL released (torch autograd).
+            nb::gil_scoped_release release;
             return self.relax(quiet, write_movie, checkpoint, prefix_movie,
                               prefix_checkpoint);
           },

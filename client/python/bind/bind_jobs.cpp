@@ -35,7 +35,12 @@ void bind_jobs(nb::module_ &m) {
       .def("get_type", &eonc::Job::getType)
       .def(
           "run",
-          [](eonc::Job &self) { return self.run(); },
+          [](eonc::Job &self) {
+            // Torch autograd in RGPOT metatomic engines refuses the GIL.
+            // Release for the whole job (force evals dominate runtime).
+            nb::gil_scoped_release release;
+            return self.run();
+          },
           "Run this job in the *current* working directory. Writes job "
           "artifacts (min.con / neb.dat / results.dat body). Does **not** "
           "write _potcalls.json or timing — call write_potcall_summary and "

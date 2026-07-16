@@ -73,8 +73,13 @@ void bind_neb(nb::module_ &m) {
           "Build NEB from a list of Matter frames (length = intermediates + 2)")
 
       // --- algorithm steps ---
-      .def("compute", &NudgedElasticBand::compute,
-           "Run NEB optimization (energy-weighted, CI, OCI per Parameters)")
+      .def(
+          "compute",
+          [](NudgedElasticBand &self) {
+            nb::gil_scoped_release release;
+            return self.compute();
+          },
+          "Run NEB optimization (energy-weighted, CI, OCI per Parameters)")
       .def("update_forces",
            nb::overload_cast<bool>(&NudgedElasticBand::updateForces),
            nb::arg("ci_active"), "Recompute projected forces; ci_active toggles CI")
