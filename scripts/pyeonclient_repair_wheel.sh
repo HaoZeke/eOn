@@ -155,6 +155,31 @@ repair_one() {
     echo "vendor-ok: $ncap capnp libraries in wheel"
   fi
 
+  # Avoid SONAME collisions with pip rgpot (both ship a liblennard_jones.so).
+  # Rename eOn pot libs to libeon_* and rewrite NEEDED across the wheel.
+  local old_soname new_soname so
+  declare -A soname_map=(
+    [liblennard_jones.so]=libeon_lennard_jones.so
+    [liblennard_jones_cluster.so]=libeon_lennard_jones_cluster.so
+  )
+  for old_soname in "${!soname_map[@]}"; do
+    new_soname="${soname_map[$old_soname]}"
+    if [[ -f "$libs_dir/$old_soname" ]]; then
+      mv -f "$libs_dir/$old_soname" "$libs_dir/$new_soname"
+      patchelf --set-soname "$new_soname" "$libs_dir/$new_soname"
+      echo "soname: $old_soname -> $new_soname"
+    fi
+  done
+  while IFS= read -r -d '' so; do
+    for old_soname in "${!soname_map[@]}"; do
+      new_soname="${soname_map[$old_soname]}"
+      if needed_libs "$so" | grep -qx "$old_soname"; then
+        patchelf --replace-needed "$old_soname" "$new_soname" "$so"
+        echo "replace-needed: $(basename "$so") $old_soname -> $new_soname"
+      fi
+    done
+  done < <(find "$work" -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
+
   # Repack with zip (always portable; no wheel.cli dependency)
   python3 - <<PY
 import zipfile

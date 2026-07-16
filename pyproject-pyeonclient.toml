@@ -35,13 +35,16 @@ ase = ["ase>=3.22"]
 # Does NOT inject WITH_METATOMIC into a prebuilt wheel; use the metatomic
 # wheel artifact or a from-source build (see README).
 metatomic = [
-    "torch>=2.3",
+    # Engines from rgpot cover torch 2.7+ (same floor as rgpot multi-ABI).
+    "torch>=2.7",
+    "rgpot>=2.4.1",
     "metatensor>=0.1.0",
     "metatensor-torch>=0.6.0",
     "metatomic-torch>=0.1.0",
     "vesin>=0.1.0",
 ]
 # Cookbook-ish helper stack (config writing lives in rgpycrumbs).
+# No conda-forge eOn / eonclient required.
 cookbook = [
     "pyeonclient[metatomic,ase]",
     "rgpycrumbs>=0.1.0",

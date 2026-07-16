@@ -84,21 +84,47 @@ not a thin job wrapper. Jobs and communicators layer on Matter later.
 `.con` I/O uses ConFileIO / readcon-core (same path as `eonclient`).
 
 
-## Cookbook / workdir jobs
+## Cookbook / workdir jobs (pip only — no conda-forge eOn)
 
-For the same layout as ``eonclient`` (``config.ini`` + ``pos.con`` / NEB files)::
+Base PyPI wheels ship **RGPOT** linked. Metatomic forces use **dlopen** of
+``libmetatomic_engine.so`` from the separate ``rgpot`` package (torch **2.7+**
+multi-ABI engines). You do **not** need the conda-forge ``eon`` package or the
+``eonclient`` binary.
+
+```bash
+pip install pyeonclient 'rgpot>=2.4.1' 'pyeonclient[metatomic]'
+# or: pip install torch metatomic-torch metatensor-torch metatensor-core vesin
+```
+
+Same workdir layout as ``eonclient`` (``config.ini`` + ``pos.con`` / NEB files)::
+
+```python
+import pyeonclient as pc
+import rgpot
+
+# Optional: pin engine explicitly (defaults via RGPOT_METATOMIC_ENGINE / picker)
+eng = rgpot.default_metatomic_engine_path()
+pc.run_job_in_directory(".")  # reads config.ini in cwd
+# helpers: pc.rgpot_metatomic_workdir(...), pc.rgpot_metatomic_neb_workdir(...)
+```
+
+``config.ini`` Metatomic via RGPOT::
+
+```ini
+[Potential]
+potential = RGPOT
+[RgpotPot]
+backend = metatomic
+model_path = /path/to/model.pt
+# engine_path = ...  # optional; otherwise rgpot multi-ABI picker / env
+```
+
+CLI helper::
 
     python scripts/run_eon_workdir_pyeonclient.py /path/to/workdir
 
-Or in Python::
-
-    import pyeonclient as pc
-    pc.run_job_in_directory("/path/to/workdir", pc.Parameters())
-
-Metatomic requires a fat build (``-Dwith_metatomic=true``). That remains the
-conda-forge packaging path; the atomistic-cookbook ``eon-pet-neb`` example
-prefers pyeonclient when importable.
-
+A fat ``-Dwith_metatomic=true`` wheel (torch linked into the pot) remains an
+optional local/CI artifact; the pip product path is **base wheel + rgpot engines**.
 
 ## ClientEON steps (compose in Python)
 
