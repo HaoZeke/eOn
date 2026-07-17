@@ -1,12 +1,17 @@
 #pragma once
 /**
  * Helpers: eOn row-major Eigen matrices <-> numpy ndarrays (nanobind).
+ *
+ * Prefer *view* helpers for Matter-owned storage (zero-copy, keep parent
+ * alive via rv_policy::reference_internal). Use *copy* helpers when the
+ * Eigen temporary must outlive the Python buffer.
  */
 #include "Eigen.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
@@ -20,6 +25,55 @@ using NpI32 =
 using NpI64 =
     nb::ndarray<nb::numpy, int64_t, nb::c_contig, nb::device::cpu>;
 
+/// Zero-copy (n, 3) float64 view of external/row-major AtomMatrix storage.
+inline nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
+view_n3(double *data, long n) {
+  if (n < 0) {
+    throw std::invalid_argument("view_n3: negative n");
+  }
+  return nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>(
+      data, {static_cast<size_t>(n), size_t{3}});
+}
+
+inline nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
+view_n3(const double *data, long n) {
+  return view_n3(const_cast<double *>(data), n);
+}
+
+inline nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
+view_33(double *data) {
+  return nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>(
+      data, {size_t{3}, size_t{3}});
+}
+
+inline nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
+view_n(double *data, long n) {
+  return nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>(
+      data, {static_cast<size_t>(n)});
+}
+
+inline nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu>
+view_n_i32(int *data, long n) {
+  static_assert(sizeof(int) == 4, "view_n_i32 assumes 32-bit int");
+  return nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu>(
+      reinterpret_cast<int32_t *>(data), {static_cast<size_t>(n)});
+}
+
+/// Require C-contiguous (n,3) float64; return data pointer (no copy).
+inline const double *require_n3(const NpF64 &arr, long expected_n = -1) {
+  if (arr.ndim() != 2 || arr.shape(1) != 3) {
+    throw std::invalid_argument(
+        "expected float64 array of shape (n, 3), got ndim=" +
+        std::to_string(arr.ndim()));
+  }
+  if (expected_n >= 0 && static_cast<long>(arr.shape(0)) != expected_n) {
+    throw std::invalid_argument("expected n=" + std::to_string(expected_n) +
+                                " rows, got " +
+                                std::to_string(arr.shape(0)));
+  }
+  return arr.data();
+}
+
 inline AtomMatrix atom_matrix_from_numpy(const NpF64 &arr) {
   if (arr.ndim() != 2 || arr.shape(1) != 3) {
     throw std::invalid_argument(
@@ -29,7 +83,7 @@ inline AtomMatrix atom_matrix_from_numpy(const NpF64 &arr) {
   const auto n = static_cast<Eigen::Index>(arr.shape(0));
   AtomMatrix m(n, 3);
   const double *p = arr.data();
-  std::copy(p, p + n * 3, m.data());
+  std::memcpy(m.data(), p, static_cast<size_t>(n) * 3u * sizeof(double));
   return m;
 }
 

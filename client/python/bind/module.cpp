@@ -10,6 +10,7 @@ void bind_enums(nb::module_ &m);
 void bind_parameters(nb::module_ &m);
 void bind_potential(nb::module_ &m);
 void bind_matter(nb::module_ &m);
+void bind_ase(nb::module_ &m);
 void bind_jobs(nb::module_ &m);
 void bind_neb(nb::module_ &m);
 void bind_eigenmode(nb::module_ &m);
@@ -23,7 +24,8 @@ NB_MODULE(_core, m) {
   m.doc() =
       "eOn client core via nanobind: Matter, Parameters, Potential, "
       "NudgedElasticBand, Dimer/ImprovedDimer/Lanczos/Davidson, "
-      "MinModeSaddleSearch, Hessian, Prefactor, Dynamics/MC/BH/process_search. "
+      "MinModeSaddleSearch, Hessian, Prefactor, Dynamics/MC/BH/process_search, "
+      "ASE bulk matter_from_ase/matter_to_ase. "
       "Stable ABI (abi3) or free-threaded.";
   m.attr("__version__") = "0.3.0";
 
@@ -52,6 +54,7 @@ NB_MODULE(_core, m) {
   eonc::pybind::bind_parameters(m);
   eonc::pybind::bind_potential(m);
   eonc::pybind::bind_matter(m);
+  eonc::pybind::bind_ase(m);
   eonc::pybind::bind_jobs(m);
   eonc::pybind::bind_neb(m);
   eonc::pybind::bind_eigenmode(m);

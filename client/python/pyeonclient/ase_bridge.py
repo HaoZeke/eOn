@@ -1,19 +1,22 @@
 """ASE ↔ Matter / Structure / readcon helpers (optional ASE dependency).
 
+Hot path is C++ nanobind (``matter_from_ase`` / ``matter_to_ase`` /
+``make_potential_from_ase``): bulk ndarray buffers, zero-copy Matter views.
+
 Seamless calculator path::
 
     import pyeonclient as pyec
     from ase.calculators.emt import EMT
 
     atoms.calc = EMT()
-    matter = pyec.from_ase(atoms)              # uses atoms.calc → Potential
+    matter = pyec.from_ase(atoms)              # C++ bulk fill + ASE pot wrap
     # or
     pot = pyec.potential_from_ase(atoms.calc)
     matter = pyec.from_ase(atoms, pot, params)
 
-Geometry-only (existing)::
-
-    path = [pyec.from_ase(img, pot, params) for img in images]
+    # Zero-copy geometry views into Matter (mutate + mark_geometry_dirty)
+    matter.positions[:] = atoms.get_positions()
+    matter.mark_geometry_dirty()
 """
 
 from __future__ import annotations
@@ -53,27 +56,11 @@ def potential_from_ase(calculator: Any, parameters: Any = None) -> Any:
 
 
 def matter_to_ase(matter: Any, *, pbc: Optional[bool] = None) -> "AseAtoms":
-    """Convert a live :class:`pyeonclient.Matter` to ``ase.Atoms``."""
-    _, Atoms, FixAtoms = _require_ase()
+    """Convert a live :class:`pyeonclient.Matter` to ``ase.Atoms`` (C++ path)."""
+    _require_ase()
+    from pyeonclient._core import matter_to_ase as _matter_to_ase
 
-    pos = np.asarray(matter.positions, dtype=float)
-    cell = np.asarray(matter.cell, dtype=float)
-    numbers = np.asarray(matter.atomic_numbers, dtype=int)
-    masses = np.asarray(matter.masses, dtype=float)
-    fixed = np.asarray(matter.fixed, dtype=int).reshape(-1)
-
-    use_pbc = bool(matter.periodic) if pbc is None else bool(pbc)
-    atoms = Atoms(
-        numbers=numbers,
-        positions=pos,
-        cell=cell,
-        pbc=use_pbc,
-        masses=masses,
-    )
-    mask = fixed != 0
-    if np.any(mask):
-        atoms.set_constraint(FixAtoms(mask=mask.tolist()))
-    return atoms
+    return _matter_to_ase(matter, pbc)
 
 
 def ase_to_matter(
@@ -81,15 +68,16 @@ def ase_to_matter(
     potential: Any = None,
     parameters: Any = None,
 ) -> Any:
-    """Build :class:`pyeonclient.Matter` from ``ase.Atoms``.
+    """Build :class:`pyeonclient.Matter` from ``ase.Atoms`` (C++ bulk path).
 
     If ``potential`` is omitted, uses ``atoms.calc`` via
     :func:`potential_from_ase`. If ``parameters`` is omitted, a default
     :class:`Parameters` is created.
     """
-    from pyeonclient import Matter, Parameters
+    from pyeonclient import Parameters
+    from pyeonclient._core import matter_from_ase
 
-    _, _, FixAtoms = _require_ase()
+    _require_ase()
 
     if parameters is None:
         parameters = Parameters()
@@ -102,29 +90,7 @@ def ase_to_matter(
             )
         potential = potential_from_ase(calc, parameters)
 
-    n = len(atoms)
-    m = Matter(potential, parameters)
-    m.resize(n)
-    # Cell before positions (default Matter cell is Zero; PBC wrap needs it).
-    # Contiguous float64 / int64 so the nanobind hot path can view buffers
-    # without another conversion.
-    m.cell = np.ascontiguousarray(np.asarray(atoms.get_cell(), dtype=np.float64))
-    m.positions = np.ascontiguousarray(
-        np.asarray(atoms.get_positions(), dtype=np.float64)
-    )
-    m.masses = np.ascontiguousarray(np.asarray(atoms.get_masses(), dtype=np.float64))
-    m.atomic_numbers = np.ascontiguousarray(
-        np.asarray(atoms.get_atomic_numbers(), dtype=np.int64)
-    )
-
-    fixed = np.zeros(n, dtype=np.int64)
-    for c in atoms.constraints:
-        if isinstance(c, FixAtoms):
-            idx = np.asarray(c.get_indices(), dtype=int).reshape(-1)
-            fixed[idx] = 1
-    m.fixed = fixed
-    m.periodic = bool(np.any(atoms.pbc))
-    return m
+    return matter_from_ase(atoms, potential, parameters)
 
 
 def structure_to_ase(structure: Any, *, pbc: bool = True) -> "AseAtoms":

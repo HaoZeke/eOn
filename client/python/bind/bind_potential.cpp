@@ -228,19 +228,19 @@ void bind_potential(nb::module_ &m) {
             if (box.ndim() != 2 || box.shape(0) != 3 || box.shape(1) != 3)
               throw std::invalid_argument("box must be (3,3)");
             const auto n = static_cast<Eigen::Index>(pos.shape(0));
-            AtomMatrix R(n, 3);
-            std::copy(pos.data(), pos.data() + n * 3, R.data());
+            // Map Python buffers without intermediate heap AtomMatrix for R/cell.
+            AtomMatrix R = AtomMatrix::Map(
+                const_cast<double *>(pos.data()), n, 3);
+            Matrix3d cell = Matrix3d::Map(const_cast<double *>(box.data()));
             VectorXi atmnrs(n);
             for (Eigen::Index i = 0; i < n; ++i)
               atmnrs(i) = static_cast<int>(z.data()[i]);
-            Matrix3d cell;
-            std::copy(box.data(), box.data() + 9, cell.data());
             auto [energy, forces] = self.get_ef(R, atmnrs, cell);
-            // return (energy, forces ndarray)
+            // return (energy, forces ndarray) — owned copy (force is temp)
             const size_t rows = static_cast<size_t>(forces.rows());
             const size_t cols = 3;
             double *buf = new double[rows * cols];
-            std::copy(forces.data(), forces.data() + rows * cols, buf);
+            std::memcpy(buf, forces.data(), rows * cols * sizeof(double));
             nb::capsule owner(buf, [](void *p) noexcept {
               delete[] static_cast<double *>(p);
             });

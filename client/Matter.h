@@ -206,6 +206,47 @@ public:
   /// Whether forces need recomputation (positions changed since last eval).
   [[nodiscard]] bool needsForceUpdate() const { return recomputePotential; }
 
+  /// After write-through mutation of a zero-copy positions/cell view from
+  /// Python (nanobind), call this so the next energy/force read recomputes.
+  void markGeometryDirty() noexcept {
+    recomputePotential = true;
+    recomputeMaskedForces = true;
+  }
+
+  /// Zero-copy buffer pointers for nanobind (row-major AtomMatrix / Eigen).
+  /// Lifetime is tied to this Matter; do not free.
+  [[nodiscard]] double *positionsData() noexcept { return positions.data(); }
+  [[nodiscard]] const double *positionsData() const noexcept {
+    return positions.data();
+  }
+  [[nodiscard]] double *velocitiesData() noexcept { return velocities.data(); }
+  [[nodiscard]] const double *velocitiesData() const noexcept {
+    return velocities.data();
+  }
+  [[nodiscard]] double *massesData() noexcept { return masses.data(); }
+  [[nodiscard]] const double *massesData() const noexcept {
+    return masses.data();
+  }
+  [[nodiscard]] int *atomicNrsData() noexcept { return atomicNrs.data(); }
+  [[nodiscard]] const int *atomicNrsData() const noexcept {
+    return atomicNrs.data();
+  }
+  [[nodiscard]] int *isFixedData() noexcept { return isFixed.data(); }
+  [[nodiscard]] const int *isFixedData() const noexcept {
+    return isFixed.data();
+  }
+  [[nodiscard]] double *cellData() noexcept { return cell.data(); }
+  [[nodiscard]] const double *cellData() const noexcept { return cell.data(); }
+
+  /// Bulk assign from contiguous C buffers (n must match numberOfAtoms).
+  /// Applies PBC wrap when enabled and marks geometry dirty.
+  void assignPositions(const double *xyz_n3);
+  void assignCell(const double *cell_3x3_row_major);
+  void assignVelocities(const double *v_n3);
+  void assignMasses(const double *mass_n);
+  void assignAtomicNrs(const int *z_n);
+  void assignIsFixed(const int *fixed_n);
+
   /// Mutable access to force storage for batched potential evaluation.
   /// Caller must also call setComputedPotential() after writing forces.
   double *forcesData() { return forces.data(); }

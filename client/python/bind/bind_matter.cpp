@@ -36,18 +36,24 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro("n_free", &Matter::numberOfFreeAtoms)
       .def_prop_ro("n_fixed", &Matter::numberOfFixedAtoms)
 
-      // --- positions ---
-      // rv_policy::move: capsule-owned ndarrays (see eigen_numpy.hpp)
+      // --- positions (zero-copy view of Matter storage) ---
+      // Getter: NumPy view into Eigen row-major positions (n,3).
+      // Setter: bulk memcpy + PBC + dirty flag (no temporary AtomMatrix).
+      // Write-through on the view: call mark_geometry_dirty() after mutate.
       .def_prop_rw(
           "positions",
-          [](const Matter &self) {
-            return matrix_to_numpy(self.getPositions());
+          [](Matter &self) {
+            return view_n3(self.positionsData(), self.numberOfAtoms());
           },
           [](Matter &self, const NpF64 &arr) {
-            self.setPositions(atom_matrix_from_numpy(arr));
+            const long n = self.numberOfAtoms();
+            const double *p = require_n3(arr, n);
+            self.assignPositions(p);
           },
-          nb::rv_policy::move,
-          "Cartesian positions, shape (n, 3) float64")
+          nb::rv_policy::reference_internal,
+          "Cartesian positions (n,3) float64 — zero-copy view of C++ storage")
+      .def("mark_geometry_dirty", &Matter::markGeometryDirty,
+           "After in-place mutation of positions/cell views, force recompute")
       .def_prop_ro(
           "positions_free",
           [](const Matter &self) {
@@ -60,41 +66,49 @@ void bind_matter(nb::module_ &m) {
            },
            nb::arg("positions"))
 
-      // --- cell ---
+      // --- cell (zero-copy 3x3 view) ---
       .def_prop_rw(
           "cell",
-          [](const Matter &self) { return matrix_to_numpy(self.getCell()); },
+          [](Matter &self) { return view_33(self.cellData()); },
           [](Matter &self, const NpF64 &arr) {
-            self.setCell(matrix3_from_numpy(arr));
+            if (arr.ndim() != 2 || arr.shape(0) != 3 || arr.shape(1) != 3) {
+              throw std::invalid_argument("cell must be float64 (3,3)");
+            }
+            self.assignCell(arr.data());
           },
-          nb::rv_policy::move,
-          "Cell matrix (3, 3) row-vector lattice")
+          nb::rv_policy::reference_internal,
+          "Cell matrix (3,3) row-major — zero-copy view")
 
       // --- velocities ---
       .def_prop_rw(
           "velocities",
-          [](const Matter &self) {
-            return matrix_to_numpy(self.getVelocities());
+          [](Matter &self) {
+            return view_n3(self.velocitiesData(), self.numberOfAtoms());
           },
           [](Matter &self, const NpF64 &arr) {
-            self.setVelocities(atom_matrix_from_numpy(arr));
+            const long n = self.numberOfAtoms();
+            self.assignVelocities(require_n3(arr, n));
           },
-          nb::rv_policy::move)
+          nb::rv_policy::reference_internal)
 
-      // --- forces (const getters; may evaluate potential) ---
+      // --- forces (zero-copy into cached force storage after evaluate) ---
       .def_prop_ro(
           "forces",
-          [](const Matter &self) {
-            return matrix_to_numpy(self.getForces());
+          [](Matter &self) {
+            const AtomMatrix &f = self.getForces();
+            return view_n3(const_cast<double *>(f.data()),
+                           self.numberOfAtoms());
           },
-          nb::rv_policy::move,
-          "Forces with fixed atoms zeroed as appropriate")
+          nb::rv_policy::reference_internal,
+          "Forces with fixed atoms zeroed (zero-copy view of cache)")
       .def_prop_ro(
           "forces_raw",
-          [](const Matter &self) {
-            return matrix_to_numpy(self.getForcesRaw());
+          [](Matter &self) {
+            const AtomMatrix &f = self.getForcesRaw();
+            return view_n3(const_cast<double *>(f.data()),
+                           self.numberOfAtoms());
           },
-          nb::rv_policy::move)
+          nb::rv_policy::reference_internal)
       .def_prop_ro(
           "forces_free",
           [](const Matter &self) {
@@ -107,26 +121,43 @@ void bind_matter(nb::module_ &m) {
            },
            nb::arg("forces"))
 
-      // --- masses / Z / fixed ---
+      // --- masses / Z / fixed (zero-copy where layout allows) ---
       .def_prop_rw(
           "masses",
-          [](const Matter &self) {
-            return vector_to_numpy(self.getMasses());
+          [](Matter &self) {
+            return view_n(self.massesData(), self.numberOfAtoms());
           },
           [](Matter &self, const NpF64 &arr) {
-            self.setMasses(vector_from_numpy(arr));
+            if (arr.ndim() != 1 ||
+                static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
+              throw std::invalid_argument(
+                  "masses must be float64 length n_atoms");
+            }
+            self.assignMasses(arr.data());
           },
-          nb::rv_policy::move)
+          nb::rv_policy::reference_internal)
       .def_prop_rw(
           "atomic_numbers",
-          [](const Matter &self) {
-            return vectori_to_numpy(self.getAtomicNrs());
+          [](Matter &self) {
+            // int32 view of VectorXi storage (portable on LP64)
+            return view_n_i32(self.atomicNrsData(), self.numberOfAtoms());
           },
-          [](Matter &self, const NpI64 &arr) {
-            self.setAtomicNrs(vectori_from_numpy_i64(arr));
+          [](Matter &self, nb::object obj) {
+            // Accept int32 or int64 from NumPy
+            auto np = nb::module_::import_("numpy");
+            nb::object cont = np.attr("ascontiguousarray")(
+                obj, nb::arg("dtype") = "int32");
+            auto arr = nb::cast<NpI32>(cont);
+            if (arr.ndim() != 1 ||
+                static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
+              throw std::invalid_argument(
+                  "atomic_numbers must be length n_atoms");
+            }
+            self.assignAtomicNrs(
+                reinterpret_cast<const int *>(arr.data()));
           },
-          nb::rv_policy::move,
-          "Atomic numbers (Z), int64 array length n")
+          nb::rv_policy::reference_internal,
+          "Atomic numbers (Z) — zero-copy int32 view of C++ storage")
       .def(
           "get_fixed",
           [](const Matter &self, long atom) { return self.getFixed(atom); },
@@ -139,27 +170,23 @@ void bind_matter(nb::module_ &m) {
           nb::arg("atom"), nb::arg("fixed"))
       .def_prop_rw(
           "fixed",
-          [](const Matter &self) {
-            const long n = self.numberOfAtoms();
-            VectorXi v(n);
-            for (long i = 0; i < n; ++i) {
-              v(i) = self.getFixed(i);
-            }
-            return vectori_to_numpy(v);
+          [](Matter &self) {
+            return view_n_i32(self.isFixedData(), self.numberOfAtoms());
           },
-          [](Matter &self, const NpI64 &arr) {
+          [](Matter &self, nb::object obj) {
+            auto np = nb::module_::import_("numpy");
+            nb::object cont = np.attr("ascontiguousarray")(
+                obj, nb::arg("dtype") = "int32");
+            auto arr = nb::cast<NpI32>(cont);
             if (arr.ndim() != 1 ||
                 static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
               throw std::invalid_argument(
                   "fixed mask must be 1-d int array of length n_atoms");
             }
-            for (size_t i = 0; i < arr.shape(0); ++i) {
-              self.setFixed(static_cast<long>(i),
-                            static_cast<int>(arr.data()[i]) ? 1 : 0);
-            }
+            self.assignIsFixed(reinterpret_cast<const int *>(arr.data()));
           },
-          nb::rv_policy::move,
-          "Fixed flags (1=fixed, 0=free), length n")
+          nb::rv_policy::reference_internal,
+          "Fixed flags (1=fixed, 0=free) — zero-copy int32 view")
 
       // --- free mask ---
       .def_prop_ro(

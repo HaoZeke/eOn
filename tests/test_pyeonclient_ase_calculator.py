@@ -99,3 +99,26 @@ def test_ase_force_matches_direct_calculator():
     E, F = pot.get_ef(pos, z, cell)
     assert E == pytest.approx(E_ref, rel=1e-10, abs=1e-10)
     assert np.allclose(F, F_ref, rtol=1e-10, atol=1e-10)
+
+
+def test_matter_from_ase_core_roundtrip():
+    """C++ matter_from_ase / matter_to_ase preserve geometry."""
+    atoms = Atoms(
+        "H2",
+        positions=[[0.0, 0.0, 0.0], [0.8, 0.0, 0.0]],
+        cell=np.eye(3) * 10.0,
+        pbc=True,
+    )
+    atoms.calc = LennardJones(epsilon=1.0, sigma=1.0, rc=5.0, smooth=False)
+    m = pyec.from_ase(atoms)
+    assert m.n_atoms == 2
+    assert np.allclose(m.positions, atoms.get_positions())
+    back = pyec.to_ase(m)
+    assert len(back) == 2
+    assert np.allclose(back.get_positions(), atoms.get_positions())
+    assert np.allclose(back.get_cell(), atoms.get_cell())
+
+
+def test_from_ase_uses_cpp_entry():
+    assert hasattr(pyec, "matter_from_ase")
+    assert callable(pyec.matter_from_ase)
