@@ -18,6 +18,7 @@
 #include "SurrogatePotential.h"
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -206,11 +207,18 @@ public:
   /// Whether forces need recomputation (positions changed since last eval).
   [[nodiscard]] bool needsForceUpdate() const { return recomputePotential; }
 
+  /// Monotonic generation for ASE / external pot cache invalidation.
+  /// Bumped on any geometry or composition change (positions, cell, Z, resize).
+  [[nodiscard]] std::uint64_t geometryGeneration() const noexcept {
+    return geometryGeneration_;
+  }
+
   /// After write-through mutation of a zero-copy positions/cell view from
   /// Python (nanobind), call this so the next energy/force read recomputes.
   void markGeometryDirty() noexcept {
     recomputePotential = true;
     recomputeMaskedForces = true;
+    ++geometryGeneration_;
   }
 
   /// Zero-copy buffer pointers for nanobind (row-major AtomMatrix / Eigen).
@@ -371,6 +379,8 @@ private:
   // Full Parameters pointer retained solely for relax() delegation
   const Parameters *parameters;
   long nAtoms;
+  /// Bumped whenever geometry/composition changes (ASE system_changes cache).
+  std::uint64_t geometryGeneration_{1};
   AtomMatrix positions;
   AtomMatrix velocities;
   mutable AtomMatrix forces;

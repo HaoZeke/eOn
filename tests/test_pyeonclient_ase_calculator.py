@@ -122,3 +122,47 @@ def test_matter_from_ase_core_roundtrip():
 def test_from_ase_uses_cpp_entry():
     assert hasattr(pyec, "matter_from_ase")
     assert callable(pyec.matter_from_ase)
+
+
+def test_ase_potential_drives_matter_relax():
+    """ASE calc is Matter's pot; relax/energy go through pyeonclient only."""
+    handle = pyec.ase_potential(
+        LennardJones(epsilon=1.0, sigma=1.0, rc=5.0, smooth=False)
+    )
+    params = pyec.Parameters()
+    params.opt_max_iterations = 50
+    params.opt_converged_force = 0.1
+    m = pyec.Matter(handle.potential, params)
+    m.resize(2)
+    m.positions = np.array([[0.0, 0.0, 0.0], [1.5, 0.0, 0.0]], dtype=np.float64)
+    m.cell = np.eye(3) * 12.0
+    m.atomic_numbers = np.array([1, 1], dtype=np.int32)
+    m.masses = np.ones(2)
+    m.periodic = False
+    handle.bind_matter(m)
+    assert handle.is_bound
+    e0 = float(m.potential_energy)
+    assert np.isfinite(e0)
+    gen0 = m.geometry_generation
+    # second energy without geometry change should not require full rebuild
+    e1 = float(m.potential_energy)
+    assert e1 == pytest.approx(e0, rel=1e-12, abs=1e-12)
+    assert m.geometry_generation == gen0
+    out, ok = m.relax(inplace=False)
+    assert np.isfinite(float(out.potential_energy))
+
+
+def test_attach_ase_calculator_api():
+    params = pyec.Parameters()
+    pot = pyec.make_potential(pyec.PotType.LJ, params)
+    m = pyec.Matter(pot, params)
+    m.resize(2)
+    m.positions = np.array([[0.0, 0.0, 0.0], [1.2, 0.0, 0.0]], dtype=np.float64)
+    m.cell = np.eye(3) * 10.0
+    m.atomic_numbers = np.array([13, 13], dtype=np.int32)
+    m.masses = np.ones(2)
+    pyec.attach_ase_calculator(
+        m, LennardJones(epsilon=1.0, sigma=1.0, rc=6.0, smooth=False)
+    )
+    assert np.isfinite(float(m.potential_energy))
+    assert np.isfinite(float(m.max_force))

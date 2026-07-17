@@ -1,5 +1,7 @@
+#include "Matter.h"
 #include "Parameters.h"
 #include "Potential.h"
+#include "HelperFunctions.h"
 #include "BaseStructures.h"
 #include "Eigen.h"
 #include <nanobind/ndarray.h>
@@ -22,24 +24,49 @@ namespace nb = nanobind;
 
 namespace {
 
-/// Live ASE calculator as Potential (seamless Python path; no ASE_POT script).
+/// ASE Calculator as eOn Potential — designed to drive Matter, not Atoms.
 ///
-/// Hot path design (force is called every MD/opt step):
-/// - Reuse one ``ase.Atoms`` + the same calculator (no per-call construction).
-/// - Wrap C++ ``R`` / ``box`` / ``Z`` as NumPy **views** (zero alloc / zero
-///   Python list materialization). ASE then bulk-copies positions into its
-///   own buffer via ``positions[:] = view`` (one memcpy, not O(N) Python).
-/// - One ``calc.calculate(..., ['energy','forces'])`` (not energy then forces).
-/// - Forces leave via ``memcpy`` from a contiguous float64 ndarray.
+/// Model:
+///   Matter owns geometry (Eigen). ASE calc is the force engine.
+///   MD/relax/NEB call Matter → Potential::force(R*, …) with R* =
+///   Matter.positionsData(). This class keeps one peer ase.Atoms and:
+///
+///   1. **bind_matter(m)**: wire ASE ``arrays['positions']`` / cell to
+///      Matter buffers when possible (shared storage; no per-step copy).
+///   2. **system_changes** cache via ``Matter.geometryGeneration()`` so
+///      successive force calls only declare what changed (positions vs
+///      all_changes).
+///   3. Fallback path when force() is called with foreign buffers (e.g.
+///      Potential.get_ef from Python arrays): bulk view + set_positions.
+///
+/// Chemist API (Python)::
+///
+///   pot = pyec.ase_potential(EMT())
+///   m = pyec.Matter(pot, params);  m.resize(...); fill geometry
+///   pot.bind_matter(m)            # optional; from_ase does this
+///   m.potential_energy / m.relax()  # ASE under the hood
 class AseCalcPotential final : public eonc::Potential {
   nb::object calc_;
-  nb::object atoms_;          // cached ase.Atoms
-  nb::object np_;             // numpy module
-  nb::object props_;          // ['energy', 'forces']
-  nb::object all_changes_;    // ase.calculators.calculator.all_changes
-  std::vector<int> z_cache_;  // last atomic numbers (detect composition change)
+  nb::object atoms_;
+  nb::object np_;
+  nb::object props_;
+  nb::object all_changes_;
+  nb::object changes_positions_; // ['positions']
+  nb::object changes_cell_;      // ['cell']
+  nb::object changes_pos_cell_;  // ['positions', 'cell']
+  nb::object changes_empty_;     // []
+  std::vector<int> z_cache_;
   long n_cached_{-1};
   bool modules_ready_{false};
+
+  // Bound Matter (not owned). When force() sees R == matter->positionsData(),
+  // use generation-based system_changes and shared positions if installed.
+  eonc::Matter *linked_{nullptr};
+  std::uint64_t last_gen_{0};
+  bool shared_positions_{false};
+  bool cell_synced_{false};
+  const double *last_R_{nullptr};
+  const double *last_box_{nullptr};
 
   void ensure_modules() {
     if (modules_ready_)
@@ -50,25 +77,24 @@ class AseCalcPotential final : public eonc::Potential {
     props_ = nb::list();
     props_.attr("append")("energy");
     props_.attr("append")("forces");
+    changes_positions_ = nb::list();
+    changes_positions_.attr("append")("positions");
+    changes_cell_ = nb::list();
+    changes_cell_.attr("append")("cell");
+    changes_pos_cell_ = nb::list();
+    changes_pos_cell_.attr("append")("positions");
+    changes_pos_cell_.attr("append")("cell");
+    changes_empty_ = nb::list();
     modules_ready_ = true;
   }
 
-  /// NumPy view of external C++ buffer (no copy; valid only for this force()).
   static nb::object view_f64(const double *data, size_t d0, size_t d1) {
-    // ndarray without capsule owner → view; caller must not outlive data.
     nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu> arr(
         const_cast<double *>(data), {d0, d1});
     return nb::cast(arr, nb::rv_policy::reference);
   }
 
-  static nb::object view_i32(const int *data, size_t n) {
-    static_assert(sizeof(int) == 4, "AseCalcPotential Z view assumes 32-bit int");
-    nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu> arr(
-        const_cast<int32_t *>(reinterpret_cast<const int32_t *>(data)), {n});
-    return nb::cast(arr, nb::rv_policy::reference);
-  }
-
-  void ensure_atoms(long nAtoms, const int *atomicNrs) {
+  void ensure_atoms(long nAtoms, const int *atomicNrs, bool pbc) {
     const size_t n = static_cast<size_t>(nAtoms);
     const bool size_changed = (n_cached_ != nAtoms);
     bool z_changed = size_changed;
@@ -80,14 +106,13 @@ class AseCalcPotential final : public eonc::Potential {
 
     z_cache_.assign(atomicNrs, atomicNrs + n);
     n_cached_ = nAtoms;
+    shared_positions_ = false;
+    cell_synced_ = false;
+    last_gen_ = 0;
 
-    // Numbers: view into z_cache_ (stable for lifetime of this Potential call
-    // sequence; reallocated only on composition change).
     nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu> z_arr(
         z_cache_.data(), {n});
     nb::object numbers = nb::cast(z_arr, nb::rv_policy::reference);
-
-    // Placeholder geometry; force() overwrites via zero-copy views each call.
     nb::object zeros = np_.attr("zeros");
     nb::object positions =
         zeros(nb::make_tuple(nAtoms, 3), nb::arg("dtype") = "float64");
@@ -96,24 +121,44 @@ class AseCalcPotential final : public eonc::Potential {
     nb::object Atoms = nb::module_::import_("ase").attr("Atoms");
     atoms_ =
         Atoms(nb::arg("numbers") = numbers, nb::arg("positions") = positions,
-              nb::arg("cell") = cell, nb::arg("pbc") = true);
+              nb::arg("cell") = cell, nb::arg("pbc") = pbc);
     atoms_.attr("calc") = calc_;
+  }
+
+  /// Point ASE positions array at Matter storage (zero-copy when ASE allows).
+  bool try_share_positions(eonc::Matter &m) {
+    try {
+      nb::object pos_view =
+          view_f64(m.positionsData(), static_cast<size_t>(m.numberOfAtoms()),
+                   size_t{3});
+      // Direct arrays dict install — np.asarray on a view does not copy.
+      atoms_.attr("arrays").attr("__setitem__")("positions", pos_view);
+      // Sanity: must still look like (n,3)
+      nb::object p = atoms_.attr("positions");
+      auto sh = nb::cast<nb::tuple>(p.attr("shape"));
+      if (nb::len(sh) != 2 || nb::cast<long>(sh[0]) != m.numberOfAtoms()) {
+        shared_positions_ = false;
+        return false;
+      }
+      shared_positions_ = true;
+      return true;
+    } catch (...) {
+      shared_positions_ = false;
+      return false;
+    }
   }
 
   static void copy_forces_out(nb::object forces_obj, long nAtoms, double *F) {
     const size_t n3 = static_cast<size_t>(nAtoms) * 3u;
-    // Prefer a direct buffer view of the calculator result (no Python loop).
     try {
       auto farr =
           nb::cast<nb::ndarray<nb::numpy, double, nb::device::cpu>>(forces_obj);
       if (farr.ndim() == 2 &&
           static_cast<long>(farr.shape(0)) == nAtoms && farr.shape(1) == 3) {
-        // C-contiguous (n,3): stride0==3, stride1==1 in elements
         if (farr.stride(0) == 3 && farr.stride(1) == 1) {
           std::memcpy(F, farr.data(), n3 * sizeof(double));
           return;
         }
-        // Generic strided read (still bulk C++, no Python scalars)
         const double *base = farr.data();
         const auto s0 = static_cast<size_t>(farr.stride(0));
         const auto s1 = static_cast<size_t>(farr.stride(1));
@@ -124,7 +169,6 @@ class AseCalcPotential final : public eonc::Potential {
         return;
       }
     } catch (const nb::cast_error &) {
-      // fall through to ascontiguousarray
     }
     auto np = nb::module_::import_("numpy");
     nb::object cont = np.attr("ascontiguousarray")(
@@ -140,6 +184,19 @@ class AseCalcPotential final : public eonc::Potential {
     std::memcpy(F, farr.data(), n3 * sizeof(double));
   }
 
+  nb::object pick_system_changes(bool pos_changed, bool cell_changed,
+                                 bool first) {
+    if (first)
+      return all_changes_;
+    if (pos_changed && cell_changed)
+      return changes_pos_cell_;
+    if (pos_changed)
+      return changes_positions_;
+    if (cell_changed)
+      return changes_cell_;
+    return changes_empty_;
+  }
+
 public:
   explicit AseCalcPotential(nb::object calc)
       : eonc::Potential(eonc::PotType::ASE_POT), calc_(std::move(calc)) {
@@ -149,6 +206,41 @@ public:
     }
   }
 
+  /// Attach this calculator to a Matter for shared geometry + gen cache.
+  /// Call after Matter is resized and Z/cell filled (from_ase does this).
+  void bind_matter(eonc::Matter &m) {
+    nb::gil_scoped_acquire gil;
+    ensure_modules();
+    linked_ = &m;
+    const long n = m.numberOfAtoms();
+    if (n <= 0) {
+      return;
+    }
+    ensure_atoms(n, m.atomicNrsData(), m.getPeriodic());
+    // Sync cell once from Matter
+    nb::object cell_view =
+        view_f64(m.cellData(), size_t{3}, size_t{3});
+    atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+    cell_synced_ = true;
+    try_share_positions(m);
+    if (!shared_positions_) {
+      nb::object pos_view =
+          view_f64(m.positionsData(), static_cast<size_t>(n), size_t{3});
+      atoms_.attr("set_positions")(pos_view);
+    }
+    last_gen_ = m.geometryGeneration();
+    last_R_ = m.positionsData();
+    last_box_ = m.cellData();
+  }
+
+  void unbind_matter() {
+    linked_ = nullptr;
+    shared_positions_ = false;
+    last_gen_ = 0;
+  }
+
+  [[nodiscard]] bool is_bound() const noexcept { return linked_ != nullptr; }
+
   void force(long nAtoms, const double *R, const int *atomicNrs, double *F,
              double *U, double * /*variance*/, const double *box) override {
     if (nAtoms <= 0) {
@@ -156,32 +248,69 @@ public:
       return;
     }
     if (!R || !atomicNrs || !F || !U || !box) {
-      throw std::invalid_argument("make_potential_from_ase force: null buffer");
+      throw std::invalid_argument("ase_potential force: null buffer");
     }
     nb::gil_scoped_acquire gil;
     try {
       ensure_modules();
-      ensure_atoms(nAtoms, atomicNrs);
+      const bool pbc =
+          linked_ ? linked_->getPeriodic() : true;
+      ensure_atoms(nAtoms, atomicNrs, pbc);
 
-      // Zero-copy views of caller-owned buffers (valid for this call only).
-      nb::object pos_view =
-          view_f64(R, static_cast<size_t>(nAtoms), size_t{3});
-      nb::object cell_view = view_f64(box, size_t{3}, size_t{3});
+      const bool from_linked =
+          linked_ && nAtoms == linked_->numberOfAtoms() &&
+          R == linked_->positionsData() && box == linked_->cellData();
 
-      // Bulk assign into ASE arrays (one C-level memcpy each via NumPy, not
-      // per-atom Python). Views above avoid building list/asarray trees.
-      atoms_.attr("set_positions")(pos_view);
-      atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+      bool first = (last_R_ == nullptr);
+      bool pos_changed = true;
+      bool cell_changed = true;
 
-      // Single calculator evaluation for energy + forces.
+      if (from_linked) {
+        const auto gen = linked_->geometryGeneration();
+        pos_changed = (gen != last_gen_) || (R != last_R_);
+        cell_changed = (box != last_box_) || (gen != last_gen_);
+        // Re-share if resize rebuilt Atoms
+        if (!shared_positions_) {
+          try_share_positions(*linked_);
+        }
+        if (shared_positions_) {
+          // Matter buffers are ASE positions — no set_positions.
+          pos_changed = (gen != last_gen_);
+        } else if (pos_changed) {
+          nb::object pos_view =
+              view_f64(R, static_cast<size_t>(nAtoms), size_t{3});
+          atoms_.attr("set_positions")(pos_view);
+        }
+        if (cell_changed || !cell_synced_) {
+          nb::object cell_view = view_f64(box, size_t{3}, size_t{3});
+          atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+          cell_synced_ = true;
+        }
+        last_gen_ = gen;
+      } else {
+        // Foreign buffers (Potential.get_ef path)
+        nb::object pos_view =
+            view_f64(R, static_cast<size_t>(nAtoms), size_t{3});
+        nb::object cell_view = view_f64(box, size_t{3}, size_t{3});
+        atoms_.attr("set_positions")(pos_view);
+        atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+        shared_positions_ = false;
+        first = true; // force full system_changes when buffers unknown
+      }
+
+      last_R_ = R;
+      last_box_ = box;
+
+      nb::object sys_changes =
+          pick_system_changes(pos_changed, cell_changed, first);
+
       nb::object forces_obj;
       try {
-        calc_.attr("calculate")(atoms_, props_, all_changes_);
+        calc_.attr("calculate")(atoms_, props_, sys_changes);
         nb::object results = calc_.attr("results");
         *U = nb::cast<double>(results["energy"]);
         forces_obj = results["forces"];
       } catch (const nb::python_error &) {
-        // Fallback for calculators without calculate()/results.
         *U = nb::cast<double>(atoms_.attr("get_potential_energy")());
         forces_obj = atoms_.attr("get_forces")();
       }
@@ -198,6 +327,15 @@ public:
   [[nodiscard]] bool needsPerImageInstance() const noexcept override {
     return false;
   }
+};
+
+// Type-erased holder so Python can call bind_matter on ASE pots only.
+struct AsePotentialHandle {
+  std::shared_ptr<AseCalcPotential> pot;
+  void bind_matter(eonc::Matter &m) { pot->bind_matter(m); }
+  void unbind_matter() { pot->unbind_matter(); }
+  [[nodiscard]] bool is_bound() const { return pot && pot->is_bound(); }
+  std::shared_ptr<eonc::Potential> as_potential() const { return pot; }
 };
 
 } // namespace
@@ -228,7 +366,6 @@ void bind_potential(nb::module_ &m) {
             if (box.ndim() != 2 || box.shape(0) != 3 || box.shape(1) != 3)
               throw std::invalid_argument("box must be (3,3)");
             const auto n = static_cast<Eigen::Index>(pos.shape(0));
-            // Map Python buffers without intermediate heap AtomMatrix for R/cell.
             AtomMatrix R = AtomMatrix::Map(
                 const_cast<double *>(pos.data()), n, 3);
             Matrix3d cell = Matrix3d::Map(const_cast<double *>(box.data()));
@@ -236,7 +373,6 @@ void bind_potential(nb::module_ &m) {
             for (Eigen::Index i = 0; i < n; ++i)
               atmnrs(i) = static_cast<int>(z.data()[i]);
             auto [energy, forces] = self.get_ef(R, atmnrs, cell);
-            // return (energy, forces ndarray) — owned copy (force is temp)
             const size_t rows = static_cast<size_t>(forces.rows());
             const size_t cols = 3;
             double *buf = new double[rows * cols];
@@ -254,6 +390,18 @@ void bind_potential(nb::module_ &m) {
         return "<Potential " +
                std::string(magic_enum::enum_name(self.getType())) + ">";
       });
+
+  nb::class_<AsePotentialHandle>(m, "AsePotential",
+                                 "ASE Calculator bound as eOn Potential. "
+                                 "Use bind_matter(m) so MD/relax hit shared "
+                                 "geometry + system_changes caching.")
+      .def("bind_matter", &AsePotentialHandle::bind_matter, nb::arg("matter"),
+           nb::keep_alive<1, 2>(),
+           "Wire ASE peer Atoms to this Matter (shared positions when possible)")
+      .def("unbind_matter", &AsePotentialHandle::unbind_matter)
+      .def_prop_ro("is_bound", &AsePotentialHandle::is_bound)
+      .def_prop_ro("potential", &AsePotentialHandle::as_potential,
+                   "Underlying Potential for Matter(pot, params)");
 
   m.def(
       "make_potential",
@@ -297,14 +445,49 @@ void bind_potential(nb::module_ &m) {
       nb::arg("parameters"),
       "Construct a Potential from Parameters.potential");
 
-  // Seamless ASE Calculator → Potential (runtime ASE import; no -Dwith_ase).
+  // ASE Calculator → Potential (runtime ASE; no -Dwith_ase compile flag).
   m.def(
       "make_potential_from_ase",
       [](nb::object calculator) -> std::shared_ptr<eonc::Potential> {
         return std::make_shared<AseCalcPotential>(std::move(calculator));
       },
       nb::arg("calculator"),
-      "Wrap a live ASE Calculator as eOn Potential (no ASE_POT script path).");
+      "Wrap ASE Calculator as Potential. Prefer ase_potential() + bind_matter.");
+
+  m.def(
+      "ase_potential",
+      [](nb::object calculator) -> AsePotentialHandle {
+        AsePotentialHandle h;
+        h.pot = std::make_shared<AseCalcPotential>(std::move(calculator));
+        return h;
+      },
+      nb::arg("calculator"),
+      "ASE Calculator as first-class pyeonclient potential. "
+      "m = Matter(handle.potential, params); handle.bind_matter(m).");
+
+  m.def(
+      "attach_ase_calculator",
+      [](eonc::Matter &matter, nb::object calculator) {
+        auto pot = std::make_shared<AseCalcPotential>(std::move(calculator));
+        pot->bind_matter(matter);
+        matter.setPotential(pot);
+      },
+      nb::arg("matter"), nb::arg("calculator"),
+      "Set Matter's potential to ASE calc and bind shared geometry.");
+
+  m.def(
+      "bind_ase_matter",
+      [](std::shared_ptr<eonc::Potential> pot, eonc::Matter &matter) -> bool {
+        auto *ase = dynamic_cast<AseCalcPotential *>(pot.get());
+        if (!ase) {
+          return false;
+        }
+        ase->bind_matter(matter);
+        return true;
+      },
+      nb::arg("potential"), nb::arg("matter"),
+      "If potential is an ASE wrap, bind it to Matter for shared geometry. "
+      "Returns True if bound.");
 }
 
 } // namespace eonc::pybind

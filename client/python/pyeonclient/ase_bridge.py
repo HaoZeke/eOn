@@ -1,22 +1,40 @@
-"""ASE ↔ Matter / Structure / readcon helpers (optional ASE dependency).
+"""ASE calculators as Matter potentials (tight pyeonclient integration).
 
-Hot path is C++ nanobind (``matter_from_ase`` / ``matter_to_ase`` /
-``make_potential_from_ase``): bulk ndarray buffers, zero-copy Matter views.
+Design
+------
+eOn ``Matter`` owns geometry. An ASE ``Calculator`` is the force engine via
+``AsePotential`` / ``attach_ase_calculator`` / ``from_ase``. MD, relax, NEB,
+and dimer then call ASE **through** ``Matter.potential_energy`` / forces —
+you do not drive a parallel ``ase.Atoms`` world.
 
-Seamless calculator path::
+Efficiency (C++ ``AseCalcPotential``)
+-------------------------------------
+* One peer ``ase.Atoms`` per calculator (not rebuilt each force call).
+* ``bind_matter(m)`` wires shared positions when ASE allows and uses
+  ``Matter.geometry_generation`` for ASE ``system_changes`` (only
+  ``positions`` / ``cell`` when possible, not full ``all_changes``).
+* Foreign buffers (``Potential.get_ef``) still use bulk NumPy views.
+
+Preferred usage::
 
     import pyeonclient as pyec
     from ase.calculators.emt import EMT
 
+    # 1) From ASE structure + calc (binds automatically)
     atoms.calc = EMT()
-    matter = pyec.from_ase(atoms)              # C++ bulk fill + ASE pot wrap
-    # or
-    pot = pyec.potential_from_ase(atoms.calc)
-    matter = pyec.from_ase(atoms, pot, params)
+    m = pyec.from_ase(atoms)
+    m.relax()                       # ASE forces under the hood
 
-    # Zero-copy geometry views into Matter (mutate + mark_geometry_dirty)
-    matter.positions[:] = atoms.get_positions()
-    matter.mark_geometry_dirty()
+    # 2) Explicit Matter-first
+    handle = pyec.ase_potential(EMT())
+    m = pyec.Matter(handle.potential, pyec.Parameters())
+    m.resize(n)
+    m.positions = ...
+    handle.bind_matter(m)
+    e = m.potential_energy
+
+    # 3) Attach calc to existing Matter
+    pyec.attach_ase_calculator(m, EMT())
 """
 
 from __future__ import annotations
@@ -42,17 +60,39 @@ def _require_ase():
     return ase, Atoms, FixAtoms
 
 
+def ase_potential(calculator: Any) -> Any:
+    """Wrap an ASE Calculator as a first-class pyeonclient potential handle.
+
+    Returns an ``AsePotential`` with ``.potential`` (for ``Matter``) and
+    ``.bind_matter(m)`` for shared geometry + system_changes caching.
+    """
+    if calculator is None:
+        raise ValueError("ase_potential: calculator is None")
+    from pyeonclient._core import ase_potential as _ase_potential
+
+    return _ase_potential(calculator)
+
+
 def potential_from_ase(calculator: Any, parameters: Any = None) -> Any:
     """Wrap a live ASE Calculator as an eOn :class:`Potential`.
 
-    Does **not** require a file-based ASE_POT script or ``-Dwith_ase``.
-    Holds a reference to ``calculator``; not thread-safe across images.
+    Prefer :func:`ase_potential` + ``bind_matter`` for Matter workflows.
+    Does **not** require ``-Dwith_ase`` at compile time.
     """
     if calculator is None:
         raise ValueError("potential_from_ase: calculator is None")
     from pyeonclient._core import make_potential_from_ase
 
     return make_potential_from_ase(calculator)
+
+
+def attach_ase_calculator(matter: Any, calculator: Any) -> None:
+    """Set ``matter``'s potential to ``calculator`` and bind shared geometry."""
+    if calculator is None:
+        raise ValueError("attach_ase_calculator: calculator is None")
+    from pyeonclient._core import attach_ase_calculator as _attach
+
+    _attach(matter, calculator)
 
 
 def matter_to_ase(matter: Any, *, pbc: Optional[bool] = None) -> "AseAtoms":
@@ -68,14 +108,14 @@ def ase_to_matter(
     potential: Any = None,
     parameters: Any = None,
 ) -> Any:
-    """Build :class:`pyeonclient.Matter` from ``ase.Atoms`` (C++ bulk path).
+    """Build :class:`pyeonclient.Matter` from ``ase.Atoms``.
 
-    If ``potential`` is omitted, uses ``atoms.calc`` via
-    :func:`potential_from_ase`. If ``parameters`` is omitted, a default
-    :class:`Parameters` is created.
+    If ``potential`` is omitted, uses ``atoms.calc``. After construction the
+    ASE pot is **bound** to the Matter so subsequent force calls use shared
+    geometry + system_changes caching.
     """
     from pyeonclient import Parameters
-    from pyeonclient._core import matter_from_ase
+    from pyeonclient._core import bind_ase_matter, matter_from_ase
 
     _require_ase()
 
@@ -90,7 +130,9 @@ def ase_to_matter(
             )
         potential = potential_from_ase(calc, parameters)
 
-    return matter_from_ase(atoms, potential, parameters)
+    matter = matter_from_ase(atoms, potential, parameters)
+    bind_ase_matter(potential, matter)
+    return matter
 
 
 def structure_to_ase(structure: Any, *, pbc: bool = True) -> "AseAtoms":

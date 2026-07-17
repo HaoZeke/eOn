@@ -140,6 +140,7 @@ void Matter::resize(const long int length) {
   recomputePotential = true;
   recomputeMaskedForces = true;
   recomputeFreeMask = true;
+  ++geometryGeneration_;
 }
 
 long int Matter::numberOfAtoms() const { return (nAtoms); }
@@ -149,6 +150,9 @@ Matrix3d Matter::getCell() const { return cell; }
 void Matter::setCell(const Matrix3d &newCell) {
   cell = newCell;
   cellInverse = cell.inverse();
+  ++geometryGeneration_;
+  recomputePotential = true;
+  recomputeMaskedForces = true;
 }
 
 double Matter::getPosition(long int indexAtom, int axis) const {
@@ -162,6 +166,7 @@ void Matter::setPosition(long int indexAtom, int axis, double position) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
+  ++geometryGeneration_;
 }
 
 void Matter::setVelocity(long int indexAtom, int axis, double vel) {
@@ -208,6 +213,7 @@ void Matter::setPositions(const AtomMatrix &pos) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
+  ++geometryGeneration_;
 }
 
 void Matter::assignPositions(const double *xyz_n3) {
@@ -298,6 +304,7 @@ void Matter::setPositionsFree(const AtomMatrix &pos) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
+  ++geometryGeneration_;
 }
 
 void Matter::setPositionsFreeV(const VectorXd &pos) {
@@ -397,6 +404,7 @@ void Matter::setAtomicNr(long int indexAtom, long atomicNr) {
   atomicNrs[indexAtom] = atomicNr;
   recomputePotential = true;
   recomputeMaskedForces = true;
+  ++geometryGeneration_;
 }
 
 int Matter::getFixed(long int indexAtom) const { return (isFixed[indexAtom]); }

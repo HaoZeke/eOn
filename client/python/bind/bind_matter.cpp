@@ -54,6 +54,8 @@ void bind_matter(nb::module_ &m) {
           "Cartesian positions (n,3) float64 — zero-copy view of C++ storage")
       .def("mark_geometry_dirty", &Matter::markGeometryDirty,
            "After in-place mutation of positions/cell views, force recompute")
+      .def_prop_ro("geometry_generation", &Matter::geometryGeneration,
+                   "Monotonic gen for ASE system_changes cache")
       .def_prop_ro(
           "positions_free",
           [](const Matter &self) {
