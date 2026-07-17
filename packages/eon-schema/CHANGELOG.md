@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-07-17
+
 ### Added
 
 - `NebSpec` covers CI / energy-weighted springs / OCI-MMF / optimizer knobs and

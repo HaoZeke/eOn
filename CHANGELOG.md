@@ -2,6 +2,53 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.0](https://github.com/TheochemUI/eOn/tree/2.17.0) - 2026-07-17
+
+### Added
+
+- Add ``eon_schema.config`` INI helpers (``write_ini``, ``hydrate_ini``,
+  ``unknown_ini_keys``, ``write_models_ini``) so tooling can author validated
+  ``config.ini`` from L0/L1 without importing eon-akmc. ([#eon-schema-ini](https://github.com/TheochemUI/eOn/issues/eon-schema-ini))
+- Parameter field graph for Main, Potential, Optimizer, Structure Comparison, and Process Search is authored in ``schema/eon_params.capnp`` (Cap'n Proto L0 SSoT) with INI/JSON adapters; parity tests gate ``config.yaml`` / ``eon.schema`` against the catalog. ([#params-ssot](https://github.com/TheochemUI/eOn/issues/params-ssot))
+- Public step composition for Matter-first NEB/min: ``write_neb_results``,
+  ``pot_registry_total_force_calls`` at package root; ``NEB.find_extrema``;
+  GIL release on ``forces_free`` / ``max_force``. NebSpec covers EW/CI/OCI-MMF. ([#pyeonclient-step-compose](https://github.com/TheochemUI/eOn/issues/pyeonclient-step-compose))
+- Add packages/eon-schema (PyPI eon-schema): vendored Cap'n Proto SSoT copy, optional pydantic API models; full-tree/conda-forge eon path unchanged. ([#eon-schema-0.1](https://github.com/TheochemUI/eOn/issues/eon-schema-0.1))
+- Add pyeonclient nanobind module (Matter/Parameters/Potential); stable ABI abi3 on CPython 3.12+, free-threaded when Py_GIL_DISABLED; no pybind11. ([#372](https://github.com/TheochemUI/eOn/issues/372))
+- pyeonclient Matter end-to-end: LocalInProcess communicator (comm_type local_lib/inprocess); NbGuard without pybind11; ASE embed polarity documented. ([#373](https://github.com/TheochemUI/eOn/issues/373))
+- Expand pyeonclient: full enums, Job/make_job/run_job_in_directory, Potential.get_ef, ASE to_ase/from_ase and Structure helpers. ([#374](https://github.com/TheochemUI/eOn/issues/374))
+- Standalone PyPI package pyeonclient (pyproject-pyeonclient.toml): abi3 + cp313t + cp314t wheels via pyeonclient-wheels.yml. ([#375](https://github.com/TheochemUI/eOn/issues/375))
+- RGPOT backend ``metatomic`` loads ``libmetatomic_engine.so`` (thin host path).
+  Native ``potential = Metatomic`` is unchanged for conda-forge packaging. ([#377](https://github.com/TheochemUI/eOn/issues/377))
+- Document fat vs RGPOT-dlopen vs ASE metatomic backends; benchmark figure is
+  generated from committed JSON at ``sphinx-build`` time (not checked in).
+- Add ``pixi`` environment ``mta-bench`` and ``mta-backend-bench`` task to
+  reproducibly build fat/ASE pyeonclient, refresh the metatomic backend compare
+  JSON, and regenerate the docs figure.
+
+### Developer
+
+- Multi-flag Codecov coverage for Python, C++, and Fortran (OIDC uploads). ([#367](https://github.com/TheochemUI/eOn/issues/367))
+- CPython server entry points fixed (`eon-server` → `eon.server:main`); vectorized atoms neighbor/free-atom hot paths. ([#368](https://github.com/TheochemUI/eOn/issues/368))
+
+### Changed
+
+- Move full job-config pydantic models into ``eon-schema`` (``eon_schema.config``).
+  ``eon.schema`` and ``pyeonclient.models`` re-export the shared package so both
+  eon-akmc and pyeonclient share one schema surface. ([#eon-schema-l1](https://github.com/TheochemUI/eOn/issues/eon-schema-l1))
+- Structure is readcon-backed (ConFrame bridge); geometry PBC/NL via vesin; process-atom selection uses vesin shells. Retires aselite-era atoms container as storage source of truth. ([#371](https://github.com/TheochemUI/eOn/issues/371))
+
+### Fixed
+
+- Release the GIL around Matter energy/force accessors and NEB construction,
+  ``update_forces``, and per-image energy reads so metatomic/torch autograd can
+  run from C++ without deadlocking. Optional ``torch/cuda.h`` and ``torch/mps.h``
+  includes (``__has_include``) so CPU-only pip torch builds compile without
+  CUDA/MPS headers. ([#gil-torch-autograd](https://github.com/TheochemUI/eOn/issues/gil-torch-autograd))
+- get_process_atoms returns plain Python ints so recycling metadata repr/eval round-trips (no np.int64). ([#369](https://github.com/TheochemUI/eOn/issues/369))
+- Standalone pyeonclient wheels omit eon server package and eonclient binary (install_eon_server=false). ([#376](https://github.com/TheochemUI/eOn/issues/376))
+
+
 ## [2.16.0](https://github.com/TheochemUI/eOn/tree/2.16.0) - 2026-07-03
 
 ### Added

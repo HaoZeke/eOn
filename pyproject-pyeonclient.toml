@@ -1,6 +1,6 @@
 [project]
 name = "pyeonclient"
-version = "0.3.0"
+version = "0.3.2"
 description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs, NEB, RGPOT)"
 authors = [
     {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
@@ -33,7 +33,7 @@ keywords = ["eOn", "AKMC", "nanobind", "Matter", "metatomic", "NEB", "rgpot"]
 ase = ["ase>=3.22"]
 # Typed DimerSpec / NebSpec (Pydantic v2). Core Dimer/NEB work without it;
 # C++ still enforces accelerant=gp ⇒ method=improved.
-models = ["eon-schema>=0.2.0"]
+models = ["eon-schema>=0.2.1"]
 # models-pydantic = ["pydantic>=2.0"]
 # Metatomic stack from PyPI (install torch first or let pip resolve).
 # Does NOT inject WITH_METATOMIC into a prebuilt wheel; use the metatomic

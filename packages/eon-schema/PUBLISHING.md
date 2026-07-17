@@ -91,10 +91,12 @@ Optional monorepo tag for archaeology only: `eon-schema-v0.2.0`
 
 ### PyPI project setup (first time)
 
-1. Create project **`eon-schema`** on pypi.org (2FA).
-2. Preferred: Trusted Publisher for GitHub `TheochemUI/eOn` (or your release
-   fork), dedicated workflow or `workflow_dispatch` for this package.
+1. Create project **`eon-schema`** on pypi.org (2FA) if missing.
+2. **OIDC (preferred):** Trusted Publisher → owner `TheochemUI`, repo `eOn`,
+   workflow `eon-schema-publish.yml`, environment `pypi-eon-schema`
+   (see monorepo docs `docs/source/devdocs/pypi-oidc.md`).
 3. Fallback: project-scoped API token → `TWINE_USERNAME=__token__`.
+4. Tag: `git tag -s eon-schema-v0.2.1 -m "eon-schema 0.2.1"` then push the tag.
 
 ## Split: other PyPI projects (same monorepo)
 

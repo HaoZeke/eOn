@@ -50,9 +50,11 @@ Probes::
 ## Release
 
 1. Bump `version` in `pyproject-pyeonclient.toml` and
-   `client/python/bind/module.cpp` `__version__` (lockstep).
-2. Tag: `git tag -s pyeonclient-v0.3.0 -m "pyeonclient 0.3.0"`
-3. Push tag → workflow builds and publishes via Trusted Publishing.
+   `client/python/bind/module.cpp` `__version__` (lockstep). Pin
+   `pyeonclient[models]` → `eon-schema` floor if schema public API changed.
+2. Tag: `git tag -s pyeonclient-v0.3.2 -m "pyeonclient 0.3.2"`
+3. Push tag → `pyeonclient-wheels.yml` builds and publishes via OIDC
+   (environment `pypi-pyeonclient`). See {doc}`pypi-oidc`.
 
 ## Cookbook / RGPOT metatomic
 
