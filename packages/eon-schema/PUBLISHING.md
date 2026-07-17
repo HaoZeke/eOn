@@ -11,7 +11,7 @@ Layout cleanup (where Cap’n Proto lives, package paths, etc.) is allowed.
 The release contract is: **one complete fat archive for the conda recipe**,
 even when you also publish split PyPI packages from the same monorepo.
 
-conda-forge does **not** need a separate `eon-schema` feedstock for 0.1.x:
+conda-forge does **not** need a separate `eon-schema` feedstock for 0.2.x:
 the fat tarball already contains whatever the monorepo needs to build `eon`.
 
 ## Fat tarball (conda-forge / full eOn cut)
@@ -74,8 +74,8 @@ python tools/params_ssot/codegen.py
 cd packages/eon-schema
 python -m build
 twine check dist/*
-python -m pip install dist/eon_schema-*.whl 'pydantic>=2'
-python -c "from eon_schema.ssot import capnp_path; from eon_schema.api import DimerSpec; print(capnp_path()); print(DimerSpec())"
+python -m pip install dist/eon_schema-*.whl
+python -c "from eon_schema.ssot import capnp_path; from eon_schema.config import MainConfig, write_ini; from eon_schema.api import DimerSpec; print(capnp_path(), MainConfig().job, DimerSpec())"
 ```
 
 ### Upload
@@ -85,7 +85,7 @@ twine upload dist/*
 # or Trusted Publishing / uv publish
 ```
 
-Optional monorepo tag for archaeology only: `eon-schema-v0.1.0`  
+Optional monorepo tag for archaeology only: `eon-schema-v0.2.0`  
 (do **not** use this tag as the feedstock source — feedstock wants the **fat**
 `eon-v*` archive).
 
@@ -101,8 +101,8 @@ Optional monorepo tag for archaeology only: `eon-schema-v0.1.0`
 | Project | How it is cut | Notes |
 |---------|----------------|-------|
 | `eon-akmc` | Full-tree tag + meson-python / release.yml | Import `eon`; **not** name `eon` on PyPI |
-| `pyeonclient` | `pyproject-pyeonclient.toml` + wheel CI | Optional `[models]` → `eon-schema[pydantic]` |
-| `eon-schema` | This directory | Zero hard deps; optional pydantic |
+| `pyeonclient` | `pyproject-pyeonclient.toml` + wheel CI | Optional `[models]` → `eon-schema>=0.2` |
+| `eon-schema` | This directory | Hard deps: pydantic≥2; L0+L1+L2 + INI helpers |
 
 ## Checklist: full eOn release (fat + optional splits)
 

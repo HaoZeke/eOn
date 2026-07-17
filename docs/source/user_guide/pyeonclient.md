@@ -49,6 +49,12 @@ pip install 'pyeonclient[ase]'
 pip install 'rgpot>=2.4.2'   # multi-ABI engines for Metatomic via RGPOT
 ```
 
+Typed Dimer/NEB specs come from the shared **[eon-schema](project:../devdocs/eon-schema.md)**
+package (`pip install 'pyeonclient[models]'` → `eon-schema>=0.2`). Job-config
+pydantic models used in docs live there too (`eon.schema` is a re-export for
+eon-akmc).
+
+
 
 ## Metatomic force backends
 

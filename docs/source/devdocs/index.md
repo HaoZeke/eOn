@@ -32,6 +32,7 @@ design/client
 :caption: pyeonclient packaging
 
 pyeonclient
+eon-schema
 pyeonclient-pypi
 ```
 
