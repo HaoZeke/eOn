@@ -673,56 +673,67 @@ if get_option('with_metatomic')
     )
 
     if get_option('pip_metatomic')
-        torch_ver = get_option('torch_version')
-        # metatensor-torch >=0.10 installs as top-level metatensor_torch/;
-        # older wheels used metatensor/torch/torch-X.Y/. Probe both layouts.
-        _mts_torch_lib_new = py.get_install_dir() / 'metatensor_torch' / f'torch-@torch_ver@' / 'lib'
-        _mts_torch_lib_old = py.get_install_dir() / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'lib'
-        _mts_torch_inc_new = py.get_install_dir() / 'metatensor_torch' / f'torch-@torch_ver@' / 'include'
-        _mts_torch_inc_old = py.get_install_dir() / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'include'
+        # Resolve site-packages + torch major.minor from the *build* interpreter
+        # (py.get_install_dir() misses platlib in manylinux/no-isolation; default
+        # torch_version option often lags the installed torch).
+        _pip_mts = run_command(
+            py,
+            '-c',
+            '''
+import pathlib, torch
+site = pathlib.Path(torch.__file__).resolve().parent.parent
+tv = ".".join(torch.__version__.split(".")[:2])
+# torch_version meson option override when non-default probe fails later
+print(site)
+print(tv)
+for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
+    p = site / name
+    print(name, "ok" if p.is_dir() else "missing", p)
+''',
+            check: true,
+        )
+        _pip_mts_lines = _pip_mts.stdout().strip().split('\n')
+        _site_pkg = _pip_mts_lines[0].strip()
+        torch_ver = _pip_mts_lines[1].strip()
+        message('pip_metatomic: site-packages at', _site_pkg, 'torch_ver', torch_ver)
+        # metatensor-torch >=0.10: top-level metatensor_torch/; older: metatensor/torch/
+        _mts_torch_lib_new = _site_pkg / 'metatensor_torch' / f'torch-@torch_ver@' / 'lib'
+        _mts_torch_lib_old = _site_pkg / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'lib'
+        _mts_torch_inc_new = _site_pkg / 'metatensor_torch' / f'torch-@torch_ver@' / 'include'
+        _mts_torch_inc_old = _site_pkg / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'include'
+        _mts_core_lib = _site_pkg / 'metatensor' / 'lib'
+        _mts_core_inc = _site_pkg / 'metatensor' / 'include'
+        _mta_lib = _site_pkg / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib'
+        _mta_inc = _site_pkg / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'include'
+        _vesin_lib = _site_pkg / 'vesin' / 'lib'
+        _vesin_inc = _site_pkg / 'vesin' / 'include'
         _mts_torch_lib_dirs = [_mts_torch_lib_new, _mts_torch_lib_old]
         pip_metatomic_runtime_dirs = [
             LIB_TORCH_LIB_PATH,
-            py.get_install_dir() / 'metatensor' / 'lib',
+            _mts_core_lib,
             _mts_torch_lib_new,
             _mts_torch_lib_old,
-            py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib',
-            py.get_install_dir() / 'vesin' / 'lib',
+            _mta_lib,
+            _vesin_lib,
         ]
         if not is_windows
             _runtime_rpath += pip_metatomic_runtime_dirs
         endif
         mts_inc_args = []
-        foreach d : [
-            py.get_install_dir() / 'metatensor' / 'include',
-            _mts_torch_inc_new,
-            _mts_torch_inc_old,
-            py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'include',
-        ]
+        foreach d : [_mts_core_inc, _mts_torch_inc_new, _mts_torch_inc_old, _mta_inc]
             mts_inc_args += ['-isystem', d]
         endforeach
         mts_dep = declare_dependency(
             dependencies: [
-                cppc.find_library(
-                    'metatensor',
-                    dirs: [py.get_install_dir() / 'metatensor' / 'lib'],
-                ),
-                cppc.find_library(
-                    'metatensor_torch',
-                    dirs: _mts_torch_lib_dirs,
-                ),
-                cppc.find_library(
-                    'metatomic_torch',
-                    dirs: [
-                        py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib',
-                    ],
-                ),
+                cppc.find_library('metatensor', dirs: [_mts_core_lib]),
+                cppc.find_library('metatensor_torch', dirs: _mts_torch_lib_dirs),
+                cppc.find_library('metatomic_torch', dirs: [_mta_lib]),
             ],
             compile_args: mts_inc_args,
         )
         vesin_dep = cppc.find_library(
             'vesin',
-            dirs: [py.get_install_dir() / 'vesin' / 'lib'],
+            dirs: [_vesin_lib],
             required: false,
         )
         if vesin_dep.found()
@@ -730,11 +741,11 @@ if get_option('with_metatomic')
                 dependencies: [
                     cppc.find_library(
                         'vesin',
-                        dirs: [py.get_install_dir() / 'vesin' / 'lib'],
+                        dirs: [_vesin_lib],
                         required: false,
                     ),
                 ],
-                compile_args: ['-isystem', py.get_install_dir() / 'vesin' / 'include'],
+                compile_args: ['-isystem', _vesin_inc],
             )
         endif
     else

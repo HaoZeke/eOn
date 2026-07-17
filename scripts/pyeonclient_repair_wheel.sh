@@ -52,6 +52,23 @@ repair_one() {
   fi
   export LD_LIBRARY_PATH="$libs_dir:${search}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
+  # Pull auditwheel / mesonpy lib packs into one dir so a single $ORIGIN rpath
+  # covers hash-suffixed capnp/kj/gfortran that auditwheel already staged.
+  local pack
+  while IFS= read -r -d '' pack; do
+    [[ "$(cd "$pack" && pwd)" == "$(cd "$libs_dir" && pwd)" ]] && continue
+    local f
+    while IFS= read -r -d '' f; do
+      local base
+      base="$(basename "$f")"
+      if [[ ! -f "$libs_dir/$base" ]]; then
+        echo "consolidate: $base <- $pack"
+        cp -aL "$f" "$libs_dir/$base"
+        chmod u+w "$libs_dir/$base" 2>/dev/null || true
+      fi
+    done < <(find "$pack" -maxdepth 1 -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
+  done < <(find "$work" -type d \( -name '*.libs' -o -name '.libs' -o -name '.pyeonclient.mesonpy.libs' \) -print0)
+
   local changed=1 round=0
   while [[ $changed -eq 1 && $round -lt 30 ]]; do
     changed=0
@@ -88,7 +105,16 @@ repair_one() {
           continue
         fi
         case "$resolved" in
-          "$work"/*) continue ;;
+          "$work"/*)
+            # already inside wheel (e.g. other pack dir) — copy into libs_dir
+            if [[ ! -f "$libs_dir/$needed" ]]; then
+              echo "vendor-in-wheel: $needed <- $resolved"
+              cp -aL "$resolved" "$libs_dir/$needed"
+              chmod u+w "$libs_dir/$needed" 2>/dev/null || true
+              changed=1
+            fi
+            continue
+            ;;
         esac
         echo "vendor: $needed <- $resolved"
         cp -aL "$resolved" "$libs_dir/$(basename "$resolved")"
@@ -102,7 +128,7 @@ repair_one() {
     done < <(find "$work" -type f \( -name '*.so' -o -name '*.so.*' \) -print0 | sort -z)
   done
 
-  # Strip host RPATH/RUNPATH → $ORIGIN-relative only
+  # Strip host RPATH/RUNPATH → $ORIGIN-relative only (point everything at libs_dir)
   local so so_dir libs_abs rel new_rpath
   libs_abs="$(cd "$libs_dir" && pwd)"
   while IFS= read -r -d '' so; do
@@ -129,7 +155,7 @@ repair_one() {
   done < <(find "$work" -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
   [[ $bad -eq 0 ]] || exit 1
 
-  # Every non-system NEEDED of the extension must be vendored
+  # Every non-system NEEDED of the extension must live in $libs_dir after consolidate.
   local core
   core="$(find "$work/pyeonclient" -name '_core*.so' | head -1 || true)"
   if [[ -n "$core" ]]; then
@@ -139,6 +165,7 @@ repair_one() {
       is_system_lib "$needed" && continue
       if [[ ! -f "$libs_dir/$needed" ]]; then
         echo "ERROR: non-system NEEDED not vendored: $needed" >&2
+        ls -la "$libs_dir" | head -40 >&2 || true
         bad=1
       fi
     done < <(needed_libs "$core")
