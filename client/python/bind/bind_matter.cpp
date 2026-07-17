@@ -109,7 +109,8 @@ void bind_matter(nb::module_ &m) {
           nb::rv_policy::reference_internal)
       .def_prop_ro(
           "forces_free",
-          [](const Matter &self) {
+          [](Matter &self) {
+            nb::gil_scoped_release release;
             return matrix_to_numpy(self.getForcesFree());
           },
           nb::rv_policy::move)
@@ -208,7 +209,13 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro("kinetic_energy", &Matter::getKineticEnergy)
       .def_prop_ro("mechanical_energy", &Matter::getMechanicalEnergy)
       .def_prop_ro("energy_variance", &Matter::getEnergyVariance)
-      .def_prop_ro("max_force", &Matter::maxForce)
+      .def_prop_ro(
+          "max_force",
+          [](Matter &self) {
+            nb::gil_scoped_release release;
+            return self.maxForce();
+          },
+          "Max force norm (GIL released for metatomic/torch)")
       .def_prop_ro("force_calls", &Matter::getForceCalls)
       .def("reset_force_calls", &Matter::resetForceCalls)
       .def_prop_ro("needs_force_update", &Matter::needsForceUpdate)

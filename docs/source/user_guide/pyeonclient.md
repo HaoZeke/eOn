@@ -98,29 +98,37 @@ out = pyec.TAD(matter, params, pot).run(matter, params, pot, inplace=True)   # u
 
 ## Shared setup
 
+Matter-first (preferred for new code). One ``Parameters`` is shared with
+``make_backend`` so pot type and job knobs stay consistent:
+
 ```{code-block} python
 import numpy as np
-import pyeonclient as pyec
+from pyeonclient import Matter, Parameters
+from pyeonclient.backends import make_backend
 
-params = pyec.Parameters()
-params.potential = pyec.PotType.LJ          # or RGPOT, METATOMIC, …
+params = Parameters()
 params.opt_converged_force = 0.01
 params.opt_max_iterations = 1000
-pot = pyec.make_potential(params.potential, params)
+pot = make_backend("lj", params=params)   # or "metatomic", "ase_metatomic", …
 
-matter = pyec.Matter(pot, params)
+matter = Matter(pot, params)
 matter.resize(n)
 matter.positions = ...                    # (n, 3) float64
 matter.cell = np.eye(3) * L
 matter.atomic_numbers = ...
 matter.masses = ...
-# or: matter = pyec.from_ase(atoms, pot, params)
+# or: from pyeonclient import from_ase; matter = from_ase(atoms, pot, params)
 ```
+
+INI / PotType path (eonclient workdir parity) still works::
+
+    params = load_parameters("config.ini")
+    pot = make_potential(params.potential, params)
 
 ## Minimization
 
 ```{code-block} python
-ok = matter.relax()                       # like LBFGS(atoms).run(fmax=...)
+out, ok = matter.relax()                  # like LBFGS(atoms).run(fmax=...)
 print(ok, matter.potential_energy, matter.max_force)
 ```
 
@@ -177,26 +185,54 @@ ASE ``interpolate("idpp")`` into a pyeonclient band — the same engines live
 in ``helpers::neb_paths`` and are already what the endpoint NEB constructor
 uses.
 
+Typed knobs live on :class:`~pyeonclient.NebSpec`. Compose the same steps as a
+workdir job without a package alias:
+
 ```{code-block} python
-import pyeonclient as pyec
+from pyeonclient import (
+    NEB,
+    NebSpec,
+    Parameters,
+    PathInit,
+    append_timing,
+    from_ase,
+    pot_registry_total_force_calls,
+    steady_clock_now,
+    write_neb_results,
+    write_potcall_summary,
+)
+from pyeonclient.backends import make_backend
 
-initial = pyec.from_ase(reactant, pot, params)
-final = pyec.from_ase(product, pot, params)
+params = Parameters()
+spec = NebSpec(
+    n_images=10,
+    path_init=PathInit.idpp,
+    energy_weighted=True,
+    ci_mmf=True,
+    max_iterations=1000,
+    force_tolerance=0.01,
+)
+spec.apply_to_parameters(params)
+pot = make_backend("metatomic", model_path="pet-mad.pt", params=params)
+initial = from_ase(reactant, pot, params)
+final = from_ase(product, pot, params)
 
-# Explicit IDPP band (recommended when you want the path object first)
-params.neb_init_method = pyec.NEBInit.IDPP
-path = pyec.neb_idpp_path(initial, final, n_intermediate=10, parameters=params)
-# or dispatch: path = pyec.neb_initial_path(initial, final, 10, params)
-
-neb = pyec.NudgedElasticBand(path, params, pot)
+t0 = steady_clock_now()
+f0 = pot_registry_total_force_calls()
+neb = NEB(initial, final, params, pot, spec=spec)
 status = neb.compute()
-
-# Or endpoint constructor (init from Parameters.neb_init_method)
-params.neb_images = 10
-params.neb_init_method = pyec.NEBInit.IDPP  # LINEAR | IDPP | SIDPP | …
-neb = pyec.NudgedElasticBand(initial, final, params, pot)
-status = neb.compute()
+if status.name == "GOOD":
+    neb.find_extrema()
+write_neb_results(neb, params, pot_registry_total_force_calls() - f0)
+write_potcall_summary("_potcalls.json")
+append_timing("results.dat", t0)
 ```
+
+Explicit path object still available::
+
+    path = neb_idpp_path(initial, final, n_intermediate=10, parameters=params)
+    band = NudgedElasticBand(path, params, pot)
+    band.compute()
 
 Helpers: ``neb_linear_path``, ``neb_idpp_path``, ``neb_idpp_collective_path``,
 ``neb_sidpp_path``, ``neb_initial_path``. See {doc}`neb` for energy-weighted

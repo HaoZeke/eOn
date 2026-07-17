@@ -424,6 +424,15 @@ void bind_neb(nb::module_ &m) {
           "Explicit Matter path (not with accelerant=\"gp\").")
       .def("compute", &PyNEB::compute,
            "Optimize band (or GP-surrogate NEB when accelerant=\"gp\").")
+      .def(
+          "find_extrema",
+          [](PyNEB &self) {
+            if (!self.band)
+              throw std::runtime_error("NEB.find_extrema: call compute() first");
+            nb::gil_scoped_release release;
+            self.band->findExtrema();
+          },
+          "Locate extrema on the band after compute()")
       .def_prop_ro(
           "band",
           [](PyNEB &self) {

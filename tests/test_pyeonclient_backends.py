@@ -58,3 +58,17 @@ def test_make_backend_ase_lj():
 def test_unknown_backend_raises():
     with pytest.raises(KeyError, match="unknown backend"):
         make_backend("not-a-real-backend")
+
+
+def test_make_backend_lj_params_kwarg_sets_pottype():
+    params = pyec.Parameters()
+    pot = make_backend("lj", params=params)
+    assert params.potential == pyec.PotType.LJ
+    assert pot is not None
+    e, f = pot.get_ef(
+        np.array([[0.0, 0.0, 0.0], [1.3, 0.0, 0.0]]),
+        np.array([1, 1], dtype=np.int64),
+        np.eye(3) * 12.0,
+    )
+    assert np.isfinite(e)
+    assert f.shape == (2, 3)

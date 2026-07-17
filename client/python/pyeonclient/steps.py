@@ -1,17 +1,33 @@
 """Optional workdir composition helpers for ClientEON stages.
 
-Prefer the in-memory Matter API for new code::
+Prefer Matter-first composition for new code (no package alias required)::
 
+    from pyeonclient import Matter, NEB, NebSpec, Parameters, PathInit
+    from pyeonclient import (
+        append_timing,
+        pot_registry_total_force_calls,
+        steady_clock_now,
+        write_neb_results,
+        write_potcall_summary,
+    )
     from pyeonclient.backends import make_backend
 
-    pot = make_backend("metatomic", model_path="pet-mad.pt")
-    path = [from_ase(img, pot, params) for img in images]
-    neb = NudgedElasticBand(path, params, pot)
-    neb.compute()
+    params = Parameters()
+    NebSpec(n_images=10, path_init=PathInit.idpp, energy_weighted=True).apply_to_parameters(
+        params
+    )
+    pot = make_backend("metatomic", model_path="pet-mad.pt", params=params)
+    initial, final = Matter(pot, params), Matter(pot, params)
+    # … con2matter endpoints …
+    t0, f0 = steady_clock_now(), pot_registry_total_force_calls()
+    neb = NEB(initial, final, params, pot)
+    status = neb.compute()
+    write_neb_results(neb, params, pot_registry_total_force_calls() - f0)
+    write_potcall_summary("_potcalls.json")
+    append_timing("results.dat", t0)
 
-These helpers exist for batch jobs that already use an ``eonclient``-style
-directory (``config.ini`` + ``.con`` files). Each function is one stage of the
-standalone binary main loop.
+Workdir helpers below still load ``config.ini`` for eonclient-style batch
+dirs (``make_potential`` from PotType).
 
 Typical job path (any JobType including NEB)::
 
@@ -67,6 +83,22 @@ def load_parameters(path: str | Path = "config.ini") -> Parameters:
     p = Parameters()
     p.load(str(path))
     return p
+
+
+def write_neb_results(
+    neb: Any,
+    params: Parameters,
+    force_calls_neb: int = 0,
+) -> list[str]:
+    """Step: write NEB artifacts (``results.dat``, ``neb.con``, ``sp.con``, …).
+
+    Accepts either a chemist :class:`~pyeonclient.NEB` (uses ``.band`` after
+    ``compute()``) or a raw :class:`~pyeonclient.NudgedElasticBand`.
+    """
+    from pyeonclient._core import neb_write_results
+
+    band = getattr(neb, "band", neb)
+    return list(neb_write_results(band, params, int(force_calls_neb)))
 
 
 def run_job(params: Parameters) -> list[str]:
