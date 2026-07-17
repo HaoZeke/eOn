@@ -1,20 +1,124 @@
 ---
 myst:
   html_meta:
-    "description": "RGPOT metatomic backend: optional libmetatomic_engine.so vs fat potential = Metatomic."
+    "description": "Fat Metatomic, RGPOT dlopen engine, and ASE MetatomicCalculator backends in eOn / pyeonclient — same science, different packaging paths."
+    "keywords": "eOn metatomic, RGPOT, ASE, PET-MAD, pyeonclient backends, benchmark"
 ---
 
-# RGPOT Metatomic (optional engine)
+# Metatomic backends (fat · RGPOT · ASE)
 
-Two ways to run Metatomic models in eOn. **Both stay supported.** rgpot is not
-on conda-forge, so the fat native Metatomic path is the packaging default;
-the RGPOT engine is an optional thin-host path that loads the same science via
-`libmetatomic_engine.so`.
+Three supported ways to evaluate the same Metatomic model (for example PET-MAD)
+from eOn / [pyeonclient](project:pyeonclient.md). **All three stay supported.**
 
-| Path | Config | Torch on host `eonclient`? | Use when |
-|------|--------|----------------------------|----------|
-| **Fat / native** | `potential = Metatomic` + `[Metatomic]` | Yes (`-Dwith_metatomic`) | Default, fastest, conda-forge |
-| **RGPOT / engine** | `potential = RGPOT`, `backend = metatomic` | No on thin hosts (`with_metatomic=false`); engine `.so` holds torch | Optional plugin; same energies |
+| Path | How | Torch linked into host? | Use when |
+|------|-----|-------------------------|----------|
+| **Fat / native** | `potential = Metatomic` / `make_backend("metatomic")` | Yes (`-Dwith_metatomic`) | Default, conda-forge, lowest overhead |
+| **RGPOT / engine** | `potential = RGPOT`, `backend = metatomic` / `make_backend("rgpot_metatomic")` | No on thin hosts; torch lives in `libmetatomic_engine.so` | Optional plugin on base wheels |
+| **ASE wrap** | `metatomic_ase.MetatomicCalculator` → `make_backend("ase")` or `make_backend("ase_metatomic")` | Python `metatomic-torch` only | Cookbook / ASE workflows; same energies |
+
+rgpot is not on conda-forge, so the fat native path is the packaging default.
+The RGPOT engine is the thin-host path. ASE is the Python calculator path.
+
+## Benchmark (PET-MAD)
+
+Single-point energy and force on a 14-atom PET-MAD geometry
+(`pet-mad-s-v1.5.0.pt`, CPU). Fat and RGPOT-dlopen match to machine precision;
+ASE agrees within ~10 µeV. Fat and RGPOT are ~10× faster per call than the ASE
+wrap on this workload (the ASE path pays Python / neighbor-list setup each
+evaluation).
+
+```{figure} ../fig/metatomic_backend_bench.svg
+:alt: Bar charts of single-point wall time and energy difference for fat, RGPOT dlopen, and ASE metatomic backends
+:width: 100%
+
+pyeonclient metatomic backends on PET-MAD s v1.5 (CPU, 14 atoms). Left: wall
+time per force call. Right: energy relative to fat (µeV). Data:
+{file}`../fig/data/metatomic_backend_bench.json`. Regenerate with
+``python scripts/plot_metatomic_backend_bench.py`` after
+``scripts/compare_metatomic_backends.py --json …``.
+```
+
+| Backend | Energy (eV) | max \|F\| (eV/Å) | ms / call |
+|---------|-------------|------------------|-----------|
+| fat (`metatomic`) | −71.980186 | 37.64625 | 21.7 |
+| RGPOT dlopen | −71.980186 | 37.64625 | 22.6 |
+| ASE wrap | −71.980194 | 37.64625 | 206 |
+
+Treat timings as workload-specific (host CPU, torch build, warm vs cold
+neighbor lists). The plot is meant to show **order-of-magnitude packaging
+cost**, not a universal ranking.
+
+```{note}
+Fat C++ Metatomic and the Python ``metatomic-torch`` extension both register
+``TORCH_LIBRARY(metatomic)``. Loading both in one process aborts. Compare them
+in separate processes (the compare script does this), or use a base
+pyeonclient build (no ``-Dwith_metatomic``) when wrapping ASE calculators in
+the same interpreter as ``make_potential_from_ase``.
+```
+
+## pyeonclient key → factory
+
+```{code-block} python
+import pyeonclient as pyec
+from pyeonclient.backends import make_backend, list_backends
+
+print(list_backends())
+# ['ase', 'ase_metatomic', 'lj', 'metatomic', 'metatomic_dlopen', ...]
+
+# Fat (needs -Dwith_metatomic=true)
+pot = make_backend("metatomic", model_path="pet-mad.pt", device="cpu")
+
+# RGPOT + dlopen engine
+pot = make_backend(
+    "rgpot_metatomic",
+    model_path="pet-mad.pt",
+    engine_path="libmetatomic_engine.so",
+    device="cpu",
+)
+
+# ASE MetatomicCalculator (PET-MAD-safe load)
+pot = make_backend("ase_metatomic", model_path="pet-mad.pt", device="cpu")
+# equivalent:
+# from pyeonclient.backends import make_metatomic_ase_calculator
+# pot = make_backend("ase", calculator=make_metatomic_ase_calculator("pet-mad.pt"))
+
+m = pyec.Matter(pot, pyec.Parameters())
+```
+
+`make_backend("ase_metatomic", …)` applies a small load compatibility shim for
+exported models (including PET-MAD) where upstream
+`load_atomistic_model` re-wraps a scripted `AtomisticModel` and misses
+`_model_capabilities_outputs_names`. Prefer that helper over raw
+`MetatomicCalculator(load_atomistic_model(path))` on PET-MAD.
+
+Reproduce the numbers:
+
+```{code-block} bash
+export EON_PET_MAD_MODEL=/path/to/pet-mad-s-v1.5.0.pt
+export EON_PET_MAD_POS=/path/to/pos.con
+export RGPOT_METATOMIC_ENGINE=/path/to/libmetatomic_engine.so
+python scripts/compare_metatomic_backends.py \
+  --json docs/source/fig/data/metatomic_backend_bench.json
+python scripts/plot_metatomic_backend_bench.py
+```
+
+## INI configuration
+
+### Fat / native
+
+```{code-block} ini
+[Potential]
+potential = Metatomic
+
+[Metatomic]
+model_path = /path/to/model.pt
+device = cpu
+```
+
+Full Metatomic keys (variants, non-conservative forces, determinism) are in
+[Metatomic Interface](project:metatomic_pot.md).
+
+### RGPOT / engine
 
 ```{code-block} ini
 [Potential]
@@ -57,4 +161,4 @@ Do **not** remove native Metatomic from eOn: it is the conda-forge path.
   engine and its metatensor stack). Thin host DT_NEEDED stays free of torch.
 - The engine wraps eOn `MetatomicPotential` through the C ABI
   (`rgpot_mta_create` / `rgpot_mta_force`); energies match fat
-  `potential = Metatomic` on the same model (verified to 1e-3 eV on PET-MAD).
+  `potential = Metatomic` on the same model (verified on PET-MAD; see figure).

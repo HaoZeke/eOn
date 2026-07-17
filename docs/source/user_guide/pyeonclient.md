@@ -50,6 +50,18 @@ pip install 'rgpot>=2.4.2'   # multi-ABI engines for Metatomic via RGPOT
 ```
 
 
+## Metatomic force backends
+
+```{versionadded} 2.17
+```
+
+Named force factories live in ``pyeonclient.backends`` (``make_backend`` /
+``list_backends``). Fat Metatomic, RGPOT ``libmetatomic_engine.so``, and ASE
+``MetatomicCalculator`` all produce a pyeonclient ``Potential`` for the same
+``.pt`` model. See [Metatomic backends](project:rgpot_metatomic.md) for the
+API, packaging notes, and a PET-MAD single-point benchmark plot.
+
+
 ## Mutation policy (`inplace`)
 
 Algorithms that change geometry **do not mutate caller-owned Matter by default**.
