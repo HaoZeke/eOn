@@ -1,13 +1,13 @@
 # Standalone PyPI package: pyeonclient
 #
-# Base wheels (always): RGPOT linked, no torch NEEDED — small manylinux.
+# Base wheels (always): RGPOT linked, no torch NEEDED - small manylinux.
 # Metatomic wheels (optional matrix): WITH_METATOMIC against CPU torch from PyPI
-#   (same distribution model as torch itself — not conda-forge-gated).
+#   (same distribution model as torch itself - not conda-forge-gated).
 #
 # Publish: tag pyeonclient-v* or workflow_dispatch with publish=true
 #
 # cibuildwheel version notes:
-# - v3.2+: CPython 3.14 (incl. freethreading cp314t) is default — no enable flag.
+# - v3.2+: CPython 3.14 (incl. freethreading cp314t) is default - no enable flag.
 # - v3.x still supports experimental cp313t via enable=cpython-freethreading.
 # - v4.0 removes 3.13 freethreading; we stay on v3.2.1 for both 313t + 314t.
 name: pyeonclient wheels
@@ -81,7 +81,7 @@ jobs:
             os: ubuntu-22.04
             free_threaded: true
             cibw_build: "cp314t-manylinux_x86_64"
-            # 3.14 freethreading is default — do NOT set cpython-freethreading
+            # 3.14 freethreading is default - do NOT set cpython-freethreading
             # (and do not use cibuildwheel 2.x which lacks cp314t tags).
             cibw_enable: ""
             variant: base

@@ -1,3 +1,4 @@
+# deps for manylinux/sdist
 #!/usr/bin/env bash
 # Install native deps for pyeonclient manylinux / sdist builds (quill, capnp SHARED+PIC).
 # Cap'n Proto must be SHARED + PIC: static .a without -fPIC cannot link into libptlrpc.so.
