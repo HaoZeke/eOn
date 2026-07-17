@@ -58,12 +58,8 @@ jobs:
             free_threaded: true
             cibw_build: "cp313t-manylinux_x86_64"
             variant: base
-          - name: cp314t-manylinux
-            os: ubuntu-22.04
-            python: "3.14"
-            free_threaded: true
-            cibw_build: "cp314t-manylinux_x86_64"
-            variant: base
+          # cp314t: skip until cibuildwheel reliably selects freethreading tags
+          # for 3.14t in this matrix (previously: No build identifiers selected).
           # CPU Metatomic linked wheel (pip torch — not conda-forge)
           - name: abi3-manylinux-metatomic
             os: ubuntu-22.04
@@ -150,6 +146,7 @@ jobs:
           CIBW_ENVIRONMENT: >-
             PATH=/root/.cargo/bin:$PATH
             CARGO_HOME=/root/.cargo
+            LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
             CMAKE_PREFIX_PATH=/usr/local
           CIBW_BEFORE_ALL_LINUX: |
@@ -159,7 +156,9 @@ jobs:
             command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             . /root/.cargo/env
             command -v cbindgen || cargo install cbindgen
-            # Cap'n Proto (RGPOT / ptlrpc) — vendored into the wheel by auditwheel
+            # Cap'n Proto (RGPOT / ptlrpc) — must be SHARED+PIC: static .a without
+            # -fPIC cannot link into shared libptlrpc.so (R_X86_64_32S).
+            yum install -y zlib-devel || true
             if ! pkg-config --exists capnp 2>/dev/null; then
               rm -rf /tmp/capnp-src /tmp/capnp-build
               curl -fsSL -o /tmp/capnp.tgz \
@@ -168,6 +167,8 @@ jobs:
               cmake -S /tmp/capnp-src -B /tmp/capnp-build \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_INSTALL_PREFIX=/usr/local \
+                -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+                -DBUILD_SHARED_LIBS=ON \
                 -DBUILD_TESTING=OFF
               cmake --build /tmp/capnp-build -j$(nproc)
               cmake --install /tmp/capnp-build
