@@ -127,6 +127,36 @@ void bind_saddle(nb::module_ &m) {
           "Run saddle search on the internal working Matter (copy of input). "
           "Returns status int. Working geometry is the bound matter used at "
           "construct (a copy).")
+      .def(
+          "run_retain_frames",
+          [](MinModeSaddleSearch &self, long max_iterations) {
+            int status = 0;
+            {
+              nb::gil_scoped_release release;
+              status = self.runRetainFrames(max_iterations);
+            }
+            return status;
+          },
+          nb::arg("max_iterations") = -1L,
+          "Like run(), but retain climb ConFrames in memory (same stamps as "
+          "write_movies climb CON; no disk required). max_iterations=-1 uses "
+          "Parameters.saddle_search max.")
+      .def(
+          "climb_frames",
+          [](MinModeSaddleSearch &self) {
+            return con_frames_to_python(self.climbFrames());
+          },
+          "list[readcon.ConFrame] retained by run_retain_frames().")
+      .def(
+          "take_climb_frames",
+          [](MinModeSaddleSearch &self) {
+            return con_frames_to_python(self.takeClimbFrames());
+          },
+          "Take ownership of retained climb frames (clears storage).")
+      .def(
+          "clear_climb_frames",
+          [](MinModeSaddleSearch &self) { self.clearClimbFrames(); },
+          "Drop retained climb frames.")
       .def_prop_ro(
           "status",
           [](const MinModeSaddleSearch &self) { return self.getStatus(); })

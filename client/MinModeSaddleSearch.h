@@ -17,7 +17,9 @@
 #include "Optimizer.h"
 #include "SaddleSearchMethod.h"
 
+#include <readcon-core.hpp>
 #include <string>
+#include <vector>
 
 namespace eonc {
 
@@ -98,6 +100,11 @@ public:
                       const Parameters &parametersPassed,
                       std::shared_ptr<Potential> potPassed);
   ~MinModeSaddleSearch() = default;
+  // climb ConFrames are move-only; do not copy the search object.
+  MinModeSaddleSearch(const MinModeSaddleSearch &) = delete;
+  MinModeSaddleSearch &operator=(const MinModeSaddleSearch &) = delete;
+  MinModeSaddleSearch(MinModeSaddleSearch &&) noexcept = default;
+  MinModeSaddleSearch &operator=(MinModeSaddleSearch &&) noexcept = default;
   AtomMatrix getEigenvector(); // lowest eigenmode
   double getEigenvalue();      // estimate for the lowest eigenvalue
   std::string_view describeStatus(int status) const override {
@@ -109,12 +116,25 @@ public:
 
   int run() override;
   int run(long max_iterations_override);
+  /// Like run(), but also retain climb ConFrames in memory (same stamps as
+  /// write_movies climb CON). Does not require write_movies on disk.
+  int runRetainFrames(long max_iterations_override = -1);
 
   int forcecalls{0};
   int iteration{0};
   int status{0};
 
+  [[nodiscard]] const std::vector<readcon::ConFrame> &climbFrames() const {
+    return climb_frames_;
+  }
+  void clearClimbFrames() { climb_frames_.clear(); }
+  [[nodiscard]] std::vector<readcon::ConFrame> takeClimbFrames() {
+    return std::move(climb_frames_);
+  }
+
 private:
+  std::vector<readcon::ConFrame> climb_frames_;
+  bool retain_climb_frames_{false};
   AtomMatrix mode;
   AtomMatrix initialTangent_;
   std::shared_ptr<Matter> matter;

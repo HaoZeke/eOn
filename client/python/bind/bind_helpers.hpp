@@ -7,13 +7,23 @@
  * Buffer access uses public Matter getters/setters; ASE/Python cache state
  * lives in the binding layer (AseCalcPotential), not on Matter.
  */
+#include "ConFileIO.h"
 #include "Eigen.h"
 #include "Matter.h"
 
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/vector.h>
+
+#include <filesystem>
+#include <format>
 #include <memory>
+#include <random>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace eonc::pybind {
+namespace nb = nanobind;
 
 /// Working Matter: same object if inplace, otherwise deep copy.
 inline std::shared_ptr<eonc::Matter>
@@ -21,6 +31,35 @@ matter_work(std::shared_ptr<eonc::Matter> matter, bool inplace) {
   if (inplace)
     return matter;
   return std::make_shared<eonc::Matter>(*matter);
+}
+
+/// Write C++ ConFrames to a short-lived temp .con and load as Python
+/// readcon.ConFrame list (same stamps as disk). Caller never sees the path.
+/// Takes const ref: readcon::ConFrame is move-only (copy deleted).
+inline nb::list
+con_frames_to_python(const std::vector<readcon::ConFrame> &frames) {
+  if (frames.empty()) {
+    return nb::list();
+  }
+  namespace fs = std::filesystem;
+  const auto tmp =
+      fs::temp_directory_path() /
+      std::format("eon_path_frames_{}_{}.con",
+                  static_cast<unsigned>(std::random_device{}() % 1000000u),
+                  reinterpret_cast<uintptr_t>(frames.data()));
+  if (!eonc::io::io_ok(eonc::io::writeConFrames(tmp.string(), frames))) {
+    throw std::runtime_error("path_frames: failed to serialize ConFrames");
+  }
+  try {
+    nb::object readcon = nb::module_::import_("readcon");
+    nb::object py_frames = readcon.attr("read_con")(tmp.string());
+    fs::remove(tmp);
+    return nb::cast<nb::list>(py_frames);
+  } catch (...) {
+    std::error_code ec;
+    fs::remove(tmp, ec);
+    throw;
+  }
 }
 
 /// Fold algorithm result into the caller's Matter when inplace=True.

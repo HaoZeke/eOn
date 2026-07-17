@@ -654,3 +654,10 @@ void NudgedElasticBand::findExtrema() {
   extremumEnergy = std::move(result.energies);
   extremumCurvature = std::move(result.curvatures);
 }
+
+std::vector<readcon::ConFrame>
+NudgedElasticBand::pathFrames(std::optional<size_t> bandIndex) {
+  return eonc::neb::pathToConFrames(
+      path, tangent, eigenmode_solvers, numImages,
+      params.debug_options.estimate_neb_eigenvalues, bandIndex);
+}

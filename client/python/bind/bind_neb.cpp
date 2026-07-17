@@ -1,6 +1,7 @@
 /*
 ** NudgedElasticBand + path init helpers — first-class NEB surface for pyeonclient.
 */
+#include "ConFileIO.h"
 #include "Matter.h"
 #include "NEBInitialPaths.hpp"
 #include "NEBSplineExtrema.h"
@@ -8,6 +9,7 @@
 #include "Parameters.h"
 #include "Potential.h"
 #include "PotRegistry.h"
+#include "bind_helpers.hpp"
 #ifdef WITH_GP_SURROGATE
 #include "GPSurrogateJob.h"
 #endif
@@ -15,6 +17,7 @@
 
 #include <magic_enum/magic_enum.hpp>
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
@@ -25,6 +28,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -183,6 +187,31 @@ void bind_neb(nb::module_ &m) {
       .def_prop_ro(
           "extremum_curvatures",
           [](const NudgedElasticBand &n) { return n.extremumCurvature; })
+      .def(
+          "path_frames",
+          [](NudgedElasticBand &n, std::optional<size_t> band_index) {
+            std::vector<readcon::ConFrame> frames;
+            {
+              nb::gil_scoped_release release;
+              frames = n.pathFrames(band_index);
+            }
+            return con_frames_to_python(std::move(frames));
+          },
+          nb::arg("band_index") = nb::none(),
+          "list[readcon.ConFrame] with writePathCon NEB stamps (no durable "
+          "neb.con required). Alias of to_conframes.")
+      .def(
+          "to_conframes",
+          [](NudgedElasticBand &n, std::optional<size_t> band_index) {
+            std::vector<readcon::ConFrame> frames;
+            {
+              nb::gil_scoped_release release;
+              frames = n.pathFrames(band_index);
+            }
+            return con_frames_to_python(std::move(frames));
+          },
+          nb::arg("band_index") = nb::none(),
+          "Alias of path_frames().")
       .def("__repr__", [](NudgedElasticBand &n) {
         return "<NudgedElasticBand images=" + std::to_string(n.numImages) +
                " status=" +
@@ -457,6 +486,34 @@ void bind_neb(nb::module_ &m) {
               throw std::runtime_error("NEB.path_images: call compute() first");
             return self.band->path;
           })
+      .def(
+          "path_frames",
+          [](PyNEB &self, std::optional<size_t> band_index) {
+            if (!self.band)
+              throw std::runtime_error("NEB.path_frames: call compute() first");
+            std::vector<readcon::ConFrame> frames;
+            {
+              nb::gil_scoped_release release;
+              frames = self.band->pathFrames(band_index);
+            }
+            return con_frames_to_python(std::move(frames));
+          },
+          nb::arg("band_index") = nb::none(),
+          "list[readcon.ConFrame] with writePathCon stamps (in-memory).")
+      .def(
+          "to_conframes",
+          [](PyNEB &self, std::optional<size_t> band_index) {
+            if (!self.band)
+              throw std::runtime_error("NEB.to_conframes: call compute() first");
+            std::vector<readcon::ConFrame> frames;
+            {
+              nb::gil_scoped_release release;
+              frames = self.band->pathFrames(band_index);
+            }
+            return con_frames_to_python(std::move(frames));
+          },
+          nb::arg("band_index") = nb::none(),
+          "Alias of path_frames().")
       .def_prop_ro(
           "n_path",
           [](PyNEB &self) {

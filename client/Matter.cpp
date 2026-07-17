@@ -190,9 +190,14 @@ VectorXi Matter::getAtomicNrsFree() const {
 }
 
 bool Matter::relax(bool quiet, bool writeMovie, bool checkpoint,
-                   std::string prefixMovie, std::string prefixCheckpoint) {
-  return eonc::helpers::relaxMatter(*this, *parameters, quiet, writeMovie,
-                                    checkpoint, prefixMovie, prefixCheckpoint);
+                   std::string prefixMovie, std::string prefixCheckpoint,
+                   bool retainMovieFrames) {
+  if (retainMovieFrames) {
+    movie_frames_.clear();
+  }
+  return eonc::helpers::relaxMatter(
+      *this, *parameters, quiet, writeMovie, checkpoint, prefixMovie,
+      prefixCheckpoint, retainMovieFrames ? &movie_frames_ : nullptr);
 }
 
 VectorXd Matter::getPositionsFreeV() const {

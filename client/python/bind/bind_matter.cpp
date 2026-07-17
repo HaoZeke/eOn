@@ -264,13 +264,14 @@ void bind_matter(nb::module_ &m) {
           "relax",
           [](Matter &self, bool inplace, bool quiet, bool write_movie,
              bool checkpoint, const std::string &prefix_movie,
-             const std::string &prefix_checkpoint) -> nb::object {
+             const std::string &prefix_checkpoint,
+             bool retain_frames) -> nb::object {
             if (inplace) {
               bool ok = false;
               {
                 nb::gil_scoped_release release;
                 ok = self.relax(quiet, write_movie, checkpoint, prefix_movie,
-                                prefix_checkpoint);
+                                prefix_checkpoint, retain_frames);
               }
               return nb::make_tuple(
                   nb::cast(self, nb::rv_policy::reference), ok);
@@ -280,15 +281,34 @@ void bind_matter(nb::module_ &m) {
             {
               nb::gil_scoped_release release;
               ok = out.relax(quiet, write_movie, checkpoint, prefix_movie,
-                             prefix_checkpoint);
+                             prefix_checkpoint, retain_frames);
             }
             return nb::make_tuple(std::move(out), ok);
           },
           nb::arg("inplace") = false, nb::arg("quiet") = false,
           nb::arg("write_movie") = false, nb::arg("checkpoint") = false,
           nb::arg("prefix_movie") = "", nb::arg("prefix_checkpoint") = "",
+          nb::arg("retain_frames") = false,
           "Minimize. Default: copy then relax (self unchanged). "
-          "inplace=True mutates self. Returns (Matter, converged: bool).")
+          "inplace=True mutates self. retain_frames=True keeps iteration "
+          "ConFrames in memory (same stamps as write_movie, no disk required). "
+          "Returns (Matter, converged: bool).")
+      .def(
+          "movie_frames",
+          [](Matter &self) {
+            return con_frames_to_python(self.movieFrames());
+          },
+          "list[readcon.ConFrame] retained by relax(retain_frames=True).")
+      .def(
+          "take_movie_frames",
+          [](Matter &self) {
+            return con_frames_to_python(self.takeMovieFrames());
+          },
+          "Take ownership of retained movie frames (clears storage).")
+      .def(
+          "clear_movie_frames",
+          [](Matter &self) { self.clearMovieFrames(); },
+          "Drop retained minimization movie frames.")
 
       // --- I/O (same ConFileIO / readcon path as CLI client) ---
       .def(

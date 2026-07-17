@@ -227,6 +227,11 @@ namespace {
 std::atomic<bool> g_write_con_forces{false};
 } // namespace
 
+readcon::ConFrame matterToConFrame(Matter &m,
+                                   const ConFrameMetadata *metadata) {
+  return frame_from_matter(m, metadata, /*with_velocities=*/false);
+}
+
 void set_write_con_forces(bool enabled) noexcept {
   g_write_con_forces.store(enabled, std::memory_order_relaxed);
 }
@@ -501,26 +506,23 @@ IoStatus writeTibble(Matter &m, std::string fname) {
   return out ? IoStatus::Ok : IoStatus::WriteError;
 }
 
-IoStatus writeNebPath(std::string filename,
-                      const std::vector<std::shared_ptr<Matter>> &path,
-                      const std::vector<ConFrameMetadata> &metadata_per_image) {
+std::vector<readcon::ConFrame>
+buildNebPathFrames(const std::vector<std::shared_ptr<Matter>> &path,
+                   const std::vector<ConFrameMetadata> &metadata_per_image) {
+  std::vector<readcon::ConFrame> frames;
   if (path.empty() || path.size() != metadata_per_image.size()) {
     EONC_LOG_ERROR(
-        "writeNebPath: path/metadata size mismatch (path={}, meta={})",
+        "buildNebPathFrames: path/metadata size mismatch (path={}, meta={})",
         path.size(), metadata_per_image.size());
-    return IoStatus::InvalidArgument;
+    return frames;
   }
   for (const auto &img : path) {
     if (!img) {
-      EONC_LOG_ERROR("writeNebPath: null Matter in path");
-      return IoStatus::InvalidArgument;
+      EONC_LOG_ERROR("buildNebPathFrames: null Matter in path");
+      return {};
     }
   }
 
-  filename = ensure_extension(std::move(filename), ".con");
-
-  // NEB invariant: all images share topology/cell/ids with path[0]; only
-  // positions (and optional force sections) differ per image.
   Matter &template_m = *path.front();
   template_m.applyPeriodicBoundaryIfEnabled();
 
@@ -529,33 +531,47 @@ IoStatus writeNebPath(std::string filename,
   std::array<std::string, 2> postbox;
   collect_ids_headers(template_m, atom_ids, prebox, postbox);
 
-  std::vector<readcon::ConFrame> frames;
   frames.reserve(path.size());
-
   try {
     auto seed = seed_builder(template_m, prebox, postbox, atom_ids);
     for (size_t i = 0; i < path.size(); ++i) {
       Matter &img = *path[i];
       img.applyPeriodicBoundaryIfEnabled();
       if (img.numberOfAtoms() != template_m.numberOfAtoms()) {
-        EONC_LOG_ERROR("writeNebPath: image {} atom count {} != template {}", i,
-                       img.numberOfAtoms(), template_m.numberOfAtoms());
-        return IoStatus::InvalidArgument;
+        EONC_LOG_ERROR(
+            "buildNebPathFrames: image {} atom count {} != template {}", i,
+            img.numberOfAtoms(), template_m.numberOfAtoms());
+        return {};
       }
-
-      // COW clone of the topology template (cell/Z/fixed/mass/id from path[0]);
-      // mutations do not leak to seed.
       auto builder = seed.clone();
       apply_frame_metadata(builder, &metadata_per_image[i]);
       apply_geometry(builder, img, /*with_velocities=*/false);
       frames.push_back(builder.build());
     }
   } catch (const std::exception &e) {
-    EONC_LOG_ERROR("writeNebPath build failed: {}", e.what());
-    return IoStatus::WriteError;
+    EONC_LOG_ERROR("buildNebPathFrames failed: {}", e.what());
+    return {};
   }
+  return frames;
+}
 
+IoStatus writeConFrames(std::string filename,
+                        const std::vector<readcon::ConFrame> &frames) {
+  if (frames.empty()) {
+    return IoStatus::InvalidArgument;
+  }
+  filename = ensure_extension(std::move(filename), ".con");
   return write_frames(filename, frames, kConPrecision);
+}
+
+IoStatus writeNebPath(std::string filename,
+                      const std::vector<std::shared_ptr<Matter>> &path,
+                      const std::vector<ConFrameMetadata> &metadata_per_image) {
+  auto frames = buildNebPathFrames(path, metadata_per_image);
+  if (frames.empty()) {
+    return IoStatus::InvalidArgument;
+  }
+  return writeConFrames(std::move(filename), frames);
 }
 
 } // namespace eonc::io
