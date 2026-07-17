@@ -8,15 +8,18 @@ Usage::
     import pyeonclient as pyec
     from pyeonclient.backends import make_backend, list_backends
 
+    # One Parameters owns pot type + job knobs (pass params= into the factory).
+    params = pyec.Parameters()
+    pot = make_backend("metatomic", model_path="pet-mad.pt", params=params)
     pot = make_backend("ase", calculator=my_calc)
-    pot = make_backend("metatomic", model_path="pet-mad.pt")
-    pot = make_backend("ase_metatomic", model_path="pet-mad.pt")
+    pot = make_backend("ase_metatomic", model_path="pet-mad.pt", params=params)
     pot = make_backend(
         "rgpot_metatomic",
         model_path="pet-mad.pt",
         engine_path="libmetatomic_engine.so",
+        params=params,
     )
-    m = pyec.Matter(pot, pyec.Parameters())
+    m = pyec.Matter(pot, params)
 """
 from __future__ import annotations
 

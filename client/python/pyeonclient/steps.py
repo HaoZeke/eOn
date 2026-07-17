@@ -23,8 +23,9 @@ Typical job path (any JobType including NEB)::
 
 Matter path (minimization without Job wrapper)::
 
-    params = load_parameters("config.ini")
-    pot = make_potential(params.potential, params)
+    params = load_parameters("config.ini")  # or Parameters() + make_backend
+    pot = make_potential(params.potential, params)  # INI / PotType path
+    # Class-first: pot = make_backend("metatomic", model_path=..., params=params)
     m = Matter(pot, params)
     m.con2matter("pos.con")
     _m, ok = m.relax(inplace=True, write_movie=True,
