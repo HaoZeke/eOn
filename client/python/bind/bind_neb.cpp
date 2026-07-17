@@ -55,6 +55,8 @@ void bind_neb(nb::module_ &m) {
           [](NudgedElasticBand *self, std::shared_ptr<Matter> initial,
              std::shared_ptr<Matter> final_state, const Parameters &params,
              std::shared_ptr<Potential> pot) {
+            // Metatomic/torch autograd must not run while holding the GIL.
+            nb::gil_scoped_release release;
             new (self)
                 NudgedElasticBand(std::move(initial), std::move(final_state),
                                   params, std::move(pot));
@@ -70,6 +72,7 @@ void bind_neb(nb::module_ &m) {
           "__init__",
           [](NudgedElasticBand *self, const std::vector<Matter> &path,
              const Parameters &params, std::shared_ptr<Potential> pot) {
+            nb::gil_scoped_release release;
             new (self) NudgedElasticBand(path, params, std::move(pot));
           },
           nb::arg("path"), nb::arg("parameters"), nb::arg("potential"),
@@ -84,11 +87,20 @@ void bind_neb(nb::module_ &m) {
             return self.compute();
           },
           "Run NEB optimization (energy-weighted, CI, OCI per Parameters)")
-      .def("update_forces",
-           nb::overload_cast<bool>(&NudgedElasticBand::updateForces),
-           nb::arg("ci_active"), "Recompute projected forces; ci_active toggles CI")
-      .def("update_forces", nb::overload_cast<>(&NudgedElasticBand::updateForces),
-           "Recompute projected forces with current CI flag")
+      .def(
+          "update_forces",
+          [](NudgedElasticBand &self, bool ci_active) {
+            nb::gil_scoped_release release;
+            self.updateForces(ci_active);
+          },
+          nb::arg("ci_active"), "Recompute projected forces; ci_active toggles CI")
+      .def(
+          "update_forces",
+          [](NudgedElasticBand &self) {
+            nb::gil_scoped_release release;
+            self.updateForces();
+          },
+          "Recompute projected forces with current CI flag")
       .def("set_ci_enabled", &NudgedElasticBand::setCIEnabled, nb::arg("enabled"))
       .def("convergence_force", &NudgedElasticBand::convergenceForce)
       .def("find_extrema", &NudgedElasticBand::findExtrema)
@@ -135,17 +147,19 @@ void bind_neb(nb::module_ &m) {
           "Full path as list of shared Matter (endpoints + intermediates)")
       .def(
           "image_energy",
-          [](const NudgedElasticBand &n, long i) {
+          [](NudgedElasticBand &n, long i) {
             if (i < 0 || static_cast<size_t>(i) >= n.path.size())
               throw std::out_of_range("NEB image index out of range");
+            nb::gil_scoped_release release;
             return n.path[static_cast<size_t>(i)]->getPotentialEnergy();
           },
           nb::arg("i"))
       .def(
           "image_force_norm",
-          [](const NudgedElasticBand &n, long i) {
+          [](NudgedElasticBand &n, long i) {
             if (i < 0 || static_cast<size_t>(i) >= n.path.size())
               throw std::out_of_range("NEB image index out of range");
+            nb::gil_scoped_release release;
             return n.path[static_cast<size_t>(i)]->getForces().norm();
           },
           nb::arg("i"))
@@ -387,6 +401,7 @@ void bind_neb(nb::module_ &m) {
              std::shared_ptr<eonc::Matter> final_state,
              const eonc::Parameters &params,
              std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+            nb::gil_scoped_release release;
             new (self) PyNEB(std::move(initial), std::move(final_state), params,
                              std::move(pot), accelerant);
           },
@@ -400,6 +415,7 @@ void bind_neb(nb::module_ &m) {
           [](PyNEB *self, const std::vector<eonc::Matter> &path,
              const eonc::Parameters &params,
              std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+            nb::gil_scoped_release release;
             new (self) PyNEB(path, params, std::move(pot), accelerant);
           },
           nb::arg("path"), nb::arg("parameters"), nb::arg("potential"),

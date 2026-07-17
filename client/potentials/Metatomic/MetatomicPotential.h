@@ -24,10 +24,14 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
-#include <torch/cuda.h>
-#include <torch/mps.h>
 #include <torch/script.h>
 #include <torch/version.h>
+#if __has_include(<torch/cuda.h>)
+#include <torch/cuda.h>
+#endif
+#if __has_include(<torch/mps.h>)
+#include <torch/mps.h>
+#endif
 
 #include "metatensor/torch.hpp"
 #include "metatensor/torch/module.hpp"

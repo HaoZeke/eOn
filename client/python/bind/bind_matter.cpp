@@ -89,6 +89,10 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro(
           "forces",
           [](Matter &self) {
+            {
+              nb::gil_scoped_release release;
+              (void)self.getForces(); // ensure force cache
+            }
             return view_n3(matter_forces_ptr(self), self.numberOfAtoms());
           },
           nb::rv_policy::reference_internal,
@@ -96,6 +100,10 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro(
           "forces_raw",
           [](Matter &self) {
+            {
+              nb::gil_scoped_release release;
+              (void)self.getForcesRaw();
+            }
             return view_n3(matter_forces_raw_ptr(self), self.numberOfAtoms());
           },
           nb::rv_policy::reference_internal)
@@ -190,7 +198,13 @@ void bind_matter(nb::module_ &m) {
           "Nx3 free mask (1 free, 0 fixed)")
 
       // --- energy / mechanics ---
-      .def_prop_ro("potential_energy", &Matter::getPotentialEnergy)
+      .def_prop_ro(
+          "potential_energy",
+          [](Matter &self) {
+            nb::gil_scoped_release release;
+            return self.getPotentialEnergy();
+          },
+          "Potential energy (GIL released for metatomic/torch autograd)")
       .def_prop_ro("kinetic_energy", &Matter::getKineticEnergy)
       .def_prop_ro("mechanical_energy", &Matter::getMechanicalEnergy)
       .def_prop_ro("energy_variance", &Matter::getEnergyVariance)
