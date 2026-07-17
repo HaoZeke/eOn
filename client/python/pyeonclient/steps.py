@@ -2,10 +2,7 @@
 
 Prefer the in-memory Matter API for new code::
 
-    from pyeonclient.backends import make_backend
-
-    pot = make_backend("metatomic", model_path="pet-mad.pt")
-    params = configure_neb_ew_mmf(images=10)
+    pot = make_potential(params.potential, params)
     path = [from_ase(img, pot, params) for img in images]
     neb = NudgedElasticBand(path, params, pot)
     neb.compute()
@@ -66,74 +63,6 @@ def load_parameters(path: str | Path = "config.ini") -> Parameters:
     """Step: load ``config.ini`` (or JSON via Parameters.load_json)."""
     p = Parameters()
     p.load(str(path))
-    return p
-
-
-def configure_neb_ew_mmf(
-    params: Parameters | None = None,
-    *,
-    images: int = 10,
-    max_iterations: int = 1000,
-    converged_force: float = 0.01,
-    max_move: float = 0.1,
-    path_list: str | Path | None = None,
-    minimize_endpoints: bool = False,
-    climbing_image: bool = True,
-    climbing_converged_only: bool = True,
-    ci_after: float = 0.5,
-    ci_after_rel: float = 0.8,
-    energy_weighted: bool = True,
-    ew_ksp_min: float = 0.972,
-    ew_ksp_max: float = 9.72,
-    ci_mmf: bool = True,
-    ci_mmf_after: float = 0.1,
-    ci_mmf_after_rel: float = 0.5,
-    ci_mmf_angle: float = 0.9,
-    ci_mmf_nsteps: int = 1000,
-    write_movies: bool = True,
-    random_seed: int | None = 706253457,
-) -> Parameters:
-    """Configure *params* for energy-weighted CI-NEB + off-path MMF (OCI-NEB).
-
-    Matches the atomistic-cookbook ``eon-pet-neb`` NEB block so class-first
-    ``make_backend`` + ``NudgedElasticBand`` runs use the same knobs as the
-    historical ``config.ini`` path.
-
-    When *path_list* is set, ``neb_init_method`` becomes FILE and
-    ``neb_initial_path`` points at that list (one ``.con`` path per line).
-    Otherwise images are IDPP-initialized between endpoints.
-    """
-    from pyeonclient._core import NEBInit
-
-    p = params if params is not None else Parameters()
-    if random_seed is not None:
-        p.random_seed = int(random_seed)
-    p.neb_images = int(images)
-    p.neb_max_iterations = int(max_iterations)
-    p.neb_force_tolerance = float(converged_force)
-    p.opt_max_iterations = int(max_iterations)
-    p.opt_converged_force = float(converged_force)
-    p.opt_max_move = float(max_move)
-    p.neb_minimize_endpoints = bool(minimize_endpoints)
-    p.neb_climbing_image = bool(climbing_image)
-    p.neb_climbing_converged_only = bool(climbing_converged_only)
-    p.neb_ci_after = float(ci_after)
-    p.neb_ci_after_rel = float(ci_after_rel)
-    p.neb_energy_weighted = bool(energy_weighted)
-    p.neb_ew_ksp_min = float(ew_ksp_min)
-    p.neb_ew_ksp_max = float(ew_ksp_max)
-    p.neb_ci_mmf = bool(ci_mmf)
-    p.neb_ci_mmf_after = float(ci_mmf_after)
-    p.neb_ci_mmf_after_rel = float(ci_mmf_after_rel)
-    p.neb_ci_mmf_angle = float(ci_mmf_angle)
-    p.neb_ci_mmf_nsteps = int(ci_mmf_nsteps)
-    p.write_movies = bool(write_movies)
-    if path_list is not None:
-        p.neb_init_method = NEBInit.FILE
-        p.neb_initial_path = str(path_list)
-    else:
-        p.neb_init_method = NEBInit.IDPP
-        p.neb_initial_path = ""
     return p
 
 

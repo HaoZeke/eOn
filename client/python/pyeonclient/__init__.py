@@ -155,7 +155,6 @@ from pyeonclient.backends import (  # noqa: E402
 
 from pyeonclient.steps import (  # noqa: E402
     append_timing,
-    configure_neb_ew_mmf,
     load_parameters,
     minimize_workdir,
     run_eon_cwd,
@@ -237,7 +236,6 @@ __all__ = [
     "load_atomistic_model_compat",
     "make_metatomic_ase_calculator",
     "load_parameters",
-    "configure_neb_ew_mmf",
     "run_job",
     "run_job_in_directory",
     "run_eon_cwd",
