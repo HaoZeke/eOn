@@ -110,8 +110,13 @@ void bind_matter(nb::module_ &m) {
       .def_prop_ro(
           "forces_free",
           [](Matter &self) {
-            nb::gil_scoped_release release;
-            return matrix_to_numpy(self.getForcesFree());
+            // Force eval under released GIL; numpy conversion must hold GIL.
+            AtomMatrix free_forces;
+            {
+              nb::gil_scoped_release release;
+              free_forces = self.getForcesFree();
+            }
+            return matrix_to_numpy(free_forces);
           },
           nb::rv_policy::move)
       .def("set_forces",

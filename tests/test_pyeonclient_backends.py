@@ -72,3 +72,20 @@ def test_make_backend_lj_params_kwarg_sets_pottype():
     )
     assert np.isfinite(e)
     assert f.shape == (2, 3)
+
+
+def test_matter_forces_free_and_max_force_lj():
+    """GIL-safe free-force path: eval under release, numpy with GIL held."""
+    params = pyec.Parameters()
+    pot = make_backend("lj", params=params)
+    m = pyec.Matter(pot, params)
+    m.resize(2)
+    m.positions = np.array([[0.0, 0.0, 0.0], [1.3, 0.0, 0.0]], dtype=np.float64)
+    m.cell = np.eye(3) * 15.0
+    m.atomic_numbers = np.array([1, 1], dtype=np.int64)
+    m.masses = np.ones(2)
+    m.fixed = np.zeros(2, dtype=np.int64)
+    ff = np.asarray(m.forces_free)
+    assert ff.shape == (2, 3)
+    assert np.isfinite(ff).all()
+    assert np.isfinite(float(m.max_force))
