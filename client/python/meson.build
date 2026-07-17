@@ -159,8 +159,11 @@ endif
 py.install_sources(
     [
         'pyeonclient/__init__.py',
+        'pyeonclient/api.py',
+        'pyeonclient/backends.py',
         'pyeonclient/bridge.py',
         'pyeonclient/ase_bridge.py',
+        'pyeonclient/models.py',
         'pyeonclient/steps.py',
     ],
     pure: false,
