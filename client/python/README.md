@@ -55,7 +55,20 @@ print(pyec.saddle_status_message(status), ss.eigenvalue)
 path = [pyec.from_ase(img, pot, params) for img in images]
 neb = pyec.NudgedElasticBand(path, params, pot)
 neb.compute()
+# Stamped ConFrames for plots (no neb.con write required):
+frames = neb.path_frames()  # list[readcon.ConFrame]
 path = list(neb.path_images())
+```
+
+## Min / saddle movies (in-memory)
+
+```python
+out, ok = matter.relax(retain_frames=True)  # default inplace=False returns working copy
+movie = out.movie_frames()  # list[readcon.ConFrame]
+
+ss = pyec.MinModeSaddleSearch(matter, mode, e0, params, pot)
+ss.run_retain_frames()
+climb = ss.climb_frames()
 ```
 
 ## Build
