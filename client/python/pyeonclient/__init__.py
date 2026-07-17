@@ -82,6 +82,20 @@ try:
         # Build probes
         built_with_metatomic,
         built_with_rgpot,
+        min_mode_saddle_search,
+        run_dynamics,
+        run_monte_carlo,
+        run_basin_hopping,
+        process_search,
+        structures_equal,
+        structure_distance,
+        run_tad,
+        run_parallel_replica,
+        run_safe_hyperdynamics,
+        run_replica_exchange,
+        run_gp_surrogate_neb,
+        built_with_gp_surrogate,
+
     )
 except ImportError as e:  # pragma: no cover
     raise ImportError(
@@ -194,5 +208,18 @@ __all__ = [
     # Probes
     "built_with_metatomic",
     "built_with_rgpot",
+    "min_mode_saddle_search",
+    "run_dynamics",
+    "run_monte_carlo",
+    "run_basin_hopping",
+    "process_search",
+    "structures_equal",
+    "structure_distance",
+    "run_tad",
+    "run_parallel_replica",
+    "run_safe_hyperdynamics",
+    "run_replica_exchange",
+    "run_gp_surrogate_neb",
+    "built_with_gp_surrogate",
     "__version__",
 ]

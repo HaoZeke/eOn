@@ -25,8 +25,8 @@ Matter path (minimization without Job wrapper)::
     pot = make_potential(params.potential, params)
     m = Matter(pot, params)
     m.con2matter("pos.con")
-    ok = m.relax(write_movie=True, prefix_movie="minimization",
-                 prefix_checkpoint="pos")
+    _m, ok = m.relax(inplace=True, write_movie=True,
+                     prefix_movie="minimization", prefix_checkpoint="pos")
     m.matter2con("min.con")
     write_minimization_results(params, pot, m, converged=ok)
     del m, pot
@@ -153,15 +153,15 @@ def minimize_workdir(
                 raise RuntimeError(f"con2matter failed for {pos}: {st}")
         quiet = bool(getattr(params, "quiet", False))
         ckpt = bool(getattr(params, "checkpoint", False))
-        converged = bool(
-            matter.relax(
-                quiet=quiet,
-                write_movie=write_movie,
-                checkpoint=ckpt,
-                prefix_movie=movie_prefix,
-                prefix_checkpoint="pos",
-            )
+        _m, converged = matter.relax(
+            inplace=True,
+            quiet=quiet,
+            write_movie=write_movie,
+            checkpoint=ckpt,
+            prefix_movie=movie_prefix,
+            prefix_checkpoint="pos",
         )
+        converged = bool(converged)
         matter.matter2con(min_con)
         files.append(min_con)
         write_minimization_results(params, pot, matter, converged=converged)
@@ -266,6 +266,7 @@ def neb_workdir(
 
         if getattr(params, "neb_minimize_endpoints", False):
             initial.relax(
+                inplace=True,
                 quiet=bool(getattr(params, "quiet", False)),
                 write_movie=bool(getattr(params, "write_movies", False)),
                 checkpoint=bool(getattr(params, "checkpoint", False)),
@@ -273,6 +274,7 @@ def neb_workdir(
                 prefix_checkpoint="react_neb",
             )
             final.relax(
+                inplace=True,
                 quiet=bool(getattr(params, "quiet", False)),
                 write_movie=bool(getattr(params, "write_movies", False)),
                 checkpoint=bool(getattr(params, "checkpoint", False)),

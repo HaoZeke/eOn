@@ -630,6 +630,62 @@ void bind_parameters(nb::module_ &m) {
             s.prefactor_options.all_free_atoms = v;
           })
 
+
+      // --- Dynamics / MC / BH ---
+      .def_prop_rw(
+          "dynamics_steps",
+          [](const eonc::Parameters &s) {
+            return static_cast<long>(s.dynamics_options.steps);
+          },
+          [](eonc::Parameters &s, long v) { s.dynamics_options.steps = v; })
+      .def_prop_rw(
+          "dynamics_time_step",
+          [](const eonc::Parameters &s) {
+            return s.dynamics_options.time_step_input;
+          },
+          [](eonc::Parameters &s, double v) {
+            s.dynamics_options.time_step_input = v;
+            s.dynamics_options.time_step = v / s.constants.timeUnit;
+          })
+      .def_prop_rw(
+          "monte_carlo_steps",
+          [](const eonc::Parameters &s) {
+            return s.monte_carlo_options.steps;
+          },
+          [](eonc::Parameters &s, int v) { s.monte_carlo_options.steps = v; })
+      .def_prop_rw(
+          "monte_carlo_step_size",
+          [](const eonc::Parameters &s) {
+            return s.monte_carlo_options.step_size;
+          },
+          [](eonc::Parameters &s, double v) {
+            s.monte_carlo_options.step_size = v;
+          })
+      .def_prop_rw(
+          "basin_hopping_steps",
+          [](const eonc::Parameters &s) {
+            return static_cast<long>(s.basin_hopping_options.steps);
+          },
+          [](eonc::Parameters &s, long v) {
+            s.basin_hopping_options.steps = v;
+          })
+      .def_prop_rw(
+          "basin_hopping_displacement",
+          [](const eonc::Parameters &s) {
+            return s.basin_hopping_options.displacement;
+          },
+          [](eonc::Parameters &s, double v) {
+            s.basin_hopping_options.displacement = v;
+          })
+      .def_prop_rw(
+          "process_search_minimize_first",
+          [](const eonc::Parameters &s) {
+            return s.process_search_options.minimize_first;
+          },
+          [](eonc::Parameters &s, bool v) {
+            s.process_search_options.minimize_first = v;
+          })
+
       // --- Structure comparison ---
 
 

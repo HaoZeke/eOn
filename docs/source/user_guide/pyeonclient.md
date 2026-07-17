@@ -25,6 +25,13 @@ call — the same engines the binary uses.
 | NEB | `NudgedElasticBand` | `job = nudged_elastic_band` |
 | Hessian | `Hessian` | `job = hessian` |
 | Prefactor | `get_prefactors` | `job = prefactor` |
+| Dynamics | `run_dynamics` | `job = dynamics` |
+| Monte Carlo | `run_monte_carlo` | `job = monte_carlo` |
+| Basin hopping | `run_basin_hopping` | `job = basin_hopping` |
+| Process search | `process_search` | `job = process_search` |
+| Structure compare | `structures_equal` / `structure_distance` | `job = structure_comparison` |
+| TAD / PR / safe hyper / rex | `run_tad` / `run_parallel_replica` / … | short Dynamics entry; full multi-replica via `make_job` |
+| GP surrogate | `run_gp_surrogate_neb` (gated) | `WITH_GP_SURROGATE` |
 | Opaque batch | `make_job` + `Job.run` | any `JobType` via factory |
 
 `make_job(params)` still constructs every `JobType` the C++ factory supports
@@ -38,6 +45,25 @@ pip install pyeonclient
 pip install 'pyeonclient[ase]'
 pip install 'rgpot>=2.4.2'   # multi-ABI engines for Metatomic via RGPOT
 ```
+
+
+## Mutation policy (`inplace`)
+
+Algorithms that change geometry **do not mutate caller-owned Matter by default**.
+Pass ``inplace=True`` to write into the input object.
+
+```{code-block} python
+out, ok = matter.relax()                 # copy-then-relax; matter unchanged
+out, ok = matter.relax(inplace=True)     # mutates matter
+
+saddle, status = pc.min_mode_saddle_search(
+    matter, mode, E0, params, pot)       # matter unchanged
+saddle, status = pc.min_mode_saddle_search(
+    matter, mode, E0, params, pot, inplace=True)
+```
+
+Same for ``run_dynamics``, ``run_monte_carlo``, ``run_basin_hopping``,
+``process_search``, and the long-timescale entry points.
 
 ## Shared setup
 

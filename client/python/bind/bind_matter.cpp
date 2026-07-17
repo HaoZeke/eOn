@@ -7,6 +7,7 @@
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 #include <nanobind/stl/array.h>
 
 #include <memory>
@@ -213,21 +214,36 @@ void bind_matter(nb::module_ &m) {
       .def("compare", &Matter::compare, nb::arg("other"),
            nb::arg("indistinguishable") = false)
 
-      // --- relax ---
+      // --- relax (default non-mutating; inplace=True mutates self) ---
       .def(
           "relax",
-          [](Matter &self, bool quiet, bool write_movie, bool checkpoint,
-             const std::string &prefix_movie,
-             const std::string &prefix_checkpoint) {
-            // RGPOT metatomic engines need the GIL released (torch autograd).
-            nb::gil_scoped_release release;
-            return self.relax(quiet, write_movie, checkpoint, prefix_movie,
-                              prefix_checkpoint);
+          [](Matter &self, bool inplace, bool quiet, bool write_movie,
+             bool checkpoint, const std::string &prefix_movie,
+             const std::string &prefix_checkpoint) -> nb::object {
+            if (inplace) {
+              bool ok = false;
+              {
+                nb::gil_scoped_release release;
+                ok = self.relax(quiet, write_movie, checkpoint, prefix_movie,
+                                prefix_checkpoint);
+              }
+              return nb::make_tuple(
+                  nb::cast(self, nb::rv_policy::reference), ok);
+            }
+            Matter out(self);
+            bool ok = false;
+            {
+              nb::gil_scoped_release release;
+              ok = out.relax(quiet, write_movie, checkpoint, prefix_movie,
+                             prefix_checkpoint);
+            }
+            return nb::make_tuple(std::move(out), ok);
           },
-          nb::arg("quiet") = false, nb::arg("write_movie") = false,
-          nb::arg("checkpoint") = false, nb::arg("prefix_movie") = "",
-          nb::arg("prefix_checkpoint") = "",
-          "Run client minimizer on this Matter; returns True if converged")
+          nb::arg("inplace") = false, nb::arg("quiet") = false,
+          nb::arg("write_movie") = false, nb::arg("checkpoint") = false,
+          nb::arg("prefix_movie") = "", nb::arg("prefix_checkpoint") = "",
+          "Minimize. Default: copy then relax (self unchanged). "
+          "inplace=True mutates self. Returns (Matter, converged: bool).")
 
       // --- I/O (same ConFileIO / readcon path as CLI client) ---
       .def(

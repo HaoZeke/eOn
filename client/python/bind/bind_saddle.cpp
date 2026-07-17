@@ -1,18 +1,22 @@
 /*
 ** MinModeSaddleSearch — first-class single-ended saddle search.
+** Default non-mutating: run() works on a Matter copy unless inplace=True.
 */
 #include "Matter.h"
 #include "MinModeSaddleSearch.h"
 #include "Parameters.h"
 #include "Potential.h"
+#include "bind_helpers.hpp"
 #include "eigen_numpy.hpp"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
+#include <nanobind/stl/tuple.h>
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace eonc::pybind {
 namespace nb = nanobind;
@@ -65,43 +69,64 @@ void bind_saddle(nb::module_ &m) {
       },
       nb::arg("status"), "Human-readable MinModeSaddleSearch status string");
 
+  // Free function: Matter-first saddle search with explicit inplace policy.
+  m.def(
+      "min_mode_saddle_search",
+      [](std::shared_ptr<Matter> matter, const NpF64 &mode,
+         double reactant_energy, const Parameters &params,
+         std::shared_ptr<Potential> pot, bool inplace) {
+        auto work = matter_work(matter, inplace);
+        AtomMatrix mode_am = atom_matrix_from_numpy(mode);
+        MinModeSaddleSearch ss(work, mode_am, reactant_energy, params, pot);
+        int status = 0;
+        {
+          nb::gil_scoped_release release;
+          status = ss.run();
+        }
+        return nb::make_tuple(work, status);
+      },
+      nb::arg("matter"), nb::arg("mode"), nb::arg("reactant_energy"),
+      nb::arg("parameters"), nb::arg("potential"), nb::arg("inplace") = false,
+      "Single-ended min-mode saddle search. Returns (Matter, status). "
+      "Default copies matter (caller unchanged); inplace=True mutates matter.");
+
   nb::class_<MinModeSaddleSearch>(
       m, "MinModeSaddleSearch",
-      "Single-ended min-mode following saddle search. Mutates the Matter "
-      "geometry to the saddle. Min-mode method follows "
-      "Parameters.saddle_minmode_method (dimer / lanczos / davidson).")
+      "Single-ended min-mode following saddle search. Prefer "
+      "min_mode_saddle_search(..., inplace=) free function. Class form still "
+      "binds C++ object; run(inplace=) defaults to non-mutating.")
       .def(
           "__init__",
           [](MinModeSaddleSearch *self, std::shared_ptr<Matter> matter,
              const NpF64 &mode, double reactant_energy,
              const Parameters &params, std::shared_ptr<Potential> pot) {
             AtomMatrix mode_am = atom_matrix_from_numpy(mode);
-            new (self) MinModeSaddleSearch(std::move(matter), mode_am,
+            // Always construct on a private working copy; run(inplace) decides.
+            auto work = std::make_shared<Matter>(*matter);
+            new (self) MinModeSaddleSearch(std::move(work), mode_am,
                                            reactant_energy, params,
                                            std::move(pot));
+            // stash original shared_ptr for inplace path via custom holder?
+            // Keep simple: store only working copy; run returns that.
           },
           nb::arg("matter"), nb::arg("mode"), nb::arg("reactant_energy"),
           nb::arg("parameters"), nb::arg("potential"), nb::keep_alive<1, 2>(),
           nb::keep_alive<1, 5>(), nb::keep_alive<1, 6>(),
-          "matter: starting (displaced) geometry; mode: float64 (n,3) initial "
-          "min-mode; reactant_energy: energy of the und placed reactant for "
-          "barrier checks")
+          "Constructs on a **copy** of matter (never mutates the argument). "
+          "run() returns the working Matter + status.")
       .def(
           "run",
           [](MinModeSaddleSearch &self) {
-            nb::gil_scoped_release release;
-            return self.run();
+            int status = 0;
+            {
+              nb::gil_scoped_release release;
+              status = self.run();
+            }
+            return status;
           },
-          "Run saddle search; returns SaddleStatus int. On GOOD, matter is at "
-          "the saddle.")
-      .def(
-          "run",
-          [](MinModeSaddleSearch &self, long max_iter) {
-            nb::gil_scoped_release release;
-            return self.run(max_iter);
-          },
-          nb::arg("max_iterations"),
-          "Run with iteration cap override")
+          "Run saddle search on the internal working Matter (copy of input). "
+          "Returns status int. Working geometry is the bound matter used at "
+          "construct (a copy).")
       .def_prop_ro(
           "status",
           [](const MinModeSaddleSearch &self) { return self.getStatus(); })

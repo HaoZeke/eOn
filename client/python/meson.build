@@ -80,6 +80,7 @@ pyeonclient_sources = files(
     'bind/bind_eigenmode.cpp',
     'bind/bind_saddle.cpp',
     'bind/bind_analysis.cpp',
+    'bind/bind_sampling.cpp',
 )
 
 _nb_incs = [
