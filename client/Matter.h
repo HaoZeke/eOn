@@ -117,6 +117,11 @@ public:
   // using resize()
   Matter(const Matter &matter);                  // create a copy of matter
   const Matter &operator=(const Matter &matter); // copy the matter object
+  /// Move: transfers retained movie ConFrames (move-only). User copy
+  /// suppresses implicit move — without this, relax(inplace=False,
+  /// retain_frames=True) loses frames when returning the working Matter.
+  Matter(Matter &&other) noexcept;
+  Matter &operator=(Matter &&other) noexcept;
   bool compare(const Matter &matter, bool indistinguishable = false);
 
   double

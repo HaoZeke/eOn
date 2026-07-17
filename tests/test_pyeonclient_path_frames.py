@@ -165,6 +165,26 @@ def test_matter_movie_frames_without_write_movie(tmp_path, monkeypatch):
     assert len(m.movie_frames()) == 0
 
 
+def test_matter_movie_frames_non_inplace_retain(tmp_path, monkeypatch):
+    """Default relax path (inplace=False) must move retained frames to the returned Matter."""
+    monkeypatch.chdir(tmp_path)
+    params = _lj_params(opt_max_iterations=15, opt_converged_force=1e-3)
+    pot = pyec.make_potential(pyec.PotType.LJ, params)
+    m = _h2(pot, params, 1.5)
+    m.positions = np.array([[0.0, 0.0, 0.0], [2.5, 0.0, 0.0]], dtype=np.float64)
+    # Caller unchanged; frames live on the returned working copy.
+    out, ok = m.relax(inplace=False, quiet=True, write_movie=False, retain_frames=True)
+    assert len(m.movie_frames()) == 0, "input Matter must not retain frames when inplace=False"
+    frames = out.movie_frames()
+    assert len(frames) >= 1, (
+        "non-inplace relax(retain_frames=True) lost movie_frames "
+        "(Matter must move ConFrames on return)"
+    )
+    assert frames[0].energy is not None
+    assert "convergence" in frames[0].metadata
+    assert "step_size" in frames[0].metadata
+
+
 def test_saddle_climb_frames_without_write_movies(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     params = _lj_params()

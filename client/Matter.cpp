@@ -23,6 +23,9 @@
 Matter::Matter(const Matter &matter) { operator=(matter); }
 
 const Matter &Matter::operator=(const Matter &matter) {
+  if (this == &matter) {
+    return *this;
+  }
   nAtoms = matter.nAtoms;
   resize(nAtoms);
 
@@ -49,7 +52,53 @@ const Matter &Matter::operator=(const Matter &matter) {
   recomputeFreeMask = true; // Force cache rebuild after assignment
 
   headerCon = matter.headerCon;
+  // ConFrame is move-only; copy does not retain movie trajectory.
+  movie_frames_.clear();
 
+  return *this;
+}
+
+Matter::Matter(Matter &&other) noexcept { operator=(std::move(other)); }
+
+Matter &Matter::operator=(Matter &&other) noexcept {
+  if (this == &other) {
+    return *this;
+  }
+  potential = std::move(other.potential);
+  usePeriodicBoundaries = other.usePeriodicBoundaries;
+  pbcConvention = other.pbcConvention;
+  recomputePotential = other.recomputePotential;
+  forceCalls = other.forceCalls;
+  headerCon = std::move(other.headerCon);
+  removeNetForce = other.removeNetForce;
+  structComp = other.structComp;
+  parameters = other.parameters;
+  nAtoms = other.nAtoms;
+  positions = std::move(other.positions);
+  velocities = std::move(other.velocities);
+  forces = std::move(other.forces);
+  biasForces = std::move(other.biasForces);
+  biasPotential = other.biasPotential;
+  other.biasPotential = nullptr;
+  masses = std::move(other.masses);
+  atomicNrs = std::move(other.atomicNrs);
+  isFixed = std::move(other.isFixed);
+  atomIndex = std::move(other.atomIndex);
+  freeMask = std::move(other.freeMask);
+  maskedForces = std::move(other.maskedForces);
+  freeIndices = std::move(other.freeIndices);
+  recomputeFreeMask = other.recomputeFreeMask;
+  recomputeMaskedForces = other.recomputeMaskedForces;
+  cell = std::move(other.cell);
+  cellInverse = std::move(other.cellInverse);
+  energyVariance = other.energyVariance;
+  movie_frames_ = std::move(other.movie_frames_);
+  potentialEnergy = other.potentialEnergy;
+
+  other.nAtoms = 0;
+  other.recomputePotential = true;
+  other.recomputeFreeMask = true;
+  other.recomputeMaskedForces = true;
   return *this;
 }
 
