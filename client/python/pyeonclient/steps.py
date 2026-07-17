@@ -2,7 +2,9 @@
 
 Prefer the in-memory Matter API for new code::
 
-    pot = make_potential(params.potential, params)
+    from pyeonclient.backends import make_backend
+
+    pot = make_backend("metatomic", model_path="pet-mad.pt")
     path = [from_ase(img, pot, params) for img in images]
     neb = NudgedElasticBand(path, params, pot)
     neb.compute()
