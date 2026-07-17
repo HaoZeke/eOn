@@ -58,3 +58,16 @@ def test_make_backend_ase_lj():
 def test_unknown_backend_raises():
     with pytest.raises(KeyError, match="unknown backend"):
         make_backend("not-a-real-backend")
+
+
+def test_configure_neb_ew_mmf_defaults():
+    import pyeonclient as pyec
+
+    p = pyec.configure_neb_ew_mmf(images=8, path_list="idppPath.dat")
+    assert p.neb_images == 8
+    assert p.neb_energy_weighted is True
+    assert p.neb_ci_mmf is True
+    assert p.neb_initial_path == "idppPath.dat"
+    assert p.neb_init_method == pyec.NEBInit.FILE
+    p2 = pyec.configure_neb_ew_mmf(images=5)
+    assert p2.neb_init_method == pyec.NEBInit.IDPP
