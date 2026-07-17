@@ -1,9 +1,16 @@
-# deps for manylinux/sdist
 #!/usr/bin/env bash
 # Install native deps for pyeonclient manylinux / sdist builds (quill, capnp SHARED+PIC).
 # Cap'n Proto must be SHARED + PIC: static .a without -fPIC cannot link into libptlrpc.so.
 set -euo pipefail
 PREFIX="${PYEONCLIENT_DEPS_PREFIX:-/usr/local}"
+# manylinux images run as root; GHA ubuntu runners need sudo for /usr/local.
+if [[ "$(id -u)" -eq 0 ]]; then
+  SUDO=()
+  LDCONFIG=(ldconfig)
+else
+  SUDO=(sudo)
+  LDCONFIG=(sudo ldconfig)
+fi
 export PATH="${PREFIX}/bin:${PATH:-}"
 export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib:${LD_LIBRARY_PATH:-}"
 export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
@@ -12,8 +19,8 @@ export CMAKE_PREFIX_PATH="${PREFIX}${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 if command -v yum >/dev/null 2>&1; then
   yum install -y eigen3-devel gcc-gfortran patchelf cmake zlib-devel 2>/dev/null || true
 elif command -v apt-get >/dev/null 2>&1; then
-  sudo apt-get update -qq
-  sudo apt-get install -y --no-install-recommends \
+  "${SUDO[@]}" apt-get update -qq
+  "${SUDO[@]}" apt-get install -y --no-install-recommends \
     libeigen3-dev gfortran ninja-build cmake pkg-config zlib1g-dev patchelf \
     build-essential 2>/dev/null || true
 fi
@@ -39,12 +46,12 @@ if ! pkg-config --exists capnp 2>/dev/null; then
     -DBUILD_SHARED_LIBS=ON \
     -DBUILD_TESTING=OFF
   cmake --build /tmp/capnp-build -j"$(nproc 2>/dev/null || echo 2)"
-  cmake --install /tmp/capnp-build
-  ldconfig 2>/dev/null || true
+  "${SUDO[@]}" cmake --install /tmp/capnp-build
+  "${LDCONFIG[@]}" 2>/dev/null || true
 fi
 # Ensure capnp CLI can load shared libs (libcapnpc.so)
 export LD_LIBRARY_PATH="${PREFIX}/lib64:${PREFIX}/lib:${LD_LIBRARY_PATH:-}"
-ldconfig 2>/dev/null || true
+"${LDCONFIG[@]}" 2>/dev/null || true
 command -v capnp
 capnp --version || true
 pkg-config --modversion capnp
@@ -60,7 +67,7 @@ if ! pkg-config --exists quill 2>/dev/null; then
     -DQUILL_BUILD_TESTS=OFF \
     -DQUILL_BUILD_EXAMPLES=OFF
   cmake --build /tmp/quill-build -j"$(nproc 2>/dev/null || echo 2)"
-  cmake --install /tmp/quill-build
+  "${SUDO[@]}" cmake --install /tmp/quill-build
 fi
 pkg-config --modversion quill
 echo "pyeonclient_manylinux_deps: OK"
