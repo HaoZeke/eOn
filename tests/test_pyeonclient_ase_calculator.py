@@ -143,11 +143,9 @@ def test_ase_potential_drives_matter_relax():
     assert handle.is_bound
     e0 = float(m.potential_energy)
     assert np.isfinite(e0)
-    gen0 = m.geometry_generation
-    # second energy without geometry change should not require full rebuild
+    # second energy without geometry change
     e1 = float(m.potential_energy)
     assert e1 == pytest.approx(e0, rel=1e-12, abs=1e-12)
-    assert m.geometry_generation == gen0
     out, ok = m.relax(inplace=False)
     assert np.isfinite(float(out.potential_energy))
 

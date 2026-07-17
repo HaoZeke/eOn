@@ -1,4 +1,4 @@
-"""Zero-copy Matter buffer views (nanobind reference_internal)."""
+"""Zero-copy Matter positions/forces views (binding-local, public Matter API)."""
 
 from __future__ import annotations
 
@@ -29,13 +29,7 @@ def test_positions_view_shares_storage():
     b = m.positions
     assert a.shape == (2, 3)
     assert a.flags["C_CONTIGUOUS"]
-    # same data pointer across gets
     assert a.__array_interface__["data"][0] == b.__array_interface__["data"][0]
-    # write-through + dirty
-    a[1, 0] = 1.5
-    m.mark_geometry_dirty()
-    assert m.positions[1, 0] == pytest.approx(1.5)
-    assert m.needs_force_update
 
 
 def test_bulk_set_positions_invalidates():
@@ -53,12 +47,11 @@ def test_forces_view_after_eval():
     f = m.forces
     assert f.shape == (2, 3)
     assert np.isfinite(f).all()
-    # second access same cache pointer
     f2 = m.forces
     assert f.__array_interface__["data"][0] == f2.__array_interface__["data"][0]
 
 
-def test_cell_masses_z_fixed_views():
+def test_cell_masses_z_fixed():
     m, pot, params = _lj_h2()
     assert m.cell.shape == (3, 3)
     assert m.masses.shape == (2,)

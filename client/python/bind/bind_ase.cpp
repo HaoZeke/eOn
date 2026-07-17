@@ -5,6 +5,7 @@
 #include "Parameters.h"
 #include "Potential.h"
 #include "eigen_numpy.hpp"
+#include "bind_helpers.hpp"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -85,11 +86,10 @@ void bind_ase(nb::module_ &m) {
 
         auto matter = std::make_shared<Matter>(pot, params);
         matter->resize(n);
-        // Contiguous copy from ascontiguousarray buffers
-        matter->assignCell(f64_ptr(cell));
-        matter->assignPositions(f64_ptr(pos));
-        matter->assignMasses(f64_ptr(mass));
-        matter->assignAtomicNrs(reinterpret_cast<const int *>(z.data()));
+        matter_set_cell_buf(*matter, f64_ptr(cell));
+        matter_set_positions_buf(*matter, f64_ptr(pos), n);
+        matter_set_masses_buf(*matter, f64_ptr(mass), n);
+        matter_set_z_buf(*matter, reinterpret_cast<const int *>(z.data()), n);
 
         // FixAtoms → fixed mask
         std::vector<int> fixed(static_cast<size_t>(n), 0);
@@ -117,7 +117,7 @@ void bind_ase(nb::module_ &m) {
           // ignore constraint extraction failures
         } catch (const nb::cast_error &) {
         }
-        matter->assignIsFixed(fixed.data());
+        matter_set_fixed_buf(*matter, fixed.data(), n);
 
         bool periodic = false;
         try {
@@ -142,20 +142,20 @@ void bind_ase(nb::module_ &m) {
         auto np = nb::module_::import_("numpy");
 
         const long n = matter.numberOfAtoms();
-        // Copy views into owned NumPy so ASE can take ownership safely.
         nb::object positions = np.attr("array")(
-            nb::cast(view_n3(matter.positionsData(), n),
+            nb::cast(view_n3(matter_positions_ptr(matter), n),
                      nb::rv_policy::reference),
             nb::arg("dtype") = "float64", nb::arg("copy") = true);
+        Matrix3d cell_m = matter.getCell();
         nb::object cell = np.attr("array")(
-            nb::cast(view_33(matter.cellData()), nb::rv_policy::reference),
+            nb::cast(view_33(cell_m.data()), nb::rv_policy::reference),
             nb::arg("dtype") = "float64", nb::arg("copy") = true);
-        nb::object masses = np.attr("array")(
-            nb::cast(view_n(matter.massesData(), n), nb::rv_policy::reference),
-            nb::arg("dtype") = "float64", nb::arg("copy") = true);
+        nb::object masses = np.attr("asarray")(
+            nb::cast(vector_to_numpy(matter.getMasses()), nb::rv_policy::move),
+            nb::arg("dtype") = "float64");
         nb::object numbers = np.attr("ascontiguousarray")(
-            nb::cast(view_n_i32(matter.atomicNrsData(), n),
-                     nb::rv_policy::reference),
+            nb::cast(vectori_to_numpy(matter.getAtomicNrs()),
+                     nb::rv_policy::move),
             nb::arg("dtype") = "int64");
 
         bool use_pbc = matter.getPeriodic();
@@ -169,9 +169,8 @@ void bind_ase(nb::module_ &m) {
                   nb::arg("masses") = masses);
 
         nb::list fixed_idx;
-        const int *fx = matter.isFixedData();
         for (long i = 0; i < n; ++i) {
-          if (fx[i]) {
+          if (matter.getFixed(i)) {
             fixed_idx.append(i);
           }
         }

@@ -1,4 +1,5 @@
 #include "Matter.h"
+#include "bind_helpers.hpp"
 #include "Parameters.h"
 #include "Potential.h"
 #include "HelperFunctions.h"
@@ -33,9 +34,8 @@ namespace {
 ///
 ///   1. **bind_matter(m)**: wire ASE ``arrays['positions']`` / cell to
 ///      Matter buffers when possible (shared storage; no per-step copy).
-///   2. **system_changes** cache via ``Matter.geometryGeneration()`` so
-///      successive force calls only declare what changed (positions vs
-///      all_changes).
+///   2. **system_changes** tracked only in this class (pointer identity +
+///      cell memcmp) — no Matter API for ASE cache state.
 ///   3. Fallback path when force() is called with foreign buffers (e.g.
 ///      Potential.get_ef from Python arrays): bulk view + set_positions.
 ///
@@ -59,14 +59,14 @@ class AseCalcPotential final : public eonc::Potential {
   long n_cached_{-1};
   bool modules_ready_{false};
 
-  // Bound Matter (not owned). When force() sees R == matter->positionsData(),
-  // use generation-based system_changes and shared positions if installed.
+  // Bound Matter (not owned). Cache state is binding-local only.
   eonc::Matter *linked_{nullptr};
-  std::uint64_t last_gen_{0};
   bool shared_positions_{false};
   bool cell_synced_{false};
+  bool ever_calculated_{false};
   const double *last_R_{nullptr};
   const double *last_box_{nullptr};
+  double last_cell_[9]{};
 
   void ensure_modules() {
     if (modules_ready_)
@@ -108,7 +108,7 @@ class AseCalcPotential final : public eonc::Potential {
     n_cached_ = nAtoms;
     shared_positions_ = false;
     cell_synced_ = false;
-    last_gen_ = 0;
+    ever_calculated_ = false;
 
     nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu> z_arr(
         z_cache_.data(), {n});
@@ -129,8 +129,8 @@ class AseCalcPotential final : public eonc::Potential {
   bool try_share_positions(eonc::Matter &m) {
     try {
       nb::object pos_view =
-          view_f64(m.positionsData(), static_cast<size_t>(m.numberOfAtoms()),
-                   size_t{3});
+          view_f64(matter_positions_ptr(m),
+                   static_cast<size_t>(m.numberOfAtoms()), size_t{3});
       // Direct arrays dict install — np.asarray on a view does not copy.
       atoms_.attr("arrays").attr("__setitem__")("positions", pos_view);
       // Sanity: must still look like (n,3)
@@ -216,27 +216,30 @@ public:
     if (n <= 0) {
       return;
     }
-    ensure_atoms(n, m.atomicNrsData(), m.getPeriodic());
-    // Sync cell once from Matter
-    nb::object cell_view =
-        view_f64(m.cellData(), size_t{3}, size_t{3});
+    // Z from public API (by-value VectorXi)
+    VectorXi z = m.getAtomicNrs();
+    ensure_atoms(n, z.data(), m.getPeriodic());
+    Matrix3d cell = m.getCell();
+    nb::object cell_view = view_f64(cell.data(), size_t{3}, size_t{3});
     atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+    std::memcpy(last_cell_, cell.data(), 9 * sizeof(double));
     cell_synced_ = true;
     try_share_positions(m);
     if (!shared_positions_) {
       nb::object pos_view =
-          view_f64(m.positionsData(), static_cast<size_t>(n), size_t{3});
+          view_f64(matter_positions_ptr(m), static_cast<size_t>(n), size_t{3});
       atoms_.attr("set_positions")(pos_view);
     }
-    last_gen_ = m.geometryGeneration();
-    last_R_ = m.positionsData();
-    last_box_ = m.cellData();
+    ever_calculated_ = false;
+    last_R_ = matter_positions_ptr(m);
+    // cell is by-value on Matter; force path uses box pointer from force()
+    last_box_ = nullptr;
   }
 
   void unbind_matter() {
     linked_ = nullptr;
     shared_positions_ = false;
-    last_gen_ = 0;
+    ever_calculated_ = false;
   }
 
   [[nodiscard]] bool is_bound() const noexcept { return linked_ != nullptr; }
@@ -257,45 +260,48 @@ public:
           linked_ ? linked_->getPeriodic() : true;
       ensure_atoms(nAtoms, atomicNrs, pbc);
 
+      // Linked when force is driven by Matter::computePotential (R is
+      // Matter positions storage). Cache is binding-local only.
       const bool from_linked =
           linked_ && nAtoms == linked_->numberOfAtoms() &&
-          R == linked_->positionsData() && box == linked_->cellData();
+          R == matter_positions_ptr(*linked_);
 
-      bool first = (last_R_ == nullptr);
+      bool first = !ever_calculated_;
       bool pos_changed = true;
-      bool cell_changed = true;
+      bool cell_changed =
+          (std::memcmp(box, last_cell_, 9 * sizeof(double)) != 0);
 
       if (from_linked) {
-        const auto gen = linked_->geometryGeneration();
-        pos_changed = (gen != last_gen_) || (R != last_R_);
-        cell_changed = (box != last_box_) || (gen != last_gen_);
-        // Re-share if resize rebuilt Atoms
         if (!shared_positions_) {
           try_share_positions(*linked_);
         }
         if (shared_positions_) {
-          // Matter buffers are ASE positions — no set_positions.
-          pos_changed = (gen != last_gen_);
-        } else if (pos_changed) {
+          // Recompute only when Matter says geometry is dirty (public API).
+          pos_changed = linked_->needsForceUpdate();
+        } else {
           nb::object pos_view =
               view_f64(R, static_cast<size_t>(nAtoms), size_t{3});
           atoms_.attr("set_positions")(pos_view);
+          pos_changed = true;
         }
         if (cell_changed || !cell_synced_) {
           nb::object cell_view = view_f64(box, size_t{3}, size_t{3});
           atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+          std::memcpy(last_cell_, box, 9 * sizeof(double));
           cell_synced_ = true;
+          cell_changed = true;
         }
-        last_gen_ = gen;
       } else {
-        // Foreign buffers (Potential.get_ef path)
         nb::object pos_view =
             view_f64(R, static_cast<size_t>(nAtoms), size_t{3});
         nb::object cell_view = view_f64(box, size_t{3}, size_t{3});
         atoms_.attr("set_positions")(pos_view);
         atoms_.attr("set_cell")(cell_view, nb::arg("scale_atoms") = false);
+        std::memcpy(last_cell_, box, 9 * sizeof(double));
         shared_positions_ = false;
-        first = true; // force full system_changes when buffers unknown
+        first = true;
+        pos_changed = true;
+        cell_changed = true;
       }
 
       last_R_ = R;
@@ -303,6 +309,7 @@ public:
 
       nb::object sys_changes =
           pick_system_changes(pos_changed, cell_changed, first);
+      ever_calculated_ = true;
 
       nb::object forces_obj;
       try {

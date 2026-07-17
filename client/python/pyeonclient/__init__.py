@@ -143,6 +143,13 @@ from pyeonclient.ase_bridge import (  # noqa: E402
     matter_to_conframe,
     structure_to_ase,
 )
+
+from pyeonclient.backends import (  # noqa: E402
+    list_backends,
+    make_backend,
+    register as register_backend,
+)
+
 from pyeonclient.steps import (  # noqa: E402
     append_timing,
     load_parameters,
@@ -219,6 +226,9 @@ __all__ = [
     "bind_ase_matter",
     "matter_from_ase",
     "potential_from_ase",
+    "make_backend",
+    "list_backends",
+    "register_backend",
     "load_parameters",
     "run_job",
     "run_job_in_directory",

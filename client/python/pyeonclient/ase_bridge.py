@@ -1,40 +1,16 @@
-"""ASE calculators as Matter potentials (tight pyeonclient integration).
+"""ASE calculators as Matter force engines.
 
-Design
-------
-eOn ``Matter`` owns geometry. An ASE ``Calculator`` is the force engine via
-``AsePotential`` / ``attach_ase_calculator`` / ``from_ase``. MD, relax, NEB,
-and dimer then call ASE **through** ``Matter.potential_energy`` / forces —
-you do not drive a parallel ``ase.Atoms`` world.
+Preferred multi-backend style is the key→factory map::
 
-Efficiency (C++ ``AseCalcPotential``)
--------------------------------------
-* One peer ``ase.Atoms`` per calculator (not rebuilt each force call).
-* ``bind_matter(m)`` wires shared positions when ASE allows and uses
-  ``Matter.geometry_generation`` for ASE ``system_changes`` (only
-  ``positions`` / ``cell`` when possible, not full ``all_changes``).
-* Foreign buffers (``Potential.get_ef``) still use bulk NumPy views.
+    from pyeonclient.backends import make_backend
+    pot = make_backend("ase", calculator=EMT())
+    m = pyec.Matter(pot, params)
 
-Preferred usage::
+Also::
 
-    import pyeonclient as pyec
-    from ase.calculators.emt import EMT
-
-    # 1) From ASE structure + calc (binds automatically)
-    atoms.calc = EMT()
-    m = pyec.from_ase(atoms)
-    m.relax()                       # ASE forces under the hood
-
-    # 2) Explicit Matter-first
-    handle = pyec.ase_potential(EMT())
-    m = pyec.Matter(handle.potential, pyec.Parameters())
-    m.resize(n)
-    m.positions = ...
-    handle.bind_matter(m)
-    e = m.potential_energy
-
-    # 3) Attach calc to existing Matter
-    pyec.attach_ase_calculator(m, EMT())
+    m = pyec.from_ase(atoms)                 # atoms.calc → Potential
+    pyec.attach_ase_calculator(m, EMT())     # replace pot on existing Matter
+    pot = pyec.potential_from_ase(calc)      # raw Potential wrap
 """
 
 from __future__ import annotations

@@ -17,7 +17,6 @@
 #include "SurrogatePotential.h"
 
 #include "EonLogger.h"
-#include <cstring>
 #include <memory>
 #include <stdexcept>
 
@@ -140,7 +139,6 @@ void Matter::resize(const long int length) {
   recomputePotential = true;
   recomputeMaskedForces = true;
   recomputeFreeMask = true;
-  ++geometryGeneration_;
 }
 
 long int Matter::numberOfAtoms() const { return (nAtoms); }
@@ -150,9 +148,6 @@ Matrix3d Matter::getCell() const { return cell; }
 void Matter::setCell(const Matrix3d &newCell) {
   cell = newCell;
   cellInverse = cell.inverse();
-  ++geometryGeneration_;
-  recomputePotential = true;
-  recomputeMaskedForces = true;
 }
 
 double Matter::getPosition(long int indexAtom, int axis) const {
@@ -166,7 +161,6 @@ void Matter::setPosition(long int indexAtom, int axis, double position) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
-  ++geometryGeneration_;
 }
 
 void Matter::setVelocity(long int indexAtom, int axis, double vel) {
@@ -213,78 +207,6 @@ void Matter::setPositions(const AtomMatrix &pos) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
-  ++geometryGeneration_;
-}
-
-void Matter::assignPositions(const double *xyz_n3) {
-  if (!xyz_n3) {
-    throw std::invalid_argument("assignPositions: null buffer");
-  }
-  if (nAtoms <= 0) {
-    return;
-  }
-  std::memcpy(positions.data(), xyz_n3,
-              static_cast<size_t>(nAtoms) * 3u * sizeof(double));
-  if (usePeriodicBoundaries) {
-    applyPeriodicBoundary();
-  }
-  markGeometryDirty();
-}
-
-void Matter::assignCell(const double *cell_3x3_row_major) {
-  if (!cell_3x3_row_major) {
-    throw std::invalid_argument("assignCell: null buffer");
-  }
-  std::memcpy(cell.data(), cell_3x3_row_major, 9u * sizeof(double));
-  cellInverse = cell.inverse();
-  markGeometryDirty();
-}
-
-void Matter::assignVelocities(const double *v_n3) {
-  if (!v_n3) {
-    throw std::invalid_argument("assignVelocities: null buffer");
-  }
-  if (nAtoms <= 0) {
-    return;
-  }
-  std::memcpy(velocities.data(), v_n3,
-              static_cast<size_t>(nAtoms) * 3u * sizeof(double));
-}
-
-void Matter::assignMasses(const double *mass_n) {
-  if (!mass_n) {
-    throw std::invalid_argument("assignMasses: null buffer");
-  }
-  if (nAtoms <= 0) {
-    return;
-  }
-  std::memcpy(masses.data(), mass_n,
-              static_cast<size_t>(nAtoms) * sizeof(double));
-}
-
-void Matter::assignAtomicNrs(const int *z_n) {
-  if (!z_n) {
-    throw std::invalid_argument("assignAtomicNrs: null buffer");
-  }
-  if (nAtoms <= 0) {
-    return;
-  }
-  std::memcpy(atomicNrs.data(), z_n,
-              static_cast<size_t>(nAtoms) * sizeof(int));
-  markGeometryDirty();
-}
-
-void Matter::assignIsFixed(const int *fixed_n) {
-  if (!fixed_n) {
-    throw std::invalid_argument("assignIsFixed: null buffer");
-  }
-  if (nAtoms <= 0) {
-    return;
-  }
-  std::memcpy(isFixed.data(), fixed_n,
-              static_cast<size_t>(nAtoms) * sizeof(int));
-  recomputeFreeMask = true;
-  recomputeMaskedForces = true;
 }
 
 // Same but takes vector instead of n x 3 matrix
@@ -304,7 +226,6 @@ void Matter::setPositionsFree(const AtomMatrix &pos) {
   }
   recomputePotential = true;
   recomputeMaskedForces = true;
-  ++geometryGeneration_;
 }
 
 void Matter::setPositionsFreeV(const VectorXd &pos) {
@@ -404,7 +325,6 @@ void Matter::setAtomicNr(long int indexAtom, long atomicNr) {
   atomicNrs[indexAtom] = atomicNr;
   recomputePotential = true;
   recomputeMaskedForces = true;
-  ++geometryGeneration_;
 }
 
 int Matter::getFixed(long int indexAtom) const { return (isFixed[indexAtom]); }
