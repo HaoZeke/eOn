@@ -183,6 +183,29 @@ def _metatomic_fat(
     return pyec.make_potential(p)
 
 
+def _resolve_rgpot_metatomic_engine(engine_path: str = "") -> str:
+    """Engine path: explicit arg, env, or ``rgpot.default_metatomic_engine_path()``."""
+    import os
+
+    if engine_path:
+        return str(engine_path)
+    env = os.environ.get("RGPOT_METATOMIC_ENGINE") or os.environ.get(
+        "METATOMIC_ENGINE", ""
+    )
+    if env:
+        return env
+    try:
+        import rgpot
+
+        discovered = rgpot.default_metatomic_engine_path()
+        if discovered:
+            os.environ.setdefault("RGPOT_METATOMIC_ENGINE", str(discovered))
+            return str(discovered)
+    except Exception:
+        pass
+    return ""
+
+
 @register("rgpot_metatomic")
 @register("metatomic_dlopen")
 def _metatomic_dlopen(
@@ -193,18 +216,23 @@ def _metatomic_dlopen(
     params: Any = None,
     **_: Any,
 ) -> Any:
-    """RGPOT + ``backend=metatomic`` (dlopen ``libmetatomic_engine.so``)."""
+    """RGPOT + ``backend=metatomic`` (dlopen ``libmetatomic_engine.so``).
+
+    If *engine_path* is empty, try ``RGPOT_METATOMIC_ENGINE`` / ``METATOMIC_ENGINE``,
+    then ``rgpot.default_metatomic_engine_path()`` when rgpot is installed.
+    """
     import pyeonclient as pyec
 
     if not model_path:
         raise ValueError("backend 'rgpot_metatomic' requires model_path=")
+    eng = _resolve_rgpot_metatomic_engine(engine_path)
     p = params if params is not None else pyec.Parameters()
     p.potential = pyec.PotType.RGPOT
     p.rgpot_backend = "metatomic"
     p.rgpot_model_path = str(model_path)
     p.rgpot_device = str(device)
-    if engine_path:
-        p.rgpot_engine_path = str(engine_path)
+    if eng:
+        p.rgpot_engine_path = eng
     return pyec.make_potential(p)
 
 
