@@ -167,12 +167,6 @@ from pyeonclient.steps import (  # noqa: E402
     rgpot_metatomic_neb_workdir,
 )
 
-from pyeonclient.plot import (  # noqa: E402
-    plot_min,
-    plot_neb,
-    thin_min_movie,
-)
-
 to_ase = matter_to_ase
 from_ase = ase_to_matter
 
@@ -252,9 +246,6 @@ __all__ = [
     "rgpot_metatomic_neb_workdir",
     "write_minimization_results",
     "write_neb_results",
-    "plot_neb",
-    "plot_min",
-    "thin_min_movie",
     "write_potcall_summary",
     "append_results_timing",
     "append_timing",

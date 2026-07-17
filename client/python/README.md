@@ -20,7 +20,6 @@ Docs: [Python API](https://eondocs.org/user_guide/pyeonclient.html)
 pip install pyeonclient
 pip install 'pyeonclient[ase]'           # Matter ↔ ASE geometry helpers
 pip install 'pyeonclient[models]'        # optional Pydantic DimerSpec / NebSpec
-pip install 'pyeonclient[plot]'          # plot_neb / plot_min (chemparseplot)
 # uv: uv pip install 'pyeonclient[models]'
 # Core Dimer/NEB work without pydantic; C++ + light Python still enforce
 # accelerant="gp" only with method="improved".
@@ -57,10 +56,6 @@ path = [pyec.from_ase(img, pot, params) for img in images]
 neb = pyec.NudgedElasticBand(path, params, pot)
 neb.compute()
 path = list(neb.path_images())
-pyec.write_neb_results(neb, params, force_calls)
-# After write_movies=True, figures via the plot extra:
-pyec.plot_neb(plot_type="profile", output="neb_1d.png")
-pyec.plot_neb(plot_type="landscape", output="neb_2d.png")
 ```
 
 ## Build
