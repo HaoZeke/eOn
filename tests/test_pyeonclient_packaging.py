@@ -77,8 +77,8 @@ def test_workflow_publish_excludes_metatomic_local_version():
 
 def test_runtime_feature_flags_when_built():
     pyec = pytest.importorskip("pyeonclient")
-    assert hasattr(pc, "built_with_metatomic")
-    assert hasattr(pc, "built_with_rgpot")
+    assert hasattr(pyec, "built_with_metatomic")
+    assert hasattr(pyec, "built_with_rgpot")
     assert isinstance(pyec.built_with_metatomic(), bool)
     assert isinstance(pyec.built_with_rgpot(), bool)
     data = _load_toml()

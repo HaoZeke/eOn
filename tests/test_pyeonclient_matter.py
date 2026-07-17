@@ -73,7 +73,7 @@ def test_abi_policy_metadata():
 
 
 def test_version_and_enums():
-    assert hasattr(pc, "__version__")
+    assert hasattr(pyec, "__version__")
     assert pyec.io_ok(pyec.IoStatus.Ok)
     assert not pyec.io_ok(pyec.IoStatus.ReadError)
     assert pyec.pot_type_from_name("lj") == pyec.PotType.LJ

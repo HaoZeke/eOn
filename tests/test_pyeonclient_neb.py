@@ -21,12 +21,12 @@ COOK_ROOT = Path(
 
 
 def test_neb_symbols_bound():
-    assert hasattr(pc, "NudgedElasticBand")
-    assert hasattr(pc, "NEBStatus")
-    assert hasattr(pc, "neb_read_file_paths")
-    assert hasattr(pc, "neb_write_results")
-    assert hasattr(pc, "neb_linear_path")
-    assert hasattr(pc, "pot_registry_total_force_calls")
+    assert hasattr(pyec, "NudgedElasticBand")
+    assert hasattr(pyec, "NEBStatus")
+    assert hasattr(pyec, "neb_read_file_paths")
+    assert hasattr(pyec, "neb_write_results")
+    assert hasattr(pyec, "neb_linear_path")
+    assert hasattr(pyec, "pot_registry_total_force_calls")
     assert pyec.NEBStatus.GOOD is not None
 
 

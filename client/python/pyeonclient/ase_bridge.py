@@ -106,11 +106,15 @@ def ase_to_matter(
     m = Matter(potential, parameters)
     m.resize(n)
     # Cell before positions (default Matter cell is Zero; PBC wrap needs it).
-    m.cell = np.ascontiguousarray(np.asarray(atoms.get_cell()), dtype=np.float64)
-    m.positions = np.ascontiguousarray(atoms.get_positions(), dtype=np.float64)
-    m.masses = np.ascontiguousarray(atoms.get_masses(), dtype=np.float64)
+    # Contiguous float64 / int64 so the nanobind hot path can view buffers
+    # without another conversion.
+    m.cell = np.ascontiguousarray(np.asarray(atoms.get_cell(), dtype=np.float64))
+    m.positions = np.ascontiguousarray(
+        np.asarray(atoms.get_positions(), dtype=np.float64)
+    )
+    m.masses = np.ascontiguousarray(np.asarray(atoms.get_masses(), dtype=np.float64))
     m.atomic_numbers = np.ascontiguousarray(
-        atoms.get_atomic_numbers(), dtype=np.int64
+        np.asarray(atoms.get_atomic_numbers(), dtype=np.int64)
     )
 
     fixed = np.zeros(n, dtype=np.int64)

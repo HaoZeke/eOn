@@ -1,6 +1,8 @@
-"""Seamless ASE Calculator → Matter Potential."""
+"""Seamless ASE Calculator → Matter Potential (zero-copy hot path)."""
 
 from __future__ import annotations
+
+import time
 
 import numpy as np
 import pytest
@@ -48,3 +50,52 @@ def test_from_ase_without_calc_requires_pot():
     atoms = Atoms("H", positions=[[0, 0, 0]], cell=np.eye(3) * 5, pbc=False)
     with pytest.raises(ValueError, match="atoms.calc|potential"):
         pyec.from_ase(atoms)
+
+
+def test_ase_hot_path_many_force_calls():
+    """Repeated force() must stay bulk-fast (cached Atoms + view buffers).
+
+    The old path built O(N) Python lists per call and was unusable for MD.
+    400 evals on 48 atoms should finish well under a second on a workstation.
+    """
+    rng = np.random.default_rng(0)
+    n = 48
+    pos = rng.normal(scale=1.5, size=(n, 3)).astype(np.float64)
+    # keep atoms from overlapping too hard
+    pos[:, 0] += np.arange(n) * 1.2
+    z = np.full(n, 13, dtype=np.int64)
+    cell = np.eye(3) * (n * 1.5 + 10.0)
+    calc = LennardJones(epsilon=0.1, sigma=1.0, rc=3.0, smooth=False)
+    pot = pyec.potential_from_ase(calc)
+    # warm-up (module import / Atoms cache)
+    pot.get_ef(pos, z, cell)
+    t0 = time.perf_counter()
+    last_E = None
+    for k in range(400):
+        pos2 = pos + 1e-4 * k
+        E, F = pot.get_ef(pos2, z, cell)
+        last_E = E
+        assert F.shape == (n, 3)
+        assert np.isfinite(E)
+        assert np.isfinite(F).all()
+    elapsed = time.perf_counter() - t0
+    assert last_E is not None
+    # Loose ceiling: catches accidental O(N) Python list rebuild regressions.
+    assert elapsed < 5.0, f"ASE hot path too slow: {elapsed:.3f}s for 400 evals"
+
+
+def test_ase_force_matches_direct_calculator():
+    """eOn AseCalcPotential must match ASE calculator results (bulk path)."""
+    pos = np.array([[0.0, 0.0, 0.0], [1.4, 0.1, 0.0], [0.2, 1.3, 0.0]], dtype=np.float64)
+    z = np.array([1, 1, 1], dtype=np.int64)
+    cell = np.eye(3) * 12.0
+    calc = LennardJones(epsilon=1.0, sigma=1.0, rc=6.0, ro=0.0, smooth=False)
+    atoms = Atoms(numbers=z, positions=pos, cell=cell, pbc=True)
+    atoms.calc = calc
+    E_ref = float(atoms.get_potential_energy())
+    F_ref = np.asarray(atoms.get_forces(), dtype=np.float64)
+
+    pot = pyec.potential_from_ase(LennardJones(epsilon=1.0, sigma=1.0, rc=6.0, ro=0.0, smooth=False))
+    E, F = pot.get_ef(pos, z, cell)
+    assert E == pytest.approx(E_ref, rel=1e-10, abs=1e-10)
+    assert np.allclose(F, F_ref, rtol=1e-10, atol=1e-10)
