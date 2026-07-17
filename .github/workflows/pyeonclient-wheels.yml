@@ -28,8 +28,6 @@ on:
   push:
     tags:
       - "pyeonclient-v*"
-    branches:
-      - "feat/rgpot-metatomic-backend"
     paths:
       - "client/python/**"
       - "client/**/*.cpp"
@@ -166,7 +164,7 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.cibw_build }}
           CIBW_ENABLE: ${{ matrix.cibw_enable }}
-          CIBW_BUILD_FRONTEND: ${{ matrix.no_isolation == '1' && 'build;args: --no-isolation' || 'build' }}
+          CIBW_BUILD_FRONTEND: ${{ matrix.build_frontend }}
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
           CIBW_ARCHS: native
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
