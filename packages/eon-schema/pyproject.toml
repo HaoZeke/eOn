@@ -1,7 +1,7 @@
 [project]
 name = "eon-schema"
 version = "0.1.0"
-description = "Shared eOn parameter SSoT (Cap'n Proto L0 copy), enums, and optional pydantic API models for eon-akmc + pyeonclient"
+description = "Shared eOn parameter SSoT (vendored Cap'n Proto L0 from monorepo schema/), enums, and optional pydantic API models for eon-akmc + pyeonclient"
 readme = "README.md"
 license = {text = "BSD-3-Clause"}
 requires-python = ">=3.11"

@@ -1,22 +1,27 @@
 # eon-schema
 
-Shared **eOn** Cap’n Proto L0 SSoT (**authoring home**), enums, and optional
-pydantic **API** models for `eon-akmc` and `pyeonclient`.
+Shared **eOn** Cap’n Proto L0 SSoT (**vendored** from monorepo `schema/`),
+enums, and optional pydantic **API** models for `eon-akmc` and `pyeonclient`.
 
 ## Fat tree vs this package
 
 | | Fat monorepo tarball | This PyPI package |
 |--|----------------------|-------------------|
 | Purpose | conda-forge `eon`, full C++/server builds | Shared Python models + SSoT copy |
-| Cap’n Proto | `schema/` **mirror** in the tarball | Authoring under `src/eon_schema/ssot/` |
+| Cap’n Proto | Full monorepo including `schema/` | Vendored under `src/eon_schema/ssot/` |
 | Feedstock | **Uses fat tarball only** | Not required for 0.1.x |
 
-After editing the SSoT here, sync into the monorepo mirror so fat releases stay complete:
+**Authoring** is monorepo `schema/eon_params.capnp`. After edits:
 
 ```bash
-./packages/eon-schema/scripts/sync_ssot_to_tree.sh
 python tools/params_ssot/codegen.py
+./packages/eon-schema/scripts/sync_ssot_into_package.sh
 ```
+
+Release contract: always produce the **fat** `eon-v*.tar.xz` for
+conda-forge; publish **splits** (`eon-schema`, `pyeonclient`, `eon-akmc`, …)
+independently when their APIs change. Tree layout may be cleaned up as long as
+the fat archive remains buildable.
 
 See **[PUBLISHING.md](PUBLISHING.md)** for release trains and PyPI steps.
 
@@ -46,7 +51,7 @@ print(DimerSpec(method=MinModeMethod.improved, accelerant=Accelerant.gp).core_kw
 
 ```text
 src/eon_schema/
-  ssot/          # Cap'n Proto L0 authoring + catalog
+  ssot/          # vendored Cap'n Proto L0 + catalog (from monorepo schema/)
   fields/        # enums (no pydantic)
   api/           # DimerSpec, NebSpec (pydantic optional)
   config/        # placeholder: L1 still in eon-akmc eon.schema

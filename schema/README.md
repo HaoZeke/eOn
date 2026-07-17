@@ -1,16 +1,28 @@
-# eOn Cap'n Proto parameter SSoT (tree mirror)
+# eOn Cap'n Proto parameter SSoT
 
-**Authoring home:** `packages/eon-schema/src/eon_schema/ssot/eon_params.capnp`
+**Authoring home:** `schema/eon_params.capnp`
 
-This directory is a **mirror** for:
-- fat release tarballs (`eon-v*.tar.xz`) used by conda-forge `eon-feedstock`
-- `tools/params_ssot/codegen.py` historical paths
-
-After editing the package SSoT, run:
+Edit field names, types, defaults, and wire ordinals here first, then:
 
 ```bash
-./packages/eon-schema/scripts/sync_ssot_to_tree.sh
 python tools/params_ssot/codegen.py
+./packages/eon-schema/scripts/sync_ssot_into_package.sh   # if packages/eon-schema is present
 ```
 
-Do not add fields only here without updating the package authoring file.
+That regenerates:
+
+- `schema/eon_params_catalog.json`
+- `eon/_params_ssot_catalog.py`
+- `client/generated/ParametersSSOT*`
+- vendored copy under `packages/eon-schema/src/eon_schema/ssot/` (PyPI split)
+
+## Release shapes (monorepo)
+
+| Shape | Artifact | Consumer |
+|-------|----------|----------|
+| **Fat tree** | `eon-vX.Y.Z.tar.xz` (`git archive` of this monorepo) | conda-forge `eon-feedstock`, EasyBuild, full source builds |
+| **Splits** | PyPI `eon-schema`, `pyeonclient`, `eon-akmc`, … | pip/uv focused installs |
+
+Layout under `schema/` or `packages/` can change; the release contract is that
+the **fat** tarball is a complete monorepo archive the feedstock can build, while
+splits publish independently with their own versions when useful.

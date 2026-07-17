@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""Generate consumer projections from eon-schema Cap'n Proto L0 SSoT.
+"""Generate consumer projections from Cap'n Proto L0 SSoT.
 
-Authoring: packages/eon-schema/src/eon_schema/ssot/eon_params.capnp
-(fallback: schema/eon_params.capnp fat-tree mirror).
+Authoring SSoT: schema/eon_params.capnp (monorepo root).
+
+The PyPI split ``eon-schema`` vendors a copy under
+``packages/eon-schema/src/eon_schema/ssot/`` for standalone installs;
+codegen refreshes that catalog JSON in lockstep. Fat release tarballs
+(``git archive`` of the full monorepo) still ship everything for
+conda-forge ``eon-feedstock`` — layout cleanup is fine; the release
+contract is one fat archive + optional split PyPI packages.
 
 Outputs (relative to repo root):
-  packages/eon-schema/.../ssot/eon_params_catalog.json
-  schema/eon_params_catalog.json   (fat tarball / feedstock mirror)
+  schema/eon_params_catalog.json
+  packages/eon-schema/.../ssot/eon_params_catalog.json  (vendored for split)
   eon/_params_ssot_catalog.py
   client/generated/ParametersSSOTDefaults.h
   client/generated/ParametersSSOTFieldIndex.inc
@@ -19,12 +25,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-# Authoring: packages/eon-schema; schema/ is fat-tarball / historical mirror.
-_CAPNP_CANDIDATES = (
-    REPO / "packages" / "eon-schema" / "src" / "eon_schema" / "ssot" / "eon_params.capnp",
-    REPO / "schema" / "eon_params.capnp",
-)
-CAPNP = next((p for p in _CAPNP_CANDIDATES if p.is_file()), _CAPNP_CANDIDATES[0])
+CAPNP = REPO / "schema" / "eon_params.capnp"
 
 SECTION_MAP = {
     "MainOptions": "Main",
@@ -220,7 +221,7 @@ def build_catalog(structs: dict) -> dict:
     }
 
     return {
-        "source": "packages/eon-schema/src/eon_schema/ssot/eon_params.capnp",
+        "source": "schema/eon_params.capnp",
         "schema_version": 1,
         "sections": sections,
         "flat_aliases": flat_aliases,
@@ -334,8 +335,8 @@ def main() -> int:
     out_h.write_text(emit_cpp_header(catalog))
     out_idx.write_text(emit_field_index(catalog))
     print("read", CAPNP.relative_to(REPO))
-    print("wrote", out_json_tree.relative_to(REPO), "(fat-tree mirror)")
-    print("wrote", out_json_pkg.relative_to(REPO), "(eon-schema package)")
+    print("wrote", out_json_tree.relative_to(REPO), "(SSoT catalog)")
+    print("wrote", out_json_pkg.relative_to(REPO), "(eon-schema vendored)")
     print("wrote", out_py.relative_to(REPO))
     print("wrote", out_h.relative_to(REPO))
     print("wrote", out_idx.relative_to(REPO))

@@ -1,14 +1,18 @@
-# Publishing: fat full-tree tarball vs split PyPI packages
+# Publishing: fat monorepo tarball vs split PyPI packages
 
-eOn is a **monorepo**. One git tag can feed several distribution shapes:
+eOn is a **monorepo**. Releases can ship **both**:
 
 | Shape | Artifact | Consumer |
 |-------|----------|----------|
 | **Fat tree** | `eon-vX.Y.Z.tar.xz` (`git archive` of the monorepo) | **conda-forge `eon-feedstock`**, full source builds, EasyBuild |
 | **Split** | PyPI `eon-akmc`, `pyeonclient`, `eon-schema`, … | pip/uv pure-Python or focused wheels |
 
-conda-forge does **not** need a separate `eon-schema` feedstock for 0.1.x: the
-fat tarball still contains `schema/`, `eon/`, `client/`, and `packages/`.
+Layout cleanup (where Cap’n Proto lives, package paths, etc.) is allowed.
+The release contract is: **one complete fat archive for the conda recipe**,
+even when you also publish split PyPI packages from the same monorepo.
+
+conda-forge does **not** need a separate `eon-schema` feedstock for 0.1.x:
+the fat tarball already contains whatever the monorepo needs to build `eon`.
 
 ## Fat tarball (conda-forge / full eOn cut)
 
@@ -26,18 +30,6 @@ Unchanged process — see monorepo [`docs/source/devdocs/release.md`](../../docs
 5. PyPI job publishes **`eon-akmc`** (server import `eon`) from the same tag
    when configured — **not** the only Python project in the repo.
 
-**Fat-tree requirements for SSoT**
-
-- Authoring: `packages/eon-schema/src/eon_schema/ssot/eon_params.capnp`
-- Mirror into tree for historical paths + tarball layout:
-
-  ```bash
-  ./packages/eon-schema/scripts/sync_ssot_to_tree.sh
-  python tools/params_ssot/codegen.py
-  ```
-
-- Commit **both** package SSoT and `schema/` mirror so `git archive` is complete.
-
 Feedstock `recipe.yaml` continues to point at:
 
 ```yaml
@@ -45,6 +37,22 @@ url: https://github.com/TheochemUI/eOn/releases/download/v${{ version }}/eon-v${
 ```
 
 No new conda package is required when you only add PyPI splits.
+
+### Cap’n Proto SSoT and the fat archive
+
+- **Authoring:** `schema/eon_params.capnp`
+- After edits:
+
+  ```bash
+  python tools/params_ssot/codegen.py
+  ./packages/eon-schema/scripts/sync_ssot_into_package.sh
+  ```
+
+- Commit generated catalogs / headers and the package vendored copy so
+  `git archive` is self-contained for feedstock **and** for split builds.
+
+Do not `export-ignore` paths the fat build needs (e.g. `schema/`, `client/`,
+`eon/`, `packages/` if present) in `.gitattributes`.
 
 ## Split: PyPI `eon-schema` (independent semver)
 
@@ -54,13 +62,13 @@ Independent of a `v2.y.z` cut. Bump `packages/eon-schema/pyproject.toml`
 ### Build + check
 
 ```bash
-cd packages/eon-schema
-./scripts/sync_ssot_to_tree.sh   # keep fat mirror in sync if you edited package SSoT
-python tools/params_ssot/codegen.py   # from repo root, if field graph changed
+# from monorepo root if SSoT changed:
+python tools/params_ssot/codegen.py
+./packages/eon-schema/scripts/sync_ssot_into_package.sh
+
 cd packages/eon-schema
 python -m build
 twine check dist/*
-# smoke
 python -m pip install dist/eon_schema-*.whl 'pydantic>=2'
 python -c "from eon_schema.ssot import capnp_path; from eon_schema.api import DimerSpec; print(capnp_path()); print(DimerSpec())"
 ```
@@ -73,7 +81,8 @@ twine upload dist/*
 ```
 
 Optional monorepo tag for archaeology only: `eon-schema-v0.1.0`  
-(do **not** use this tag as the feedstock source).
+(do **not** use this tag as the feedstock source — feedstock wants the **fat**
+`eon-v*` archive).
 
 ### PyPI project setup (first time)
 
@@ -90,23 +99,9 @@ Optional monorepo tag for archaeology only: `eon-schema-v0.1.0`
 | `pyeonclient` | `pyproject-pyeonclient.toml` + wheel CI | Optional `[models]` → `eon-schema[pydantic]` |
 | `eon-schema` | This directory | Zero hard deps; optional pydantic |
 
-## What must stay in the fat tarball
+## Checklist: full eOn release (fat + optional splits)
 
-Everything feedstock and in-tree builds need, including after cleanup:
-
-- `schema/` mirror of Cap’n Proto + catalog
-- `packages/eon-schema/` (authoring + package sources)
-- `eon/` (server + `eon/schema.py` Config)
-- `client/` (C++ + generated headers)
-- `tools/params_ssot/`
-- meson/CMake, pixi, etc.
-
-Do not `export-ignore` `packages/` or `schema/` in `.gitattributes`.
-
-## Checklist: full eOn release (fat)
-
-- [ ] SSoT edited under `packages/eon-schema/.../ssot/` if changed
-- [ ] `sync_ssot_to_tree.sh` + `codegen.py` committed
+- [ ] SSoT edits under `schema/` if needed; codegen + package sync committed
 - [ ] towncrier / cog / `release_assert.py`
 - [ ] Tag `vX.Y.Z` → fat `eon-v*.tar.xz` → feedstock sha256
 - [ ] Optional same-day: bump/publish split packages if their public API changed
@@ -115,11 +110,6 @@ Do not `export-ignore` `packages/` or `schema/` in `.gitattributes`.
 
 - [ ] Version bump in `packages/eon-schema/pyproject.toml`
 - [ ] `CHANGELOG.md` entry
-- [ ] SSoT sync + build + twine
-- [ ] Upload to PyPI
+- [ ] Vendored SSoT in sync with monorepo `schema/`
+- [ ] Build + twine + upload to PyPI
 - [ ] **No** feedstock PR unless you intentionally add `eon-schema` conda later
-
-## Later (docs monorepo polish)
-
-Deeper monorepo docs (package map, CI matrix, dependency graph) can live under
-`docs/source/devdocs/` without changing this dual fat/split release contract.

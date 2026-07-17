@@ -1,13 +1,15 @@
-# Cap’n Proto L0 SSoT (authoring)
+# Cap'n Proto L0 SSoT (vendored for this package)
 
-Edit **`eon_params.capnp`** here first.
+**Authoring home:** monorepo `schema/eon_params.capnp`
 
-Then from the monorepo root:
+This directory is a **vendored copy** shipped in the PyPI `eon-schema` wheel
+so installs work without the full monorepo. Do not edit field graphs here.
+
+After editing monorepo `schema/`:
 
 ```bash
-./packages/eon-schema/scripts/sync_ssot_to_tree.sh
 python tools/params_ssot/codegen.py
+./packages/eon-schema/scripts/sync_ssot_into_package.sh
 ```
 
-That updates the fat-tree mirror `schema/` (conda-forge tarball) and generated
-client/Python catalogs.
+Fat conda-forge releases use a full monorepo `git archive` tarball (not this package alone).

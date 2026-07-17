@@ -6,8 +6,9 @@
 
 - Initial PyPI package `eon-schema`.
 - Vendored Cap’n Proto L0 copy (`eon_params.capnp` + catalog JSON) from monorepo
-  `schema/` (authoring remains in the full eOn tree).
+  `schema/` (authoring SSoT). Fat `eon-v*` tarball for conda-forge remains the
+  full monorepo archive; this package is a PyPI split only.
 - Enums: `MinModeMethod`, `Accelerant`, `PathInit`.
 - Optional pydantic L2 API: `DimerSpec`, `NebSpec` (extra `[pydantic]`).
 - Soft optional dep loading via rgpycrumbs `ensure_import` when available.
-- Publishing / release notes for feedstock-safe dual shipping.
+- Publishing notes: fat monorepo tarball (conda-forge) + split PyPI packages.

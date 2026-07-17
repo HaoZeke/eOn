@@ -117,20 +117,26 @@ Do once per GitHub repo (Settings):
 
 ## Multi-package monorepo: fat tarball vs splits
 
-One monorepo, two distribution shapes:
+One monorepo, two distribution shapes (both can ship from the same tag train):
 
 | Shape | Artifact | Primary consumer |
 |-------|----------|------------------|
 | **Fat tree** | `eon-vX.Y.Z.tar.xz` (`git archive` of the full tag) | **conda-forge `eon-feedstock`**, EasyBuild, source builds |
 | **Splits** | PyPI `eon-akmc`, `pyeonclient`, `eon-schema`, … | pip/uv focused installs |
 
-### Fat tarball (feedstock path — keep complete)
+Schema/package layout may be cleaned up over time. The release contract is:
+**always produce one complete fat archive for the conda-forge recipe**, and
+**also** publish splits when those packages have independent consumers.
+
+### Fat tarball (feedstock path)
 
 - Built by `release.yml`: `git archive --format=tar "$TAG" | xz -9 > eon-v….tar.xz`
-- Must include `schema/` (mirror), `packages/eon-schema/`, `eon/`, `client/`, tools, meson, …
-- Cap’n Proto **authoring** lives in `packages/eon-schema/src/eon_schema/ssot/`;
-  after SSoT edits run `./packages/eon-schema/scripts/sync_ssot_to_tree.sh` and
-  `python tools/params_ssot/codegen.py`, then commit **both** package + mirror.
+- Must be a **complete monorepo** snapshot the feedstock can build (`schema/`,
+  `eon/`, `client/`, tools, meson, and any `packages/` the tree uses).
+- Cap’n Proto **authoring:** `schema/eon_params.capnp`. After edits:
+  `python tools/params_ssot/codegen.py` then
+  `./packages/eon-schema/scripts/sync_ssot_into_package.sh` (vendors into the
+  split for PyPI). Commit generated outputs so the fat archive is self-contained.
 - Feedstock continues to use only the fat tarball URL + sha256 — **no new
   conda package required** when adding PyPI splits.
 
@@ -140,12 +146,12 @@ One monorepo, two distribution shapes:
 |---------|----------|--------|
 | `eon-akmc` | root (import `eon`) | Full-tree tag release job |
 | `pyeonclient` | `pyproject-pyeonclient.toml` | Wheel CI; optional `[models]` |
-| `eon-schema` | `packages/eon-schema/` | Independent `0.y.z`; see package `PUBLISHING.md` |
+| `eon-schema` | `packages/eon-schema/` | Independent `0.y.z`; vendored SSoT; see package `PUBLISHING.md` |
 
 Detail: [`packages/eon-schema/PUBLISHING.md`](../../../packages/eon-schema/PUBLISHING.md).
 
 Monorepo developer docs (package map, CI matrix) can expand later under
-`docs/source/devdocs/` without changing this fat/split contract.
+`docs/source/devdocs/` without changing this fat/split release contract.
 
 
 **conda-forge first-time:** feedstock already exists at
