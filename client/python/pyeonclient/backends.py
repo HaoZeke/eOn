@@ -151,9 +151,11 @@ def _ase_metatomic(
     model_path: str = "",
     device: str = "cpu",
     calculator: Any = None,
+    params: Any = None,  # accepted for API parity; unused (ASE calc has no Parameters)
     **calc_kwargs: Any,
 ) -> Any:
     """ASE ``MetatomicCalculator`` → eOn Potential (works with PET-MAD .pt)."""
+    del params  # pot type lives on Matter's Parameters, not MetatomicCalculator
     if calculator is None:
         if not model_path:
             raise ValueError(
