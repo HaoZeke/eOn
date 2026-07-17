@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Plot fat vs RGPOT-dlopen vs ASE-metatomic cost from compare JSON.
 
+Preferred entry: ``pixi run -e mta-bench mta-backend-bench``.
+
 SSoT is the JSON (``docs/source/fig/data/metatomic_backend_bench.json`` or the
 output of ``scripts/compare_metatomic_backends.py``). The SVG is **generated**
 (at docs build time via ``docs/source/conf.py``, or manually); do not commit it.

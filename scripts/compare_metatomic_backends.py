@@ -46,12 +46,10 @@ def _prepare_worker_env(backend: str, base_env: dict | None = None) -> dict:
     import tempfile
 
     env = dict(base_env or os.environ)
+    repo = Path(__file__).resolve().parents[1]
     root_candidates = [
         Path.cwd(),
-        Path(__file__).resolve().parents[1],
-        Path(
-            "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final"
-        ),
+        repo,
     ]
     if backend != "ase_metatomic":
         return env
@@ -60,9 +58,20 @@ def _prepare_worker_env(backend: str, base_env: dict | None = None) -> dict:
     core_path = Path(core) if core else None
     if core_path is None or not core_path.is_file():
         for root in root_candidates:
-            cand = root / "build-pyeon-methods" / "client" / "python" / "_core.abi3.so"
-            if cand.is_file():
-                core_path = cand
+            for rel in (
+                "bbdir-mta-bench-ase/client/python/_core.abi3.so",
+                "build-pyeon-methods/client/python/_core.abi3.so",
+                "bbdir-mta-bench/client/python/_core.abi3.so",
+            ):
+                cand = root / rel
+                if cand.is_file():
+                    # Prefer non-metatomic cores when discoverable via name.
+                    core_path = cand
+                    if "ase" in rel or "methods" in rel:
+                        break
+            if core_path is not None and core_path.is_file() and (
+                "ase" in str(core_path) or "methods" in str(core_path)
+            ):
                 break
     if core_path is None or not core_path.is_file():
         # fall back to default import; may TORCH_LIBRARY-clash with fat-linked core
@@ -167,17 +176,13 @@ def _worker_main(argv: list[str] | None = None) -> int:
 
 
 def _resolve_paths(args: argparse.Namespace):
+    repo = Path(__file__).resolve().parents[1]
     model = Path(args.model).expanduser() if args.model else None
     if not model or not model.is_file():
         for cand in (
-            Path(
-                "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/"
-                "subprojects/gpr_optim/bench_data/petmad/pet-mad-s-v1.5.0.pt"
-            ),
-            Path(
-                "/home/rgoswami/Git/Github/TheochemUI/gpr_optim/"
-                "bench_data/petmad/pet-mad-s-v1.5.0.pt"
-            ),
+            repo / "subprojects/gpr_optim/bench_data/petmad/pet-mad-s-v1.5.0.pt",
+            repo.parent / "gpr_optim/bench_data/petmad/pet-mad-s-v1.5.0.pt",
+            Path.cwd() / "subprojects/gpr_optim/bench_data/petmad/pet-mad-s-v1.5.0.pt",
         ):
             if cand.is_file():
                 model = cand
@@ -189,12 +194,10 @@ def _resolve_paths(args: argparse.Namespace):
     pos_con = Path(args.pos) if args.pos else None
     if not pos_con or not pos_con.is_file():
         for cand in (
-            Path(
-                "/home/rgoswami/Git/Github/epfl/pixi_envs/atomistic-cookbook/"
-                "atomistic-cookbook/examples/eon-pet-neb/min_reactant/pos.con"
-            ),
             model.parent / "d016_pos.con",
             model.parent / "minimal_pt.con",
+            repo / "subprojects/gpr_optim/bench_data/petmad/d016_pos.con",
+            repo / "docs/lj13.con",
         ):
             if cand.is_file():
                 pos_con = cand
@@ -206,17 +209,12 @@ def _resolve_paths(args: argparse.Namespace):
     engine = Path(args.engine) if args.engine else None
     if not engine or not engine.is_file():
         for cand in (
+            repo / "bbdir-mta-bench/client/libmetatomic_engine.so",
+            repo / "bbdir/client/libmetatomic_engine.so",
+            Path("bbdir-mta-bench/client/libmetatomic_engine.so"),
             Path("build-pyeon-mta-rgpot/client/libmetatomic_engine.so"),
-            Path("build-pyeon-mta/client/libmetatomic_engine.so"),
             Path("build-mta-compare/client/libmetatomic_engine.so"),
-            Path(
-                "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/"
-                "build-pyeon-mta-rgpot/client/libmetatomic_engine.so"
-            ),
-            Path(
-                "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/"
-                "build-mta-compare/client/libmetatomic_engine.so"
-            ),
+            Path("build-pyeon-mta/client/libmetatomic_engine.so"),
         ):
             if cand.is_file():
                 engine = cand

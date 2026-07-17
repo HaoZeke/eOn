@@ -89,17 +89,42 @@ exported models (including PET-MAD) where upstream
 `_model_capabilities_outputs_names`. Prefer that helper over raw
 `MetatomicCalculator(load_atomistic_model(path))` on PET-MAD.
 
-Reproduce the numbers:
+## Reproducible bench (pixi)
+
+One-shot path from a clean tree (builds fat + ASE-safe pyeonclient, runs the
+three-way compare, writes the JSON SSoT and regenerates the figure):
 
 ```{code-block} bash
+# PET-MAD + d016_pos.con live under subprojects/gpr_optim/bench_data/petmad/
+# (rsynced from ../gpr_optim when missing). Override with EON_PET_MAD_*.
+pixi run -e mta-bench mta-backend-bench
+```
+
+| Task | What it does |
+|------|----------------|
+| `mta-backend-bench` | meson fat + ASE cores, compare, write JSON + SVG |
+| `mta-backend-bench-skip-build` | re-run compare/plot only (`EON_MTA_BENCH_SKIP_BUILD=1`) |
+| `mta-backend-plot` | plot from committed JSON only (no C++ build) |
+
+Build trees: `bbdir-mta-bench/` (fat Metatomic + RGPOT engine) and
+`bbdir-mta-bench-ase/` (pyeonclient without C++ metatomic so ASE
+`metatomic-torch` does not double-register `TORCH_LIBRARY(metatomic)`).
+
+```{code-block} bash
+# optional overrides
 export EON_PET_MAD_MODEL=/path/to/pet-mad-s-v1.5.0.pt
 export EON_PET_MAD_POS=/path/to/pos.con
 export RGPOT_METATOMIC_ENGINE=/path/to/libmetatomic_engine.so
-python scripts/compare_metatomic_backends.py \
-  --json docs/source/fig/data/metatomic_backend_bench.json
-# figure is produced by sphinx-build; optional local preview:
-python scripts/plot_metatomic_backend_bench.py
+pixi run -e mta-bench mta-backend-bench-skip-build
+
+# figure alone (docs build also regenerates from JSON)
+pixi run -e mta-bench mta-backend-plot
+# or: sphinx-build docs/source docs/build/html
 ```
+
+Driver: {file}`scripts/run_metatomic_backend_bench.sh`. Compare:
+{file}`scripts/compare_metatomic_backends.py`. Plot:
+{file}`scripts/plot_metatomic_backend_bench.py`.
 
 ## INI configuration
 
