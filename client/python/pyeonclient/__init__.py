@@ -249,6 +249,7 @@ __all__ = [
     "append_timing",
     "get_process_times",
     "steady_clock_now",
+    "pot_registry_total_force_calls",
     "io_ok",
     "io_status_name",
     "job_type_from_name",
