@@ -12,9 +12,23 @@ does most of the computation (e.g. saddle searches, minimizations, and molecular
 dynamics) while the server creates the input for the client and processes its
 results.
 
-## Getting started
+## Python client only (`pyeonclient`)
 
-The simplest way to hit the ground running is with the `conda` package:
+For in-process minimization / NEB without the conda `eon` package or the
+`eonclient` binary:
+
+```{code-block} bash
+pip install pyeonclient 'rgpot>=2.4.2'
+pip install 'pyeonclient[ase,metatomic]'   # ASE converters + torch stack
+```
+
+Then use Matter objects as in {doc}`/user_guide/pyeonclient` (ASE-shaped API).
+Wheels and variants: {doc}`/devdocs/pyeonclient-pypi`.
+
+## Getting started (full eOn)
+
+The simplest way to hit the ground running with the full server + client is the
+`conda` package:
 
 ```{code-block} bash
 # best with pixi
@@ -31,7 +45,9 @@ features enabled:
 
 - [Metatomic](project:../user_guide/metatomic_pot.md) (machine-learned potentials via libtorch)
 - [xTB](https://xtb-docs.readthedocs.io/) (semi-empirical tight-binding)
-- [Serve mode](project:../user_guide/serve_mode.md) (rgpot-compatible RPC server)
+- [rgpot integration](project:../user_guide/rgpot_integration.md) (direct dlopen vs serve vs potserv client)
+- [RgpotPot / RGPOT](project:../user_guide/rgpot_pot.md) (`-Dwith_rgpot`: in-process NWChemPot/CPMDPot)
+- [Serve mode](project:../user_guide/serve_mode.md) (`-Dwith_serve`: eOn as rgpot-compatible RPC *server*)
 
 The server is accessed through `python -m eon.server`, and the `eonclient`
 binary is automatically made available in the activated environment.
