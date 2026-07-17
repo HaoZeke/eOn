@@ -27,22 +27,20 @@ ASE agrees within ~10 µeV. Fat and RGPOT are ~10× faster per call than the ASE
 wrap on this workload (the ASE path pays Python / neighbor-list setup each
 evaluation).
 
-```{figure} ../fig/metatomic_backend_bench.svg
+Numbers and figure are **generated at docs build time** from the committed
+JSON SSoT ({file}`../fig/data/metatomic_backend_bench.json`). Do not commit the
+SVG/PNG; ``sphinx-build`` runs ``scripts/plot_metatomic_backend_bench.py``.
+
+```{figure} ../fig/generated/metatomic_backend_bench.svg
 :alt: Bar charts of single-point wall time and energy difference for fat, RGPOT dlopen, and ASE metatomic backends
 :width: 100%
 
 pyeonclient metatomic backends on PET-MAD s v1.5 (CPU, 14 atoms). Left: wall
-time per force call. Right: energy relative to fat (µeV). Data:
-{file}`../fig/data/metatomic_backend_bench.json`. Regenerate with
-``python scripts/plot_metatomic_backend_bench.py`` after
-``scripts/compare_metatomic_backends.py --json …``.
+time per force call. Right: energy relative to fat (µeV).
 ```
 
-| Backend | Energy (eV) | max \|F\| (eV/Å) | ms / call |
-|---------|-------------|------------------|-----------|
-| fat (`metatomic`) | −71.980186 | 37.64625 | 21.7 |
-| RGPOT dlopen | −71.980186 | 37.64625 | 22.6 |
-| ASE wrap | −71.980194 | 37.64625 | 206 |
+```{include} ../fig/generated/metatomic_backend_bench_table.md
+```
 
 Treat timings as workload-specific (host CPU, torch build, warm vs cold
 neighbor lists). The plot is meant to show **order-of-magnitude packaging
@@ -99,6 +97,7 @@ export EON_PET_MAD_POS=/path/to/pos.con
 export RGPOT_METATOMIC_ENGINE=/path/to/libmetatomic_engine.so
 python scripts/compare_metatomic_backends.py \
   --json docs/source/fig/data/metatomic_backend_bench.json
+# figure is produced by sphinx-build; optional local preview:
 python scripts/plot_metatomic_backend_bench.py
 ```
 

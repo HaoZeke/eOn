@@ -139,6 +139,7 @@ patchelf = "*"
 enchant = ">=2"
 
 [feature.docs.pypi-dependencies]
+matplotlib = "*"
 meson-python = ">=0.17"
 myst-nb = ">=1.1"
 sphinx-design = "*"

@@ -158,3 +158,36 @@ favicons = [
     "favicons/apple-touch-icon.png",
     "favicons/site.webmanifest",
 ]
+
+
+# --- Generated figures (JSON SSoT → SVG at build time) ---------------------
+def _generate_docs_figures(app):
+    """Build metatomic backend benchmark figure from committed JSON."""
+    import sys
+
+    from sphinx.util import logging as _sphinx_logging
+
+    log = _sphinx_logging.getLogger(__name__)
+    repo = _Path(__file__).resolve().parents[2]
+    scripts = repo / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    try:
+        from plot_metatomic_backend_bench import generate_docs_assets
+    except Exception as exc:  # pragma: no cover
+        log.warning("metatomic backend figure not generated: %s", exc)
+        return
+    json_path = repo / "docs/source/fig/data/metatomic_backend_bench.json"
+    if not json_path.is_file():
+        log.warning("missing benchmark JSON: %s", json_path)
+        return
+    try:
+        svg, table = generate_docs_assets(json_path)
+        log.info("generated %s", svg)
+        log.info("generated %s", table)
+    except Exception as exc:
+        log.warning("metatomic backend figure failed: %s", exc)
+
+
+def setup(app):
+    app.connect("builder-inited", _generate_docs_figures)

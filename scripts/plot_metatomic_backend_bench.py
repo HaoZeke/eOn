@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
-"""Plot fat vs RGPOT-dlopen vs ASE-metatomic single-point cost for eOn docs.
+"""Plot fat vs RGPOT-dlopen vs ASE-metatomic cost from compare JSON.
 
-Reads the JSON produced by ``scripts/compare_metatomic_backends.py`` (or the
-committed copy under ``docs/source/fig/data/``) and writes an SVG bar chart.
+SSoT is the JSON (``docs/source/fig/data/metatomic_backend_bench.json`` or the
+output of ``scripts/compare_metatomic_backends.py``). The SVG is **generated**
+(at docs build time via ``docs/source/conf.py``, or manually); do not commit it.
 
 Usage::
 
   python scripts/plot_metatomic_backend_bench.py
   python scripts/plot_metatomic_backend_bench.py \\
       --json docs/source/fig/data/metatomic_backend_bench.json \\
-      --out docs/source/fig/metatomic_backend_bench.svg
+      --out docs/source/fig/generated/metatomic_backend_bench.svg
 """
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
-# Display order and labels for the docs figure.
+# Display order and short labels for the docs figure.
 _LABELS = {
     "metatomic": "fat",
     "metatomic_fat": "fat",
@@ -33,31 +35,34 @@ _COLORS = {
     "ase_metatomic": "#c44536",
 }
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_JSON = (
+    _REPO_ROOT / "docs/source/fig/data/metatomic_backend_bench.json"
+)
+_DEFAULT_OUT = (
+    _REPO_ROOT / "docs/source/fig/generated/metatomic_backend_bench.svg"
+)
 
-def main(argv: list[str] | None = None) -> int:
-    root = Path(__file__).resolve().parents[1]
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument(
-        "--json",
-        type=Path,
-        default=root / "docs/source/fig/data/metatomic_backend_bench.json",
-    )
-    ap.add_argument(
-        "--out",
-        type=Path,
-        default=root / "docs/source/fig/metatomic_backend_bench.svg",
-    )
-    args = ap.parse_args(argv)
 
-    payload = json.loads(args.json.read_text())
+def load_results(json_path: Path) -> tuple[dict[str, Any], list[str]]:
+    payload = json.loads(json_path.read_text())
     by_key = {r["backend"]: r for r in payload["results"] if r.get("ok")}
-    # normalize aliases
     if "metatomic_fat" in by_key and "metatomic" not in by_key:
         by_key["metatomic"] = by_key["metatomic_fat"]
-
     keys = [k for k in _ORDER if k in by_key]
     if len(keys) < 2:
-        raise SystemExit(f"need ≥2 ok backends in {args.json}; got {list(by_key)}")
+        raise ValueError(
+            f"need ≥2 ok backends in {json_path}; got {sorted(by_key)}"
+        )
+    return payload, keys
+
+
+def render_figure(json_path: Path, out_path: Path) -> Path:
+    """Write SVG (and PNG sibling) from *json_path*. Returns *out_path*."""
+    payload, keys = load_results(json_path)
+    by_key = {r["backend"]: r for r in payload["results"] if r.get("ok")}
+    if "metatomic_fat" in by_key and "metatomic" not in by_key:
+        by_key["metatomic"] = by_key["metatomic_fat"]
 
     import matplotlib
 
@@ -77,10 +82,11 @@ def main(argv: list[str] | None = None) -> int:
         gridspec_kw={"width_ratios": [1.15, 1.0], "wspace": 0.28},
     )
 
-    # --- timing ---
     ax = axes[0]
     x = range(len(keys))
-    bars = ax.bar(x, times_ms, color=colors, width=0.62, edgecolor="white", linewidth=0.6)
+    bars = ax.bar(
+        x, times_ms, color=colors, width=0.62, edgecolor="white", linewidth=0.6
+    )
     ax.set_xticks(list(x), labels, fontsize=9)
     ax.set_ylabel("wall time / single-point (ms)", fontsize=10)
     ax.set_title("Force-call cost (CPU, 14 atoms)", fontsize=11, pad=8)
@@ -100,7 +106,6 @@ def main(argv: list[str] | None = None) -> int:
     ax.grid(axis="y", linestyle=":", alpha=0.45)
     ax.set_axisbelow(True)
 
-    # --- energy agreement ---
     ax = axes[1]
     e0 = energies[0]
     dE = [(e - e0) * 1e6 for e in energies]  # µeV vs fat
@@ -132,24 +137,91 @@ def main(argv: list[str] | None = None) -> int:
         f"pyeonclient metatomic backends · {model} · n={n_atoms} · CPU",
         fontsize=11,
     )
-    # short legend under figure
     fig.text(
         0.5,
         -0.02,
-        "fat = PotType.METATOMIC  ·  RGPOT = dlopen libmetatomic_engine  ·  ASE = MetatomicCalculator wrap",
+        "fat = PotType.METATOMIC  ·  RGPOT = dlopen libmetatomic_engine  ·  "
+        "ASE = MetatomicCalculator wrap",
         ha="center",
         va="top",
         fontsize=8,
         color="#444444",
     )
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(args.out, bbox_inches="tight", facecolor="white")
-    # also PNG for browsers that prefer raster
-    png = args.out.with_suffix(".png")
-    fig.savefig(png, dpi=160, bbox_inches="tight", facecolor="white")
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, bbox_inches="tight", facecolor="white")
+    fig.savefig(out_path.with_suffix(".png"), dpi=160, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print("wrote", args.out)
-    print("wrote", png)
+    return out_path
+
+
+def render_table_md(json_path: Path, out_path: Path) -> Path:
+    """Write a Markdown table fragment from *json_path* (for Sphinx include)."""
+    payload, keys = load_results(json_path)
+    by_key = {r["backend"]: r for r in payload["results"] if r.get("ok")}
+    if "metatomic_fat" in by_key and "metatomic" not in by_key:
+        by_key["metatomic"] = by_key["metatomic_fat"]
+    lines = [
+        "| Backend | Energy (eV) | max \\|F\\| (eV/Å) | ms / call |",
+        "|---------|-------------|------------------|-----------|",
+    ]
+    pretty = {
+        "metatomic": "fat (`metatomic`)",
+        "rgpot_metatomic": "RGPOT dlopen",
+        "ase_metatomic": "ASE wrap",
+    }
+    for k in keys:
+        r = by_key[k]
+        lines.append(
+            f"| {pretty.get(k, k)} "
+            f"| {r['energy']:.6f} "
+            f"| {r['max_force']:.5f} "
+            f"| {r['seconds_per_call'] * 1e3:.1f} |"
+        )
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("\n".join(lines) + "\n")
+    return out_path
+
+
+def generate_docs_assets(
+    json_path: Path | None = None,
+    *,
+    fig_out: Path | None = None,
+    table_out: Path | None = None,
+) -> tuple[Path, Path]:
+    """Generate SVG + table for the Sphinx build. Returns (svg, table_md)."""
+    json_path = Path(json_path or _DEFAULT_JSON)
+    fig_out = Path(fig_out or _DEFAULT_OUT)
+    table_out = Path(
+        table_out
+        or (
+            _REPO_ROOT
+            / "docs/source/fig/generated/metatomic_backend_bench_table.md"
+        )
+    )
+    svg = render_figure(json_path, fig_out)
+    table = render_table_md(json_path, table_out)
+    return svg, table
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--json", type=Path, default=_DEFAULT_JSON)
+    ap.add_argument("--out", type=Path, default=_DEFAULT_OUT)
+    ap.add_argument(
+        "--table",
+        type=Path,
+        default=_REPO_ROOT
+        / "docs/source/fig/generated/metatomic_backend_bench_table.md",
+    )
+    args = ap.parse_args(argv)
+    svg, table = generate_docs_assets(
+        args.json, fig_out=args.out, table_out=args.table
+    )
+    print("wrote", svg)
+    print("wrote", svg.with_suffix(".png"))
+    print("wrote", table)
     return 0
 
 

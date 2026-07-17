@@ -62,6 +62,7 @@ eon-server = "eon.server:main"
 
 [dependency-groups]
 docs = [
+    "matplotlib>=3.8",
     "sphinx>=7.3.7",
     "sphinx-contributors>=0.2.7",
     "sphinx-copybutton>=0.5.2",

@@ -95,7 +95,6 @@ eon/version.py
 *.out
 *.app
 
-
 ### https://raw.github.com/github/gitignore/cb0c6ef7ac68f2300409ee85501d9ad432cb4c7e/Python.gitignore
 
 # Byte-compiled / optimized / DLL files
@@ -232,11 +231,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-
 ### https://raw.github.com/github/gitignore/cb0c6ef7ac68f2300409ee85501d9ad432cb4c7e/Global/SVN.gitignore
 
 .svn/
-
 
 ### https://raw.github.com/github/gitignore/cb0c6ef7ac68f2300409ee85501d9ad432cb4c7e/Fortran.gitignore
 
@@ -272,7 +269,6 @@ dmypy.json
 *.exe
 *.out
 *.app
-
 
 # Additionals
 .ccls-cache/
@@ -692,3 +688,5 @@ packages/eon-schema/.venv/
 packages/eon-schema/dist/
 packages/eon-schema/build/
 
+# Docs figures generated from JSON at sphinx-build time (SSoT is fig/data/*.json)
+docs/source/fig/generated/
