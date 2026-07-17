@@ -1,12 +1,19 @@
 """ASE ↔ Matter / Structure / readcon helpers (optional ASE dependency).
 
-Typical path construction for NEB::
+Seamless calculator path::
 
-    path = [ase_to_matter(img, pot, params) for img in images]
-    # aliases: pyeonclient.from_ase / pyeonclient.to_ase
+    import pyeonclient as pyec
+    from ase.calculators.emt import EMT
 
-When ASE is not installed, functions raise ``ImportError`` with a clear
-message (the server path does not require ASE).
+    atoms.calc = EMT()
+    matter = pyec.from_ase(atoms)              # uses atoms.calc → Potential
+    # or
+    pot = pyec.potential_from_ase(atoms.calc)
+    matter = pyec.from_ase(atoms, pot, params)
+
+Geometry-only (existing)::
+
+    path = [pyec.from_ase(img, pot, params) for img in images]
 """
 
 from __future__ import annotations
@@ -30,6 +37,19 @@ def _require_ase():
             "(optional: pip/pixi install ase)"
         ) from e
     return ase, Atoms, FixAtoms
+
+
+def potential_from_ase(calculator: Any, parameters: Any = None) -> Any:
+    """Wrap a live ASE Calculator as an eOn :class:`Potential`.
+
+    Does **not** require a file-based ASE_POT script or ``-Dwith_ase``.
+    Holds a reference to ``calculator``; not thread-safe across images.
+    """
+    if calculator is None:
+        raise ValueError("potential_from_ase: calculator is None")
+    from pyeonclient._core import make_potential_from_ase
+
+    return make_potential_from_ase(calculator)
 
 
 def matter_to_ase(matter: Any, *, pbc: Optional[bool] = None) -> "AseAtoms":
@@ -58,13 +78,29 @@ def matter_to_ase(matter: Any, *, pbc: Optional[bool] = None) -> "AseAtoms":
 
 def ase_to_matter(
     atoms: "AseAtoms",
-    potential: Any,
-    parameters: Any,
+    potential: Any = None,
+    parameters: Any = None,
 ) -> Any:
-    """Build :class:`pyeonclient.Matter` from ``ase.Atoms``."""
-    from pyeonclient import Matter
+    """Build :class:`pyeonclient.Matter` from ``ase.Atoms``.
+
+    If ``potential`` is omitted, uses ``atoms.calc`` via
+    :func:`potential_from_ase`. If ``parameters`` is omitted, a default
+    :class:`Parameters` is created.
+    """
+    from pyeonclient import Matter, Parameters
 
     _, _, FixAtoms = _require_ase()
+
+    if parameters is None:
+        parameters = Parameters()
+    if potential is None:
+        calc = getattr(atoms, "calc", None)
+        if calc is None:
+            raise ValueError(
+                "from_ase/ase_to_matter: pass potential= or attach atoms.calc "
+                "(ASE Calculator) so eOn can evaluate forces"
+            )
+        potential = potential_from_ase(calc, parameters)
 
     n = len(atoms)
     m = Matter(potential, parameters)
@@ -135,11 +171,7 @@ def ase_to_structure(atoms: "AseAtoms") -> Any:
 
 
 def matter_to_conframe(matter: Any):
-    """Matter → readcon.ConFrame (via temporary .con round-trip or arrays).
-
-    Uses in-memory write_con_string path through Structure for fidelity.
-    """
-    import readcon
+    """Matter → readcon.ConFrame (via Structure arrays)."""
     from pyeonclient.bridge import matter_to_structure
 
     s = matter_to_structure(matter)

@@ -1,0 +1,51 @@
+[project]
+name = "eon-schema"
+version = "0.1.0"
+description = "Shared eOn parameter SSoT (Cap'n Proto L0 copy), enums, and optional pydantic API models for eon-akmc + pyeonclient"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.11"
+authors = [{name = "Rohit Goswami", email = "rgoswami@ieee.org"}]
+dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+keywords = ["eOn", "schema", "capnp", "pydantic", "AKMC", "pyeonclient"]
+
+[project.optional-dependencies]
+pydantic = ["pydantic>=2.0"]
+rgpycrumbs = ["rgpycrumbs>=1.3"]
+
+[project.urls]
+Homepage = "https://github.com/TheochemUI/eOn"
+Documentation = "https://github.com/TheochemUI/eOn/blob/main/packages/eon-schema/README.md"
+Repository = "https://github.com/TheochemUI/eOn"
+Issues = "https://github.com/TheochemUI/eOn/issues"
+Changelog = "https://github.com/TheochemUI/eOn/blob/main/packages/eon-schema/CHANGELOG.md"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/eon_schema",
+  "scripts",
+  "README.md",
+  "PUBLISHING.md",
+  "CHANGELOG.md",
+  "LICENSE",
+  "pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/eon_schema/ssot/eon_params.capnp" = "eon_schema/ssot/eon_params.capnp"
+"src/eon_schema/ssot/eon_params_catalog.json" = "eon_schema/ssot/eon_params_catalog.json"
+"src/eon_schema/ssot/README.md" = "eon_schema/ssot/README.md"

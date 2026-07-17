@@ -1,5 +1,6 @@
 #include "Parameters.h"
 #include "Potential.h"
+#include "BaseStructures.h"
 #include "Eigen.h"
 #include <nanobind/ndarray.h>
 #include <algorithm>
@@ -12,9 +13,86 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace eonc::pybind {
 namespace nb = nanobind;
+
+
+namespace {
+
+/// Live ASE calculator held as a Potential (seamless Python path).
+/// Does not use the file-based ASE_POT script (extPotPath); works in any
+/// pyeonclient build when ASE is importable at runtime.
+class AseCalcPotential final : public eonc::Potential {
+  nb::object calc_;
+
+public:
+  explicit AseCalcPotential(nb::object calc)
+      : eonc::Potential(eonc::PotType::ASE_POT), calc_(std::move(calc)) {
+    if (!calc_.is_valid() || calc_.is_none()) {
+      throw std::invalid_argument(
+          "make_potential_from_ase: calculator is None");
+    }
+  }
+
+  void force(long nAtoms, const double *R, const int *atomicNrs, double *F,
+             double *U, double * /*variance*/, const double *box) override {
+    nb::gil_scoped_acquire gil;
+    try {
+      auto np = nb::module_::import_("numpy");
+      // Build Python lists then asarray — avoids dangling ndarray capsules.
+      nb::list pos_rows;
+      for (long i = 0; i < nAtoms; ++i) {
+        nb::list row;
+        row.append(R[i * 3 + 0]);
+        row.append(R[i * 3 + 1]);
+        row.append(R[i * 3 + 2]);
+        pos_rows.append(std::move(row));
+      }
+      nb::list z_list;
+      for (long i = 0; i < nAtoms; ++i)
+        z_list.append(atomicNrs[i]);
+      nb::list cell_rows;
+      for (int i = 0; i < 3; ++i) {
+        nb::list row;
+        row.append(box[i * 3 + 0]);
+        row.append(box[i * 3 + 1]);
+        row.append(box[i * 3 + 2]);
+        cell_rows.append(std::move(row));
+      }
+      nb::object positions = np.attr("asarray")(pos_rows, nb::arg("dtype") = "float64");
+      nb::object numbers = np.attr("asarray")(z_list, nb::arg("dtype") = "int32");
+      nb::object cell = np.attr("asarray")(cell_rows, nb::arg("dtype") = "float64");
+
+      nb::object Atoms = nb::module_::import_("ase").attr("Atoms");
+      nb::object atoms =
+          Atoms(nb::arg("numbers") = numbers, nb::arg("positions") = positions,
+                nb::arg("cell") = cell, nb::arg("pbc") = true);
+      atoms.attr("calc") = calc_;
+      *U = nb::cast<double>(atoms.attr("get_potential_energy")());
+      nb::object forces_obj = atoms.attr("get_forces")();
+      nb::object forces = np.attr("ascontiguousarray")(
+          forces_obj, nb::arg("dtype") = "float64");
+      nb::object flat = forces.attr("ravel")();
+      const long n = nAtoms * 3;
+      for (long i = 0; i < n; ++i)
+        F[i] = nb::cast<double>(flat[nb::int_(i)]);
+    } catch (const nb::python_error &e) {
+      throw std::runtime_error(std::string("ASE calculator Python error: ") +
+                               e.what());
+    } catch (const std::exception &e) {
+      throw std::runtime_error(std::string("ASE calculator error: ") + e.what());
+    }
+  }
+
+  [[nodiscard]] bool isThreadSafe() const noexcept override { return false; }
+  [[nodiscard]] bool needsPerImageInstance() const noexcept override {
+    return false;
+  }
+};
+
+} // namespace
 
 void bind_potential(nb::module_ &m) {
   nb::class_<eonc::Potential>(m, "Potential",

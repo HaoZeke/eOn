@@ -1,25 +1,16 @@
-# eOn Cap'n Proto parameter SSoT
+# eOn Cap'n Proto parameter SSoT (tree mirror)
 
-`eon_params.capnp` is the **sole authoring surface** for covered simulation
-parameter names, types, defaults, and sections (L0 field graph).
+**Authoring home:** `packages/eon-schema/src/eon_schema/ssot/eon_params.capnp`
 
-## Covered groups
-Main, Potential, Optimizer (+ LBFGS/CG/Quickmin/SD), Structure Comparison,
-Process Search.
+This directory is a **mirror** for:
+- fat release tarballs (`eon-v*.tar.xz`) used by conda-forge `eon-feedstock`
+- `tools/params_ssot/codegen.py` historical paths
 
-## Regenerate consumers
+After editing the package SSoT, run:
+
 ```bash
+./packages/eon-schema/scripts/sync_ssot_to_tree.sh
 python tools/params_ssot/codegen.py
 ```
-Writes:
-- `schema/eon_params_catalog.json`
-- `eon/_params_ssot_catalog.py`
-- `client/generated/ParametersSSOTDefaults.h`
 
-## Adapters
-- Client: `Parameters::load` / JSON (INI/JSON files)
-- Python: `eon.config` / Pydantic (`eon/schema.py`) — field names parity-gated
-
-## Do not
-- Add keys to covered sections of `config.yaml` or `schema.py` without updating
-  this Cap'n Proto file and regenerating.
+Do not add fields only here without updating the package authoring file.

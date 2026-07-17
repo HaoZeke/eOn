@@ -63,15 +63,18 @@ eonc::Parameters route_minmode_params(eonc::Parameters params,
         "Dimer(accelerant=\"gp\") requires build with -Dwith_gprd=true "
         "(WITH_GPRD); this extension has built_with_gprd()==False");
 #else
-    if (method != "improved" && method != "classic" && method != "dimer") {
+    // GP accelerant is always the improved-dimer + GP stack (AtomicGPDimer).
+    if (method != "improved" && method != "dimer" && !method.empty()) {
       throw std::runtime_error(
-          "Dimer(accelerant=\"gp\") only applies to method "
-          "\"improved\" or \"classic\" (got \"" +
-          method_in + "\")");
+          "Dimer(accelerant=\"gp\") only applies to method=\"improved\" "
+          "(got \"" +
+          method_in +
+          "\"). Use DimerSpec / method=\"improved\" — not classic/lanczos/"
+          "davidson.");
     }
     params.saddle_search_options.minmode_method =
         eonc::LowestEigenmode::MINMODE_GPRDIMER;
-    params.dimer_options.improved = (method == "improved");
+    params.dimer_options.improved = true;
     return params;
 #endif
   }

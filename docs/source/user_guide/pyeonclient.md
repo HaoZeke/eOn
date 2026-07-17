@@ -220,12 +220,28 @@ dedicated Matter-first classes. The algorithms above are already first-class.
 
 ## ASE bridge
 
+Geometry (always array-copy, fast)::
+
 ```{code-block} python
 matter = pyec.from_ase(atoms, pot, params)
 atoms = pyec.to_ase(matter)
 ```
 
-Requires `pip install 'pyeonclient[ase]'`.
+**Seamless calculator** — wrap a live ASE Calculator as the Matter PEF
+(no file script, no ``-Dwith_ase``)::
+
+```{code-block} python
+from ase.calculators.emt import EMT
+
+atoms.calc = EMT()
+matter = pyec.from_ase(atoms)                 # uses atoms.calc
+# or
+pot = pyec.potential_from_ase(atoms.calc)
+matter = pyec.from_ase(atoms, pot, params)
+```
+
+Requires `pip install 'pyeonclient[ase]'` and ASE installed at runtime.
+Not thread-safe across images (one calculator object).
 
 ## Related
 

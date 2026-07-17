@@ -112,6 +112,42 @@ Do once per GitHub repo (Settings):
 5. Never `twine upload` by hand unless CI is down; the tag workflow is the
    source of truth for stable tags.
 
+
+
+
+## Multi-package monorepo: fat tarball vs splits
+
+One monorepo, two distribution shapes:
+
+| Shape | Artifact | Primary consumer |
+|-------|----------|------------------|
+| **Fat tree** | `eon-vX.Y.Z.tar.xz` (`git archive` of the full tag) | **conda-forge `eon-feedstock`**, EasyBuild, source builds |
+| **Splits** | PyPI `eon-akmc`, `pyeonclient`, `eon-schema`, … | pip/uv focused installs |
+
+### Fat tarball (feedstock path — keep complete)
+
+- Built by `release.yml`: `git archive --format=tar "$TAG" | xz -9 > eon-v….tar.xz`
+- Must include `schema/` (mirror), `packages/eon-schema/`, `eon/`, `client/`, tools, meson, …
+- Cap’n Proto **authoring** lives in `packages/eon-schema/src/eon_schema/ssot/`;
+  after SSoT edits run `./packages/eon-schema/scripts/sync_ssot_to_tree.sh` and
+  `python tools/params_ssot/codegen.py`, then commit **both** package + mirror.
+- Feedstock continues to use only the fat tarball URL + sha256 — **no new
+  conda package required** when adding PyPI splits.
+
+### Split PyPI packages
+
+| Project | Location | Notes |
+|---------|----------|--------|
+| `eon-akmc` | root (import `eon`) | Full-tree tag release job |
+| `pyeonclient` | `pyproject-pyeonclient.toml` | Wheel CI; optional `[models]` |
+| `eon-schema` | `packages/eon-schema/` | Independent `0.y.z`; see package `PUBLISHING.md` |
+
+Detail: [`packages/eon-schema/PUBLISHING.md`](../../../packages/eon-schema/PUBLISHING.md).
+
+Monorepo developer docs (package map, CI matrix) can expand later under
+`docs/source/devdocs/` without changing this fat/split contract.
+
+
 **conda-forge first-time:** feedstock already exists at
 [conda-forge/eon-feedstock](https://github.com/conda-forge/eon-feedstock). New
 maintainers request access via the feedstock `recipe/recipe.yaml` maintainers

@@ -3,16 +3,18 @@
 Class-first surface (import as ``pyec``)::
 
     import pyeonclient as pyec
+    from pyeonclient.models import DimerSpec, Accelerant
 
-    # Min-mode (default method=\"improved\")
+    # Min-mode: default method=improved; GP only with improved (validated)
     d = pyec.Dimer(matter, params, pot)
-    d = pyec.Dimer(matter, params, pot, method=\"improved\", accelerant=\"gp\")
+    d = pyec.Dimer(matter, params, pot, accelerant="gp")
+    d = pyec.Dimer(matter, params, pot, spec=DimerSpec(accelerant=Accelerant.gp))
     d.compute(matter, direction)
 
-    # NEB (accelerant=\"gp\" for GP-surrogate band when built)
+    # NEB: path init + optional GP accelerant (validated NebSpec)
     path = pyec.neb_idpp_path(initial, final, n, params)
     neb = pyec.NEB(path, params, pot)
-    neb.compute()
+    neb = pyec.NEB(initial, final, params, pot, accelerant="gp")
 
     # Jobs
     out = pyec.TAD(matter, params, pot).run(inplace=False)
@@ -45,13 +47,14 @@ try:
         job_type_name,
         make_job,
         make_potential,
+        make_potential_from_ase,
         pot_type_from_name,
         pot_type_name,
         steady_clock_now,
         write_potcall_summary,
         # NEB
         NudgedElasticBand,
-        NEB,
+        NEB as _NEBCore,
         NEBStatus,
         neb_read_file_paths,
         neb_load_path_from_files,
@@ -62,8 +65,8 @@ try:
         neb_initial_path,
         neb_write_results,
         pot_registry_total_force_calls,
-        # Min-mode
-        Dimer,
+        # Min-mode engines (chemist Dimer/NEB come from api after validation)
+        Dimer as _DimerCore,
         ClassicDimer,
         ImprovedDimer,
         Lanczos,
@@ -101,6 +104,24 @@ except ImportError as e:  # pragma: no cover
         "-Dwith_pyeonclient=true (nanobind; stable ABI / free-threaded)."
     ) from e
 
+from pyeonclient.api import Dimer, NEB
+
+# Typed specs optional — install pydantic via pyeonclient[models]
+try:
+    from pyeonclient.models import (  # type: ignore F401
+        Accelerant,
+        DimerSpec,
+        MinModeMethod,
+        NebSpec,
+        PathInit,
+    )
+except ImportError:  # pragma: no cover
+    Accelerant = None  # type: ignore[misc, assignment]
+    DimerSpec = None  # type: ignore[misc, assignment]
+    MinModeMethod = None  # type: ignore[misc, assignment]
+    NebSpec = None  # type: ignore[misc, assignment]
+    PathInit = None  # type: ignore[misc, assignment]
+
 from pyeonclient.bridge import (
     from_structure,
     matter_to_structure,
@@ -109,6 +130,7 @@ from pyeonclient.bridge import (
 )
 from pyeonclient.ase_bridge import (  # noqa: E402
     ase_to_matter,
+    potential_from_ase,
     ase_to_structure,
     conframe_to_matter,
     matter_to_ase,
@@ -155,6 +177,11 @@ __all__ = [
     "neb_read_file_paths",
     "neb_write_results",
     "Dimer",
+    "PathInit",
+    "Accelerant",
+    "MinModeMethod",
+    "NebSpec",
+    "DimerSpec",
     "ClassicDimer",
     "ImprovedDimer",
     "Lanczos",
@@ -180,6 +207,8 @@ __all__ = [
     "structure_distance",
     "make_job",
     "make_potential",
+    "make_potential_from_ase",
+    "potential_from_ase",
     "load_parameters",
     "run_job",
     "run_job_in_directory",

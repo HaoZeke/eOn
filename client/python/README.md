@@ -17,7 +17,12 @@ Docs: [Python API](https://eondocs.org/user_guide/pyeonclient.html)
 ## Install
 
 ```bash
-pip install pyeonclient 'pyeonclient[ase]' 'rgpot>=2.4.2'
+pip install pyeonclient
+pip install 'pyeonclient[ase]'           # Matter ↔ ASE geometry helpers
+pip install 'pyeonclient[models]'        # optional Pydantic DimerSpec / NebSpec
+# uv: uv pip install 'pyeonclient[models]'
+# Core Dimer/NEB work without pydantic; C++ + light Python still enforce
+# accelerant="gp" only with method="improved".
 ```
 
 ## Example (dimer → saddle)

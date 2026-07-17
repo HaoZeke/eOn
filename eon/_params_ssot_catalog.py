@@ -559,5 +559,5 @@ CATALOG = {
     "Main.job": "akmc",
     "Potential.ext_pot_path": "ext_pot"
   },
-  "source": "schema/eon_params.capnp"
+  "source": "packages/eon-schema/src/eon_schema/ssot/eon_params.capnp"
 }

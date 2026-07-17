@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Generate consumer projections from schema/eon_params.capnp (L0 SSoT).
+"""Generate consumer projections from eon-schema Cap'n Proto L0 SSoT.
+
+Authoring: packages/eon-schema/src/eon_schema/ssot/eon_params.capnp
+(fallback: schema/eon_params.capnp fat-tree mirror).
 
 Outputs (relative to repo root):
-  schema/eon_params_catalog.json
+  packages/eon-schema/.../ssot/eon_params_catalog.json
+  schema/eon_params_catalog.json   (fat tarball / feedstock mirror)
   eon/_params_ssot_catalog.py
   client/generated/ParametersSSOTDefaults.h
   client/generated/ParametersSSOTFieldIndex.inc
@@ -15,7 +19,12 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-CAPNP = REPO / "schema" / "eon_params.capnp"
+# Authoring: packages/eon-schema; schema/ is fat-tarball / historical mirror.
+_CAPNP_CANDIDATES = (
+    REPO / "packages" / "eon-schema" / "src" / "eon_schema" / "ssot" / "eon_params.capnp",
+    REPO / "schema" / "eon_params.capnp",
+)
+CAPNP = next((p for p in _CAPNP_CANDIDATES if p.is_file()), _CAPNP_CANDIDATES[0])
 
 SECTION_MAP = {
     "MainOptions": "Main",
@@ -211,7 +220,7 @@ def build_catalog(structs: dict) -> dict:
     }
 
     return {
-        "source": "schema/eon_params.capnp",
+        "source": "packages/eon-schema/src/eon_schema/ssot/eon_params.capnp",
         "schema_version": 1,
         "sections": sections,
         "flat_aliases": flat_aliases,
@@ -302,17 +311,31 @@ def main() -> int:
         return 1
     catalog = build_catalog(structs)
 
-    out_json = REPO / "schema" / "eon_params_catalog.json"
+    out_json_tree = REPO / "schema" / "eon_params_catalog.json"
+    out_json_pkg = (
+        REPO
+        / "packages"
+        / "eon-schema"
+        / "src"
+        / "eon_schema"
+        / "ssot"
+        / "eon_params_catalog.json"
+    )
     out_py = REPO / "eon" / "_params_ssot_catalog.py"
     out_h = REPO / "client" / "generated" / "ParametersSSOTDefaults.h"
     out_idx = REPO / "client" / "generated" / "ParametersSSOTFieldIndex.inc"
     out_h.parent.mkdir(parents=True, exist_ok=True)
+    out_json_pkg.parent.mkdir(parents=True, exist_ok=True)
 
-    out_json.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
+    catalog_json = json.dumps(catalog, indent=2, sort_keys=True) + "\n"
+    out_json_tree.write_text(catalog_json)
+    out_json_pkg.write_text(catalog_json)
     out_py.write_text(emit_python(catalog))
     out_h.write_text(emit_cpp_header(catalog))
     out_idx.write_text(emit_field_index(catalog))
-    print("wrote", out_json.relative_to(REPO))
+    print("read", CAPNP.relative_to(REPO))
+    print("wrote", out_json_tree.relative_to(REPO), "(fat-tree mirror)")
+    print("wrote", out_json_pkg.relative_to(REPO), "(eon-schema package)")
     print("wrote", out_py.relative_to(REPO))
     print("wrote", out_h.relative_to(REPO))
     print("wrote", out_idx.relative_to(REPO))

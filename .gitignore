@@ -686,3 +686,9 @@ scripts/regression/workdirs/
 /fortran_lcov.info
 /bbdir-cov/
 *.profraw
+
+# eon-schema local build
+packages/eon-schema/.venv/
+packages/eon-schema/dist/
+packages/eon-schema/build/
+
