@@ -34,3 +34,4 @@ class PathInit(str, Enum):
     idpp_collective = "idpp_collective"
     sidpp = "sidpp"
     sidpp_zbl = "sidpp_zbl"
+    file = "file"  # path list via Parameters.neb_initial_path

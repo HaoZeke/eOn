@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- `NebSpec` covers CI / energy-weighted springs / OCI-MMF / optimizer knobs and
+  `PathInit.file` + `path_list` for class-first cookbook NEB without hand-set
+  `Parameters.neb_*` fields.
+
 ## [0.2.0] — 2026-07-17
 
 ### Added
