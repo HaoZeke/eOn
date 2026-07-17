@@ -25,19 +25,18 @@ on:
         description: "Also build CPU-metatomic wheels"
         type: boolean
         default: true
+  # NOTE: do not put paths: under push when also using tags:. With only tags
+  # listed (no branches), branch pushes never run. With tags+paths, a tag that
+  # does not touch those paths may not schedule either. Tags always run; branch
+  # pushes restricted to main + feat/* for CI cost.
   push:
     tags:
       - "pyeonclient-v*"
-    paths:
-      - "client/python/**"
-      - "client/**/*.cpp"
-      - "client/**/*.h"
-      - "pyproject-pyeonclient.toml"
-      - ".github/workflows/pyeonclient-wheels.yml"
-      - "scripts/pyeonclient_*.sh"
-      - "subprojects/**"
-      - "meson.build"
-      - "meson_options.txt"
+    branches:
+      - "main"
+      - "feat/**"
+      - "fix/**"
+      - "ci/**"
   pull_request:
     paths:
       - "client/python/**"
