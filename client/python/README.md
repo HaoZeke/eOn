@@ -24,31 +24,31 @@ pip install pyeonclient 'pyeonclient[ase]' 'rgpot>=2.4.2'
 
 ```python
 import numpy as np
-import pyeonclient as pc
+import pyeonclient as pyec
 
-params = pc.Parameters()
-params.potential = pc.PotType.LJ
-pot = pc.make_potential(params.potential, params)
-matter = pc.Matter(pot, params)
+params = pyec.Parameters()
+params.potential = pyec.PotType.LJ
+pot = pyec.make_potential(params.potential, params)
+matter = pyec.Matter(pot, params)
 # ... set positions / cell / numbers ...
 
 matter.relax()
 mode0 = np.random.default_rng(0).normal(size=matter.positions.shape)
-dimer = pc.ImprovedDimer(matter, params, pot)
+dimer = pyec.ImprovedDimer(matter, params, pot)
 dimer.compute(matter, mode0)
 
-ss = pc.MinModeSaddleSearch(
+ss = pyec.MinModeSaddleSearch(
     matter, dimer.eigenvector, matter.potential_energy, params, pot
 )
 status = ss.run()
-print(pc.saddle_status_message(status), ss.eigenvalue)
+print(pyec.saddle_status_message(status), ss.eigenvalue)
 ```
 
 ## NEB
 
 ```python
-path = [pc.from_ase(img, pot, params) for img in images]
-neb = pc.NudgedElasticBand(path, params, pot)
+path = [pyec.from_ase(img, pot, params) for img in images]
+neb = pyec.NudgedElasticBand(path, params, pot)
 neb.compute()
 path = list(neb.path_images())
 ```

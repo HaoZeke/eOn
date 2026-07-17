@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-pc = pytest.importorskip("pyeonclient")
+pyec = pytest.importorskip("pyeonclient")
 
 DATA = Path(__file__).resolve().parent / "data"
 FIXTURE = DATA / "server" / "Pt_Heptamer_oneLayer" / "pos.con"
@@ -19,9 +19,9 @@ FIXTURE = DATA / "server" / "Pt_Heptamer_oneLayer" / "pos.con"
 
 @pytest.fixture
 def lj_params():
-    p = pc.Parameters()
-    p.potential = pc.PotType.LJ
-    p.job = pc.JobType.Minimization
+    p = pyec.Parameters()
+    p.potential = pyec.PotType.LJ
+    p.job = pyec.JobType.Minimization
     p.quiet = True
     p.write_log = False
     p.remove_net_force = True
@@ -30,12 +30,12 @@ def lj_params():
 
 @pytest.fixture
 def pot(lj_params):
-    return pc.make_potential(pc.PotType.LJ, lj_params)
+    return pyec.make_potential(pyec.PotType.LJ, lj_params)
 
 
 @pytest.fixture
 def matter_h2(pot, lj_params):
-    m = pc.Matter(pot, lj_params)
+    m = pyec.Matter(pot, lj_params)
     m.resize(2)
     # Cell before positions (default cell is Zero; PBC wrap needs a real cell).
     m.cell = np.eye(3, dtype=np.float64) * 20.0
@@ -74,28 +74,28 @@ def test_abi_policy_metadata():
 
 def test_version_and_enums():
     assert hasattr(pc, "__version__")
-    assert pc.io_ok(pc.IoStatus.Ok)
-    assert not pc.io_ok(pc.IoStatus.ReadError)
-    assert pc.pot_type_from_name("lj") == pc.PotType.LJ
-    assert pc.pot_type_from_name("LJ") == pc.PotType.LJ
-    assert "LJ" in pc.pot_type_name(pc.PotType.LJ)
+    assert pyec.io_ok(pyec.IoStatus.Ok)
+    assert not pyec.io_ok(pyec.IoStatus.ReadError)
+    assert pyec.pot_type_from_name("lj") == pyec.PotType.LJ
+    assert pyec.pot_type_from_name("LJ") == pyec.PotType.LJ
+    assert "LJ" in pyec.pot_type_name(pyec.PotType.LJ)
 
 
 def test_make_potential_overloads(lj_params):
-    p1 = pc.make_potential(pc.PotType.LJ, lj_params)
-    p2 = pc.make_potential("lj", lj_params)
-    p3 = pc.make_potential(lj_params)
-    assert p1.type == pc.PotType.LJ
-    assert p2.type == pc.PotType.LJ
-    assert p3.type == pc.PotType.LJ
+    p1 = pyec.make_potential(pyec.PotType.LJ, lj_params)
+    p2 = pyec.make_potential("lj", lj_params)
+    p3 = pyec.make_potential(lj_params)
+    assert p1.type == pyec.PotType.LJ
+    assert p2.type == pyec.PotType.LJ
+    assert p3.type == pyec.PotType.LJ
 
 
 def test_parameters_json_roundtrip(lj_params):
     js = lj_params.to_json()
     assert isinstance(js, str) and len(js) > 2
-    p2 = pc.Parameters()
+    p2 = pyec.Parameters()
     p2.load_json(js)
-    assert p2.potential == pc.PotType.LJ
+    assert p2.potential == pyec.PotType.LJ
 
 
 # --- unit: Matter geometry ---
@@ -145,7 +145,7 @@ def test_matter_pbc_and_distance(matter_h2):
 
 
 def test_matter_copy_compare(matter_h2):
-    m2 = pc.Matter(matter_h2)
+    m2 = pyec.Matter(matter_h2)
     assert m2.n_atoms == matter_h2.n_atoms
     assert m2.compare(matter_h2) or True  # compare may depend on eps config
 
@@ -156,15 +156,15 @@ def test_matter_copy_compare(matter_h2):
 def test_matter_con_roundtrip_tmp(matter_h2, tmp_path):
     path = tmp_path / "h2.con"
     st = matter_h2.matter2con(str(path))
-    assert pc.io_ok(st)
+    assert pyec.io_ok(st)
     assert path.is_file() and path.stat().st_size > 50
 
-    params = pc.Parameters()
-    params.potential = pc.PotType.LJ
+    params = pyec.Parameters()
+    params.potential = pyec.PotType.LJ
     params.quiet = True
-    m2 = pc.Matter(matter_h2.get_potential(), params)
+    m2 = pyec.Matter(matter_h2.get_potential(), params)
     st2 = m2.con2matter(str(path))
-    assert pc.io_ok(st2)
+    assert pyec.io_ok(st2)
     assert m2.n_atoms == 2
     np.testing.assert_allclose(m2.positions, matter_h2.positions, atol=1e-6)
     np.testing.assert_allclose(m2.masses, matter_h2.masses, atol=1e-6)
@@ -172,9 +172,9 @@ def test_matter_con_roundtrip_tmp(matter_h2, tmp_path):
 
 @pytest.mark.skipif(not FIXTURE.is_file(), reason="fixture missing")
 def test_matter_load_fixture_pos_con(pot, lj_params):
-    m = pc.Matter(pot, lj_params)
+    m = pyec.Matter(pot, lj_params)
     st = m.con2matter(str(FIXTURE))
-    assert pc.io_ok(st)
+    assert pyec.io_ok(st)
     assert m.n_atoms == 343
     assert m.positions.shape == (343, 3)
     # Pt masses ~195
@@ -187,8 +187,8 @@ def test_regression_matter_vs_readcon_structure(pot, lj_params):
     readcon = pytest.importorskip("readcon")
     from eon import fileio as io
 
-    m = pc.Matter(pot, lj_params)
-    assert pc.io_ok(m.con2matter(str(FIXTURE)))
+    m = pyec.Matter(pot, lj_params)
+    assert pyec.io_ok(m.con2matter(str(FIXTURE)))
     s = io.loadcon(str(FIXTURE))
     assert len(s) == m.n_atoms
     np.testing.assert_allclose(m.positions, s.r, atol=1e-6)
@@ -205,10 +205,10 @@ def test_regression_matter_vs_readcon_structure(pot, lj_params):
 
 def test_structure_bridge_roundtrip(matter_h2, pot, lj_params):
     pytest.importorskip("eon.structure")
-    s = pc.matter_to_structure(matter_h2)
+    s = pyec.matter_to_structure(matter_h2)
     assert len(s) == 2
     assert s.names[0] in ("H", "Z1")
-    m2 = pc.structure_to_matter(s, pot, lj_params)
+    m2 = pyec.structure_to_matter(s, pot, lj_params)
     assert m2.n_atoms == 2
     np.testing.assert_allclose(m2.positions, matter_h2.positions, atol=1e-12)
     np.testing.assert_allclose(m2.masses, matter_h2.masses, atol=1e-12)

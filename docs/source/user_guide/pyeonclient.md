@@ -59,9 +59,9 @@ Pass ``inplace=True`` to write into the input object.
 out, ok = matter.relax()                 # copy-then-relax; matter unchanged
 out, ok = matter.relax(inplace=True)     # mutates matter
 
-saddle, status = pc.min_mode_saddle_search(
+saddle, status = pyec.min_mode_saddle_search(
     matter, mode, E0, params, pot)       # matter unchanged
-saddle, status = pc.min_mode_saddle_search(
+saddle, status = pyec.min_mode_saddle_search(
     matter, mode, E0, params, pot, inplace=True)
 ```
 
@@ -71,32 +71,32 @@ Same for ``run_dynamics``, ``run_monte_carlo``, ``run_basin_hopping``,
 silent mutators: every algorithm takes ``inplace=False`` by default.
 
 ```{code-block} python
-out = pc.run_tad(matter, params, pot)                 # TADJob; matter unchanged
-out = pc.run_parallel_replica(matter, params, pot)    # ParallelReplicaJob
-out = pc.run_safe_hyperdynamics(matter, params, pot)
-out = pc.run_replica_exchange(matter, params, pot)
-out = pc.run_tad(matter, params, pot, inplace=True)   # updates matter
+out = pyec.TAD(matter, params, pot).run(matter, params, pot)                 # TADJob; matter unchanged
+out = pyec.run_parallel_replica(matter, params, pot)    # ParallelReplicaJob
+out = pyec.run_safe_hyperdynamics(matter, params, pot)
+out = pyec.run_replica_exchange(matter, params, pot)
+out = pyec.TAD(matter, params, pot).run(matter, params, pot, inplace=True)   # updates matter
 ```
 
 ## Shared setup
 
 ```{code-block} python
 import numpy as np
-import pyeonclient as pc
+import pyeonclient as pyec
 
-params = pc.Parameters()
-params.potential = pc.PotType.LJ          # or RGPOT, METATOMIC, …
+params = pyec.Parameters()
+params.potential = pyec.PotType.LJ          # or RGPOT, METATOMIC, …
 params.opt_converged_force = 0.01
 params.opt_max_iterations = 1000
-pot = pc.make_potential(params.potential, params)
+pot = pyec.make_potential(params.potential, params)
 
-matter = pc.Matter(pot, params)
+matter = pyec.Matter(pot, params)
 matter.resize(n)
 matter.positions = ...                    # (n, 3) float64
 matter.cell = np.eye(3) * L
 matter.atomic_numbers = ...
 matter.masses = ...
-# or: matter = pc.from_ase(atoms, pot, params)
+# or: matter = pyec.from_ase(atoms, pot, params)
 ```
 
 ## Minimization
@@ -106,25 +106,23 @@ ok = matter.relax()                       # like LBFGS(atoms).run(fmax=...)
 print(ok, matter.potential_energy, matter.max_force)
 ```
 
-## Min-mode (dimer / Lanczos / Davidson)
+## Min-mode (Dimer)
 
 ```{code-block} python
-params.dimer_improved = True              # ImprovedDimer (default)
 params.dimer_rotations_max = 10
 params.dimer_opt_method = "cg"            # cg | lbfgs | sd
 
 direction = np.random.default_rng(0).normal(size=matter.positions.shape)
-dimer = pc.ImprovedDimer(matter, params, pot)
-dimer.compute(matter, direction)
-print(dimer.eigenvalue)                   # curvature
-print(dimer.eigenvector)                  # (n, 3) mode
-print(dimer.stats_rotations, dimer.stats_torque)
-
-# Alternatives with the same API:
-# pc.Dimer(matter, params, pot)
-# pc.Lanczos(matter, params, pot)
-# pc.Davidson(matter, params, pot)
+# Default method is "improved"
+d = pyec.Dimer(matter, params, pot)
+# d = pyec.Dimer(matter, params, pot, method="classic")
+# d = pyec.Dimer(matter, params, pot, method="improved", accelerant="gp")  # WITH_GPRD
+d.compute(matter, direction)
+print(d.eigenvalue, d.eigenvector)
 ```
+
+Low-level engines remain: ``ClassicDimer``, ``ImprovedDimer``, ``Lanczos``,
+``Davidson``. Prefer ``Dimer(method=..., accelerant=...)``.
 
 Parameters: `dimer_improved`, `dimer_rotation_angle`, `dimer_converged_angle`,
 `dimer_max_iterations`, `dimer_opt_method`, `dimer_rotations_max` /
@@ -140,9 +138,9 @@ params.saddle_max_energy = 20.0
 # Displace from the minimum, then search
 mode = dimer.eigenvector                  # or a random (n, 3) guess
 E_react = matter.potential_energy
-ss = pc.MinModeSaddleSearch(matter, mode, E_react, params, pot)
+ss = pyec.MinModeSaddleSearch(matter, mode, E_react, params, pot)
 status = ss.run()                         # mutates matter → saddle geometry
-print(pc.saddle_status_message(status))
+print(pyec.saddle_status_message(status))
 print(ss.eigenvalue, ss.iteration, ss.force_calls)
 saddle = matter                           # now at the saddle
 ```
@@ -156,25 +154,49 @@ Parameters: `saddle_method`, `saddle_minmode_method`, `saddle_max_iterations`,
 
 ## NEB
 
+Use **eOn-native** path initializers (IDPP / SIDPP / linear). Do not pull
+ASE ``interpolate("idpp")`` into a pyeonclient band — the same engines live
+in ``helpers::neb_paths`` and are already what the endpoint NEB constructor
+uses.
+
 ```{code-block} python
-path = [pc.from_ase(img, pot, params) for img in images]  # list[Matter]
-neb = pc.NudgedElasticBand(path, params, pot)
+import pyeonclient as pyec
+
+initial = pyec.from_ase(reactant, pot, params)
+final = pyec.from_ase(product, pot, params)
+
+# Explicit IDPP band (recommended when you want the path object first)
+params.neb_init_method = pyec.NEBInit.IDPP
+path = pyec.neb_idpp_path(initial, final, n_intermediate=10, parameters=params)
+# or dispatch: path = pyec.neb_initial_path(initial, final, 10, params)
+
+neb = pyec.NudgedElasticBand(path, params, pot)
 status = neb.compute()
-path = list(neb.path_images())
-energies = [neb.image_energy(i) for i in range(neb.n_path)]
+
+# Or endpoint constructor (init from Parameters.neb_init_method)
+params.neb_images = 10
+params.neb_init_method = pyec.NEBInit.IDPP  # LINEAR | IDPP | SIDPP | …
+neb = pyec.NudgedElasticBand(initial, final, params, pot)
+status = neb.compute()
 ```
 
-See {doc}`neb` for energy-weighted springs and OCINEB (`neb_ci_mmf`, …).
+Helpers: ``neb_linear_path``, ``neb_idpp_path``, ``neb_idpp_collective_path``,
+``neb_sidpp_path``, ``neb_initial_path``. See {doc}`neb` for energy-weighted
+springs and OCINEB (``neb_ci_mmf``, …).
+
+GP-surrogate NEB is still the same **NEB** idea with a GP accelerant on the
+band engine (``WITH_GP_SURROGATE``), not a separate product noun — and **not**
+prefactor / Parallel Replica.
 
 ## Hessian and prefactors
 
 ```{code-block} python
-atoms = pc.all_free_atoms(matter)         # int64 indices
-hess = pc.Hessian(params, matter)
+atoms = pyec.all_free_atoms(matter)         # int64 indices
+hess = pyec.Hessian(params, matter)
 H = hess.get_hessian(matter, atoms)       # (3n, 3n)
 freqs = hess.get_freqs(matter, atoms)
 
-pref1, pref2 = pc.get_prefactors(params, min1, saddle, min2)
+pref1, pref2 = pyec.get_prefactors(params, min1, saddle, min2)
 ```
 
 Parameters: `hessian_atom_list`, `hessian_zero_freq_value`, `prefactor_rate`
@@ -186,10 +208,10 @@ Every type in `JobType` that the C++ `makeJob` factory implements is available
 as a workdir-oriented job:
 
 ```{code-block} python
-params.job = pc.JobType.Saddle_Search     # or Process_Search, Dynamics, …
-job = pc.make_job(params)                 # reads cwd files like eonclient
+params.job = pyec.JobType.Saddle_Search     # or Process_Search, Dynamics, …
+job = pyec.make_job(params)                 # reads cwd files like eonclient
 files = job.run()
-pc.write_potcall_summary()
+pyec.write_potcall_summary()
 ```
 
 Use this for process search, dynamics, basin hopping, TAD, parallel replica,
@@ -199,8 +221,8 @@ dedicated Matter-first classes. The algorithms above are already first-class.
 ## ASE bridge
 
 ```{code-block} python
-matter = pc.from_ase(atoms, pot, params)
-atoms = pc.to_ase(matter)
+matter = pyec.from_ase(atoms, pot, params)
+atoms = pyec.to_ase(matter)
 ```
 
 Requires `pip install 'pyeonclient[ase]'`.

@@ -25,9 +25,9 @@ PYEONCLIENT_VARIANT=metatomic ./scripts/pyeonclient_build_wheel.sh
 
 Probes::
 
-    import pyeonclient as pc
-    pc.built_with_rgpot()
-    pc.built_with_metatomic()
+    import pyeonclient as pyec
+    pyec.built_with_rgpot()
+    pyec.built_with_metatomic()
 
 ## Matrix (GIL + free-threaded)
 

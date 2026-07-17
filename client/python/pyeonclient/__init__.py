@@ -1,30 +1,22 @@
 """pyeonclient — in-process eOn client (nanobind).
 
-First-class algorithm surface (ASE-shaped geometries as :class:`Matter`)::
+Class-first surface (import as ``pyec``)::
 
-    # Minimization
-    matter = from_ase(atoms, pot, params); matter.relax()
+    import pyeonclient as pyec
 
-    # Min-mode
-    dimer = ImprovedDimer(matter, params, pot)
-    dimer.compute(matter, direction)          # direction (n, 3)
-    ev, mode = dimer.eigenvalue, dimer.eigenvector
+    # Min-mode (default method=\"improved\")
+    d = pyec.Dimer(matter, params, pot)
+    d = pyec.Dimer(matter, params, pot, method=\"improved\", accelerant=\"gp\")
+    d.compute(matter, direction)
 
-    # Single-ended saddle
-    ss = MinModeSaddleSearch(matter, mode, E_react, params, pot)
-    status = ss.run()                         # mutates matter → saddle
+    # NEB (accelerant=\"gp\" for GP-surrogate band when built)
+    path = pyec.neb_idpp_path(initial, final, n, params)
+    neb = pyec.NEB(path, params, pot)
+    neb.compute()
 
-    # NEB band
-    path = [from_ase(img, pot, params) for img in images]
-    neb = NudgedElasticBand(path, params, pot); neb.compute()
-
-    # Hessian / HTST prefactors
-    H = Hessian(params, matter)
-    freqs = H.get_freqs(matter, all_free_atoms(matter))
-    pref1, pref2 = get_prefactors(params, min1, saddle, min2)
-
-Modules: ``_core`` (compiled), :mod:`pyeonclient.ase_bridge`,
-:mod:`pyeonclient.bridge`, :mod:`pyeonclient.steps` (optional workdir helpers).
+    # Jobs
+    out = pyec.TAD(matter, params, pot).run(inplace=False)
+    out = pyec.MolecularDynamics(matter, params).run()
 
 Docs: https://eondocs.org/user_guide/pyeonclient.html
 """
@@ -59,43 +51,49 @@ try:
         write_potcall_summary,
         # NEB
         NudgedElasticBand,
+        NEB,
         NEBStatus,
         neb_read_file_paths,
         neb_load_path_from_files,
         neb_linear_path,
+        neb_idpp_path,
+        neb_idpp_collective_path,
+        neb_sidpp_path,
+        neb_initial_path,
         neb_write_results,
         pot_registry_total_force_calls,
         # Min-mode
         Dimer,
+        ClassicDimer,
         ImprovedDimer,
         Lanczos,
         Davidson,
+        built_with_gprd,
         # Saddle
         MinModeSaddleSearch,
         SaddleStatus,
         saddle_status_message,
+        min_mode_saddle_search,
         # Analysis
         Hessian,
         get_prefactors,
         moved_atoms,
         all_free_atoms,
+        # Class-first jobs
+        MolecularDynamics,
+        MonteCarlo,
+        BasinHopping,
+        ProcessSearch,
+        TAD,
+        ParallelReplica,
+        SafeHyperdynamics,
+        ReplicaExchange,
+        structures_equal,
+        structure_distance,
         # Build probes
         built_with_metatomic,
         built_with_rgpot,
-        min_mode_saddle_search,
-        run_dynamics,
-        run_monte_carlo,
-        run_basin_hopping,
-        process_search,
-        structures_equal,
-        structure_distance,
-        run_tad,
-        run_parallel_replica,
-        run_safe_hyperdynamics,
-        run_replica_exchange,
-        run_gp_surrogate_neb,
         built_with_gp_surrogate,
-
     )
 except ImportError as e:  # pragma: no cover
     raise ImportError(
@@ -134,7 +132,6 @@ to_ase = matter_to_ase
 from_ase = ase_to_matter
 
 __all__ = [
-    # Core types
     "IoStatus",
     "Job",
     "JobType",
@@ -145,29 +142,42 @@ __all__ = [
     "PotType",
     "OptType",
     "RunStatus",
-    # NEB
     "NEBInit",
     "NEBStatus",
     "NudgedElasticBand",
+    "NEB",
     "neb_linear_path",
+    "neb_idpp_path",
+    "neb_idpp_collective_path",
+    "neb_sidpp_path",
+    "neb_initial_path",
     "neb_load_path_from_files",
     "neb_read_file_paths",
     "neb_write_results",
-    # Min-mode
     "Dimer",
+    "ClassicDimer",
     "ImprovedDimer",
     "Lanczos",
     "Davidson",
-    # Saddle
+    "built_with_gprd",
     "MinModeSaddleSearch",
     "SaddleStatus",
     "saddle_status_message",
-    # Analysis
+    "min_mode_saddle_search",
     "Hessian",
     "get_prefactors",
     "moved_atoms",
     "all_free_atoms",
-    # Factories / steps
+    "MolecularDynamics",
+    "MonteCarlo",
+    "BasinHopping",
+    "ProcessSearch",
+    "TAD",
+    "ParallelReplica",
+    "SafeHyperdynamics",
+    "ReplicaExchange",
+    "structures_equal",
+    "structure_distance",
     "make_job",
     "make_potential",
     "load_parameters",
@@ -184,42 +194,26 @@ __all__ = [
     "append_timing",
     "get_process_times",
     "steady_clock_now",
-    "pot_registry_total_force_calls",
-    # Enum helpers
     "io_ok",
     "io_status_name",
     "job_type_from_name",
     "job_type_name",
     "pot_type_from_name",
     "pot_type_name",
-    # Bridges
+    "built_with_metatomic",
+    "built_with_rgpot",
+    "built_with_gp_surrogate",
     "from_ase",
     "to_ase",
     "ase_to_matter",
     "matter_to_ase",
     "ase_to_structure",
     "structure_to_ase",
-    "conframe_to_matter",
     "matter_to_conframe",
+    "conframe_to_matter",
     "from_structure",
     "to_structure",
-    "structure_to_matter",
     "matter_to_structure",
-    # Probes
-    "built_with_metatomic",
-    "built_with_rgpot",
-    "min_mode_saddle_search",
-    "run_dynamics",
-    "run_monte_carlo",
-    "run_basin_hopping",
-    "process_search",
-    "structures_equal",
-    "structure_distance",
-    "run_tad",
-    "run_parallel_replica",
-    "run_safe_hyperdynamics",
-    "run_replica_exchange",
-    "run_gp_surrogate_neb",
-    "built_with_gp_surrogate",
+    "structure_to_matter",
     "__version__",
 ]

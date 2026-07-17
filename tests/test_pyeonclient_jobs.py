@@ -7,41 +7,41 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-pc = pytest.importorskip("pyeonclient")
+pyec = pytest.importorskip("pyeonclient")
 
 
 def test_job_type_names():
-    assert pc.job_type_from_name("minimization") == pc.JobType.Minimization
-    assert "Minimization" in pc.job_type_name(pc.JobType.Minimization)
+    assert pyec.job_type_from_name("minimization") == pyec.JobType.Minimization
+    assert "Minimization" in pyec.job_type_name(pyec.JobType.Minimization)
 
 
 def test_make_job_minimization():
-    params = pc.Parameters()
-    params.job = pc.JobType.Minimization
-    params.potential = pc.PotType.LJ
+    params = pyec.Parameters()
+    params.job = pyec.JobType.Minimization
+    params.potential = pyec.PotType.LJ
     params.quiet = True
-    job = pc.make_job(params)
-    assert job.get_type() == pc.JobType.Minimization
+    job = pyec.make_job(params)
+    assert job.get_type() == pyec.JobType.Minimization
 
 
 def test_client_steps_are_bound():
     """Each ClientEON post-job step is a real binding, not only a wrapper."""
-    assert callable(pc.write_potcall_summary)
-    assert callable(pc.get_process_times)
-    assert callable(pc.append_results_timing)
-    assert callable(pc.steady_clock_now)
-    assert callable(pc.run_job)
-    assert callable(pc.load_parameters)
-    t0 = pc.steady_clock_now()
-    real, user, sys = pc.get_process_times()
+    assert callable(pyec.write_potcall_summary)
+    assert callable(pyec.get_process_times)
+    assert callable(pyec.append_results_timing)
+    assert callable(pyec.steady_clock_now)
+    assert callable(pyec.run_job)
+    assert callable(pyec.load_parameters)
+    t0 = pyec.steady_clock_now()
+    real, user, sys = pyec.get_process_times()
     assert real >= 0 and user >= 0 and sys >= 0
-    assert pc.steady_clock_now() >= t0
+    assert pyec.steady_clock_now() >= t0
 
 
 def test_run_job_in_directory_composed_steps(tmp_path, pot_params_files):
     """Composition of steps matches eonclient artifact set."""
     work = pot_params_files
-    files = pc.run_job_in_directory(str(work), pc.Parameters())
+    files = pyec.run_job_in_directory(str(work), pyec.Parameters())
     assert (work / "min.con").is_file()
     text = (work / "results.dat").read_text()
     assert "time_seconds" in text
@@ -52,7 +52,7 @@ def test_run_job_in_directory_composed_steps(tmp_path, pot_params_files):
 def test_minimize_workdir_matter_steps(tmp_path, pot_params_files):
     """Matter.relax path (not Job wrapper) for minimization."""
     work = pot_params_files
-    files = pc.minimize_workdir(work, write_movie=False)
+    files = pyec.minimize_workdir(work, write_movie=False)
     assert (work / "min.con").is_file()
     assert "potential_energy" in (work / "results.dat").read_text()
     assert (work / "_potcalls.json").is_file()

@@ -76,14 +76,14 @@ def test_workflow_publish_excludes_metatomic_local_version():
 
 
 def test_runtime_feature_flags_when_built():
-    pc = pytest.importorskip("pyeonclient")
+    pyec = pytest.importorskip("pyeonclient")
     assert hasattr(pc, "built_with_metatomic")
     assert hasattr(pc, "built_with_rgpot")
-    assert isinstance(pc.built_with_metatomic(), bool)
-    assert isinstance(pc.built_with_rgpot(), bool)
+    assert isinstance(pyec.built_with_metatomic(), bool)
+    assert isinstance(pyec.built_with_rgpot(), bool)
     data = _load_toml()
     # local builds may be 0.3.0; installed wheel may match
-    assert pc.__version__.split("+")[0] == data["project"]["version"].split("+")[0]
+    assert pyec.__version__.split("+")[0] == data["project"]["version"].split("+")[0]
 
 
 @pytest.mark.skipif(

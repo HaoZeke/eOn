@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-pc = pytest.importorskip("pyeonclient")
+pyec = pytest.importorskip("pyeonclient")
 
 MODEL = os.environ.get("EON_PET_MAD_MODEL", "").strip()
 pytestmark = pytest.mark.skipif(
@@ -59,7 +59,7 @@ def test_metatomic_minimize_via_run_job_in_directory(tmp_path):
         if cand.is_file():
             pos_path = cand
     work = _write_min_workdir(tmp_path, MODEL, pos_path)
-    files = pc.minimize_workdir(work)  # Matter.relax steps, not black-box Job
+    files = pyec.minimize_workdir(work)  # Matter.relax steps, not black-box Job
     results = work / "results.dat"
     assert results.is_file(), f"missing results.dat; files={files}"
     text = results.read_text()
@@ -83,9 +83,9 @@ def test_metatomic_minimize_via_run_job_in_directory(tmp_path):
 
 
 def test_job_and_pot_enums_cover_cookbook():
-    assert pc.pot_type_from_name("metatomic") == pc.PotType.METATOMIC
-    assert pc.job_type_from_name("minimization") == pc.JobType.Minimization
+    assert pyec.pot_type_from_name("metatomic") == pyec.PotType.METATOMIC
+    assert pyec.job_type_from_name("minimization") == pyec.JobType.Minimization
     assert (
-        pc.job_type_from_name("nudged_elastic_band")
-        == pc.JobType.Nudged_Elastic_Band
+        pyec.job_type_from_name("nudged_elastic_band")
+        == pyec.JobType.Nudged_Elastic_Band
     )

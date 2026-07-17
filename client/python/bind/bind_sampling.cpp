@@ -1,8 +1,6 @@
 /*
-** Matter-first sampling / long-timescale primitives with explicit inplace.
-** Issues: eOn-p8em dynamics, eOn-n6oi MC, eOn-fmxm BH, eOn-412j process search,
-** eOn-du2q TAD, eOn-v1d0 PR/SafeHyper/REX, eOn-nmcu structure comparison,
-** eOn-hyjn GP surrogate (gated), eOn-rczn inplace contract.
+** Class-first Matter sampling / long-timescale surface (import as pyec).
+** Free run_* removed from public API; construct then run(inplace=False).
 */
 #include "Dynamics.h"
 #include "Matter.h"
@@ -43,20 +41,17 @@ namespace nb = nanobind;
 namespace {
 
 void ensure_dynamics_steps(eonc::Parameters &params, long default_steps) {
-  if (params.dynamics_options.steps <= 0) {
+  if (params.dynamics_options.steps <= 0)
     params.dynamics_options.steps = default_steps;
-  }
   if (params.dynamics_options.time_step <= 0.0) {
     params.dynamics_options.time_step =
         params.dynamics_options.time_step_input / params.constants.timeUnit;
     if (params.dynamics_options.time_step <= 0.0)
       params.dynamics_options.time_step =
-          1.0 / params.constants.timeUnit; // 1 fs
+          1.0 / params.constants.timeUnit;
   }
 }
 
-/// Ensure PR/TAD/REX interval fields are finite and compatible with a short
-/// Matter-first smoke run (avoids zero-length buffers / div-by-zero).
 void ensure_long_timescale_params(eonc::Parameters &params,
                                   long default_steps) {
   ensure_dynamics_steps(params, default_steps);
@@ -71,17 +66,14 @@ void ensure_long_timescale_params(eonc::Parameters &params,
     pr.record_interval = std::max(dt, pr.state_check_interval / 2.0);
   if (pr.record_interval > pr.state_check_interval)
     pr.record_interval = pr.state_check_interval;
-  // Ensure at least one MD step per interval (integer division in TAD/PR).
   if (pr.state_check_interval < dt)
     pr.state_check_interval = dt;
   if (pr.record_interval < dt)
     pr.record_interval = dt;
   if (pr.dephase_time <= 0.0)
-    pr.dephase_time = dt; // one step dephase for smoke
+    pr.dephase_time = dt;
   if (pr.corr_time <= 0.0)
     pr.corr_time = dt;
-  // Short Matter-first smokes: skip refine (needs filled snapshot buffers)
-  // and always cap dephase so LJ dimers cannot hang forever.
   if (dyn.steps > 0 && dyn.steps < 50) {
     pr.refine_transition = false;
     pr.dephase_loop_stop = true;
@@ -92,14 +84,10 @@ void ensure_long_timescale_params(eonc::Parameters &params,
   auto &rex = params.replica_exchange_options;
   if (rex.replicas < 2)
     rex.replicas = 2;
-  // Prefer explicit dynamics budget over stale sampling_time_input conversion.
   if (rex.sampling_time <= 0.0 ||
-      (dyn.steps > 0 && dyn.steps < 50 &&
-       rex.sampling_time > horizon * 2.0)) {
+      (dyn.steps > 0 && dyn.steps < 50 && rex.sampling_time > horizon * 2.0))
     rex.sampling_time = horizon > 0.0 ? horizon : dt;
-  }
-  if (rex.exchange_period <= 0.0 ||
-      rex.exchange_period > rex.sampling_time)
+  if (rex.exchange_period <= 0.0 || rex.exchange_period > rex.sampling_time)
     rex.exchange_period = std::max(dt, rex.sampling_time / 2.0);
   if (rex.temperature_low <= 0.0)
     rex.temperature_low = params.main_options.temperature > 0.0
@@ -109,23 +97,25 @@ void ensure_long_timescale_params(eonc::Parameters &params,
     rex.temperature_high = rex.temperature_low * 1.5;
   if (rex.exchange_trials <= 0)
     rex.exchange_trials = std::max(1L, rex.replicas - 1);
-  // Short Matter-first smoke: two replicas is enough to exercise Metropolis.
   if (dyn.steps > 0 && dyn.steps < 50 && rex.replicas > 3)
     rex.replicas = 2;
 }
 
-AtomMatrix random_direction(long n_atoms, std::mt19937_64 &rng) {
-  AtomMatrix m(n_atoms, 3);
-  std::normal_distribution<double> n(0.0, 1.0);
-  for (long i = 0; i < n_atoms; ++i)
-    for (int k = 0; k < 3; ++k)
-      m(i, k) = n(rng);
-  // normalize free subspace roughly
-  double nrm = m.norm();
-  if (nrm > 1e-12)
-    m /= nrm;
-  return m;
-}
+struct SeededAlgo {
+  std::shared_ptr<eonc::Matter> seed;
+  eonc::Parameters params;
+  std::shared_ptr<eonc::Potential> pot;
+  std::shared_ptr<eonc::Matter> result;
+
+  SeededAlgo(std::shared_ptr<eonc::Matter> m, eonc::Parameters p,
+             std::shared_ptr<eonc::Potential> pot_in)
+      : seed(std::move(m)), params(std::move(p)), pot(std::move(pot_in)) {
+    if (!seed)
+      throw std::runtime_error("matter is required");
+    if (!pot)
+      pot = seed->getPotential();
+  }
+};
 
 } // namespace
 
@@ -149,285 +139,321 @@ void bind_sampling(nb::module_ &m) {
       },
       "True if compiled with WITH_GP_SURROGATE / meson with_gp_surrogate");
 
-  // --- Dynamics (eOn-p8em) ---
-  m.def(
-      "run_dynamics",
-      [](std::shared_ptr<Matter> matter, Parameters params, bool inplace) {
-        auto work = matter_work(matter, inplace);
-        ensure_dynamics_steps(params, 10);
-        Dynamics dyn(work.get(), DynamicsConfig::fromParams(params));
-        {
-          nb::gil_scoped_release release;
-          dyn.run();
-        }
-        return work;
-      },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Run velocity-Verlet dynamics on Matter. Default non-mutating copy. "
-      "Uses Parameters.dynamics_steps / dynamics_time_step / temperature.");
-
-  // --- Monte Carlo (eOn-dvf5) ---
-  m.def(
-      "run_monte_carlo",
-      [](std::shared_ptr<Matter> matter, const Parameters &params,
-         bool inplace) {
-        auto work = matter_work(matter, inplace);
-        MonteCarlo mc(work, params);
-        int steps = params.monte_carlo_options.steps;
-        if (steps <= 0)
-          steps = 10;
-        {
-          nb::gil_scoped_release release;
-          mc.run(steps, params.main_options.temperature,
-                 params.monte_carlo_options.step_size);
-        }
-        return work;
-      },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Metropolis MC on Matter. Default non-mutating. "
-      "Parameters.monte_carlo_steps / monte_carlo_step_size / temperature.");
-
-  // --- Basin hopping (eOn-73ji): Metropolis + random displace + relax ---
-  m.def(
-      "run_basin_hopping",
-      [](std::shared_ptr<Matter> matter, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        auto work = matter_work(matter, inplace);
-        // ensure pot on work matches
+  // --- MolecularDynamics ---
+  struct PyMD : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      ensure_dynamics_steps(params, 10);
+      auto work = matter_work(seed, inplace);
+      if (pot)
         work->setPotential(pot);
-        long nsteps = params.basin_hopping_options.steps;
-        if (nsteps <= 0)
-          nsteps = 5;
-        double max_disp = params.basin_hopping_options.displacement;
-        double kT = params.constants.kB * params.main_options.temperature;
-        std::mt19937_64 rng(
-            params.main_options.randomSeed >= 0
-                ? static_cast<uint64_t>(params.main_options.randomSeed)
-                : 0xC0FFEEULL);
-        std::uniform_real_distribution<double> uni(0.0, 1.0);
-        std::normal_distribution<double> gauss(0.0, 1.0);
+      Dynamics dyn(work.get(), DynamicsConfig::fromParams(params));
+      {
+        nb::gil_scoped_release release;
+        dyn.run();
+      }
+      result = matter_result(seed, work, inplace);
+      return result;
+    }
+  };
 
-        {
-          nb::gil_scoped_release release;
-          work->relax(/*quiet=*/true);
-          double Ecur = work->getPotentialEnergy();
-          Matter best(*work);
-          double Ebest = Ecur;
+  nb::class_<PyMD>(m, "MolecularDynamics",
+                   "Velocity-Verlet MD on Matter (C++ Dynamics). "
+                   "run(inplace=False) default non-mutating.")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PyMD::run, nb::arg("inplace") = false,
+           "Run MD; returns Matter. inplace=True mutates seed.")
+      .def_prop_ro("matter",
+                   [](const PyMD &s) { return s.result ? s.result : s.seed; });
 
-          for (long step = 0; step < nsteps; ++step) {
-            Matter trial(*work);
-            AtomMatrix pos = trial.getPositions();
-            for (long i = 0; i < trial.numberOfAtoms(); ++i) {
-              if (trial.getFixed(i))
-                continue;
-              for (int k = 0; k < 3; ++k)
-                pos(i, k) += max_disp * gauss(rng);
-            }
-            trial.setPositions(pos);
-            trial.relax(/*quiet=*/true);
-            double Etrial = trial.getPotentialEnergy();
-            double dE = Etrial - Ecur;
-            bool accept = dE <= 0.0 || uni(rng) < std::exp(-dE / kT);
-            if (accept) {
-              *work = trial;
-              Ecur = Etrial;
-              if (Ecur < Ebest) {
-                best = *work;
-                Ebest = Ecur;
-              }
+  // --- MonteCarlo ---
+  struct PyMC : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      auto work = matter_work(seed, inplace);
+      MonteCarlo mc(work, params);
+      int steps = params.monte_carlo_options.steps;
+      if (steps <= 0)
+        steps = 10;
+      {
+        nb::gil_scoped_release release;
+        mc.run(steps, params.main_options.temperature,
+               params.monte_carlo_options.step_size);
+      }
+      result = matter_result(seed, work, inplace);
+      return result;
+    }
+  };
+
+  nb::class_<PyMC>(m, "MonteCarlo",
+                   "Metropolis MC on Matter. run(inplace=False).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PyMC::run, nb::arg("inplace") = false)
+      .def_prop_ro("matter",
+                   [](const PyMC &s) { return s.result ? s.result : s.seed; });
+
+  // --- BasinHopping ---
+  struct PyBH : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      if (!pot)
+        throw std::runtime_error("BasinHopping: potential required");
+      auto work = matter_work(seed, inplace);
+      work->setPotential(pot);
+      long nsteps = params.basin_hopping_options.steps;
+      if (nsteps <= 0)
+        nsteps = 5;
+      double max_disp = params.basin_hopping_options.displacement;
+      double kT = params.constants.kB * params.main_options.temperature;
+      std::mt19937_64 rng(params.main_options.randomSeed >= 0
+                              ? static_cast<uint64_t>(params.main_options.randomSeed)
+                              : 0xC0FFEEULL);
+      std::uniform_real_distribution<double> uni(0.0, 1.0);
+      std::normal_distribution<double> gauss(0.0, 1.0);
+      {
+        nb::gil_scoped_release release;
+        work->relax(true);
+        double Ecur = work->getPotentialEnergy();
+        Matter best(*work);
+        double Ebest = Ecur;
+        for (long step = 0; step < nsteps; ++step) {
+          Matter trial(*work);
+          AtomMatrix pos = trial.getPositions();
+          for (long i = 0; i < trial.numberOfAtoms(); ++i) {
+            if (trial.getFixed(i))
+              continue;
+            for (int k = 0; k < 3; ++k)
+              pos(i, k) += max_disp * gauss(rng);
+          }
+          trial.setPositions(pos);
+          trial.relax(true);
+          double Etrial = trial.getPotentialEnergy();
+          double dE = Etrial - Ecur;
+          if (dE <= 0.0 || uni(rng) < std::exp(-dE / kT)) {
+            *work = trial;
+            Ecur = Etrial;
+            if (Ecur < Ebest) {
+              best = *work;
+              Ebest = Ecur;
             }
           }
-          *work = best;
         }
-        return work;
-      },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("potential"),
-      nb::arg("inplace") = false,
-      "Basin-hopping style Metropolis + random free-atom displace + "
-      "Matter.relax. Default non-mutating. Returns best Matter.");
+        *work = best;
+      }
+      result = matter_result(seed, work, inplace);
+      return result;
+    }
+  };
 
-  // --- Process search (eOn-m6o8): min-mode saddle compose ---
-  m.def(
-      "process_search",
-      [](std::shared_ptr<Matter> matter, const NpF64 &mode, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        auto reactant = matter_work(matter, inplace);
-        reactant->setPotential(pot);
-        if (params.process_search_options.minimize_first) {
-          nb::gil_scoped_release release;
-          reactant->relax(/*quiet=*/true);
-        }
-        double E0 = reactant->getPotentialEnergy();
-        // Working saddle starts as copy of reactant, then search mutates it.
-        auto saddle = std::make_shared<Matter>(*reactant);
-        AtomMatrix mode_am = atom_matrix_from_numpy(mode);
-        // Mild displacement along mode if magnitude > 0
-        double mag = params.saddle_search_options.displace_magnitude;
-        if (mag > 0.0) {
-          AtomMatrix pos = saddle->getPositions();
-          pos += mag * mode_am;
-          saddle->setPositions(pos);
-        }
-        MinModeSaddleSearch ss(saddle, mode_am, E0, params, pot);
-        int status = 0;
-        {
-          nb::gil_scoped_release release;
-          status = ss.run();
-        }
-        // optional: minimize product not required for smoke
-        return nb::make_tuple(reactant, saddle, status);
-      },
-      nb::arg("matter"), nb::arg("mode"), nb::arg("parameters"),
-      nb::arg("potential"), nb::arg("inplace") = false,
-      "Process-search style min-mode saddle. Returns "
-      "(reactant_Matter, saddle_Matter, status). Default does not mutate "
-      "caller matter (inplace only applies to optional minimize_first on a "
-      "work copy unless inplace=True).");
+  nb::class_<PyBH>(m, "BasinHopping",
+                   "Basin-hopping Metropolis + displace + relax. "
+                   "run(inplace=False).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"), nb::arg("potential"),
+           nb::keep_alive<1, 2>(), nb::keep_alive<1, 4>())
+      .def("run", &PyBH::run, nb::arg("inplace") = false)
+      .def_prop_ro("matter",
+                   [](const PyBH &s) { return s.result ? s.result : s.seed; });
 
-  // --- Structure comparison (eOn-515s): already on Matter; free helpers ---
+  // --- ProcessSearch ---
+  struct PyProcessSearch {
+    std::shared_ptr<Matter> seed;
+    AtomMatrix mode;
+    Parameters params;
+    std::shared_ptr<Potential> pot;
+    std::shared_ptr<Matter> reactant_out;
+    std::shared_ptr<Matter> saddle_out;
+    int status{0};
+
+    PyProcessSearch(std::shared_ptr<Matter> m, const NpF64 &mode_np,
+                    Parameters p, std::shared_ptr<Potential> pot_in)
+        : seed(std::move(m)), mode(atom_matrix_from_numpy(mode_np)),
+          params(std::move(p)), pot(std::move(pot_in)) {
+      if (!seed)
+        throw std::runtime_error("ProcessSearch: matter required");
+      if (!pot)
+        pot = seed->getPotential();
+    }
+
+    nb::object run(bool inplace) {
+      auto reactant = matter_work(seed, inplace);
+      reactant->setPotential(pot);
+      if (params.process_search_options.minimize_first) {
+        nb::gil_scoped_release release;
+        reactant->relax(true);
+      }
+      double E0 = reactant->getPotentialEnergy();
+      auto saddle = std::make_shared<Matter>(*reactant);
+      double mag = params.saddle_search_options.displace_magnitude;
+      if (mag > 0.0) {
+        AtomMatrix pos = saddle->getPositions();
+        pos += mag * mode;
+        saddle->setPositions(pos);
+      }
+      MinModeSaddleSearch ss(saddle, mode, E0, params, pot);
+      {
+        nb::gil_scoped_release release;
+        status = ss.run();
+      }
+      reactant_out = reactant;
+      saddle_out = saddle;
+      return nb::make_tuple(reactant, saddle, status);
+    }
+  };
+
+  nb::class_<PyProcessSearch>(
+      m, "ProcessSearch",
+      "Min-mode process search. run(inplace=False) -> (reactant, saddle, status).")
+      .def(nb::init<std::shared_ptr<Matter>, const NpF64 &, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("mode"), nb::arg("parameters"),
+           nb::arg("potential"), nb::keep_alive<1, 2>(), nb::keep_alive<1, 5>())
+      .def("run", &PyProcessSearch::run, nb::arg("inplace") = false)
+      .def_prop_ro("status",
+                   [](const PyProcessSearch &s) { return s.status; });
+
+  // --- Structure helpers (free is fine — pure predicates) ---
   m.def(
       "structures_equal",
       [](Matter &a, Matter &b, bool indistinguishable) {
         return a.compare(b, indistinguishable);
       },
-      nb::arg("a"), nb::arg("b"), nb::arg("indistinguishable") = false,
-      "True if configurations match (Matter.compare).");
+      nb::arg("a"), nb::arg("b"), nb::arg("indistinguishable") = false);
 
   m.def(
       "structure_distance",
-      [](Matter &a, Matter &b) { return a.distanceTo(b); },
-      nb::arg("a"), nb::arg("b"), "RMS-like distance between two Matter.");
+      [](Matter &a, Matter &b) { return a.distanceTo(b); }, nb::arg("a"),
+      nb::arg("b"));
 
-  // --- Long-timescale jobs via real Job classes (eOn-du2q, eOn-v1d0) ---
-  // Never Dynamics aliases. Default non-mutating; inplace=True writes back.
-  m.def(
-      "run_tad",
-      [](std::shared_ptr<Matter> matter, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        ensure_long_timescale_params(params, 5);
-        auto work = matter_work(matter, inplace);
-        if (pot)
-          work->setPotential(pot);
-        auto job_pot = pot ? pot : work->getPotential();
-        TADJob job(job_pot, params);
-        std::shared_ptr<Matter> result;
-        {
-          nb::gil_scoped_release release;
-          result = job.runFromMatter(work);
-        }
-        return matter_result(matter, result, inplace);
-      },
-      nb::arg("matter"), nb::arg("parameters"),
-      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
-      "Matter-first Temperature Accelerated Dynamics (TADJob). "
-      "Default non-mutating copy; inplace=True updates matter.");
+  // --- TAD ---
+  struct PyTAD : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      ensure_long_timescale_params(params, 5);
+      auto work = matter_work(seed, inplace);
+      if (pot)
+        work->setPotential(pot);
+      auto job_pot = pot ? pot : work->getPotential();
+      eonc::TADJob job(job_pot, params);
+      std::shared_ptr<Matter> out;
+      {
+        nb::gil_scoped_release release;
+        out = job.runFromMatter(work);
+      }
+      result = matter_result(seed, out, inplace);
+      return result;
+    }
+  };
 
-  m.def(
-      "run_parallel_replica",
-      [](std::shared_ptr<Matter> matter, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        ensure_long_timescale_params(params, 5);
-        auto work = matter_work(matter, inplace);
-        if (pot)
-          work->setPotential(pot);
-        auto job_pot = pot ? pot : work->getPotential();
-        ParallelReplicaJob job(job_pot, params);
-        std::shared_ptr<Matter> result;
-        {
-          nb::gil_scoped_release release;
-          result = job.runFromMatter(work);
-        }
-        return matter_result(matter, result, inplace);
-      },
-      nb::arg("matter"), nb::arg("parameters"),
-      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
-      "Matter-first Parallel Replica Dynamics (ParallelReplicaJob). "
-      "Default non-mutating; inplace=True updates matter with final trajectory.");
+  nb::class_<PyTAD>(m, "TAD",
+                    "Temperature Accelerated Dynamics (TADJob). "
+                    "run(inplace=False).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PyTAD::run, nb::arg("inplace") = false)
+      .def_prop_ro("matter",
+                   [](const PyTAD &s) { return s.result ? s.result : s.seed; });
 
-  m.def(
-      "run_safe_hyperdynamics",
-      [](std::shared_ptr<Matter> matter, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        ensure_long_timescale_params(params, 5);
-        auto work = matter_work(matter, inplace);
-        if (pot)
-          work->setPotential(pot);
-        auto job_pot = pot ? pot : work->getPotential();
-        SafeHyperJob job(job_pot, params);
-        std::shared_ptr<Matter> result;
-        {
-          nb::gil_scoped_release release;
-          result = job.runFromMatter(work);
-        }
-        return matter_result(matter, result, inplace);
-      },
-      nb::arg("matter"), nb::arg("parameters"),
-      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
-      "Matter-first Safe Hyperdynamics (SafeHyperJob). "
-      "Default non-mutating; inplace=True updates matter.");
+  // Mechanical shells for PR family (not product focus)
+  auto bind_pr_like = [&](const char *name, auto make_and_run) {
+    // use explicit classes below instead
+    (void)name;
+    (void)make_and_run;
+  };
+  (void)bind_pr_like;
 
-  m.def(
-      "run_replica_exchange",
-      [](std::shared_ptr<Matter> matter, Parameters params,
-         std::shared_ptr<Potential> pot, bool inplace) {
-        ensure_long_timescale_params(params, 5);
-        auto work = matter_work(matter, inplace);
-        if (pot)
-          work->setPotential(pot);
-        auto job_pot = pot ? pot : work->getPotential();
-        ReplicaExchangeJob job(job_pot, params);
-        std::shared_ptr<Matter> result;
-        {
-          nb::gil_scoped_release release;
-          result = job.runFromMatter(work);
-        }
-        return matter_result(matter, result, inplace);
-      },
-      nb::arg("matter"), nb::arg("parameters"),
-      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
-      "Matter-first Replica Exchange (ReplicaExchangeJob). "
-      "Default non-mutating; returns replica-0 Matter after sampling.");
+  struct PyPR : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      ensure_long_timescale_params(params, 5);
+      auto work = matter_work(seed, inplace);
+      if (pot)
+        work->setPotential(pot);
+      auto job_pot = pot ? pot : work->getPotential();
+      eonc::ParallelReplicaJob job(job_pot, params);
+      std::shared_ptr<Matter> out;
+      {
+        nb::gil_scoped_release release;
+        out = job.runFromMatter(work);
+      }
+      result = matter_result(seed, out, inplace);
+      return result;
+    }
+  };
+  nb::class_<PyPR>(m, "ParallelReplica",
+                   "Parallel Replica (mechanical class; run(inplace=False)).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PyPR::run, nb::arg("inplace") = false);
 
-  // --- GP surrogate (eOn-hyjn): gated ---
-  m.def(
-      "run_gp_surrogate_neb",
-      [](std::shared_ptr<Matter> initial, std::shared_ptr<Matter> final_state,
-         Parameters params, std::shared_ptr<Potential> pot,
-         bool inplace) -> nb::object {
-#ifdef WITH_GP_SURROGATE
-        if (!initial || !final_state)
-          throw std::runtime_error(
-              "run_gp_surrogate_neb: initial and final Matter required");
-        auto work_i = matter_work(initial, inplace);
-        // final is never mutated by the surrogate path; always copy
-        auto work_f = std::make_shared<Matter>(*final_state);
-        if (pot) {
-          work_i->setPotential(pot);
-          work_f->setPotential(pot);
-        }
-        auto job_pot = pot ? pot : work_i->getPotential();
-        GPSurrogateJob job(job_pot, params);
-        std::shared_ptr<NudgedElasticBand> neb;
-        {
-          nb::gil_scoped_release release;
-          neb = job.runFromMatter(work_i, work_f);
-        }
-        return nb::cast(neb);
-#else
-        (void)initial;
-        (void)final_state;
-        (void)params;
-        (void)pot;
-        (void)inplace;
-        throw std::runtime_error(
-            "run_gp_surrogate_neb requires build with -Dwith_gp_surrogate=true "
-            "(WITH_GP_SURROGATE); this wheel has built_with_gp_surrogate()==False");
-#endif
-      },
-      nb::arg("initial"), nb::arg("final"), nb::arg("parameters"),
-      nb::arg("potential"), nb::arg("inplace") = false,
-      "GP-surrogate NEB via GPSurrogateJob (compile-gated WITH_GP_SURROGATE). "
-      "Returns NudgedElasticBand. Raises RuntimeError if feature off.");
+  struct PySH : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      ensure_long_timescale_params(params, 5);
+      auto work = matter_work(seed, inplace);
+      if (pot)
+        work->setPotential(pot);
+      auto job_pot = pot ? pot : work->getPotential();
+      eonc::SafeHyperJob job(job_pot, params);
+      std::shared_ptr<Matter> out;
+      {
+        nb::gil_scoped_release release;
+        out = job.runFromMatter(work);
+      }
+      result = matter_result(seed, out, inplace);
+      return result;
+    }
+  };
+  nb::class_<PySH>(m, "SafeHyperdynamics",
+                   "Safe Hyperdynamics. run(inplace=False).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PySH::run, nb::arg("inplace") = false);
+
+  struct PyREX : SeededAlgo {
+    using SeededAlgo::SeededAlgo;
+    std::shared_ptr<Matter> run(bool inplace) {
+      ensure_long_timescale_params(params, 5);
+      auto work = matter_work(seed, inplace);
+      if (pot)
+        work->setPotential(pot);
+      auto job_pot = pot ? pot : work->getPotential();
+      eonc::ReplicaExchangeJob job(job_pot, params);
+      std::shared_ptr<Matter> out;
+      {
+        nb::gil_scoped_release release;
+        out = job.runFromMatter(work);
+      }
+      result = matter_result(seed, out, inplace);
+      return result;
+    }
+  };
+  nb::class_<PyREX>(m, "ReplicaExchange",
+                    "Replica Exchange. run(inplace=False).")
+      .def(nb::init<std::shared_ptr<Matter>, Parameters,
+                    std::shared_ptr<Potential>>(),
+           nb::arg("matter"), nb::arg("parameters"),
+           nb::arg("potential") = nb::none(), nb::keep_alive<1, 2>(),
+           nb::keep_alive<1, 4>())
+      .def("run", &PyREX::run, nb::arg("inplace") = false);
 }
 
 } // namespace eonc::pybind

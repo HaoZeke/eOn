@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-pc = pytest.importorskip("pyeonclient")
+pyec = pytest.importorskip("pyeonclient")
 
 MODEL = os.environ.get("EON_PET_MAD_MODEL", "").strip()
 ENGINE = os.environ.get("RGPOT_METATOMIC_ENGINE", "").strip()
@@ -29,14 +29,14 @@ need = (
 
 
 def test_rgpot_params_bound():
-    p = pc.Parameters()
+    p = pyec.Parameters()
     p.rgpot_backend = "metatomic"
     p.rgpot_engine_path = "/tmp/libmetatomic_engine.so"
     p.rgpot_model_path = "/tmp/model.pt"
     p.rgpot_device = "cpu"
     assert p.rgpot_backend == "metatomic"
     assert "metatomic" in p.rgpot_engine_path
-    assert pc.PotType.RGPOT is not None
+    assert pyec.PotType.RGPOT is not None
 
 
 @pytest.mark.skipif(need, reason="needs MODEL + RGPOT_METATOMIC_ENGINE + cookbook pos")
@@ -63,7 +63,7 @@ def test_rgpot_metatomic_minimize(tmp_path):
         "max_move = 0.1\n"
         "converged_force = 0.01\n"
     )
-    files = pc.run_job_in_directory(work)
+    files = pyec.run_job_in_directory(work)
     text = (work / "results.dat").read_text()
     assert "GOOD" in text or "potential_energy" in text
     assert "RGPOT" in text or "rgpot" in text.lower() or "METATOMIC" in text
@@ -125,7 +125,7 @@ def test_rgpot_metatomic_neb(tmp_path):
         "[Debug]\n"
         "write_movies = true\n"
     )
-    files = pc.rgpot_metatomic_neb_workdir(work, engine_path=ENGINE, model_path=MODEL)
+    files = pyec.rgpot_metatomic_neb_workdir(work, engine_path=ENGINE, model_path=MODEL)
     text = (work / "results.dat").read_text()
     assert "GOOD" in text
     assert (work / "neb.con").is_file() or "neb.dat" in text or (work / "neb.dat").is_file()

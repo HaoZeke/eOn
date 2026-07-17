@@ -8,6 +8,9 @@
 #include "Parameters.h"
 #include "Potential.h"
 #include "PotRegistry.h"
+#ifdef WITH_GP_SURROGATE
+#include "GPSurrogateJob.h"
+#endif
 #include "eigen_numpy.hpp"
 
 #include <magic_enum/magic_enum.hpp>
@@ -16,6 +19,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <cctype>
 #include <cmath>
 #include <format>
 #include <fstream>
@@ -213,9 +217,231 @@ void bind_neb(nb::module_ &m) {
             initial, final_state, static_cast<size_t>(n_intermediate));
       },
       nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
-      "Linear interpolate n_intermediate images between endpoints");
+      "Linear interpolate n_intermediate images between endpoints "
+      "(same as NEBInit.LINEAR). Prefer this over ASE for eOn paths.");
 
-  // Full NEBJob::saveData artifact set (callable as a Python step).
+  // eOn-native path initializers (do not use ASE idpp for pyeonclient paths).
+  m.def(
+      "neb_idpp_path",
+      [](const Matter &initial, const Matter &final_state, long n_intermediate,
+         const Parameters &params, bool use_zbl) {
+        return eonc::helpers::neb_paths::idppPath(
+            initial, final_state, static_cast<size_t>(n_intermediate), params,
+            use_zbl);
+      },
+      nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
+      nb::arg("parameters"), nb::arg("use_zbl") = false,
+      "Image-dependent pair potential (IDPP) path (NEBInit.IDPP). "
+      "eOn-native; no ASE dependency.");
+
+  m.def(
+      "neb_idpp_collective_path",
+      [](const Matter &initial, const Matter &final_state, long n_intermediate,
+         const Parameters &params, bool use_zbl) {
+        return eonc::helpers::neb_paths::idppCollectivePath(
+            initial, final_state, static_cast<size_t>(n_intermediate), params,
+            use_zbl);
+      },
+      nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
+      nb::arg("parameters"), nb::arg("use_zbl") = false,
+      "Collective IDPP path (NEBInit.IDPP_COLLECTIVE).");
+
+  m.def(
+      "neb_sidpp_path",
+      [](const Matter &initial, const Matter &final_state, long n_intermediate,
+         const Parameters &params, bool use_zbl) {
+        return eonc::helpers::neb_paths::sidppPath(
+            initial, final_state, static_cast<size_t>(n_intermediate), params,
+            use_zbl);
+      },
+      nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
+      nb::arg("parameters"), nb::arg("use_zbl") = false,
+      "Sequential IDPP (SIDPP) path growth (NEBInit.SIDPP / SIDPP_ZBL).");
+
+  m.def(
+      "neb_initial_path",
+      [](const Matter &initial, const Matter &final_state, long n_intermediate,
+         const Parameters &params) {
+        using eonc::NEBInit;
+        const auto method = params.neb_options.initialization.method;
+        const size_t n = static_cast<size_t>(n_intermediate);
+        switch (method) {
+        case NEBInit::IDPP:
+          return eonc::helpers::neb_paths::idppPath(initial, final_state, n,
+                                                   params, false);
+        case NEBInit::IDPP_COLLECTIVE:
+          return eonc::helpers::neb_paths::idppCollectivePath(
+              initial, final_state, n, params, false);
+        case NEBInit::SIDPP:
+          return eonc::helpers::neb_paths::sidppPath(initial, final_state, n,
+                                                    params, false);
+        case NEBInit::SIDPP_ZBL:
+          return eonc::helpers::neb_paths::sidppPath(initial, final_state, n,
+                                                    params, true);
+        case NEBInit::FILE:
+          throw std::runtime_error(
+              "neb_initial_path: FILE init needs neb_load_path_from_files / "
+              "endpoint NEB constructor with input_path");
+        case NEBInit::LINEAR:
+        default:
+          return eonc::helpers::neb_paths::linearPath(initial, final_state, n);
+        }
+      },
+      nb::arg("initial"), nb::arg("final"), nb::arg("n_intermediate"),
+      nb::arg("parameters"),
+      "Dispatch path init from Parameters.neb_init_method "
+      "(LINEAR / IDPP / IDPP_COLLECTIVE / SIDPP / SIDPP_ZBL). "
+      "Same engines NudgedElasticBand uses for endpoint construction.");
+
+
+  // Chemist-facing NEB: optional accelerant="gp" (GPSurrogateJob), else plain NEB.
+  struct PyNEB {
+    eonc::Parameters params;
+    std::shared_ptr<eonc::Potential> pot;
+    std::shared_ptr<eonc::Matter> initial;
+    std::shared_ptr<eonc::Matter> final_state;
+    std::vector<eonc::Matter> path;
+    bool has_path{false};
+    std::string accelerant;
+    std::shared_ptr<eonc::NudgedElasticBand> band;
+
+    static std::string lower(std::string s) {
+      for (char &c : s)
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+      return s;
+    }
+
+    PyNEB(std::shared_ptr<eonc::Matter> init, std::shared_ptr<eonc::Matter> fin,
+          const eonc::Parameters &p, std::shared_ptr<eonc::Potential> pot_in,
+          std::string acc)
+        : params(p), pot(std::move(pot_in)), initial(std::move(init)),
+          final_state(std::move(fin)), accelerant(lower(std::move(acc))) {
+      if (!initial || !final_state)
+        throw std::runtime_error("NEB: initial and final Matter required");
+      if (!pot)
+        pot = initial->getPotential();
+      if (accelerant != "" && accelerant != "none" && accelerant != "gp")
+        throw std::runtime_error(
+            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant + "\"");
+    }
+
+    PyNEB(const std::vector<eonc::Matter> &path_in, const eonc::Parameters &p,
+          std::shared_ptr<eonc::Potential> pot_in, std::string acc)
+        : params(p), pot(std::move(pot_in)), path(path_in), has_path(true),
+          accelerant(lower(std::move(acc))) {
+      if (path.size() < 2)
+        throw std::runtime_error("NEB: path needs >= 2 frames");
+      if (!pot) {
+        // path holds Matter by value; potential must be passed explicitly
+        throw std::runtime_error("NEB: potential required for path constructor");
+      }
+      if (accelerant != "" && accelerant != "none" && accelerant != "gp")
+        throw std::runtime_error(
+            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant + "\"");
+    }
+
+    eonc::NudgedElasticBand::NEBStatus compute() {
+      if (accelerant == "gp") {
+#ifdef WITH_GP_SURROGATE
+        if (has_path)
+          throw std::runtime_error(
+              "NEB(accelerant=\"gp\"): use endpoint constructor "
+              "(initial, final), not an explicit path");
+        eonc::GPSurrogateJob job(pot, params);
+        {
+          nb::gil_scoped_release release;
+          band = job.runFromMatter(initial, final_state);
+        }
+        if (!band)
+          throw std::runtime_error("NEB(accelerant=\"gp\"): empty band");
+        return band->getStatus();
+#else
+        throw std::runtime_error(
+            "NEB(accelerant=\"gp\") requires -Dwith_gp_surrogate=true "
+            "(WITH_GP_SURROGATE); built_with_gp_surrogate()==False");
+#endif
+      }
+      if (has_path) {
+        band = std::make_shared<eonc::NudgedElasticBand>(path, params, pot);
+      } else {
+        band = std::make_shared<eonc::NudgedElasticBand>(initial, final_state,
+                                                        params, pot);
+      }
+      eonc::NudgedElasticBand::NEBStatus st;
+      {
+        nb::gil_scoped_release release;
+        st = band->compute();
+      }
+      return st;
+    }
+  };
+
+  nb::class_<PyNEB>(
+      m, "NEB",
+      "NEB band (chemist entry). Default plain NudgedElasticBand. "
+      "accelerant=\"gp\" routes to GPSurrogateJob when built with "
+      "WITH_GP_SURROGATE. Prefer this name over NudgedElasticBand.")
+      .def(
+          "__init__",
+          [](PyNEB *self, std::shared_ptr<eonc::Matter> initial,
+             std::shared_ptr<eonc::Matter> final_state,
+             const eonc::Parameters &params,
+             std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+            new (self) PyNEB(std::move(initial), std::move(final_state), params,
+                             std::move(pot), accelerant);
+          },
+          nb::arg("initial"), nb::arg("final"), nb::arg("parameters"),
+          nb::arg("potential"), nb::arg("accelerant") = "",
+          nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>(),
+          nb::keep_alive<1, 4>(), nb::keep_alive<1, 5>(),
+          "Endpoints; path init from Parameters.neb_init_method unless GP.")
+      .def(
+          "__init__",
+          [](PyNEB *self, const std::vector<eonc::Matter> &path,
+             const eonc::Parameters &params,
+             std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+            new (self) PyNEB(path, params, std::move(pot), accelerant);
+          },
+          nb::arg("path"), nb::arg("parameters"), nb::arg("potential"),
+          nb::arg("accelerant") = "", nb::keep_alive<1, 3>(),
+          nb::keep_alive<1, 4>(),
+          "Explicit Matter path (not with accelerant=\"gp\").")
+      .def("compute", &PyNEB::compute,
+           "Optimize band (or GP-surrogate NEB when accelerant=\"gp\").")
+      .def_prop_ro(
+          "band",
+          [](PyNEB &self) {
+            if (!self.band)
+              throw std::runtime_error("NEB.band: call compute() first");
+            return self.band;
+          },
+          "Underlying NudgedElasticBand after compute().")
+      .def_prop_ro("accelerant",
+                   [](const PyNEB &s) { return s.accelerant; })
+      .def_prop_ro(
+          "status",
+          [](PyNEB &self) {
+            if (!self.band)
+              throw std::runtime_error("NEB.status: call compute() first");
+            return self.band->getStatus();
+          })
+      .def(
+          "path_images",
+          [](PyNEB &self) {
+            if (!self.band)
+              throw std::runtime_error("NEB.path_images: call compute() first");
+            return self.band->path;
+          })
+      .def_prop_ro(
+          "n_path",
+          [](PyNEB &self) {
+            if (!self.band)
+              return 0L;
+            return static_cast<long>(self.band->path.size());
+          });
+
+
+    // Full NEBJob::saveData artifact set (callable as a Python step).
   m.def(
       "neb_write_results",
       [](NudgedElasticBand &neb, const Parameters &params,
