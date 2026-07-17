@@ -623,6 +623,18 @@ if get_option('with_metatomic')
         # Setting up Torch..
         LIB_TORCH_PATH = get_option('torch_path')
         message('Ensure your versions are correct for metatensor and metatomic')
+    elif get_option('pip_metatomic')
+        # Resolve the installed torch package (site-packages layout varies by
+        # venv / manylinux / no-isolation builds). Prefer import path over
+        # py.get_install_dir()/torch which can miss platlib installs.
+        _torch_loc = run_command(
+            py,
+            '-c',
+            'import pathlib, torch; print(pathlib.Path(torch.__file__).resolve().parent)',
+            check: true,
+        )
+        LIB_TORCH_PATH = _torch_loc.stdout().strip()
+        message('pip_metatomic: torch at', LIB_TORCH_PATH)
     else
         LIB_TORCH_PATH = py.get_install_dir() / 'torch'
     endif

@@ -185,7 +185,13 @@ jobs:
               pip install --only-binary=:all: 'torch' \
                 || pip install 'torch' --index-url https://download.pytorch.org/whl/cpu
               pip install 'metatensor' 'metatensor-torch' 'metatomic-torch' 'vesin'
-              python -c "import torch, metatensor, metatensor.torch, metatomic.torch, vesin; print('mta_modules_ok', torch.__version__)"
+              python -c "import torch, metatensor, metatensor.torch, metatomic.torch, vesin, pathlib; t=pathlib.Path(torch.__file__).resolve().parent; print('mta_modules_ok', torch.__version__, t); assert (t/'lib').is_dir(), t"
+              # so find_library(c10) / runtime can resolve torch libs during link+test
+              TORCH_LIB=$(python -c "import pathlib, torch; print(pathlib.Path(torch.__file__).resolve().parent / 'lib')")
+              export LD_LIBRARY_PATH="${TORCH_LIB}:/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}"
+              export LIBRARY_PATH="${TORCH_LIB}:${LIBRARY_PATH:-}"
+              echo "TORCH_LIB=${TORCH_LIB}"
+              ls "${TORCH_LIB}"/libc10* "${TORCH_LIB}"/libtorch* 2>/dev/null | head
             fi
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
             bash -c 'export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-};
