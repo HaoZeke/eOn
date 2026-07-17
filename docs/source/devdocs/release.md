@@ -537,9 +537,3 @@ python3 -c "import tomllib, pathlib; tomllib.loads(pathlib.Path('cog.toml').read
 
 Confirm docs name GH release/tarball, PyPI, and conda-forge/eon-feedstock;
 incomplete-release recovery (§5); and Doxygen deferral (§8).
-
-## PyPI OIDC (Trusted Publishing)
-
-Split and fat PyPI uploads use GitHub OIDC. Environment and workflow names for
-`eon-akmc`, `pyeonclient`, and `eon-schema` are listed in
-{doc}`pypi-oidc`.

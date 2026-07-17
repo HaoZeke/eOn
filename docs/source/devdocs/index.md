@@ -24,7 +24,6 @@ svn
 svn-migration
 tracking-changes
 release
-   pypi-oidc
 design/client
 ```
 
