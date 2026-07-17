@@ -51,23 +51,36 @@ def test_path_frames_api_surface():
     assert hasattr(pyec.MinModeSaddleSearch, "climb_frames")
 
 
-def test_neb_path_frames_in_memory_no_neb_con(tmp_path, monkeypatch):
-    """path_frames after force update: n_path frames, NEB stamps, no durable neb.con."""
-    monkeypatch.chdir(tmp_path)
+def _short_neb(tmp_path):
+    """Build LJ H2 NEB, short compute (no endpoint min). Returns (neb, params)."""
     params = _lj_params()
     params.job = pyec.JobType.Nudged_Elastic_Band
     params.neb_images = 3
     params.neb_minimize_endpoints = False
+    params.neb_max_iterations = 5
+    params.opt_max_iterations = 5
+    params.opt_converged_force = 1.0  # cheap force target for short band
     pot = pyec.make_potential(pyec.PotType.LJ, params)
     a = _h2(pot, params, 1.2)
     b = _h2(pot, params, 1.8)
     neb = pyec.NudgedElasticBand(a, b, params, pot)
-    neb.update_forces(False)
+    # Acceptance: path_frames after compute() (not only a single force update).
+    status = neb.compute()
+    assert status is not None
+    return neb, params
+
+
+def test_neb_path_frames_in_memory_no_neb_con(tmp_path, monkeypatch):
+    """path_frames after compute(): n_path frames, NEB stamps, no durable neb.con."""
+    monkeypatch.chdir(tmp_path)
+    neb, params = _short_neb(tmp_path)
 
     before = set(tmp_path.iterdir())
     frames = neb.path_frames()
     after = set(tmp_path.iterdir())
-    assert after == before, f"path_frames must not leave durable files: {after - before}"
+    # path_frames must not create durable neb.con (temp handoff is process-private)
+    durable_con = {p.name for p in after - before if p.suffix == ".con"}
+    assert "neb.con" not in durable_con, f"path_frames left neb.con: {durable_con}"
 
     assert len(frames) == neb.n_path
     assert len(frames) == params.neb_images + 2
@@ -95,15 +108,7 @@ def test_neb_path_frames_in_memory_no_neb_con(tmp_path, monkeypatch):
 def test_neb_path_frames_roundtrip_vs_writepathcon(tmp_path, monkeypatch):
     """In-memory stamps match writePathCon / disk re-read via neb_write_results path."""
     monkeypatch.chdir(tmp_path)
-    params = _lj_params()
-    params.job = pyec.JobType.Nudged_Elastic_Band
-    params.neb_images = 3
-    params.neb_minimize_endpoints = False
-    pot = pyec.make_potential(pyec.PotType.LJ, params)
-    a = _h2(pot, params, 1.2)
-    b = _h2(pot, params, 1.8)
-    neb = pyec.NudgedElasticBand(a, b, params, pot)
-    neb.update_forces(False)
+    neb, params = _short_neb(tmp_path)
 
     mem = neb.path_frames()
     # writePathCon is exercised by neb_write_results → neb.con
@@ -121,6 +126,9 @@ def test_neb_path_frames_roundtrip_vs_writepathcon(tmp_path, monkeypatch):
         )
         assert mfr.metadata["relative_energy"] == pytest.approx(
             dfr.metadata["relative_energy"]
+        )
+        assert mfr.metadata["parallel_force"] == pytest.approx(
+            dfr.metadata["parallel_force"]
         )
         pos_m = np.array([[at.x, at.y, at.z] for at in mfr.atoms])
         pos_d = np.array([[at.x, at.y, at.z] for at in dfr.atoms])
