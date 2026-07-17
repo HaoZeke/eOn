@@ -1,7 +1,12 @@
 """ASE ↔ Matter / Structure / readcon helpers (optional ASE dependency).
 
-Prefer these over ad-hoc conversion. When ASE is not installed, functions
-raise ``ImportError`` with a clear message (server path does not require ASE).
+Typical path construction for NEB::
+
+    path = [ase_to_matter(img, pot, params) for img in images]
+    # aliases: pyeonclient.from_ase / pyeonclient.to_ase
+
+When ASE is not installed, functions raise ``ImportError`` with a clear
+message (the server path does not require ASE).
 """
 
 from __future__ import annotations

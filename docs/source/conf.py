@@ -22,6 +22,7 @@ except Exception:
 
 extensions = [
     "myst_nb",
+    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
@@ -38,6 +39,16 @@ extensions = [
     "sphinx_sitemap",
     "autodoc2",
 ]
+
+# pyeonclient pure-Python modules (steps, ase_bridge, bridge) for automodule.
+# Mock the nanobind extension when docs build without a compiled wheel.
+autodoc_mock_imports = ["pyeonclient._core"]
+import sys
+from pathlib import Path as _Path
+
+_pyeon_src = _Path(__file__).resolve().parents[2] / "client" / "python"
+if _pyeon_src.is_dir():
+    sys.path.insert(0, str(_pyeon_src))
 
 sitemap_show_lastmod = True
 

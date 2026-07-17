@@ -26,3 +26,13 @@ tracking-changes
 release
 design/client
 ```
+
+```{toctree}
+:maxdepth: 1
+:caption: pyeonclient packaging
+
+pyeonclient
+pyeonclient-pypi
+```
+
+User-facing Python API: {doc}`/user_guide/pyeonclient`.

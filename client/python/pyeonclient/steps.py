@@ -1,7 +1,15 @@
-"""ClientEON pipeline as explicit Python steps.
+"""Optional workdir composition helpers for ClientEON stages.
 
-Each function is one stage of the standalone ``eonclient`` main loop. Compose
-them in notebooks/drivers instead of a single opaque entry point.
+Prefer the in-memory Matter API for new code::
+
+    pot = make_potential(params.potential, params)
+    path = [from_ase(img, pot, params) for img in images]
+    neb = NudgedElasticBand(path, params, pot)
+    neb.compute()
+
+These helpers exist for batch jobs that already use an ``eonclient``-style
+directory (``config.ini`` + ``.con`` files). Each function is one stage of the
+standalone binary main loop.
 
 Typical job path (any JobType including NEB)::
 
@@ -24,6 +32,8 @@ Matter path (minimization without Job wrapper)::
     del m, pot
     write_potcall_summary()
     append_timing("results.dat", t0)
+
+See the user guide: https://eondocs.org/user_guide/pyeonclient.html
 """
 
 from __future__ import annotations

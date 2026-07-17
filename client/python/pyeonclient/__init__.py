@@ -1,17 +1,32 @@
-"""pyeonclient — nanobind surface for the eOn C++ client.
+"""pyeonclient — in-process eOn client (nanobind).
 
-Core (``_core``)
-----------------
-Parameters, Potential, Matter, Job, enums, and **per-step** ClientEON helpers:
-``make_job``, ``write_potcall_summary``, ``get_process_times``,
-``append_results_timing``, ``steady_clock_now``.
+First-class algorithm surface (ASE-shaped geometries as :class:`Matter`)::
 
-Steps (``pyeonclient.steps``)
------------------------------
-Compose the client pipeline in Python (load → job/matter → potcalls → timing).
-Use these from notebooks instead of a single opaque binary wrapper.
+    # Minimization
+    matter = from_ase(atoms, pot, params); matter.relax()
 
-Bridges: :mod:`pyeonclient.bridge`, :mod:`pyeonclient.ase_bridge`.
+    # Min-mode
+    dimer = ImprovedDimer(matter, params, pot)
+    dimer.compute(matter, direction)          # direction (n, 3)
+    ev, mode = dimer.eigenvalue, dimer.eigenvector
+
+    # Single-ended saddle
+    ss = MinModeSaddleSearch(matter, mode, E_react, params, pot)
+    status = ss.run()                         # mutates matter → saddle
+
+    # NEB band
+    path = [from_ase(img, pot, params) for img in images]
+    neb = NudgedElasticBand(path, params, pot); neb.compute()
+
+    # Hessian / HTST prefactors
+    H = Hessian(params, matter)
+    freqs = H.get_freqs(matter, all_free_atoms(matter))
+    pref1, pref2 = get_prefactors(params, min1, saddle, min2)
+
+Modules: ``_core`` (compiled), :mod:`pyeonclient.ase_bridge`,
+:mod:`pyeonclient.bridge`, :mod:`pyeonclient.steps` (optional workdir helpers).
+
+Docs: https://eondocs.org/user_guide/pyeonclient.html
 """
 
 from __future__ import annotations
@@ -42,6 +57,7 @@ try:
         pot_type_name,
         steady_clock_now,
         write_potcall_summary,
+        # NEB
         NudgedElasticBand,
         NEBStatus,
         neb_read_file_paths,
@@ -49,6 +65,21 @@ try:
         neb_linear_path,
         neb_write_results,
         pot_registry_total_force_calls,
+        # Min-mode
+        Dimer,
+        ImprovedDimer,
+        Lanczos,
+        Davidson,
+        # Saddle
+        MinModeSaddleSearch,
+        SaddleStatus,
+        saddle_status_message,
+        # Analysis
+        Hessian,
+        get_prefactors,
+        moved_atoms,
+        all_free_atoms,
+        # Build probes
         built_with_metatomic,
         built_with_rgpot,
     )
@@ -89,58 +120,78 @@ to_ase = matter_to_ase
 from_ase = ase_to_matter
 
 __all__ = [
+    # Core types
     "IoStatus",
     "Job",
     "JobType",
     "Matter",
-    "NEBInit",
-    "NEBStatus",
-    "NudgedElasticBand",
-    "OptType",
     "Parameters",
     "PbcConvention",
     "Potential",
     "PotType",
+    "OptType",
     "RunStatus",
+    # NEB
+    "NEBInit",
+    "NEBStatus",
+    "NudgedElasticBand",
+    "neb_linear_path",
+    "neb_load_path_from_files",
+    "neb_read_file_paths",
+    "neb_write_results",
+    # Min-mode
+    "Dimer",
+    "ImprovedDimer",
+    "Lanczos",
+    "Davidson",
+    # Saddle
+    "MinModeSaddleSearch",
+    "SaddleStatus",
+    "saddle_status_message",
+    # Analysis
+    "Hessian",
+    "get_prefactors",
+    "moved_atoms",
+    "all_free_atoms",
+    # Factories / steps
+    "make_job",
+    "make_potential",
+    "load_parameters",
+    "run_job",
+    "run_job_in_directory",
+    "run_eon_cwd",
+    "minimize_workdir",
+    "neb_workdir",
+    "rgpot_metatomic_workdir",
+    "rgpot_metatomic_neb_workdir",
+    "write_minimization_results",
+    "write_potcall_summary",
     "append_results_timing",
     "append_timing",
-    "ase_to_matter",
-    "ase_to_structure",
-    "conframe_to_matter",
-    "from_ase",
-    "from_structure",
     "get_process_times",
+    "steady_clock_now",
+    "pot_registry_total_force_calls",
+    # Enum helpers
     "io_ok",
     "io_status_name",
     "job_type_from_name",
     "job_type_name",
-    "load_parameters",
-    "make_job",
-    "make_potential",
-    "matter_to_ase",
-    "matter_to_conframe",
-    "matter_to_structure",
-    "minimize_workdir",
-    "neb_linear_path",
-    "neb_load_path_from_files",
-    "neb_read_file_paths",
-    "neb_workdir",
-    "rgpot_metatomic_workdir",
-    "rgpot_metatomic_neb_workdir",
-    "neb_write_results",
-    "pot_registry_total_force_calls",
     "pot_type_from_name",
     "pot_type_name",
-    "run_eon_cwd",
-    "run_job",
-    "run_job_in_directory",
-    "steady_clock_now",
-    "structure_to_ase",
-    "structure_to_matter",
+    # Bridges
+    "from_ase",
     "to_ase",
+    "ase_to_matter",
+    "matter_to_ase",
+    "ase_to_structure",
+    "structure_to_ase",
+    "conframe_to_matter",
+    "matter_to_conframe",
+    "from_structure",
     "to_structure",
-    "write_minimization_results",
-    "write_potcall_summary",
+    "structure_to_matter",
+    "matter_to_structure",
+    # Probes
     "built_with_metatomic",
     "built_with_rgpot",
     "__version__",
