@@ -1,17 +1,26 @@
 /*
 ** Matter-first sampling / long-timescale primitives with explicit inplace.
-** Issues: eOn-p8em dynamics, eOn-dvf5 MC, eOn-73ji BH, eOn-m6o8 process search,
-** eOn-bcd3 TAD, eOn-tw3g parallel-replica family, eOn-515s structure comparison,
-** eOn-cb3z GP surrogate (gated).
+** Issues: eOn-p8em dynamics, eOn-n6oi MC, eOn-fmxm BH, eOn-412j process search,
+** eOn-du2q TAD, eOn-v1d0 PR/SafeHyper/REX, eOn-nmcu structure comparison,
+** eOn-hyjn GP surrogate (gated), eOn-rczn inplace contract.
 */
 #include "Dynamics.h"
 #include "Matter.h"
 #include "MinModeSaddleSearch.h"
 #include "MonteCarlo.h"
 #include "Parameters.h"
+#include "ParallelReplicaJob.h"
 #include "Potential.h"
+#include "ReplicaExchangeJob.h"
+#include "SafeHyperJob.h"
+#include "TADJob.h"
 #include "bind_helpers.hpp"
 #include "eigen_numpy.hpp"
+
+#ifdef WITH_GP_SURROGATE
+#include "GPSurrogateJob.h"
+#include "NudgedElasticBand.h"
+#endif
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
@@ -19,6 +28,7 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <random>
@@ -43,6 +53,65 @@ void ensure_dynamics_steps(eonc::Parameters &params, long default_steps) {
       params.dynamics_options.time_step =
           1.0 / params.constants.timeUnit; // 1 fs
   }
+}
+
+/// Ensure PR/TAD/REX interval fields are finite and compatible with a short
+/// Matter-first smoke run (avoids zero-length buffers / div-by-zero).
+void ensure_long_timescale_params(eonc::Parameters &params,
+                                  long default_steps) {
+  ensure_dynamics_steps(params, default_steps);
+  auto &dyn = params.dynamics_options;
+  const double dt = dyn.time_step;
+  const double horizon = dt * static_cast<double>(dyn.steps);
+
+  auto &pr = params.parallel_replica_options;
+  if (pr.state_check_interval <= 0.0)
+    pr.state_check_interval = std::max(dt, horizon);
+  if (pr.record_interval <= 0.0)
+    pr.record_interval = std::max(dt, pr.state_check_interval / 2.0);
+  if (pr.record_interval > pr.state_check_interval)
+    pr.record_interval = pr.state_check_interval;
+  // Ensure at least one MD step per interval (integer division in TAD/PR).
+  if (pr.state_check_interval < dt)
+    pr.state_check_interval = dt;
+  if (pr.record_interval < dt)
+    pr.record_interval = dt;
+  if (pr.dephase_time <= 0.0)
+    pr.dephase_time = dt; // one step dephase for smoke
+  if (pr.corr_time <= 0.0)
+    pr.corr_time = dt;
+  // Short Matter-first smokes: skip refine (needs filled snapshot buffers)
+  // and always cap dephase so LJ dimers cannot hang forever.
+  if (dyn.steps > 0 && dyn.steps < 50) {
+    pr.refine_transition = false;
+    pr.dephase_loop_stop = true;
+    if (pr.dephase_loop_max <= 0 || pr.dephase_loop_max > 5)
+      pr.dephase_loop_max = 2;
+  }
+
+  auto &rex = params.replica_exchange_options;
+  if (rex.replicas < 2)
+    rex.replicas = 2;
+  // Prefer explicit dynamics budget over stale sampling_time_input conversion.
+  if (rex.sampling_time <= 0.0 ||
+      (dyn.steps > 0 && dyn.steps < 50 &&
+       rex.sampling_time > horizon * 2.0)) {
+    rex.sampling_time = horizon > 0.0 ? horizon : dt;
+  }
+  if (rex.exchange_period <= 0.0 ||
+      rex.exchange_period > rex.sampling_time)
+    rex.exchange_period = std::max(dt, rex.sampling_time / 2.0);
+  if (rex.temperature_low <= 0.0)
+    rex.temperature_low = params.main_options.temperature > 0.0
+                              ? params.main_options.temperature
+                              : 300.0;
+  if (rex.temperature_high <= rex.temperature_low)
+    rex.temperature_high = rex.temperature_low * 1.5;
+  if (rex.exchange_trials <= 0)
+    rex.exchange_trials = std::max(1L, rex.replicas - 1);
+  // Short Matter-first smoke: two replicas is enough to exercise Metropolis.
+  if (dyn.steps > 0 && dyn.steps < 50 && rex.replicas > 3)
+    rex.replicas = 2;
 }
 
 AtomMatrix random_direction(long n_atoms, std::mt19937_64 &rng) {
@@ -229,68 +298,127 @@ void bind_sampling(nb::module_ &m) {
       [](Matter &a, Matter &b) { return a.distanceTo(b); },
       nb::arg("a"), nb::arg("b"), "RMS-like distance between two Matter.");
 
-  // --- Long-timescale family smokes: short dynamics with labeled entry ---
-  // Full multi-replica PR/TAD remain available via make_job; Matter-first
-  // surface for smoke uses Dynamics core (eOn-bcd3, eOn-tw3g).
-#define PYeON_SHORT_DYN_BODY                                                   \
-  auto work = matter_work(matter, inplace);                                    \
-  ensure_dynamics_steps(params, 5);                                            \
-  Dynamics dyn(work.get(), DynamicsConfig::fromParams(params));                \
-  {                                                                            \
-    nb::gil_scoped_release release;                                            \
-    dyn.run();                                                                 \
-  }                                                                            \
-  return work
-
+  // --- Long-timescale jobs via real Job classes (eOn-du2q, eOn-v1d0) ---
+  // Never Dynamics aliases. Default non-mutating; inplace=True writes back.
   m.def(
       "run_tad",
-      [](std::shared_ptr<Matter> matter, Parameters params, bool inplace) {
-        PYeON_SHORT_DYN_BODY;
+      [](std::shared_ptr<Matter> matter, Parameters params,
+         std::shared_ptr<Potential> pot, bool inplace) {
+        ensure_long_timescale_params(params, 5);
+        auto work = matter_work(matter, inplace);
+        if (pot)
+          work->setPotential(pot);
+        auto job_pot = pot ? pot : work->getPotential();
+        TADJob job(job_pot, params);
+        std::shared_ptr<Matter> result;
+        {
+          nb::gil_scoped_release release;
+          result = job.runFromMatter(work);
+        }
+        return matter_result(matter, result, inplace);
       },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Matter-first TAD entry (short Dynamics smoke path). Full multi-temp "
-      "TAD remains via make_job(JobType.TAD). Default non-mutating.");
+      nb::arg("matter"), nb::arg("parameters"),
+      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
+      "Matter-first Temperature Accelerated Dynamics (TADJob). "
+      "Default non-mutating copy; inplace=True updates matter.");
 
   m.def(
       "run_parallel_replica",
-      [](std::shared_ptr<Matter> matter, Parameters params, bool inplace) {
-        PYeON_SHORT_DYN_BODY;
+      [](std::shared_ptr<Matter> matter, Parameters params,
+         std::shared_ptr<Potential> pot, bool inplace) {
+        ensure_long_timescale_params(params, 5);
+        auto work = matter_work(matter, inplace);
+        if (pot)
+          work->setPotential(pot);
+        auto job_pot = pot ? pot : work->getPotential();
+        ParallelReplicaJob job(job_pot, params);
+        std::shared_ptr<Matter> result;
+        {
+          nb::gil_scoped_release release;
+          result = job.runFromMatter(work);
+        }
+        return matter_result(matter, result, inplace);
       },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Matter-first parallel-replica entry (short Dynamics smoke). Full "
-      "multi-replica PR via make_job(JobType.Parallel_Replica).");
+      nb::arg("matter"), nb::arg("parameters"),
+      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
+      "Matter-first Parallel Replica Dynamics (ParallelReplicaJob). "
+      "Default non-mutating; inplace=True updates matter with final trajectory.");
 
   m.def(
       "run_safe_hyperdynamics",
-      [](std::shared_ptr<Matter> matter, Parameters params, bool inplace) {
-        PYeON_SHORT_DYN_BODY;
+      [](std::shared_ptr<Matter> matter, Parameters params,
+         std::shared_ptr<Potential> pot, bool inplace) {
+        ensure_long_timescale_params(params, 5);
+        auto work = matter_work(matter, inplace);
+        if (pot)
+          work->setPotential(pot);
+        auto job_pot = pot ? pot : work->getPotential();
+        SafeHyperJob job(job_pot, params);
+        std::shared_ptr<Matter> result;
+        {
+          nb::gil_scoped_release release;
+          result = job.runFromMatter(work);
+        }
+        return matter_result(matter, result, inplace);
       },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Matter-first safe hyperdynamics entry (short Dynamics smoke). Full "
-      "job via make_job(JobType.Safe_Hyperdynamics).");
+      nb::arg("matter"), nb::arg("parameters"),
+      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
+      "Matter-first Safe Hyperdynamics (SafeHyperJob). "
+      "Default non-mutating; inplace=True updates matter.");
 
   m.def(
       "run_replica_exchange",
-      [](std::shared_ptr<Matter> matter, Parameters params, bool inplace) {
-        PYeON_SHORT_DYN_BODY;
+      [](std::shared_ptr<Matter> matter, Parameters params,
+         std::shared_ptr<Potential> pot, bool inplace) {
+        ensure_long_timescale_params(params, 5);
+        auto work = matter_work(matter, inplace);
+        if (pot)
+          work->setPotential(pot);
+        auto job_pot = pot ? pot : work->getPotential();
+        ReplicaExchangeJob job(job_pot, params);
+        std::shared_ptr<Matter> result;
+        {
+          nb::gil_scoped_release release;
+          result = job.runFromMatter(work);
+        }
+        return matter_result(matter, result, inplace);
       },
-      nb::arg("matter"), nb::arg("parameters"), nb::arg("inplace") = false,
-      "Matter-first replica-exchange entry (short Dynamics smoke). Full "
-      "job via make_job(JobType.Replica_Exchange).");
-#undef PYeON_SHORT_DYN_BODY
+      nb::arg("matter"), nb::arg("parameters"),
+      nb::arg("potential") = nb::none(), nb::arg("inplace") = false,
+      "Matter-first Replica Exchange (ReplicaExchangeJob). "
+      "Default non-mutating; returns replica-0 Matter after sampling.");
 
-  // --- GP surrogate (eOn-cb3z): gated ---
+  // --- GP surrogate (eOn-hyjn): gated ---
   m.def(
       "run_gp_surrogate_neb",
-      [](std::shared_ptr<Matter> /*initial*/, std::shared_ptr<Matter> /*final*/,
-         const Parameters & /*params*/, std::shared_ptr<Potential> /*pot*/,
-         bool /*inplace*/) -> nb::object {
+      [](std::shared_ptr<Matter> initial, std::shared_ptr<Matter> final_state,
+         Parameters params, std::shared_ptr<Potential> pot,
+         bool inplace) -> nb::object {
 #ifdef WITH_GP_SURROGATE
-        throw std::runtime_error(
-            "run_gp_surrogate_neb: Matter-first path not yet wired to "
-            "GPSurrogateJob; use make_job(JobType.GP_Surrogate) workdir path "
-            "or rebuild with full surrogate helpers.");
+        if (!initial || !final_state)
+          throw std::runtime_error(
+              "run_gp_surrogate_neb: initial and final Matter required");
+        auto work_i = matter_work(initial, inplace);
+        // final is never mutated by the surrogate path; always copy
+        auto work_f = std::make_shared<Matter>(*final_state);
+        if (pot) {
+          work_i->setPotential(pot);
+          work_f->setPotential(pot);
+        }
+        auto job_pot = pot ? pot : work_i->getPotential();
+        GPSurrogateJob job(job_pot, params);
+        std::shared_ptr<NudgedElasticBand> neb;
+        {
+          nb::gil_scoped_release release;
+          neb = job.runFromMatter(work_i, work_f);
+        }
+        return nb::cast(neb);
 #else
+        (void)initial;
+        (void)final_state;
+        (void)params;
+        (void)pot;
+        (void)inplace;
         throw std::runtime_error(
             "run_gp_surrogate_neb requires build with -Dwith_gp_surrogate=true "
             "(WITH_GP_SURROGATE); this wheel has built_with_gp_surrogate()==False");
@@ -298,7 +426,8 @@ void bind_sampling(nb::module_ &m) {
       },
       nb::arg("initial"), nb::arg("final"), nb::arg("parameters"),
       nb::arg("potential"), nb::arg("inplace") = false,
-      "GP-surrogate NEB (compile-gated). Raises if feature off or unwired.");
+      "GP-surrogate NEB via GPSurrogateJob (compile-gated WITH_GP_SURROGATE). "
+      "Returns NudgedElasticBand. Raises RuntimeError if feature off.");
 }
 
 } // namespace eonc::pybind

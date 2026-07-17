@@ -30,8 +30,11 @@ call — the same engines the binary uses.
 | Basin hopping | `run_basin_hopping` | `job = basin_hopping` |
 | Process search | `process_search` | `job = process_search` |
 | Structure compare | `structures_equal` / `structure_distance` | `job = structure_comparison` |
-| TAD / PR / safe hyper / rex | `run_tad` / `run_parallel_replica` / … | short Dynamics entry; full multi-replica via `make_job` |
-| GP surrogate | `run_gp_surrogate_neb` (gated) | `WITH_GP_SURROGATE` |
+| TAD | `run_tad` → `TADJob` | `job = tad` |
+| Parallel replica | `run_parallel_replica` → `ParallelReplicaJob` | `job = parallel_replica` |
+| Safe hyperdynamics | `run_safe_hyperdynamics` → `SafeHyperJob` | `job = safe_hyperdynamics` |
+| Replica exchange | `run_replica_exchange` → `ReplicaExchangeJob` | `job = replica_exchange` |
+| GP surrogate NEB | `run_gp_surrogate_neb` → `GPSurrogateJob` (gated) | `WITH_GP_SURROGATE` |
 | Opaque batch | `make_job` + `Job.run` | any `JobType` via factory |
 
 `make_job(params)` still constructs every `JobType` the C++ factory supports
@@ -63,7 +66,17 @@ saddle, status = pc.min_mode_saddle_search(
 ```
 
 Same for ``run_dynamics``, ``run_monte_carlo``, ``run_basin_hopping``,
-``process_search``, and the long-timescale entry points.
+``process_search``, ``run_tad``, ``run_parallel_replica``,
+``run_safe_hyperdynamics``, and ``run_replica_exchange``. There are **no**
+silent mutators: every algorithm takes ``inplace=False`` by default.
+
+```{code-block} python
+out = pc.run_tad(matter, params, pot)                 # TADJob; matter unchanged
+out = pc.run_parallel_replica(matter, params, pot)    # ParallelReplicaJob
+out = pc.run_safe_hyperdynamics(matter, params, pot)
+out = pc.run_replica_exchange(matter, params, pot)
+out = pc.run_tad(matter, params, pot, inplace=True)   # updates matter
+```
 
 ## Shared setup
 

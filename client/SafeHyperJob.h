@@ -18,9 +18,8 @@ namespace eonc {
 
 class SafeHyperJob : public ReplicaDynamicsJob {
 public:
-  SafeHyperJob(std::unique_ptr<Parameters> parameters)
-      : ReplicaDynamicsJob(std::move(parameters)) {}
-  ~SafeHyperJob(void) = default;
+  using ReplicaDynamicsJob::ReplicaDynamicsJob;
+  ~SafeHyperJob() = default;
 
 private:
   int dynamics() override;

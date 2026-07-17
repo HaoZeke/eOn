@@ -25,6 +25,25 @@
 #include <thread>
 
 std::vector<std::string> ReplicaExchangeJob::run() {
+  std::string posFilename =
+      eonc::helpers::getRelevantFile(params.main_options.conFilename);
+  pos = std::make_shared<Matter>(pot, params);
+  if (!eonc::io::io_ok(pos->con2matter(posFilename))) {
+    QUILL_LOG_CRITICAL(log, "Failed to load {}", posFilename);
+    throw std::runtime_error("failed to load " + posFilename);
+  }
+  (void)runFromMatter(pos);
+  return returnFiles;
+}
+
+std::shared_ptr<Matter>
+ReplicaExchangeJob::runFromMatter(std::shared_ptr<Matter> initial) {
+  if (!initial) {
+    throw std::runtime_error("ReplicaExchangeJob::runFromMatter: null Matter");
+  }
+  pos = initial;
+  pos->setPotential(pot);
+
   long samplingSteps =
       static_cast<long>(params.replica_exchange_options.sampling_time /
                             params.dynamics_options.time_step +
@@ -34,14 +53,10 @@ std::vector<std::string> ReplicaExchangeJob::run() {
                             params.dynamics_options.time_step +
                         0.5);
   const double kB = params.constants.kB;
-
-  std::string posFilename =
-      eonc::helpers::getRelevantFile(params.main_options.conFilename);
-  pos = std::make_shared<Matter>(pot, params);
-  if (!eonc::io::io_ok(pos->con2matter(posFilename))) {
-    QUILL_LOG_CRITICAL(log, "Failed to load {}", posFilename);
-    throw std::runtime_error("failed to load " + posFilename);
-  }
+  if (samplingSteps <= 0)
+    samplingSteps = 1;
+  if (exchangePeriodSteps <= 0)
+    exchangePeriodSteps = 1;
 
   QUILL_LOG_DEBUG(log, "Running Replica Exchange");
 
@@ -145,8 +160,10 @@ std::vector<std::string> ReplicaExchangeJob::run() {
 
   forceCalls = PotRegistry::get().total_force_calls() - refForceCalls;
   saveData();
-
-  return returnFiles;
+  if (!replica.empty()) {
+    *pos = *replica[0];
+  }
+  return pos;
 }
 
 void ReplicaExchangeJob::saveData() {

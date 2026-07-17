@@ -1,8 +1,8 @@
 """inplace=False default + Matter-first job APIs (no workdir).
 
-Issues: eOn-rczn (inplace), eOn-m6o8 process_search, eOn-p8em dynamics,
-eOn-dvf5 MC, eOn-73ji BH, eOn-bcd3 TAD, eOn-tw3g PR family, eOn-515s
-structure comparison, eOn-cb3z GP surrogate gate.
+Issues: eOn-rczn (inplace), eOn-412j process_search, eOn-p8em dynamics,
+eOn-n6oi MC, eOn-fmxm BH, eOn-du2q TAD, eOn-v1d0 PR family, eOn-nmcu
+structure comparison, eOn-hyjn GP surrogate gate.
 """
 
 from __future__ import annotations
@@ -32,9 +32,15 @@ def _lj_dimer(seed: int = 0):
     return m, pot, params
 
 
+def _short_md(params):
+    """Keep long-timescale jobs to a handful of MD steps for unit smoke."""
+    params.dynamics_steps = 4
+    params.dynamics_time_step = 1.0
+    return params
+
+
 def test_relax_default_does_not_mutate():
     m, pot, params = _lj_dimer()
-    # displace from min so relax moves
     pos0 = np.asarray(m.positions).copy()
     pos0[1, 0] = 1.6
     m.positions = pos0
@@ -44,7 +50,6 @@ def test_relax_default_does_not_mutate():
     assert np.allclose(before, after), "default relax must not mutate self"
     out_pos = np.asarray(out.positions)
     assert not np.allclose(before, out_pos) or ok is not None
-    # out is a distinct configuration object
     assert out is not m or not np.allclose(before, out_pos)
 
 
@@ -86,15 +91,12 @@ def test_min_mode_saddle_search_inplace():
     pos0 = np.asarray(m.positions).copy()
     pos0[1, 0] += 0.2
     m.positions = pos0
-    before = np.asarray(m.positions).copy()
     mode = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], dtype=np.float64)
     E0 = float(m.potential_energy)
     out, status = pc.min_mode_saddle_search(
         m, mode, E0, params, pot, inplace=True
     )
-    # with inplace, out is same shared object as m
     after = np.asarray(m.positions)
-    # algorithm may move or not depending on status; out should be m
     assert out is m or np.allclose(np.asarray(out.positions), after)
 
 
@@ -145,17 +147,58 @@ def test_process_search_non_mutating():
     assert np.asarray(saddle.positions).shape == before.shape
 
 
-def test_long_timescale_entry_symbols():
-    # Named TAD/PR/safe-hyper/replica-exchange entries are thin Dynamics
-    # wrappers (identical body to run_dynamics, covered by
-    # test_run_dynamics_non_mutating). Assert the Matter-first public surface.
-    for name in (
+@pytest.mark.parametrize(
+    "fn_name",
+    [
         "run_tad",
         "run_parallel_replica",
         "run_safe_hyperdynamics",
         "run_replica_exchange",
-    ):
-        assert callable(getattr(pc, name)), name
+    ],
+)
+def test_long_timescale_construct_run_non_mutating(fn_name, tmp_path, monkeypatch):
+    """Each named API is a real Job (not Dynamics alias): construct→run→geometry.
+
+    eOn-du2q / eOn-v1d0: TADJob, ParallelReplicaJob, SafeHyperJob, ReplicaExchangeJob.
+    """
+    monkeypatch.chdir(tmp_path)  # jobs may write results.dat / *.con
+    m, pot, params = _lj_dimer(10)
+    _short_md(params)
+    before = np.asarray(m.positions).copy()
+    fn = getattr(pc, fn_name)
+    out = fn(m, params, pot, inplace=False)
+    assert np.allclose(before, np.asarray(m.positions)), (
+        f"{fn_name}(inplace=False) must not mutate caller Matter"
+    )
+    assert out is not None
+    pos = np.asarray(out.positions)
+    assert pos.shape == before.shape
+    # result should be a usable Matter (energy finite)
+    e = float(out.potential_energy)
+    assert np.isfinite(e)
+
+
+@pytest.mark.parametrize(
+    "fn_name",
+    [
+        "run_tad",
+        "run_parallel_replica",
+        "run_safe_hyperdynamics",
+        "run_replica_exchange",
+    ],
+)
+def test_long_timescale_inplace(fn_name, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    m, pot, params = _lj_dimer(11)
+    _short_md(params)
+    before = np.asarray(m.positions).copy()
+    fn = getattr(pc, fn_name)
+    out = fn(m, params, pot, inplace=True)
+    after = np.asarray(m.positions)
+    assert out is m or np.allclose(np.asarray(out.positions), after)
+    # geometry still valid
+    assert after.shape == before.shape
+    assert np.isfinite(float(m.potential_energy))
 
 
 def test_structure_comparison():
@@ -178,11 +221,15 @@ def test_gp_surrogate_gate():
         with pytest.raises(RuntimeError, match="gp_surrogate|WITH_GP"):
             pc.run_gp_surrogate_neb(m1, m2, params, pot, inplace=False)
     else:
-        # Feature on: may still raise if unwired — must not pretend success
+        # Feature on: construct→run GPSurrogateJob path (may still fail
+        # without CatLearn env; must not be an 'unwired' stub).
         try:
-            pc.run_gp_surrogate_neb(m1, m2, params, pot, inplace=False)
+            neb = pc.run_gp_surrogate_neb(m1, m2, params, pot, inplace=False)
+            assert neb is not None
         except RuntimeError as e:
-            assert "gp" in str(e).lower() or "surrogate" in str(e).lower()
+            msg = str(e).lower()
+            assert "not yet wired" not in msg
+            assert "gp" in msg or "surrogate" in msg or "catlearn" in msg
 
 
 def test_public_symbols_present():

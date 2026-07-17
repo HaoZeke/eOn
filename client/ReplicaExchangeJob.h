@@ -14,22 +14,23 @@
 
 #include "Dynamics.h"
 #include "Job.h"
+#include "Matter.h"
 #include "Parameters.h"
 
 namespace eonc {
 
 class ReplicaExchangeJob : public Job {
 public:
-  ReplicaExchangeJob(std::unique_ptr<Parameters> parameters)
-      : Job(std::move(parameters)),
-        forceCalls{0} {}
-  ~ReplicaExchangeJob(void) = default;
+  using Job::Job;
+  ~ReplicaExchangeJob() = default;
   std::vector<std::string> run(void);
+  /// Matter-first; returns replica-0 Matter after sampling.
+  std::shared_ptr<Matter> runFromMatter(std::shared_ptr<Matter> initial);
 
 private:
   void saveData();
 
-  size_t forceCalls;
+  size_t forceCalls{0};
   //        std::shared_ptr<Matter>*replica;
   std::shared_ptr<Matter> pos;
   //        Dynamics **replicaDynamics;

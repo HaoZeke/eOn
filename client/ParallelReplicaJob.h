@@ -22,10 +22,11 @@ namespace eonc {
 
 class ParallelReplicaJob : public Job {
 public:
-  ParallelReplicaJob(std::unique_ptr<Parameters> parameters)
-      : Job(std::move(parameters)) {}
+  using Job::Job;
   ~ParallelReplicaJob() = default;
   std::vector<std::string> run() override;
+  /// Matter-first entry; returns final trajectory Matter.
+  std::shared_ptr<Matter> runFromMatter(std::shared_ptr<Matter> initial);
 
 private:
   std::vector<std::string> returnFiles;
