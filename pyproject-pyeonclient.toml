@@ -1,6 +1,6 @@
 [project]
 name = "pyeonclient"
-version = "0.3.2"
+version = "0.3.3"
 description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs, NEB, RGPOT)"
 authors = [
     {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
@@ -47,11 +47,22 @@ metatomic = [
     "metatomic-torch>=0.1.0",
     "vesin>=0.1.0",
 ]
-# Cookbook-ish helper stack (config writing lives in rgpycrumbs).
-# No conda-forge eOn / eonclient required.
+# Figure stack (NEB profile/landscape, min movies).
+plot = [
+    "rgpycrumbs>=1.9.16",
+    "chemparseplot[neb,plot]>=1.9.13",
+    "xyzrender>=0.1.3",
+    "adjustText>=1.0",
+    "cmcrameri",
+    "polars",
+    "jax",
+    "h5py",
+    "rich",
+    "matplotlib>=3.8",
+]
+# Cookbook-ish helper stack.
 cookbook = [
-    "pyeonclient[metatomic,ase,models]",
-    "rgpycrumbs>=0.1.0",
+    "pyeonclient[metatomic,ase,models,plot]",
 ]
 
 [project.urls]

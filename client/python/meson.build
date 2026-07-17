@@ -164,6 +164,7 @@ py.install_sources(
         'pyeonclient/bridge.py',
         'pyeonclient/ase_bridge.py',
         'pyeonclient/models.py',
+        'pyeonclient/plot.py',
         'pyeonclient/steps.py',
     ],
     pure: false,
