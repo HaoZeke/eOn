@@ -145,8 +145,11 @@ from pyeonclient.ase_bridge import (  # noqa: E402
 )
 
 from pyeonclient.backends import (  # noqa: E402
+    ensure_metatomic_load_compat,
     list_backends,
+    load_atomistic_model_compat,
     make_backend,
+    make_metatomic_ase_calculator,
     register as register_backend,
 )
 
@@ -229,6 +232,9 @@ __all__ = [
     "make_backend",
     "list_backends",
     "register_backend",
+    "ensure_metatomic_load_compat",
+    "load_atomistic_model_compat",
+    "make_metatomic_ase_calculator",
     "load_parameters",
     "run_job",
     "run_job_in_directory",

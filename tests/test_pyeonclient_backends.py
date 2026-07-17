@@ -15,6 +15,7 @@ def test_list_backends_has_keys():
     assert "lj" in keys
     assert "metatomic" in keys
     assert "rgpot_metatomic" in keys
+    assert "ase_metatomic" in keys
 
 
 def test_make_backend_lj_on_matter():
