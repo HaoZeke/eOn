@@ -84,3 +84,39 @@ src/eon_schema/
   api/           # L2 DimerSpec, NebSpec
   _deps.py
 ```
+
+## INI helpers (config write without eon-akmc)
+
+```python
+from eon_schema.config import (
+    MainConfig,
+    PotentialConfig,
+    DimerConfig,
+    write_models_ini,
+    write_ini,
+    hydrate_ini,
+    unknown_ini_keys,
+    defaults_from_catalog,
+)
+
+# L1 models → config.ini (Dimer L1 prefixes mapped to INI keys)
+write_models_ini(
+    "config.ini",
+    MainConfig(job="saddle_search"),
+    PotentialConfig(potential="lj"),
+    DimerConfig(dimer_improved=True),
+    extra={"Debug": {"write_movies": True}},
+    validate=True,
+)
+
+# Or raw sections (rgpycrumbs-style) with L0 hydrate + key check
+user = {"Main": {"job": "minimization", "temperature": 400}}
+cfg = hydrate_ini(user, base_sections=["Main", "Optimizer"])
+assert not unknown_ini_keys(cfg)
+write_ini("config.ini", cfg)
+
+print(defaults_from_catalog("Main")["job"])
+```
+
+Downstream: **rgpycrumbs** should depend on ``eon-schema`` for
+``write_eon_config`` / seed_dimers / MLflow log_params instead of full eon-akmc.

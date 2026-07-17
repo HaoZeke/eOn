@@ -112,3 +112,34 @@ __all__ = [
     "DistributedReplicaConfig",
     "Config",
 ]
+
+# INI helpers (config write / hydrate without eon-akmc)
+from eon_schema.config.ini import (  # noqa: E402,F401
+    INI_FIELD_ALIASES,
+    MODEL_INI_SECTION,
+    allowed_keys,
+    defaults_from_catalog,
+    format_ini_value,
+    hydrate_ini,
+    model_to_ini_section,
+    models_to_ini,
+    read_ini,
+    unknown_ini_keys,
+    write_ini,
+    write_models_ini,
+)
+
+__all__ += [
+    "INI_FIELD_ALIASES",
+    "MODEL_INI_SECTION",
+    "allowed_keys",
+    "defaults_from_catalog",
+    "format_ini_value",
+    "hydrate_ini",
+    "model_to_ini_section",
+    "models_to_ini",
+    "read_ini",
+    "unknown_ini_keys",
+    "write_ini",
+    "write_models_ini",
+]

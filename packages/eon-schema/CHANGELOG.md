@@ -2,6 +2,13 @@
 
 ## [0.2.0] — 2026-07-17
 
+### Added
+
+- INI helpers in ``eon_schema.config.ini``: ``write_ini``, ``read_ini``,
+  ``defaults_from_catalog``, ``hydrate_ini``, ``unknown_ini_keys``,
+  ``model_to_ini_section`` / ``models_to_ini`` / ``write_models_ini``
+  (shared config write path for rgpycrumbs without eon-akmc).
+
 ### Changed
 
 - **L1 job-config models live here** (`eon_schema.config`), not only in eon-akmc.
