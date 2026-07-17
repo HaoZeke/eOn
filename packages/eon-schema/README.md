@@ -1,59 +1,86 @@
 # eon-schema
 
-Shared **eOn** Cap’n Proto L0 SSoT (**vendored** from monorepo `schema/`),
-enums, and optional pydantic **API** models for `eon-akmc` and `pyeonclient`.
+**Shared schema package for both eon-akmc and pyeonclient.** One home for:
+
+| Layer | Module | Role |
+|-------|--------|------|
+| **L0** | `eon_schema.ssot` | Cap’n Proto field graph (vendored from monorepo `schema/`) |
+| **L1** | `eon_schema.config` | Full job-config pydantic models (`MainConfig`, `Metatomic`, `Config`, …) |
+| **L2** | `eon_schema.api` / `fields` | In-process specs (`DimerSpec`, `NebSpec`, enums) |
+
+Consumers:
+
+- **eon-akmc** — depends on `eon-schema`; `eon.schema` re-exports L1 for Sphinx / legacy imports.
+- **pyeonclient** — `pyeonclient[models]` pulls `eon-schema`; `pyeonclient.models` re-exports L2.
+
+Do **not** re-author job models under `eon/` or duplicate L2 under `pyeonclient/`.
 
 ## Fat tree vs this package
 
 | | Fat monorepo tarball | This PyPI package |
 |--|----------------------|-------------------|
-| Purpose | conda-forge `eon`, full C++/server builds | Shared Python models + SSoT copy |
+| Purpose | conda-forge `eon`, full C++/server builds | Shared Python schema for both clients |
 | Cap’n Proto | Full monorepo including `schema/` | Vendored under `src/eon_schema/ssot/` |
-| Feedstock | **Uses fat tarball only** | Not required for 0.1.x |
+| L1 models | Also present via `eon.schema` re-export | **Authoritative** under `eon_schema.config` |
+| Feedstock | **Uses fat tarball only** | Not required for 0.2.x |
 
-**Authoring** is monorepo `schema/eon_params.capnp`. After edits:
+**L0 authoring** is monorepo `schema/eon_params.capnp`. After edits:
 
 ```bash
 python tools/params_ssot/codegen.py
 ./packages/eon-schema/scripts/sync_ssot_into_package.sh
 ```
 
-Release contract: always produce the **fat** `eon-v*.tar.xz` for
-conda-forge; publish **splits** (`eon-schema`, `pyeonclient`, `eon-akmc`, …)
-independently when their APIs change. Tree layout may be cleaned up as long as
-the fat archive remains buildable.
+**L1 authoring** is `packages/eon-schema/src/eon_schema/config/models.py`.
+Keep field parity with L0 for covered sections (`tests/test_params_ssot.py`).
 
-See **[PUBLISHING.md](PUBLISHING.md)** for release trains and PyPI steps.
+See **[PUBLISHING.md](PUBLISHING.md)** for fat vs split release trains.
 
 ## Install
 
 ```bash
-pip install eon-schema
-pip install 'eon-schema[pydantic]'
-# uv: uv pip install 'eon-schema[pydantic]'
+pip install eon-schema            # L0 + L1 + L2 (pydantic is a hard dep)
+# monorepo:
+pip install -e packages/eon-schema
 ```
-
-Optional: `RGPYCRUMBS_AUTO_DEPS=1` with `rgpycrumbs` for on-demand pydantic install.
 
 ## Quick use
 
 ```python
+# L0
 from eon_schema.ssot import capnp_path, load_catalog
+
+# L1 (same objects as eon.schema.*)
+from eon_schema.config import MainConfig, Metatomic, Config
+
+# L2 (same objects as pyeonclient.models.*)
+from eon_schema.api import DimerSpec
 from eon_schema.fields import MinModeMethod, Accelerant
-from eon_schema.api import DimerSpec  # needs pydantic
 
 print(capnp_path())
-print(list(load_catalog()["sections"])[:3])
+print(MainConfig().job)
 print(DimerSpec(method=MinModeMethod.improved, accelerant=Accelerant.gp).core_kwargs())
+```
+
+eon-akmc / Sphinx still use:
+
+```python
+from eon.schema import MainConfig, Metatomic  # re-export
+```
+
+pyeonclient still uses:
+
+```python
+from pyeonclient.models import DimerSpec, NebSpec  # re-export
 ```
 
 ## Layout
 
 ```text
 src/eon_schema/
-  ssot/          # vendored Cap'n Proto L0 + catalog (from monorepo schema/)
-  fields/        # enums (no pydantic)
-  api/           # DimerSpec, NebSpec (pydantic optional)
-  config/        # placeholder: L1 still in eon-akmc eon.schema
-  _deps.py       # ensure_import (rgpycrumbs if present)
+  ssot/          # L0 vendored Cap'n Proto + catalog
+  config/        # L1 job-config models (models.py)
+  fields/        # enums
+  api/           # L2 DimerSpec, NebSpec
+  _deps.py
 ```

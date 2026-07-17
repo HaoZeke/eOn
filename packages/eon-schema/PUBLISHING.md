@@ -54,6 +54,11 @@ No new conda package is required when you only add PyPI splits.
 Do not `export-ignore` paths the fat build needs (e.g. `schema/`, `client/`,
 `eon/`, `packages/` if present) in `.gitattributes`.
 
+## Shared package contract
+
+`eon-schema` is the **only** authoring home for Python L1 job models and L2
+API specs. `eon-akmc` (`eon.schema`) and `pyeonclient.models` re-export.
+
 ## Split: PyPI `eon-schema` (independent semver)
 
 Independent of a `v2.y.z` cut. Bump `packages/eon-schema/pyproject.toml`

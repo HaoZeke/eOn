@@ -1,12 +1,12 @@
 [project]
 name = "eon-schema"
-version = "0.1.0"
-description = "Shared eOn parameter SSoT (vendored Cap'n Proto L0 from monorepo schema/), enums, and optional pydantic API models for eon-akmc + pyeonclient"
+version = "0.2.0"
+description = "Shared eOn L0 Cap'n Proto SSoT, L1 job-config pydantic models, and L2 API specs for eon-akmc + pyeonclient"
 readme = "README.md"
 license = {text = "BSD-3-Clause"}
 requires-python = ">=3.11"
 authors = [{name = "Rohit Goswami", email = "rgoswami@ieee.org"}]
-dependencies = []
+dependencies = ["pydantic>=2.0", "typing_extensions>=4.0"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
@@ -20,7 +20,6 @@ classifiers = [
 keywords = ["eOn", "schema", "capnp", "pydantic", "AKMC", "pyeonclient"]
 
 [project.optional-dependencies]
-pydantic = ["pydantic>=2.0"]
 rgpycrumbs = ["rgpycrumbs>=1.3"]
 
 [project.urls]

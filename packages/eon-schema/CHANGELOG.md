@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0] — 2026-07-17
+
+### Changed
+
+- **L1 job-config models live here** (`eon_schema.config`), not only in eon-akmc.
+  `eon.schema` and `pyeonclient.models` are re-exports.
+- `pydantic>=2` is a **hard** dependency (L1 + L2). Extra `[pydantic]` is a no-op
+  kept for older install strings.
+
+### Added
+
+- Full former `eon/schema.py` surface under `eon_schema.config.models`
+  (`MainConfig`, `Metatomic`, root `Config`, …).
+
 ## [0.1.0] — 2026-07-17
 
 ### Added

@@ -14,6 +14,10 @@ import pytest
 import yaml
 
 REPO = Path(__file__).resolve().parents[1]
+SCHEMA_MODELS = (
+    REPO / "packages" / "eon-schema" / "src" / "eon_schema"
+    / "config" / "models.py"
+)
 GENERATED = [
     REPO / "schema" / "eon_params_catalog.json",
     REPO / "eon" / "_params_ssot_catalog.py",
@@ -148,7 +152,7 @@ def test_parity_yaml_defaults_match_ssot(section):
 def test_parity_main_fields_in_schema_py():
     from eon import params_ssot
 
-    model_fields = _pydantic_model_fields(REPO / "eon" / "schema.py", "MainConfig")
+    model_fields = _pydantic_model_fields(SCHEMA_MODELS, "MainConfig")
     ssot_keys = {f["snake"] for f in params_ssot.scalar_fields("Main")}
     assert not (model_fields - ssot_keys), (
         f"schema.MainConfig fields not in SSoT: {model_fields - ssot_keys}"
@@ -160,7 +164,7 @@ def test_parity_schema_defaults_main_potential_optimizer():
     # Import only if pydantic present; else parse defaults from AST/source
     from eon import params_ssot
 
-    schema_text = (REPO / "eon" / "schema.py").read_text()
+    schema_text = (SCHEMA_MODELS).read_text()
     # lammps_logging default=False
     m = re.search(
         r"lammps_logging:\s*bool\s*=\s*Field\(\s*default=(True|False)",
@@ -190,7 +194,7 @@ def test_parity_potential_structure_process_models():
     ]
     for sec, model_name in checks:
         ssot = {f["snake"] for f in params_ssot.scalar_fields(sec)}
-        model_keys = _pydantic_model_fields(REPO / "eon" / "schema.py", model_name)
+        model_keys = _pydantic_model_fields(SCHEMA_MODELS, model_name)
         model_keys = {k for k in model_keys if k[0].islower()}
         missing = model_keys - ssot
         assert not missing, f"{model_name} not in SSoT: {missing}"
@@ -343,7 +347,7 @@ def test_parity_nested_optimizer_model_fields_subset_of_ssot():
     ssot_opt = {f["snake"] for f in params_ssot.scalar_fields("Optimizer")}
 
     for model_name, meta in _NESTED_OPT_MODELS.items():
-        fields = _pydantic_model_fields(REPO / "eon" / "schema.py", model_name)
+        fields = _pydantic_model_fields(SCHEMA_MODELS, model_name)
         fields = {k for k in fields if k[0].islower()}
         extra_allowed = set((meta.get("extra_allowed") or {}).keys())
         allowed = set(flat_keys) | ssot_opt | extra_allowed
@@ -358,7 +362,7 @@ def test_parity_nested_optimizer_model_defaults_match_ssot():
     """Defaults on nested optimizer pydantic models match Cap'n Proto SSoT."""
     from eon import params_ssot
 
-    schema_text = (REPO / "eon" / "schema.py").read_text()
+    schema_text = (SCHEMA_MODELS).read_text()
     flat_defaults = _flat_alias_default_map()
     opt_defaults = params_ssot.defaults_for("Optimizer")
 

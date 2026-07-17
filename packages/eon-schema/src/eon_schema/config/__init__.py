@@ -1,21 +1,114 @@
-"""L1 full job-config models.
+"""L1 full job-config models (pydantic).
 
-Still live in ``eon.schema`` (eon-akmc full tree) so conda-forge ``eon`` and
-existing consumers are unaffected. Future migration lands here; for now this
-module documents the boundary.
+These are the eOn configuration models used for docs validation and as the
+shared schema for **eon-akmc** and any consumer that needs the full job
+graph. They live in this package so L0 (Cap'n Proto) and L1 share one home.
+
+Import paths (equivalent)::
+
+    from eon_schema.config import MainConfig, Config
+    from eon.schema import MainConfig, Config  # re-export in eon-akmc
+
+L2 request models (``DimerSpec``, ``NebSpec``) stay under ``eon_schema.api``.
 """
 
 from __future__ import annotations
 
+from eon_schema.config.models import *  # noqa: F403
+from eon_schema.config.models import (  # noqa: F401
+    MainConfig,
+    StructureComparisonConfig,
+    AKMCConfig,
+    BasinHoppingConfig,
+    PathsConfig,
+    CommunicatorConfig,
+    ProcessSearchConfig,
+    PrefactorConfig,
+    PotentialConfig,
+    XTBPot,
+    ZBLPot,
+    SocketNWChemPot,
+    RgpotPot,
+    Metatomic,
+    ASE_NWCHEM,
+    ASE_ORCA,
+    AMSConfig,
+    AMSIOConfig,
+    AMSEnvConfig,
+    SaddleSearchConfig,
+    KDBConfig,
+    RecyclingConfig,
+    CoarseGrainingConfig,
+    OptimizerConfig,
+    QuickMinConfig,
+    FIREConfig,
+    LBFGSConfig,
+    CGConfig,
+    SDConfig,
+    RefineConfig,
+    ServeConfig,
+    DebugConfig,
+    DimerConfig,
+    NudgedElasticBandConfig,
+    LanczosConfig,
+    DavidsonConfig,
+    ARTnConfig,
+    IRAConfig,
+    BGSDConfig,
+    HessianConfig,
+    DynamicsConfig,
+    ParallelReplicaConfig,
+    HyperdynamicsConfig,
+    GPRDimerConfig,
+    DistributedReplicaConfig,
+    Config,
+)
 
-def eon_akmc_schema():
-    """Import the full pydantic job config from eon-akmc when installed."""
-    try:
-        import eon.schema as schema  # type: ignore
-    except ImportError as e:
-        raise ImportError(
-            "Full L1 job config still ships in eon-akmc (import eon.schema). "
-            "Install eon-akmc / conda-forge eon for Config models. "
-            "eon-schema L2 API specs do not require eon-akmc."
-        ) from e
-    return schema
+__all__ = [
+    "MainConfig",
+    "StructureComparisonConfig",
+    "AKMCConfig",
+    "BasinHoppingConfig",
+    "PathsConfig",
+    "CommunicatorConfig",
+    "ProcessSearchConfig",
+    "PrefactorConfig",
+    "PotentialConfig",
+    "XTBPot",
+    "ZBLPot",
+    "SocketNWChemPot",
+    "RgpotPot",
+    "Metatomic",
+    "ASE_NWCHEM",
+    "ASE_ORCA",
+    "AMSConfig",
+    "AMSIOConfig",
+    "AMSEnvConfig",
+    "SaddleSearchConfig",
+    "KDBConfig",
+    "RecyclingConfig",
+    "CoarseGrainingConfig",
+    "OptimizerConfig",
+    "QuickMinConfig",
+    "FIREConfig",
+    "LBFGSConfig",
+    "CGConfig",
+    "SDConfig",
+    "RefineConfig",
+    "ServeConfig",
+    "DebugConfig",
+    "DimerConfig",
+    "NudgedElasticBandConfig",
+    "LanczosConfig",
+    "DavidsonConfig",
+    "ARTnConfig",
+    "IRAConfig",
+    "BGSDConfig",
+    "HessianConfig",
+    "DynamicsConfig",
+    "ParallelReplicaConfig",
+    "HyperdynamicsConfig",
+    "GPRDimerConfig",
+    "DistributedReplicaConfig",
+    "Config",
+]
