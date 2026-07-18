@@ -329,24 +329,58 @@ subdir('potentials/NewPot')
 #   with_rgpot  -> nwchempot_dep + cpmdpot_dep (direct dlopen engines in eOn)
 #   with_serve  -> ptlrpc_dep (eOn is Cap'n Proto RPC server)
 # potserv RPC *client* is not wired as an eOn Potential.
+#
+# Prefer an *installed* rgpot (pkg-config) for distro/EasyBuild packaging;
+# fall back to subprojects/rgpot.wrap for pixi/dev. Wrap defaults (document
+# for matching standalone installs — no torch/xtb at link time):
+#   with_rpc_client_only=true, pure_lib=true, with_tests=false,
+#   with_examples=false  (+ with_xtb=false, with_metatomic=false for packages)
 _rgpot_proj = []
 ptlrpc_dep = disabler()
+nwchempot_dep = disabler()
+cpmdpot_dep = disabler()
+_rgpot_from_pkg = false
 if get_option('with_rgpot') or get_option('with_serve')
-    rgpot_opts = {
-        'with_rpc_client_only': true,
-        'pure_lib': true,
-        'with_tests': false,
-        'with_examples': false,
-    }
-    _rgpot_proj = subproject('rgpot', default_options: rgpot_opts)
+    # 1) installed module
+    _rgpot_pkg = dependency('rgpot', required: false)
+    if _rgpot_pkg.found()
+        message('rgpot: using pkg-config (installed), not subproject wrap')
+        _rgpot_from_pkg = true
+        nwchempot_dep = _rgpot_pkg
+        cpmdpot_dep = _rgpot_pkg
+        ptlrpc_dep = _rgpot_pkg
+    else
+        # 2) wrap / multi-source fallback
+        message('rgpot: pkg-config not found; falling back to subproject wrap')
+        rgpot_opts = {
+            'with_rpc_client_only': true,
+            'pure_lib': true,
+            'with_tests': false,
+            'with_examples': false,
+            # engines stay runtime dlopen; do not force fat metatomic/xtb link
+            'with_xtb': false,
+            'with_metatomic': false,
+        }
+        _rgpot_proj = subproject('rgpot', default_options: rgpot_opts)
+        if get_option('with_serve')
+            ptlrpc_dep = _rgpot_proj.get_variable('ptlrpc_dep')
+        endif
+        if get_option('with_rgpot') and not is_windows
+            nwchempot_dep = _rgpot_proj.get_variable('nwchempot_dep')
+            cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
+        endif
+    endif
 endif
 if get_option('with_serve')
     serve_capnp_dep = dependency('capnp-rpc', required: true)
-    ptlrpc_dep = _rgpot_proj.get_variable('ptlrpc_dep')
+    if not ptlrpc_dep.found()
+        error('with_serve requires ptlrpc from rgpot (pkg-config or subproject)')
+    endif
 endif
 if get_option('with_rgpot') and not is_windows
-    nwchempot_dep = _rgpot_proj.get_variable('nwchempot_dep')
-    cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
+    if not nwchempot_dep.found() or not cpmdpot_dep.found()
+        error('with_rgpot requires nwchempot/cpmdpot from rgpot (pkg-config or subproject)')
+    endif
     _deps += [nwchempot_dep, cpmdpot_dep]
     _args += ['-DWITH_RGPOT']
     subdir('potentials/Rgpot')
@@ -755,10 +789,13 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
         message(
             'If this is flaky, pass pip_metatomic=True with the torch version and let pip handle everything',
         )
-        # Try system dependency() first (pkg-config / cmake), fall back to find_library
+        # Prefer pkg-config/cmake vesin before manual find_library / vendored tree.
         # xref: https://github.com/metatensor/metatensor/issues/930
         # On Windows (MSVC), static libraries are often prefixed with 'lib'
         vesin_dep = dependency('vesin', required: false)
+        if not vesin_dep.found()
+            vesin_dep = dependency('vesin', method: 'cmake', required: false)
+        endif
         if not vesin_dep.found()
             vesin_dep = cppc.find_library('vesin', required: false)
         endif
