@@ -17,6 +17,7 @@
   `[Hessian] atom_list` intersected with free atoms, and a stable mobile VectorXi
   copy so moving-atom Hessians match PHVA-class active sets. ([#357](https://github.com/TheochemUI/eOn/issues/357))
 - Release CI installs quill/capnp so ``eon-akmc`` sdist and pyeonclient wheels configure cleanly on GitHub runners. ([#418](https://github.com/TheochemUI/eOn/issues/418))
+- Republish pyeonclient as **0.3.4** with the full wheel matrix (abi3 + freethreading) after incomplete 0.3.3 tag CI.
 
 
 ## [2.17.1](https://github.com/TheochemUI/eOn/tree/2.17.1) - 2026-07-17
