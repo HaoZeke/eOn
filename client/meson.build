@@ -1191,6 +1191,19 @@ if get_option('with_tests')
             env: _test_env,
         )
     endforeach
+    if get_option('with_xtb')
+        # Timing harness for linked ship vs rgpot dlopen (not a Catch suite).
+        executable(
+            'xtb_ship_bench',
+            sources: ['unit_tests/xtb_ship_bench.cpp'],
+            dependencies: test_deps,
+            include_directories: _incdirs,
+            cpp_args: test_args,
+            link_with: _linkto,
+            build_rpath: ':'.join(_runtime_rpath),
+            install: false,
+        )
+    endif
     # Special handling for the nwchem test (due to the client server bit)
     nwchem_exe = find_program('nwchem', required: false)
     bash_exe = find_program('bash', required: false)
