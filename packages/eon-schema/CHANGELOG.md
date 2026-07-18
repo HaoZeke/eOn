@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-07-17
+
+### Changed
+
+- Patch release to prove PyPI Trusted Publishing (OIDC) on
+  `TheochemUI/eOn` via `eon-schema-publish.yml` / environment
+  `pypi-eon-schema`. No API surface change vs 0.2.1.
+
 ## [0.2.1] — 2026-07-17
 
 ### Added
