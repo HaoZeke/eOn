@@ -19,7 +19,7 @@ struct RGPotEngineOptions {
   int memory_mb{0};
   std::string scratch_dir;
   std::string input_block; // optional NWChem inputBlocks text
-  // Metatomic (RGPOT backend=metatomic): model + optional engine .so path
+  // Metatomic (backend=metatomic): dlopen libmetatomic_engine.so
   std::string model_path;
   std::string device{"cpu"};
   std::string length_unit{"angstrom"};
@@ -27,9 +27,16 @@ struct RGPotEngineOptions {
   bool check_consistency{false};
   double uncertainty_threshold{-1.0};
   bool torch_determinism_strict{false};
+  // XTB (backend=xtb): dlopen libxtb_engine.so — not native -Dwith_xtb link
+  std::string xtb_paramset{"GFN2xTB"}; // GFNFF / GFN0xTB / GFN1xTB / GFN2xTB
+  double xtb_accuracy{1.0};
+  double xtb_electronic_temperature{300.0};
+  int xtb_max_iterations{250};
+  double xtb_charge{0.0};
+  int xtb_uhf{0};
 };
 
-/** Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic). No eOn Potential.h here. */
+/** Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic / xtb). */
 class RGPotEngine {
 public:
   explicit RGPotEngine(const RGPotEngineOptions &opt);

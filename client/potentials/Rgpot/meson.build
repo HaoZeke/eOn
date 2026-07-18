@@ -4,6 +4,7 @@ rgpot_pot = library(
         'RgpotPot.cpp',
         'RGPotEngine.cpp',
         'MetatomicEngineLoader.cpp',
+        'XTBEngineLoader.cpp',
     ],
     include_directories: _incdirs,
     dependencies: _deps,

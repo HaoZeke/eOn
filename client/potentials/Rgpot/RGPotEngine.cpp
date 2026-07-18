@@ -14,6 +14,7 @@
 #include "rgpot/CPMDPot/CPMDPot.hpp"
 #include "rgpot/NWChemPot/NWChemPot.hpp"
 #include "MetatomicEngineLoader.h"
+#include "XTBEngineLoader.h"
 #include "rgpot/rpc/Potentials.capnp.h"
 
 namespace {
@@ -45,14 +46,32 @@ bool looks_like_dft_xc(const std::string &s) {
   return false;
 }
 
+/** Map eOn/native XTB paramset names to RGPOT_XTB_METHOD_* ABI codes. */
+int xtb_method_from_paramset(const std::string &paramset) {
+  const std::string p = to_lower(paramset);
+  if (p == "gfnff" || p == "gfn-ff")
+    return RGPOT_XTB_METHOD_GFNFF;
+  if (p == "gfn0xtb" || p == "gfn0" || p == "gfn0-xtb")
+    return RGPOT_XTB_METHOD_GFN0;
+  if (p == "gfn1xtb" || p == "gfn1" || p == "gfn1-xtb")
+    return RGPOT_XTB_METHOD_GFN1;
+  if (p == "gfn2xtb" || p == "gfn2" || p == "gfn2-xtb" || p.empty())
+    return RGPOT_XTB_METHOD_GFN2;
+  throw std::runtime_error(
+      "RGPOT(xtb): paramset must be GFNFF, GFN0xTB, GFN1xTB, or GFN2xTB "
+      "(got '" +
+      paramset + "')");
+}
+
 } // namespace
 
 struct RGPotEngine::Impl {
-  enum class Backend { Nwchemc, Cpmdc, Metatomic };
+  enum class Backend { Nwchemc, Cpmdc, Metatomic, Xtb };
   Backend backend{Backend::Nwchemc};
   std::unique_ptr<rgpot::NWChemPot> nwchem;
   std::unique_ptr<rgpot::CPMDPot> cpmd;
   std::unique_ptr<MetatomicEngineLoader> metatomic;
+  std::unique_ptr<XTBEngineLoader> xtb;
 };
 
 RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
@@ -142,17 +161,36 @@ RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
     mopt.extensions_directory = opt.extensions_directory;
     mopt.check_consistency = opt.check_consistency;
     mopt.uncertainty_threshold = opt.uncertainty_threshold;
-    mopt.engine_path = !opt.engine_path.empty() ? opt.engine_path
-                                                : opt.engine_library;
+    mopt.engine_path =
+        !opt.engine_path.empty() ? opt.engine_path : opt.engine_library;
     mopt.torch_determinism_strict = opt.torch_determinism_strict;
     impl_->metatomic = std::make_unique<MetatomicEngineLoader>(mopt);
     if (!impl_->metatomic->available())
       throw std::runtime_error(
           "RGPOT(metatomic): engine not available (set RGPOT_METATOMIC_ENGINE "
           "or [RgpotPot] engine_path to libmetatomic_engine.so)");
+  } else if (backend_ == "xtb" || backend_ == "xtbpot" || backend_ == "gfn" ||
+             backend_ == "gfnxtb") {
+    backend_ = "xtb";
+    impl_->backend = Impl::Backend::Xtb;
+    XTBEngineOptions xopt;
+    xopt.method = xtb_method_from_paramset(opt.xtb_paramset);
+    xopt.accuracy = opt.xtb_accuracy;
+    xopt.electronic_temperature = opt.xtb_electronic_temperature;
+    xopt.max_iterations = opt.xtb_max_iterations;
+    xopt.charge = opt.xtb_charge;
+    xopt.uhf = opt.xtb_uhf;
+    xopt.engine_path =
+        !opt.engine_path.empty() ? opt.engine_path : opt.engine_library;
+    impl_->xtb = std::make_unique<XTBEngineLoader>(xopt);
+    if (!impl_->xtb->available())
+      throw std::runtime_error(
+          "RGPOT(xtb): engine not available (set RGPOT_XTB_ENGINE or "
+          "[RgpotPot] engine_path to libxtb_engine.so)");
   } else {
-    throw std::runtime_error("RGPOT: unknown backend '" + opt.backend +
-                             "' (expected nwchemc, cpmdc, or metatomic)");
+    throw std::runtime_error(
+        "RGPOT: unknown backend '" + opt.backend +
+        "' (expected nwchemc, cpmdc, metatomic, or xtb)");
   }
 }
 
@@ -167,6 +205,8 @@ bool RGPotEngine::available() const {
     return impl_->cpmd->available();
   if (impl_->backend == Impl::Backend::Metatomic && impl_->metatomic)
     return impl_->metatomic->available();
+  if (impl_->backend == Impl::Backend::Xtb && impl_->xtb)
+    return impl_->xtb->available();
   return false;
 }
 
@@ -187,6 +227,10 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
 
   if (impl_->backend == Impl::Backend::Metatomic) {
     impl_->metatomic->force(N, R, atomicNrs, F, U, nullptr, box);
+    return;
+  }
+  if (impl_->backend == Impl::Backend::Xtb) {
+    impl_->xtb->force(N, R, atomicNrs, F, U, nullptr, box);
     return;
   }
 

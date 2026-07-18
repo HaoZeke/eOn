@@ -36,6 +36,12 @@ RgpotPot::RgpotPot(const Parameters &p)
   opt.check_consistency = o.check_consistency;
   opt.uncertainty_threshold = o.uncertainty_threshold;
   opt.torch_determinism_strict = o.torch_determinism_strict;
+  opt.xtb_paramset = o.xtb_paramset;
+  opt.xtb_accuracy = o.xtb_accuracy;
+  opt.xtb_electronic_temperature = o.xtb_electronic_temperature;
+  opt.xtb_max_iterations = o.xtb_max_iterations;
+  opt.xtb_charge = o.xtb_charge;
+  opt.xtb_uhf = o.xtb_uhf;
 
   // Env overrides (CI / benchmarks)
   if (const char *e = std::getenv("RGPOT_BACKEND"))
@@ -68,9 +74,19 @@ RgpotPot::RgpotPot(const Parameters &p)
       opt.engine_path = e;
     if (const char *e = std::getenv("RGPOT_METATOMIC_MODEL"))
       opt.model_path = e;
+  } else if (backend_lc == "xtb" || backend_lc == "xtbpot" ||
+             backend_lc == "gfn" || backend_lc == "gfnxtb") {
+    if (const char *e = std::getenv("RGPOT_XTB_ENGINE"))
+      opt.engine_path = e;
+    else if (const char *e = std::getenv("XTB_ENGINE"))
+      opt.engine_path = e;
+    if (opt.xtb_paramset.empty() || opt.xtb_paramset == "GFN2xTB") {
+      if (!p.xtb_options.paramset.empty())
+        opt.xtb_paramset = p.xtb_options.paramset;
+    }
   }
 
-  // Also pull model from [Metatomic] when using RGPOT metatomic backend
+  // Dual-read [Metatomic] when RGPOT backend is metatomic
   if ((backend_lc.rfind("meta", 0) == 0 || backend_lc == "mta") &&
       opt.model_path.empty())
     opt.model_path = p.metatomic_options.model_path;
@@ -81,7 +97,7 @@ RgpotPot::RgpotPot(const Parameters &p)
   impl_ = std::make_unique<RGPotEngine>(opt);
   backend_ = impl_->backend();
   std::cout << "RgpotPot: in-process rgpot backend=" << backend_
-            << " (dlopen engines: libnwchemc/libcpmdc/libmetatomic_engine)"
+            << " (dlopen: libnwchemc/libcpmdc/libmetatomic_engine/libxtb_engine)"
             << std::endl;
 }
 
