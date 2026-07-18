@@ -27,7 +27,7 @@ NB_MODULE(_core, m) {
       "MinModeSaddleSearch, Hessian, Prefactor, Dynamics/MC/BH/process_search, "
       "ASE bulk matter_from_ase/matter_to_ase. "
       "Stable ABI (abi3) or free-threaded.";
-  m.attr("__version__") = "0.3.4";
+  m.attr("__version__") = "0.3.5";
 
   m.def(
       "built_with_metatomic",
