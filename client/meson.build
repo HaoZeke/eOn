@@ -506,11 +506,17 @@ eonclient_sources = ['ClientEON.cpp', 'CommandLine.cpp']
 
 # ------------------- Options
 
+# gpr_optim (+ nested rgpot) must not land in the shared pot-plugin dep set:
+# those plugins link with --no-undefined and would inherit HDF5/zlib (and
+# rgpot) link flags they do not need. Attach only to eonclib / executables.
+_gprd_extra_deps = []
 if get_option('with_gprd')
     gprd_opts = {
         'default_library': 'static',
         'use_mkl': get_option('use_mkl'),
-        'use_hdf5': true,
+        # AtomicGPDimer does not use gpr_optim HDF5 logs; keep HDF5 off so
+        # gpr_optim_deps do not require -lz in lean CI envs.
+        'use_hdf5': false,
         'do_install': true,
         'buildtype': 'release',
         'linalg_backend': get_option('gprd_linalg_backend'),
@@ -522,7 +528,7 @@ if get_option('with_gprd')
     # potentials += [ gprpot ]
     _args += ['-DWITH_GPRD']
     eonclib_sources += ['AtomicGPDimer.cpp', 'GPRHelpers.cpp']
-    _deps += [libgprd, gprd_deps]
+    _gprd_extra_deps = [libgprd, gprd_deps]
 endif
 
 if get_option('with_gp_surrogate')
@@ -1060,7 +1066,7 @@ eclib = library(
     'eonclib',
     sources: eonclib_sources,
     include_directories: _incdirs,
-    dependencies: _deps,
+    dependencies: _deps + _gprd_extra_deps,
     link_with: _linkto,
     cpp_args: _args,
     link_args: _linkargs,
@@ -1091,7 +1097,7 @@ if get_option('with_metatomic')
 endif
 
 # Full deps including readcon link_args (for executables and tests only)
-_exe_deps = _deps + [readcon_dep]
+_exe_deps = _deps + [readcon_dep] + _gprd_extra_deps
 
 # Export variable
 eclib_dep = declare_dependency(
