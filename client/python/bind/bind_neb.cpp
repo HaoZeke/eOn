@@ -1,5 +1,6 @@
 /*
-** NudgedElasticBand + path init helpers — first-class NEB surface for pyeonclient.
+** NudgedElasticBand + path init helpers — first-class NEB surface for
+*pyeonclient.
 */
 #include "ConFileIO.h"
 #include "Matter.h"
@@ -7,8 +8,8 @@
 #include "NEBSplineExtrema.h"
 #include "NudgedElasticBand.h"
 #include "Parameters.h"
-#include "Potential.h"
 #include "PotRegistry.h"
+#include "Potential.h"
 #include "bind_helpers.hpp"
 #ifdef WITH_GP_SURROGATE
 #include "GPSurrogateJob.h"
@@ -51,9 +52,10 @@ void bind_neb(nb::module_ &m) {
       .value("MAX_UNCERTAINTY", NudgedElasticBand::NEBStatus::MAX_UNCERTAINTY)
       .export_values();
 
-  nb::class_<NudgedElasticBand>(m, "NudgedElasticBand",
-                                "NEB band: path images, compute, forces, extrema")
-      // --- construct from endpoints (linear / IDPP / FILE init via Parameters) ---
+  nb::class_<NudgedElasticBand>(
+      m, "NudgedElasticBand", "NEB band: path images, compute, forces, extrema")
+      // --- construct from endpoints (linear / IDPP / FILE init via Parameters)
+      // ---
       .def(
           "__init__",
           [](NudgedElasticBand *self, std::shared_ptr<Matter> initial,
@@ -66,8 +68,7 @@ void bind_neb(nb::module_ &m) {
                                   params, std::move(pot));
           },
           nb::arg("initial"), nb::arg("final"), nb::arg("parameters"),
-          nb::arg("potential"),
-          nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>(),
+          nb::arg("potential"), nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>(),
           nb::keep_alive<1, 4>(), nb::keep_alive<1, 5>(),
           "Build NEB from reactant/product Matter; path init follows "
           "Parameters.neb_options.initialization")
@@ -97,7 +98,8 @@ void bind_neb(nb::module_ &m) {
             nb::gil_scoped_release release;
             self.updateForces(ci_active);
           },
-          nb::arg("ci_active"), "Recompute projected forces; ci_active toggles CI")
+          nb::arg("ci_active"),
+          "Recompute projected forces; ci_active toggles CI")
       .def(
           "update_forces",
           [](NudgedElasticBand &self) {
@@ -105,7 +107,8 @@ void bind_neb(nb::module_ &m) {
             self.updateForces();
           },
           "Recompute projected forces with current CI flag")
-      .def("set_ci_enabled", &NudgedElasticBand::setCIEnabled, nb::arg("enabled"))
+      .def("set_ci_enabled", &NudgedElasticBand::setCIEnabled,
+           nb::arg("enabled"))
       .def("convergence_force", &NudgedElasticBand::convergenceForce)
       .def("find_extrema", &NudgedElasticBand::findExtrema)
       .def("print_image_data", &NudgedElasticBand::printImageData,
@@ -145,8 +148,7 @@ void bind_neb(nb::module_ &m) {
           nb::arg("i"), nb::rv_policy::reference_internal,
           "Shared Matter at path index i (0=reactant, -1/last=product)")
       .def(
-          "path_images",
-          [](NudgedElasticBand &n) { return n.path; },
+          "path_images", [](NudgedElasticBand &n) { return n.path; },
           nb::rv_policy::reference_internal,
           "Full path as list of shared Matter (endpoints + intermediates)")
       .def(
@@ -181,9 +183,8 @@ void bind_neb(nb::module_ &m) {
       .def_prop_ro(
           "extremum_positions",
           [](const NudgedElasticBand &n) { return n.extremumPosition; })
-      .def_prop_ro(
-          "extremum_energies",
-          [](const NudgedElasticBand &n) { return n.extremumEnergy; })
+      .def_prop_ro("extremum_energies",
+                   [](const NudgedElasticBand &n) { return n.extremumEnergy; })
       .def_prop_ro(
           "extremum_curvatures",
           [](const NudgedElasticBand &n) { return n.extremumCurvature; })
@@ -210,12 +211,11 @@ void bind_neb(nb::module_ &m) {
             }
             return con_frames_to_python(std::move(frames));
           },
-          nb::arg("band_index") = nb::none(),
-          "Alias of path_frames().")
+          nb::arg("band_index") = nb::none(), "Alias of path_frames().")
       .def("__repr__", [](NudgedElasticBand &n) {
         return "<NudgedElasticBand images=" + std::to_string(n.numImages) +
-               " status=" +
-               std::to_string(static_cast<int>(n.getStatus())) + ">";
+               " status=" + std::to_string(static_cast<int>(n.getStatus())) +
+               ">";
       });
 
   // --- path init helpers (same as NEBJob / NudgedElasticBand internals) ---
@@ -234,8 +234,8 @@ void bind_neb(nb::module_ &m) {
 
   m.def(
       "neb_load_path_from_files",
-      [](const std::vector<std::string> &files,
-         std::shared_ptr<Potential> pot, const Parameters &params) {
+      [](const std::vector<std::string> &files, std::shared_ptr<Potential> pot,
+         const Parameters &params) {
         if (files.size() < 2)
           throw std::invalid_argument(
               "neb_load_path_from_files needs >= 2 frames");
@@ -255,7 +255,8 @@ void bind_neb(nb::module_ &m) {
 
   m.def(
       "neb_linear_path",
-      [](const Matter &initial, const Matter &final_state, long n_intermediate) {
+      [](const Matter &initial, const Matter &final_state,
+         long n_intermediate) {
         return eonc::helpers::neb_paths::linearPath(
             initial, final_state, static_cast<size_t>(n_intermediate));
       },
@@ -311,16 +312,16 @@ void bind_neb(nb::module_ &m) {
         switch (method) {
         case NEBInit::IDPP:
           return eonc::helpers::neb_paths::idppPath(initial, final_state, n,
-                                                   params, false);
+                                                    params, false);
         case NEBInit::IDPP_COLLECTIVE:
           return eonc::helpers::neb_paths::idppCollectivePath(
               initial, final_state, n, params, false);
         case NEBInit::SIDPP:
           return eonc::helpers::neb_paths::sidppPath(initial, final_state, n,
-                                                    params, false);
+                                                     params, false);
         case NEBInit::SIDPP_ZBL:
           return eonc::helpers::neb_paths::sidppPath(initial, final_state, n,
-                                                    params, true);
+                                                     params, true);
         case NEBInit::FILE:
           throw std::runtime_error(
               "neb_initial_path: FILE init needs neb_load_path_from_files / "
@@ -336,8 +337,8 @@ void bind_neb(nb::module_ &m) {
       "(LINEAR / IDPP / IDPP_COLLECTIVE / SIDPP / SIDPP_ZBL). "
       "Same engines NudgedElasticBand uses for endpoint construction.");
 
-
-  // Chemist-facing NEB: optional accelerant="gp" (GPSurrogateJob), else plain NEB.
+  // Chemist-facing NEB: optional accelerant="gp" (GPSurrogateJob), else plain
+  // NEB.
   struct PyNEB {
     eonc::Parameters params;
     std::shared_ptr<eonc::Potential> pot;
@@ -357,30 +358,39 @@ void bind_neb(nb::module_ &m) {
     PyNEB(std::shared_ptr<eonc::Matter> init, std::shared_ptr<eonc::Matter> fin,
           const eonc::Parameters &p, std::shared_ptr<eonc::Potential> pot_in,
           std::string acc)
-        : params(p), pot(std::move(pot_in)), initial(std::move(init)),
-          final_state(std::move(fin)), accelerant(lower(std::move(acc))) {
+        : params(p),
+          pot(std::move(pot_in)),
+          initial(std::move(init)),
+          final_state(std::move(fin)),
+          accelerant(lower(std::move(acc))) {
       if (!initial || !final_state)
         throw std::runtime_error("NEB: initial and final Matter required");
       if (!pot)
         pot = initial->getPotential();
       if (accelerant != "" && accelerant != "none" && accelerant != "gp")
         throw std::runtime_error(
-            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant + "\"");
+            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant +
+            "\"");
     }
 
     PyNEB(const std::vector<eonc::Matter> &path_in, const eonc::Parameters &p,
           std::shared_ptr<eonc::Potential> pot_in, std::string acc)
-        : params(p), pot(std::move(pot_in)), path(path_in), has_path(true),
+        : params(p),
+          pot(std::move(pot_in)),
+          path(path_in),
+          has_path(true),
           accelerant(lower(std::move(acc))) {
       if (path.size() < 2)
         throw std::runtime_error("NEB: path needs >= 2 frames");
       if (!pot) {
         // path holds Matter by value; potential must be passed explicitly
-        throw std::runtime_error("NEB: potential required for path constructor");
+        throw std::runtime_error(
+            "NEB: potential required for path constructor");
       }
       if (accelerant != "" && accelerant != "none" && accelerant != "gp")
         throw std::runtime_error(
-            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant + "\"");
+            "NEB: accelerant must be \"\" or \"gp\", got \"" + accelerant +
+            "\"");
     }
 
     eonc::NudgedElasticBand::NEBStatus compute() {
@@ -408,7 +418,7 @@ void bind_neb(nb::module_ &m) {
         band = std::make_shared<eonc::NudgedElasticBand>(path, params, pot);
       } else {
         band = std::make_shared<eonc::NudgedElasticBand>(initial, final_state,
-                                                        params, pot);
+                                                         params, pot);
       }
       eonc::NudgedElasticBand::NEBStatus st;
       {
@@ -429,7 +439,8 @@ void bind_neb(nb::module_ &m) {
           [](PyNEB *self, std::shared_ptr<eonc::Matter> initial,
              std::shared_ptr<eonc::Matter> final_state,
              const eonc::Parameters &params,
-             std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+             std::shared_ptr<eonc::Potential> pot,
+             const std::string &accelerant) {
             nb::gil_scoped_release release;
             new (self) PyNEB(std::move(initial), std::move(final_state), params,
                              std::move(pot), accelerant);
@@ -443,7 +454,8 @@ void bind_neb(nb::module_ &m) {
           "__init__",
           [](PyNEB *self, const std::vector<eonc::Matter> &path,
              const eonc::Parameters &params,
-             std::shared_ptr<eonc::Potential> pot, const std::string &accelerant) {
+             std::shared_ptr<eonc::Potential> pot,
+             const std::string &accelerant) {
             nb::gil_scoped_release release;
             new (self) PyNEB(path, params, std::move(pot), accelerant);
           },
@@ -457,7 +469,8 @@ void bind_neb(nb::module_ &m) {
           "find_extrema",
           [](PyNEB &self) {
             if (!self.band)
-              throw std::runtime_error("NEB.find_extrema: call compute() first");
+              throw std::runtime_error(
+                  "NEB.find_extrema: call compute() first");
             nb::gil_scoped_release release;
             self.band->findExtrema();
           },
@@ -470,22 +483,21 @@ void bind_neb(nb::module_ &m) {
             return self.band;
           },
           "Underlying NudgedElasticBand after compute().")
-      .def_prop_ro("accelerant",
-                   [](const PyNEB &s) { return s.accelerant; })
-      .def_prop_ro(
-          "status",
-          [](PyNEB &self) {
-            if (!self.band)
-              throw std::runtime_error("NEB.status: call compute() first");
-            return self.band->getStatus();
-          })
-      .def(
-          "path_images",
-          [](PyNEB &self) {
-            if (!self.band)
-              throw std::runtime_error("NEB.path_images: call compute() first");
-            return self.band->path;
-          })
+      .def_prop_ro("accelerant", [](const PyNEB &s) { return s.accelerant; })
+      .def_prop_ro("status",
+                   [](PyNEB &self) {
+                     if (!self.band)
+                       throw std::runtime_error(
+                           "NEB.status: call compute() first");
+                     return self.band->getStatus();
+                   })
+      .def("path_images",
+           [](PyNEB &self) {
+             if (!self.band)
+               throw std::runtime_error(
+                   "NEB.path_images: call compute() first");
+             return self.band->path;
+           })
       .def(
           "path_frames",
           [](PyNEB &self, std::optional<size_t> band_index) {
@@ -504,7 +516,8 @@ void bind_neb(nb::module_ &m) {
           "to_conframes",
           [](PyNEB &self, std::optional<size_t> band_index) {
             if (!self.band)
-              throw std::runtime_error("NEB.to_conframes: call compute() first");
+              throw std::runtime_error(
+                  "NEB.to_conframes: call compute() first");
             std::vector<readcon::ConFrame> frames;
             {
               nb::gil_scoped_release release;
@@ -512,18 +525,14 @@ void bind_neb(nb::module_ &m) {
             }
             return con_frames_to_python(std::move(frames));
           },
-          nb::arg("band_index") = nb::none(),
-          "Alias of path_frames().")
-      .def_prop_ro(
-          "n_path",
-          [](PyNEB &self) {
-            if (!self.band)
-              return 0L;
-            return static_cast<long>(self.band->path.size());
-          });
+          nb::arg("band_index") = nb::none(), "Alias of path_frames().")
+      .def_prop_ro("n_path", [](PyNEB &self) {
+        if (!self.band)
+          return 0L;
+        return static_cast<long>(self.band->path.size());
+      });
 
-
-    // Full NEBJob::saveData artifact set (callable as a Python step).
+  // Full NEBJob::saveData artifact set (callable as a Python step).
   m.def(
       "neb_write_results",
       [](NudgedElasticBand &neb, const Parameters &params,
@@ -532,7 +541,8 @@ void bind_neb(nb::module_ &m) {
         {
           std::ofstream out("results.dat", std::ios::binary);
           if (!out)
-            throw std::runtime_error("neb_write_results: cannot open results.dat");
+            throw std::runtime_error(
+                "neb_write_results: cannot open results.dat");
           auto status = neb.getStatus();
           out << std::format("{} termination_reason\n",
                              static_cast<int>(status));
@@ -548,11 +558,11 @@ void bind_neb(nb::module_ &m) {
                              neb.path[0]->getPotentialEnergy());
           out << std::format("{} number_of_images\n", neb.numImages);
           for (long i = 0; i <= neb.numImages + 1; i++) {
-            out << std::format("{:f} image{}_energy\n",
-                               neb.path[static_cast<size_t>(i)]
-                                       ->getPotentialEnergy() -
-                                   neb.path[0]->getPotentialEnergy(),
-                               i);
+            out << std::format(
+                "{:f} image{}_energy\n",
+                neb.path[static_cast<size_t>(i)]->getPotentialEnergy() -
+                    neb.path[0]->getPotentialEnergy(),
+                i);
             out << std::format(
                 "{:f} image{}_force\n",
                 neb.path[static_cast<size_t>(i)]->getForces().norm(), i);
@@ -586,8 +596,7 @@ void bind_neb(nb::module_ &m) {
 
         // Discrete saddle
         const std::string sp = "sp.con";
-        if (!eonc::io::io_ok(
-                neb.path[neb.maxEnergyImage]->matter2con(sp)))
+        if (!eonc::io::io_ok(neb.path[neb.maxEnergyImage]->matter2con(sp)))
           throw std::runtime_error("neb_write_results: failed sp.con");
         returnFiles.push_back(sp);
 
@@ -595,9 +604,8 @@ void bind_neb(nb::module_ &m) {
         if (params.neb_options.mmf_peaks.enabled && neb.numExtrema > 0) {
           int peakCount = 0;
           for (long i = 0; i < neb.numExtrema; i++) {
-            double relativeEnergy =
-                neb.extremumEnergy[static_cast<size_t>(i)] -
-                neb.path[0]->getPotentialEnergy();
+            double relativeEnergy = neb.extremumEnergy[static_cast<size_t>(i)] -
+                                    neb.path[0]->getPotentialEnergy();
             if (!(neb.extremumCurvature[static_cast<size_t>(i)] < 0 &&
                   relativeEnergy > params.neb_options.mmf_peaks.tolerance))
               continue;
@@ -640,8 +648,7 @@ void bind_neb(nb::module_ &m) {
         neb.printImageData(true, std::numeric_limits<size_t>::max());
         return returnFiles;
       },
-      nb::arg("neb"), nb::arg("parameters"),
-      nb::arg("force_calls_neb") = 0,
+      nb::arg("neb"), nb::arg("parameters"), nb::arg("force_calls_neb") = 0,
       "Write full NEBJob::saveData artifact set: results.dat, neb.con, "
       "sp.con, peaks, neb.dat");
 

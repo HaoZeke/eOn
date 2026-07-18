@@ -57,8 +57,9 @@ MetatomicDynPot::~MetatomicDynPot() {
 }
 
 void MetatomicDynPot::force(long nAtoms, const double *positions,
-                            const int *atomicNrs, double *forces, double *energy,
-                            double *variance, const double *box) {
+                            const int *atomicNrs, double *forces,
+                            double *energy, double *variance,
+                            const double *box) {
   auto &loader = MetatomicLoader::instance();
   const int rc = loader.force(m_handle, nAtoms, positions, atomicNrs, forces,
                               energy, variance, box);

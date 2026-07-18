@@ -2,12 +2,14 @@
 ** Interpreter init without pybind11.
 **
 ** Polarity:
-**   * Preferred: Python owns the process (eon-server + pyeonclient). Interpreter
+**   * Preferred: Python owns the process (eon-server + pyeonclient).
+*Interpreter
 **     already exists; ensure_interpreter() is a no-op.
 **   * Fallback: standalone eonclient needs a pot that calls into Python (ASE).
 **     Use Py_InitializeEx — do NOT depend on pybind11::embed.
 **
-** Object/array marshalling for pots should use nanobind (nb::object, nb::ndarray)
+** Object/array marshalling for pots should use nanobind (nb::object,
+*nb::ndarray)
 ** once the interpreter is up, matching pyeonclient.
 */
 #pragma once

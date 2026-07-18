@@ -1,5 +1,5 @@
-#include "Parameters.h"
 #include "ParametersSSOT.h"
+#include "Parameters.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
 

@@ -96,9 +96,10 @@ RgpotPot::RgpotPot(const Parameters &p)
 
   impl_ = std::make_unique<RGPotEngine>(opt);
   backend_ = impl_->backend();
-  std::cout << "RgpotPot: in-process rgpot backend=" << backend_
-            << " (dlopen: libnwchemc/libcpmdc/libmetatomic_engine/libxtb_engine)"
-            << std::endl;
+  std::cout
+      << "RgpotPot: in-process rgpot backend=" << backend_
+      << " (dlopen: libnwchemc/libcpmdc/libmetatomic_engine/libxtb_engine)"
+      << std::endl;
 }
 
 RgpotPot::~RgpotPot() = default;

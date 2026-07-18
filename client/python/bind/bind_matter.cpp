@@ -6,10 +6,10 @@
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
+#include <nanobind/stl/array.h>
 #include <nanobind/stl/shared_ptr.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
-#include <nanobind/stl/array.h>
 
 #include <memory>
 #include <stdexcept>
@@ -26,8 +26,7 @@ void bind_matter(nb::module_ &m) {
   nb::class_<Matter>(m, "Matter",
                      "Atomic structure + potential (eOn C++ client core)")
       .def(nb::init<std::shared_ptr<Potential>, const Parameters &>(),
-           nb::arg("potential"), nb::arg("parameters"),
-           nb::keep_alive<1, 2>(),
+           nb::arg("potential"), nb::arg("parameters"), nb::keep_alive<1, 2>(),
            nb::keep_alive<1, 3>(),
            "Create empty Matter bound to a potential and parameters "
            "(Parameters must outlive Matter)")
@@ -44,7 +43,8 @@ void bind_matter(nb::module_ &m) {
             return view_n3(matter_positions_ptr(self), self.numberOfAtoms());
           },
           [](Matter &self, const NpF64 &arr) {
-            matter_set_positions_buf(self, require_n3(arr, self.numberOfAtoms()),
+            matter_set_positions_buf(self,
+                                     require_n3(arr, self.numberOfAtoms()),
                                      self.numberOfAtoms());
           },
           nb::rv_policy::reference_internal,
@@ -55,11 +55,12 @@ void bind_matter(nb::module_ &m) {
             return matrix_to_numpy(self.getPositionsFree());
           },
           nb::rv_policy::move)
-      .def("set_positions_free",
-           [](Matter &self, const NpF64 &arr) {
-             self.setPositionsFree(atom_matrix_from_numpy(arr));
-           },
-           nb::arg("positions"))
+      .def(
+          "set_positions_free",
+          [](Matter &self, const NpF64 &arr) {
+            self.setPositionsFree(atom_matrix_from_numpy(arr));
+          },
+          nb::arg("positions"))
 
       // cell: getCell() is by value — small owned copy; set via Map
       .def_prop_rw(
@@ -79,9 +80,9 @@ void bind_matter(nb::module_ &m) {
             return matrix_to_numpy(self.getVelocities());
           },
           [](Matter &self, const NpF64 &arr) {
-            matter_set_velocities_buf(
-                self, require_n3(arr, self.numberOfAtoms()),
-                self.numberOfAtoms());
+            matter_set_velocities_buf(self,
+                                      require_n3(arr, self.numberOfAtoms()),
+                                      self.numberOfAtoms());
           },
           nb::rv_policy::move)
 
@@ -119,17 +120,16 @@ void bind_matter(nb::module_ &m) {
             return matrix_to_numpy(free_forces);
           },
           nb::rv_policy::move)
-      .def("set_forces",
-           [](Matter &self, const NpF64 &arr) {
-             self.setForces(atom_matrix_from_numpy(arr));
-           },
-           nb::arg("forces"))
+      .def(
+          "set_forces",
+          [](Matter &self, const NpF64 &arr) {
+            self.setForces(atom_matrix_from_numpy(arr));
+          },
+          nb::arg("forces"))
 
       .def_prop_rw(
           "masses",
-          [](const Matter &self) {
-            return vector_to_numpy(self.getMasses());
-          },
+          [](const Matter &self) { return vector_to_numpy(self.getMasses()); },
           [](Matter &self, const NpF64 &arr) {
             if (arr.ndim() != 1 ||
                 static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
@@ -146,8 +146,8 @@ void bind_matter(nb::module_ &m) {
           },
           [](Matter &self, nb::object obj) {
             auto np = nb::module_::import_("numpy");
-            nb::object cont = np.attr("ascontiguousarray")(
-                obj, nb::arg("dtype") = "int32");
+            nb::object cont =
+                np.attr("ascontiguousarray")(obj, nb::arg("dtype") = "int32");
             auto arr = nb::cast<NpI32>(cont);
             if (arr.ndim() != 1 ||
                 static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
@@ -180,8 +180,8 @@ void bind_matter(nb::module_ &m) {
           },
           [](Matter &self, nb::object obj) {
             auto np = nb::module_::import_("numpy");
-            nb::object cont = np.attr("ascontiguousarray")(
-                obj, nb::arg("dtype") = "int32");
+            nb::object cont =
+                np.attr("ascontiguousarray")(obj, nb::arg("dtype") = "int32");
             auto arr = nb::cast<NpI32>(cont);
             if (arr.ndim() != 1 ||
                 static_cast<long>(arr.shape(0)) != self.numberOfAtoms()) {
@@ -197,11 +197,8 @@ void bind_matter(nb::module_ &m) {
       // --- free mask ---
       .def_prop_ro(
           "free_mask",
-          [](const Matter &self) {
-            return matrix_to_numpy(self.getFree());
-          },
-          nb::rv_policy::move,
-          "Nx3 free mask (1 free, 0 fixed)")
+          [](const Matter &self) { return matrix_to_numpy(self.getFree()); },
+          nb::rv_policy::move, "Nx3 free mask (1 free, 0 fixed)")
 
       // --- energy / mechanics ---
       .def_prop_ro(
@@ -273,8 +270,8 @@ void bind_matter(nb::module_ &m) {
                 ok = self.relax(quiet, write_movie, checkpoint, prefix_movie,
                                 prefix_checkpoint, retain_frames);
               }
-              return nb::make_tuple(
-                  nb::cast(self, nb::rv_policy::reference), ok);
+              return nb::make_tuple(nb::cast(self, nb::rv_policy::reference),
+                                    ok);
             }
             Matter out(self);
             bool ok = false;
@@ -295,9 +292,7 @@ void bind_matter(nb::module_ &m) {
           "Returns (Matter, converged: bool).")
       .def(
           "movie_frames",
-          [](Matter &self) {
-            return con_frames_to_python(self.movieFrames());
-          },
+          [](Matter &self) { return con_frames_to_python(self.movieFrames()); },
           "list[readcon.ConFrame] retained by relax(retain_frames=True).")
       .def(
           "take_movie_frames",
@@ -306,8 +301,7 @@ void bind_matter(nb::module_ &m) {
           },
           "Take ownership of retained movie frames (clears storage).")
       .def(
-          "clear_movie_frames",
-          [](Matter &self) { self.clearMovieFrames(); },
+          "clear_movie_frames", [](Matter &self) { self.clearMovieFrames(); },
           "Drop retained minimization movie frames.")
 
       // --- I/O (same ConFileIO / readcon path as CLI client) ---
@@ -352,9 +346,8 @@ void bind_matter(nb::module_ &m) {
       .def("get_atom_index", &Matter::getAtomIndex, nb::arg("atom"))
       .def("set_atom_index", &Matter::setAtomIndex, nb::arg("atom"),
            nb::arg("index"))
-      .def_prop_ro(
-          "header_con",
-          [](const Matter &self) { return self.getHeaderCon(); })
+      .def_prop_ro("header_con",
+                   [](const Matter &self) { return self.getHeaderCon(); })
       .def(
           "set_header_con_line",
           [](Matter &self, size_t i, const std::string &line) {

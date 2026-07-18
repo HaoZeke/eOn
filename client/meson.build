@@ -240,7 +240,24 @@ if not eigen_dep.found()
 endif
 _deps += [eigen_dep]
 
-quill_dep = dependency('quill', required: true)
+# conda-forge ships quill.pc; source installs often only export CMake config.
+quill_dep = dependency('quill', required: false)
+if not quill_dep.found()
+    quill_dep = dependency(
+        'quill',
+        method: 'cmake',
+        modules: ['quill::quill'],
+        required: false,
+    )
+endif
+if not quill_dep.found()
+    quill_dep = dependency(
+        'Quill',
+        method: 'cmake',
+        modules: ['quill::quill'],
+        required: true,
+    )
+endif
 _deps += quill_dep
 _args += ['-DQUILL_DISABLE_NON_PREFIXED_MACROS']
 

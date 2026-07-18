@@ -3,7 +3,8 @@
 #include <dlfcn.h>
 #include <string>
 
-// Structural + optional live check: libmetatomic_engine exports rgpot_mta_* ABI.
+// Structural + optional live check: libmetatomic_engine exports rgpot_mta_*
+// ABI.
 TEST_CASE("metatomic engine C ABI symbols present when engine is loadable",
           "[metatomic][rgpot][engine]") {
   const char *env = std::getenv("RGPOT_METATOMIC_ENGINE");
@@ -19,7 +20,8 @@ TEST_CASE("metatomic engine C ABI symbols present when engine is loadable",
         d = d.substr(0, pos);
       if (!d.empty() && d.back() != '/')
         d += '/';
-      h = dlopen((d + "libmetatomic_engine.so").c_str(), RTLD_NOW | RTLD_GLOBAL);
+      h = dlopen((d + "libmetatomic_engine.so").c_str(),
+                 RTLD_NOW | RTLD_GLOBAL);
     }
   }
   if (!h) {

@@ -30,7 +30,8 @@ void *load_sym(void *h, const char *n) {
 }
 } // namespace
 
-MetatomicEngineLoader::MetatomicEngineLoader(const MetatomicEngineOptions &opt) {
+MetatomicEngineLoader::MetatomicEngineLoader(
+    const MetatomicEngineOptions &opt) {
   std::vector<std::string> paths;
   if (!opt.engine_path.empty())
     paths.push_back(opt.engine_path);
@@ -73,17 +74,18 @@ MetatomicEngineLoader::MetatomicEngineLoader(const MetatomicEngineOptions &opt) 
 #endif
   }
   if (!m_lib) {
-    std::string msg =
-        "RGPOT(metatomic): libmetatomic_engine.so not found "
-        "(set RGPOT_METATOMIC_ENGINE or EON_POTENTIALS_PATH)";
+    std::string msg = "RGPOT(metatomic): libmetatomic_engine.so not found "
+                      "(set RGPOT_METATOMIC_ENGINE or EON_POTENTIALS_PATH)";
     if (!last_dlerr.empty())
       msg += std::string("; last dlerror: ") + last_dlerr;
     throw std::runtime_error(msg);
   }
 
-  auto abi = reinterpret_cast<int (*)()>(load_sym(m_lib, "rgpot_mta_abi_version"));
+  auto abi =
+      reinterpret_cast<int (*)()>(load_sym(m_lib, "rgpot_mta_abi_version"));
   m_create = reinterpret_cast<create_fn>(load_sym(m_lib, "rgpot_mta_create"));
-  m_destroy = reinterpret_cast<destroy_fn>(load_sym(m_lib, "rgpot_mta_destroy"));
+  m_destroy =
+      reinterpret_cast<destroy_fn>(load_sym(m_lib, "rgpot_mta_destroy"));
   m_force = reinterpret_cast<force_fn>(load_sym(m_lib, "rgpot_mta_force"));
   if (!abi || !m_create || !m_destroy || !m_force ||
       abi() != RGPOT_MTA_ABI_VERSION) {
@@ -125,8 +127,8 @@ void MetatomicEngineLoader::force(long N, const double *R, const int *atomicNrs,
   if (!m_pot || !m_force)
     throw std::runtime_error("RGPOT(metatomic): engine not available");
   double var = 0.0;
-  const int rc = m_force(m_pot, N, R, atomicNrs, F, U, variance ? variance : &var,
-                         box);
+  const int rc =
+      m_force(m_pot, N, R, atomicNrs, F, U, variance ? variance : &var, box);
   if (rc != 0)
     throw std::runtime_error("RGPOT(metatomic): force failed");
 }

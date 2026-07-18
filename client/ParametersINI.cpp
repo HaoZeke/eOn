@@ -248,16 +248,16 @@ int load_ini(INIReader &ini, Parameters &params) {
         sec, "extensions_directory", params.rgpot_options.extensions_directory);
     params.rgpot_options.check_consistency = ini.GetBoolean(
         sec, "check_consistency", params.rgpot_options.check_consistency);
-    params.rgpot_options.uncertainty_threshold = ini.GetReal(
-        sec, "uncertainty_threshold",
-        params.rgpot_options.uncertainty_threshold);
-    params.rgpot_options.torch_determinism_strict = ini.GetBoolean(
-        sec, "torch_determinism_strict",
-        params.rgpot_options.torch_determinism_strict);
+    params.rgpot_options.uncertainty_threshold =
+        ini.GetReal(sec, "uncertainty_threshold",
+                    params.rgpot_options.uncertainty_threshold);
+    params.rgpot_options.torch_determinism_strict =
+        ini.GetBoolean(sec, "torch_determinism_strict",
+                       params.rgpot_options.torch_determinism_strict);
     // XTB dlopen knobs (also accept [XTBPot] when backend=xtb)
-    params.rgpot_options.xtb_paramset =
-        ini.Get(sec, "paramset",
-                ini.Get(sec, "xtb_paramset", params.rgpot_options.xtb_paramset));
+    params.rgpot_options.xtb_paramset = ini.Get(
+        sec, "paramset",
+        ini.Get(sec, "xtb_paramset", params.rgpot_options.xtb_paramset));
     params.rgpot_options.xtb_accuracy = ini.GetReal(
         sec, "accuracy",
         ini.GetReal(sec, "xtb_accuracy", params.rgpot_options.xtb_accuracy));
@@ -270,21 +270,19 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.GetInteger(sec, "xtb_max_iterations",
                        params.rgpot_options.xtb_max_iterations)));
     params.rgpot_options.xtb_charge = ini.GetReal(
-        sec, "xtb_charge",
-        static_cast<double>(params.rgpot_options.charge));
-    params.rgpot_options.xtb_uhf = static_cast<int>(
-        ini.GetInteger(sec, "uhf",
-                       ini.GetInteger(sec, "xtb_uhf",
-                                      params.rgpot_options.xtb_uhf)));
+        sec, "xtb_charge", static_cast<double>(params.rgpot_options.charge));
+    params.rgpot_options.xtb_uhf = static_cast<int>(ini.GetInteger(
+        sec, "uhf",
+        ini.GetInteger(sec, "xtb_uhf", params.rgpot_options.xtb_uhf)));
     const std::string be = toLowerCase(params.rgpot_options.backend);
     if (be == "xtb" || be == "xtbpot" || be == "gfn" || be == "gfnxtb") {
       params.rgpot_options.xtb_paramset =
           ini.Get("XTBPot", "paramset", params.rgpot_options.xtb_paramset);
       params.rgpot_options.xtb_accuracy =
           ini.GetReal("XTBPot", "accuracy", params.rgpot_options.xtb_accuracy);
-      params.rgpot_options.xtb_electronic_temperature = ini.GetReal(
-          "XTBPot", "electronic_temperature",
-          params.rgpot_options.xtb_electronic_temperature);
+      params.rgpot_options.xtb_electronic_temperature =
+          ini.GetReal("XTBPot", "electronic_temperature",
+                      params.rgpot_options.xtb_electronic_temperature);
       params.rgpot_options.xtb_max_iterations = static_cast<int>(ini.GetInteger(
           "XTBPot", "max_iterations", params.rgpot_options.xtb_max_iterations));
       params.rgpot_options.xtb_uhf = static_cast<int>(

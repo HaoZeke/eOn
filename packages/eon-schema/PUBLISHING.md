@@ -85,7 +85,7 @@ twine upload dist/*
 # or Trusted Publishing / uv publish
 ```
 
-Optional monorepo tag for archaeology only: `eon-schema-v0.2.0`  
+Optional monorepo tag for archaeology only: `eon-schema-v0.2.0`
 (do **not** use this tag as the feedstock source — feedstock wants the **fat**
 `eon-v*` archive).
 

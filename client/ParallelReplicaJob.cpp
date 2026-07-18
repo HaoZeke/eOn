@@ -10,13 +10,13 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "ParallelReplicaJob.h"
-#include <stdexcept>
 #include "BaseStructures.h"
 #include "BondBoost.h"
 #include "Dynamics.h"
 #include "ForceCallTimer.h"
 #include "HelperFunctions.h"
 #include "Matter.h"
+#include <stdexcept>
 
 #include <cmath>
 #include <format>
@@ -166,7 +166,8 @@ ParallelReplicaJob::runFromMatter(std::shared_ptr<Matter> initial) {
             snapshotIndex = static_cast<int>(mdSnapshots.size()) - 1;
 
           transitionTime = mdTimes[static_cast<size_t>(snapshotIndex)];
-          transitionStructure = *mdSnapshots[static_cast<size_t>(snapshotIndex)];
+          transitionStructure =
+              *mdSnapshots[static_cast<size_t>(snapshotIndex)];
         } else {
           transitionStructure = *trajectory;
           transitionTime = simulationTime;
@@ -256,7 +257,6 @@ ParallelReplicaJob::runFromMatter(std::shared_ptr<Matter> initial) {
   }
 
   return trajectory;
-
 }
 
 void ParallelReplicaJob::dephase(Matter &trajectory) {
@@ -268,8 +268,8 @@ void ParallelReplicaJob::dephase(Matter &trajectory) {
                                   0.5));
   if (dephaseSteps < 1)
     dephaseSteps = 1;
-  const long maxLoops = std::max(
-      1L, params.parallel_replica_options.dephase_loop_max);
+  const long maxLoops =
+      std::max(1L, params.parallel_replica_options.dephase_loop_max);
   QUILL_LOG_DEBUG(log, "[ParallelReplica] Dephasing: {} steps (max {} loops)",
                   dephaseSteps, maxLoops);
 

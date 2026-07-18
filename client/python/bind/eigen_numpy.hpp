@@ -18,12 +18,9 @@
 namespace eonc::pybind {
 namespace nb = nanobind;
 
-using NpF64 =
-    nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>;
-using NpI32 =
-    nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu>;
-using NpI64 =
-    nb::ndarray<nb::numpy, int64_t, nb::c_contig, nb::device::cpu>;
+using NpF64 = nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>;
+using NpI32 = nb::ndarray<nb::numpy, int32_t, nb::c_contig, nb::device::cpu>;
+using NpI64 = nb::ndarray<nb::numpy, int64_t, nb::c_contig, nb::device::cpu>;
 
 /// Zero-copy (n, 3) float64 view of external/row-major AtomMatrix storage.
 inline nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
@@ -68,8 +65,7 @@ inline const double *require_n3(const NpF64 &arr, long expected_n = -1) {
   }
   if (expected_n >= 0 && static_cast<long>(arr.shape(0)) != expected_n) {
     throw std::invalid_argument("expected n=" + std::to_string(expected_n) +
-                                " rows, got " +
-                                std::to_string(arr.shape(0)));
+                                " rows, got " + std::to_string(arr.shape(0)));
   }
   return arr.data();
 }
@@ -129,9 +125,9 @@ matrix_to_numpy(const EigenT &m) {
   double *buf = new double[rows * cols];
   std::copy(m.data(), m.data() + rows * cols, buf);
   // capsule deletes the buffer
-  nb::capsule owner(buf, [](void *p) noexcept { delete[] static_cast<double *>(p); });
-  return nb::ndarray<nb::numpy, double, nb::c_contig>(
-      buf, {rows, cols}, owner);
+  nb::capsule owner(
+      buf, [](void *p) noexcept { delete[] static_cast<double *>(p); });
+  return nb::ndarray<nb::numpy, double, nb::c_contig>(buf, {rows, cols}, owner);
 }
 
 template <typename Derived>
@@ -142,7 +138,8 @@ vector_to_numpy(const Eigen::MatrixBase<Derived> &v) {
   for (size_t i = 0; i < n; ++i) {
     buf[i] = static_cast<double>(v(static_cast<Eigen::Index>(i)));
   }
-  nb::capsule owner(buf, [](void *p) noexcept { delete[] static_cast<double *>(p); });
+  nb::capsule owner(
+      buf, [](void *p) noexcept { delete[] static_cast<double *>(p); });
   return nb::ndarray<nb::numpy, double, nb::c_contig>(buf, {n}, owner);
 }
 
@@ -153,7 +150,8 @@ vectori_to_numpy(const VectorXi &v) {
   for (size_t i = 0; i < n; ++i) {
     buf[i] = static_cast<int64_t>(v(static_cast<Eigen::Index>(i)));
   }
-  nb::capsule owner(buf, [](void *p) noexcept { delete[] static_cast<int64_t *>(p); });
+  nb::capsule owner(
+      buf, [](void *p) noexcept { delete[] static_cast<int64_t *>(p); });
   return nb::ndarray<nb::numpy, int64_t, nb::c_contig>(buf, {n}, owner);
 }
 

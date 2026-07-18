@@ -22,8 +22,9 @@ void bind_enums(nb::module_ &m) {
       .value("InvalidArgument", eonc::io::IoStatus::InvalidArgument)
       .export_values();
 
-  m.def("io_ok", [](eonc::io::IoStatus s) { return eonc::io::io_ok(s); },
-        nb::arg("status"));
+  m.def(
+      "io_ok", [](eonc::io::IoStatus s) { return eonc::io::io_ok(s); },
+      nb::arg("status"));
   m.def(
       "io_status_name",
       [](eonc::io::IoStatus s) {

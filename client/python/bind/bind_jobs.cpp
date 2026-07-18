@@ -31,7 +31,8 @@ namespace eonc::pybind {
 namespace nb = nanobind;
 
 void bind_jobs(nb::module_ &m) {
-  nb::class_<eonc::Job>(m, "Job", "Abstract eOn client job (Minimization, NEB, …)")
+  nb::class_<eonc::Job>(m, "Job",
+                        "Abstract eOn client job (Minimization, NEB, …)")
       .def("get_type", &eonc::Job::getType)
       .def(
           "run",
@@ -87,7 +88,8 @@ void bind_jobs(nb::module_ &m) {
          double system_time) {
         std::ofstream out(path, std::ios::app);
         if (!out.is_open())
-          throw std::runtime_error("append_results_timing: cannot open " + path);
+          throw std::runtime_error("append_results_timing: cannot open " +
+                                   path);
         out << "time_seconds " << elapsed_seconds << "\n";
 #ifndef _WIN32
         out << "user_time " << user_time << "\n";
