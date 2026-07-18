@@ -258,13 +258,16 @@ if not inireader_dep.found()
 endif
 _deps += inireader_dep
 
-# Always use the subproject: system nlohmann_json cmake configs can export
-# -I/usr/include which breaks conda-forge sysroot isolation on rolling distros.
-nlohmann_json_proj = subproject(
+# Prefer installed nlohmann_json (EasyBuild/system pkg-config or cmake
+# module — same pattern as readcon). Wrap fallback for hermetic/pixi builds.
+# Conda rolling-distro isolation: if system CMake configs inject -I/usr/include
+# into the conda sysroot, pass --force-fallback-for=nlohmann_json.
+nlohmann_json_dep = dependency(
     'nlohmann_json',
+    fallback: ['nlohmann_json', 'nlohmann_json_dep'],
+    required: true,
     default_options: ['default_library=static'],
 )
-nlohmann_json_dep = nlohmann_json_proj.get_variable('nlohmann_json_dep')
 _deps += nlohmann_json_dep
 
 # Highway SIMD (optional, for vectorized potentials)

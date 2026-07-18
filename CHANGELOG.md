@@ -6,6 +6,15 @@
 
 ### Added
 
+- Distribution packaging: prefer installed ``rgpot`` via pkg-config (wrap pin
+  ``v2.5.0``) and installed ``nlohmann_json`` (module with wrap fallback, same
+  pattern as readcon). RGPOT ``backend=metatomic`` / ``backend=xtb`` dlopen
+  ``libmetatomic_engine.so`` / ``libxtb_engine.so`` so packaging keeps
+  ``-Dwith_xtb=false`` (native XTBPot deprecation warning) and avoids fat
+  metatomic links into eOn.
+- SafeMath accepts Eigen 5 ``EIGEN_CORE_MODULE_H`` as well as Eigen < 5
+  ``EIGEN_CORE_H``.
+
 - Add ``eon_schema.config`` INI helpers (``write_ini``, ``hydrate_ini``,
   ``unknown_ini_keys``, ``write_models_ini``) so tooling can author validated
   ``config.ini`` from L0/L1 without importing eon-akmc. ([#eon-schema-ini](https://github.com/TheochemUI/eOn/issues/eon-schema-ini))
