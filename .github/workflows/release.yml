@@ -115,9 +115,21 @@ jobs:
     - name: Install build frontend
       run: python3 -m pip install --upgrade pip build
     - name: Install sdist build deps
-      # meson-python's sdist path runs a full meson setup; Eigen3 is the only
-      # hard dependency the runner image lacks (wrap fallbacks cover the rest).
-      run: sudo apt-get update && sudo apt-get install -y libeigen3-dev
+      # meson-python sdist runs full meson setup of the client tree. Eigen is
+      # apt; quill/capnp/cbindgen match pyeonclient manylinux (no wrap for quill).
+      run: |-
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libeigen3-dev gfortran ninja-build cmake pkg-config zlib1g-dev build-essential
+        bash scripts/pyeonclient_manylinux_deps.sh
+        echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+        echo "/usr/local/lib64" | sudo tee -a /etc/ld.so.conf.d/usr-local.conf
+        sudo ldconfig
+        echo "LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+        echo "PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
+        echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
+        pkg-config --modversion quill
+        pkg-config --modversion eigen3 || true
     - name: Build sdist (meson-python)
       # sdist only: a runner-built wheel would carry a non-manylinux linux tag
       # that PyPI rejects; binary distribution stays on conda-forge.
