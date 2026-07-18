@@ -1,13 +1,13 @@
-#include "Matter.h"
-#include "bind_helpers.hpp"
-#include "Parameters.h"
-#include "Potential.h"
-#include "HelperFunctions.h"
 #include "BaseStructures.h"
 #include "Eigen.h"
-#include <nanobind/ndarray.h>
+#include "HelperFunctions.h"
+#include "Matter.h"
+#include "Parameters.h"
+#include "Potential.h"
+#include "bind_helpers.hpp"
 #include <algorithm>
 #include <cstring>
+#include <nanobind/ndarray.h>
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>
@@ -21,7 +21,6 @@
 
 namespace eonc::pybind {
 namespace nb = nanobind;
-
 
 namespace {
 
@@ -153,8 +152,8 @@ class AseCalcPotential final : public eonc::Potential {
     try {
       auto farr =
           nb::cast<nb::ndarray<nb::numpy, double, nb::device::cpu>>(forces_obj);
-      if (farr.ndim() == 2 &&
-          static_cast<long>(farr.shape(0)) == nAtoms && farr.shape(1) == 3) {
+      if (farr.ndim() == 2 && static_cast<long>(farr.shape(0)) == nAtoms &&
+          farr.shape(1) == 3) {
         if (farr.stride(0) == 3 && farr.stride(1) == 1) {
           std::memcpy(F, farr.data(), n3 * sizeof(double));
           return;
@@ -171,15 +170,14 @@ class AseCalcPotential final : public eonc::Potential {
     } catch (const nb::cast_error &) {
     }
     auto np = nb::module_::import_("numpy");
-    nb::object cont = np.attr("ascontiguousarray")(
-        forces_obj, nb::arg("dtype") = "float64");
+    nb::object cont =
+        np.attr("ascontiguousarray")(forces_obj, nb::arg("dtype") = "float64");
     auto farr =
         nb::cast<nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>>(
             cont);
     if (farr.ndim() != 2 || static_cast<long>(farr.shape(0)) != nAtoms ||
         farr.shape(1) != 3) {
-      throw std::runtime_error(
-          "ASE forces must be shape (n_atoms, 3) float64");
+      throw std::runtime_error("ASE forces must be shape (n_atoms, 3) float64");
     }
     std::memcpy(F, farr.data(), n3 * sizeof(double));
   }
@@ -199,7 +197,8 @@ class AseCalcPotential final : public eonc::Potential {
 
 public:
   explicit AseCalcPotential(nb::object calc)
-      : eonc::Potential(eonc::PotType::ASE_POT), calc_(std::move(calc)) {
+      : eonc::Potential(eonc::PotType::ASE_POT),
+        calc_(std::move(calc)) {
     if (!calc_.is_valid() || calc_.is_none()) {
       throw std::invalid_argument(
           "make_potential_from_ase: calculator is None");
@@ -256,15 +255,13 @@ public:
     nb::gil_scoped_acquire gil;
     try {
       ensure_modules();
-      const bool pbc =
-          linked_ ? linked_->getPeriodic() : true;
+      const bool pbc = linked_ ? linked_->getPeriodic() : true;
       ensure_atoms(nAtoms, atomicNrs, pbc);
 
       // Linked when force is driven by Matter::computePotential (R is
       // Matter positions storage). Cache is binding-local only.
-      const bool from_linked =
-          linked_ && nAtoms == linked_->numberOfAtoms() &&
-          R == matter_positions_ptr(*linked_);
+      const bool from_linked = linked_ && nAtoms == linked_->numberOfAtoms() &&
+                               R == matter_positions_ptr(*linked_);
 
       bool first = !ever_calculated_;
       bool pos_changed = true;
@@ -326,7 +323,8 @@ public:
       throw std::runtime_error(std::string("ASE calculator Python error: ") +
                                e.what());
     } catch (const std::exception &e) {
-      throw std::runtime_error(std::string("ASE calculator error: ") + e.what());
+      throw std::runtime_error(std::string("ASE calculator error: ") +
+                               e.what());
     }
   }
 
@@ -351,11 +349,10 @@ void bind_potential(nb::module_ &m) {
   nb::class_<eonc::Potential>(m, "Potential",
                               "Abstract potential (force + energy)")
       .def_prop_ro("type", &eonc::Potential::getType)
-      .def_prop_ro(
-          "force_call_counter",
-          [](const eonc::Potential &self) {
-            return self.forceCallCounter.load();
-          })
+      .def_prop_ro("force_call_counter",
+                   [](const eonc::Potential &self) {
+                     return self.forceCallCounter.load();
+                   })
       .def("is_surrogate", &eonc::Potential::isSurrogate)
       .def("requires_isolated_molecule_layout",
            &eonc::Potential::requiresIsolatedMoleculeLayout)
@@ -365,7 +362,8 @@ void bind_potential(nb::module_ &m) {
           [](eonc::Potential &self,
              nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu> pos,
              nb::ndarray<nb::numpy, int64_t, nb::c_contig, nb::device::cpu> z,
-             nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu> box) {
+             nb::ndarray<nb::numpy, double, nb::c_contig, nb::device::cpu>
+                 box) {
             if (pos.ndim() != 2 || pos.shape(1) != 3)
               throw std::invalid_argument("pos must be (n,3)");
             if (z.ndim() != 1 || z.shape(0) != pos.shape(0))
@@ -373,8 +371,8 @@ void bind_potential(nb::module_ &m) {
             if (box.ndim() != 2 || box.shape(0) != 3 || box.shape(1) != 3)
               throw std::invalid_argument("box must be (3,3)");
             const auto n = static_cast<Eigen::Index>(pos.shape(0));
-            AtomMatrix R = AtomMatrix::Map(
-                const_cast<double *>(pos.data()), n, 3);
+            AtomMatrix R =
+                AtomMatrix::Map(const_cast<double *>(pos.data()), n, 3);
             Matrix3d cell = Matrix3d::Map(const_cast<double *>(box.data()));
             VectorXi atmnrs(n);
             for (Eigen::Index i = 0; i < n; ++i)
@@ -402,9 +400,10 @@ void bind_potential(nb::module_ &m) {
                                  "ASE Calculator bound as eOn Potential. "
                                  "Use bind_matter(m) so MD/relax hit shared "
                                  "geometry + system_changes caching.")
-      .def("bind_matter", &AsePotentialHandle::bind_matter, nb::arg("matter"),
-           nb::keep_alive<1, 2>(),
-           "Wire ASE peer Atoms to this Matter (shared positions when possible)")
+      .def(
+          "bind_matter", &AsePotentialHandle::bind_matter, nb::arg("matter"),
+          nb::keep_alive<1, 2>(),
+          "Wire ASE peer Atoms to this Matter (shared positions when possible)")
       .def("unbind_matter", &AsePotentialHandle::unbind_matter)
       .def_prop_ro("is_bound", &AsePotentialHandle::is_bound)
       .def_prop_ro("potential", &AsePotentialHandle::as_potential,
@@ -449,8 +448,7 @@ void bind_potential(nb::module_ &m) {
         }
         return pot;
       },
-      nb::arg("parameters"),
-      "Construct a Potential from Parameters.potential");
+      nb::arg("parameters"), "Construct a Potential from Parameters.potential");
 
   // ASE Calculator → Potential (runtime ASE; no -Dwith_ase compile flag).
   m.def(
@@ -459,7 +457,8 @@ void bind_potential(nb::module_ &m) {
         return std::make_shared<AseCalcPotential>(std::move(calculator));
       },
       nb::arg("calculator"),
-      "Wrap ASE Calculator as Potential. Prefer ase_potential() + bind_matter.");
+      "Wrap ASE Calculator as Potential. Prefer ase_potential() + "
+      "bind_matter.");
 
   m.def(
       "ase_potential",

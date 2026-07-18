@@ -103,8 +103,7 @@ void bind_analysis(nb::module_ &m) {
         return vectori_to_numpy(atoms);
       },
       nb::arg("parameters"), nb::arg("min1"), nb::arg("saddle"),
-      nb::arg("min2"),
-      "Atom indices selected by prefactor filter (int64 1-d)");
+      nb::arg("min2"), "Atom indices selected by prefactor filter (int64 1-d)");
 
   m.def(
       "all_free_atoms",

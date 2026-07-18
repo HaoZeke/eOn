@@ -31,8 +31,7 @@ void bind_parameters(nb::module_ &m) {
       .def("to_json", &eonc::Parameters::to_json)
       // --- Main ---
       .def_prop_rw(
-          "job",
-          [](const eonc::Parameters &s) { return s.main_options.job; },
+          "job", [](const eonc::Parameters &s) { return s.main_options.job; },
           [](eonc::Parameters &s, eonc::JobType j) { s.main_options.job = j; })
       .def_prop_rw(
           "potential",
@@ -126,14 +125,18 @@ void bind_parameters(nb::module_ &m) {
           })
       .def_prop_rw(
           "opt_max_move",
-          [](const eonc::Parameters &s) { return s.optimizer_options.max_move; },
+          [](const eonc::Parameters &s) {
+            return s.optimizer_options.max_move;
+          },
           [](eonc::Parameters &s, double v) {
             s.optimizer_options.max_move = v;
           })
       // --- Debug ---
       .def_prop_rw(
           "write_movies",
-          [](const eonc::Parameters &s) { return s.debug_options.write_movies; },
+          [](const eonc::Parameters &s) {
+            return s.debug_options.write_movies;
+          },
           [](eonc::Parameters &s, bool v) { s.debug_options.write_movies = v; })
       // --- Metatomic ---
       .def_prop_rw(
@@ -180,17 +183,13 @@ void bind_parameters(nb::module_ &m) {
           [](const eonc::Parameters &s) {
             return static_cast<long>(s.neb_options.image_count);
           },
-          [](eonc::Parameters &s, long v) {
-            s.neb_options.image_count = v;
-          })
+          [](eonc::Parameters &s, long v) { s.neb_options.image_count = v; })
       .def_prop_rw(
           "neb_max_iterations",
           [](const eonc::Parameters &s) {
             return static_cast<long>(s.neb_options.max_iterations);
           },
-          [](eonc::Parameters &s, long v) {
-            s.neb_options.max_iterations = v;
-          })
+          [](eonc::Parameters &s, long v) { s.neb_options.max_iterations = v; })
       .def_prop_rw(
           "neb_force_tolerance",
           [](const eonc::Parameters &s) {
@@ -363,9 +362,7 @@ void bind_parameters(nb::module_ &m) {
           })
       .def_prop_rw(
           "rgpot_length_unit",
-          [](const eonc::Parameters &s) {
-            return s.rgpot_options.length_unit;
-          },
+          [](const eonc::Parameters &s) { return s.rgpot_options.length_unit; },
           [](eonc::Parameters &s, const std::string &v) {
             s.rgpot_options.length_unit = v;
           })
@@ -528,15 +525,11 @@ void bind_parameters(nb::module_ &m) {
       .def_prop_rw(
           "dimer_torque_max",
           [](const eonc::Parameters &s) { return s.dimer_options.torque_max; },
-          [](eonc::Parameters &s, double v) {
-            s.dimer_options.torque_max = v;
-          })
+          [](eonc::Parameters &s, double v) { s.dimer_options.torque_max = v; })
       .def_prop_rw(
           "dimer_torque_min",
           [](const eonc::Parameters &s) { return s.dimer_options.torque_min; },
-          [](eonc::Parameters &s, double v) {
-            s.dimer_options.torque_min = v;
-          })
+          [](eonc::Parameters &s, double v) { s.dimer_options.torque_min = v; })
       .def_prop_rw(
           "dimer_remove_rotation",
           [](const eonc::Parameters &s) {
@@ -548,9 +541,7 @@ void bind_parameters(nb::module_ &m) {
       // --- Hessian ---
       .def_prop_rw(
           "hessian_atom_list",
-          [](const eonc::Parameters &s) {
-            return s.hessian_options.atom_list;
-          },
+          [](const eonc::Parameters &s) { return s.hessian_options.atom_list; },
           [](eonc::Parameters &s, const std::string &v) {
             s.hessian_options.atom_list = v;
           })
@@ -565,9 +556,7 @@ void bind_parameters(nb::module_ &m) {
       // --- Prefactor ---
       .def_prop_rw(
           "prefactor_rate",
-          [](const eonc::Parameters &s) {
-            return s.prefactor_options.rate;
-          },
+          [](const eonc::Parameters &s) { return s.prefactor_options.rate; },
           [](eonc::Parameters &s, const std::string &v) {
             s.prefactor_options.rate = v;
           },
@@ -630,7 +619,6 @@ void bind_parameters(nb::module_ &m) {
             s.prefactor_options.all_free_atoms = v;
           })
 
-
       // --- Dynamics / MC / BH ---
       .def_prop_rw(
           "dynamics_steps",
@@ -649,9 +637,7 @@ void bind_parameters(nb::module_ &m) {
           })
       .def_prop_rw(
           "monte_carlo_steps",
-          [](const eonc::Parameters &s) {
-            return s.monte_carlo_options.steps;
-          },
+          [](const eonc::Parameters &s) { return s.monte_carlo_options.steps; },
           [](eonc::Parameters &s, int v) { s.monte_carlo_options.steps = v; })
       .def_prop_rw(
           "monte_carlo_step_size",
@@ -687,7 +673,6 @@ void bind_parameters(nb::module_ &m) {
           })
 
       // --- Structure comparison ---
-
 
       .def_prop_rw(
           "comp_eps_r",

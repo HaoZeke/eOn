@@ -8,8 +8,8 @@
 #define EON_MTA_BUILD
 #include "metatomic_c_abi.h"
 
-#include "MetatomicPotential.h"
 #include "../../Parameters.h"
+#include "MetatomicPotential.h"
 
 #include <cstdio>
 #include <exception>

@@ -68,6 +68,25 @@ if ! pkg-config --exists quill 2>/dev/null; then
     -DQUILL_BUILD_EXAMPLES=OFF
   cmake --build /tmp/quill-build -j"$(nproc 2>/dev/null || echo 2)"
   "${SUDO[@]}" cmake --install /tmp/quill-build
+  # Upstream quill often installs CMake config only; meson prefers pkg-config.
+  if ! pkg-config --exists quill 2>/dev/null; then
+    for d in "${PREFIX}/lib64/pkgconfig" "${PREFIX}/lib/pkgconfig"; do
+      "${SUDO[@]}" mkdir -p "$d"
+    done
+    pc="${PREFIX}/lib/pkgconfig/quill.pc"
+    if [[ ! -d "${PREFIX}/lib/pkgconfig" && -d "${PREFIX}/lib64/pkgconfig" ]]; then
+      pc="${PREFIX}/lib64/pkgconfig/quill.pc"
+    fi
+    "${SUDO[@]}" tee "$pc" >/dev/null <<EOF
+prefix=${PREFIX}
+includedir=\${prefix}/include
+Name: quill
+Description: Asynchronous Low Latency C++ Logging Library
+Version: 11.0.2
+Cflags: -I\${includedir}
+EOF
+  fi
 fi
+export PKG_CONFIG_PATH="${PREFIX}/lib64/pkgconfig:${PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
 pkg-config --modversion quill
 echo "pyeonclient_manylinux_deps: OK"

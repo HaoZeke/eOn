@@ -6,8 +6,8 @@
 #include "Matter.h"
 #include "MinModeSaddleSearch.h"
 #include "MonteCarlo.h"
-#include "Parameters.h"
 #include "ParallelReplicaJob.h"
+#include "Parameters.h"
 #include "Potential.h"
 #include "ReplicaExchangeJob.h"
 #include "SafeHyperJob.h"
@@ -47,8 +47,7 @@ void ensure_dynamics_steps(eonc::Parameters &params, long default_steps) {
     params.dynamics_options.time_step =
         params.dynamics_options.time_step_input / params.constants.timeUnit;
     if (params.dynamics_options.time_step <= 0.0)
-      params.dynamics_options.time_step =
-          1.0 / params.constants.timeUnit;
+      params.dynamics_options.time_step = 1.0 / params.constants.timeUnit;
   }
 }
 
@@ -109,7 +108,9 @@ struct SeededAlgo {
 
   SeededAlgo(std::shared_ptr<eonc::Matter> m, eonc::Parameters p,
              std::shared_ptr<eonc::Potential> pot_in)
-      : seed(std::move(m)), params(std::move(p)), pot(std::move(pot_in)) {
+      : seed(std::move(m)),
+        params(std::move(p)),
+        pot(std::move(pot_in)) {
     if (!seed)
       throw std::runtime_error("matter is required");
     if (!pot)
@@ -213,9 +214,10 @@ void bind_sampling(nb::module_ &m) {
         nsteps = 5;
       double max_disp = params.basin_hopping_options.displacement;
       double kT = params.constants.kB * params.main_options.temperature;
-      std::mt19937_64 rng(params.main_options.randomSeed >= 0
-                              ? static_cast<uint64_t>(params.main_options.randomSeed)
-                              : 0xC0FFEEULL);
+      std::mt19937_64 rng(
+          params.main_options.randomSeed >= 0
+              ? static_cast<uint64_t>(params.main_options.randomSeed)
+              : 0xC0FFEEULL);
       std::uniform_real_distribution<double> uni(0.0, 1.0);
       std::normal_distribution<double> gauss(0.0, 1.0);
       {
@@ -276,8 +278,10 @@ void bind_sampling(nb::module_ &m) {
 
     PyProcessSearch(std::shared_ptr<Matter> m, const NpF64 &mode_np,
                     Parameters p, std::shared_ptr<Potential> pot_in)
-        : seed(std::move(m)), mode(atom_matrix_from_numpy(mode_np)),
-          params(std::move(p)), pot(std::move(pot_in)) {
+        : seed(std::move(m)),
+          mode(atom_matrix_from_numpy(mode_np)),
+          params(std::move(p)),
+          pot(std::move(pot_in)) {
       if (!seed)
         throw std::runtime_error("ProcessSearch: matter required");
       if (!pot)
@@ -310,16 +314,15 @@ void bind_sampling(nb::module_ &m) {
     }
   };
 
-  nb::class_<PyProcessSearch>(
-      m, "ProcessSearch",
-      "Min-mode process search. run(inplace=False) -> (reactant, saddle, status).")
+  nb::class_<PyProcessSearch>(m, "ProcessSearch",
+                              "Min-mode process search. run(inplace=False) -> "
+                              "(reactant, saddle, status).")
       .def(nb::init<std::shared_ptr<Matter>, const NpF64 &, Parameters,
                     std::shared_ptr<Potential>>(),
            nb::arg("matter"), nb::arg("mode"), nb::arg("parameters"),
            nb::arg("potential"), nb::keep_alive<1, 2>(), nb::keep_alive<1, 5>())
       .def("run", &PyProcessSearch::run, nb::arg("inplace") = false)
-      .def_prop_ro("status",
-                   [](const PyProcessSearch &s) { return s.status; });
+      .def_prop_ro("status", [](const PyProcessSearch &s) { return s.status; });
 
   // --- Structure helpers (free is fine — pure predicates) ---
   m.def(

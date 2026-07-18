@@ -422,4 +422,3 @@ def test_parity_nested_optimizer_model_defaults_match_ssot():
             assert fdefault == exp or (
                 isinstance(exp, float) and float(fdefault) == float(exp)
             ), f"{model_name}.{fname} default {fdefault!r} != SSoT {exp!r}"
-

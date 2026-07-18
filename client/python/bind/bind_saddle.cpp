@@ -36,20 +36,15 @@ void bind_saddle(nb::module_ &m) {
              MinModeSaddleSearch::STATUS_BAD_MAX_CONCAVE_ITERATIONS)
       .value("BAD_MAX_ITERATIONS",
              MinModeSaddleSearch::STATUS_BAD_MAX_ITERATIONS)
-      .value("BAD_NOT_CONNECTED",
-             MinModeSaddleSearch::STATUS_BAD_NOT_CONNECTED)
+      .value("BAD_NOT_CONNECTED", MinModeSaddleSearch::STATUS_BAD_NOT_CONNECTED)
       .value("BAD_PREFACTOR", MinModeSaddleSearch::STATUS_BAD_PREFACTOR)
       .value("BAD_HIGH_BARRIER", MinModeSaddleSearch::STATUS_BAD_HIGH_BARRIER)
       .value("BAD_MINIMA", MinModeSaddleSearch::STATUS_BAD_MINIMA)
-      .value("FAILED_PREFACTOR",
-             MinModeSaddleSearch::STATUS_FAILED_PREFACTOR)
-      .value("POTENTIAL_FAILED",
-             MinModeSaddleSearch::STATUS_POTENTIAL_FAILED)
-      .value("NONNEGATIVE_ABORT",
-             MinModeSaddleSearch::STATUS_NONNEGATIVE_ABORT)
+      .value("FAILED_PREFACTOR", MinModeSaddleSearch::STATUS_FAILED_PREFACTOR)
+      .value("POTENTIAL_FAILED", MinModeSaddleSearch::STATUS_POTENTIAL_FAILED)
+      .value("NONNEGATIVE_ABORT", MinModeSaddleSearch::STATUS_NONNEGATIVE_ABORT)
       .value("NONLOCAL_ABORT", MinModeSaddleSearch::STATUS_NONLOCAL_ABORT)
-      .value("NEGATIVE_BARRIER",
-             MinModeSaddleSearch::STATUS_NEGATIVE_BARRIER)
+      .value("NEGATIVE_BARRIER", MinModeSaddleSearch::STATUS_NEGATIVE_BARRIER)
       .value("BAD_MD_TRAJECTORY_TOO_SHORT",
              MinModeSaddleSearch::STATUS_BAD_MD_TRAJECTORY_TOO_SHORT)
       .value("BAD_NO_NEGATIVE_MODE_AT_SADDLE",
@@ -103,9 +98,9 @@ void bind_saddle(nb::module_ &m) {
             AtomMatrix mode_am = atom_matrix_from_numpy(mode);
             // Always construct on a private working copy; run(inplace) decides.
             auto work = std::make_shared<Matter>(*matter);
-            new (self) MinModeSaddleSearch(std::move(work), mode_am,
-                                           reactant_energy, params,
-                                           std::move(pot));
+            new (self)
+                MinModeSaddleSearch(std::move(work), mode_am, reactant_energy,
+                                    params, std::move(pot));
             // stash original shared_ptr for inplace path via custom holder?
             // Keep simple: store only working copy; run returns that.
           },
@@ -160,22 +155,18 @@ void bind_saddle(nb::module_ &m) {
       .def_prop_ro(
           "status",
           [](const MinModeSaddleSearch &self) { return self.getStatus(); })
-      .def_prop_ro(
-          "status_message",
-          [](const MinModeSaddleSearch &self) {
-            return std::string(
-                MinModeSaddleSearch::statusMessage(self.getStatus()));
-          })
-      .def_prop_ro(
-          "iteration",
-          [](const MinModeSaddleSearch &self) {
-            return self.getIterationCount();
-          })
+      .def_prop_ro("status_message",
+                   [](const MinModeSaddleSearch &self) {
+                     return std::string(
+                         MinModeSaddleSearch::statusMessage(self.getStatus()));
+                   })
+      .def_prop_ro("iteration",
+                   [](const MinModeSaddleSearch &self) {
+                     return self.getIterationCount();
+                   })
       .def_prop_ro(
           "force_calls",
-          [](const MinModeSaddleSearch &self) {
-            return self.getForceCalls();
-          })
+          [](const MinModeSaddleSearch &self) { return self.getForceCalls(); })
       .def_prop_ro(
           "eigenvalue",
           [](MinModeSaddleSearch &self) { return self.getEigenvalue(); })
@@ -187,8 +178,8 @@ void bind_saddle(nb::module_ &m) {
           nb::rv_policy::move)
       .def("__repr__", [](const MinModeSaddleSearch &self) {
         return "<MinModeSaddleSearch status=" +
-               std::to_string(self.getStatus()) + " iter=" +
-               std::to_string(self.getIterationCount()) + ">";
+               std::to_string(self.getStatus()) +
+               " iter=" + std::to_string(self.getIterationCount()) + ">";
       });
 }
 

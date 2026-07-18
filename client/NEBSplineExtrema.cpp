@@ -252,8 +252,7 @@ std::vector<readcon::ConFrame> pathToConFrames(
     const std::vector<std::shared_ptr<Matter>> &path,
     const std::vector<std::shared_ptr<AtomMatrix>> &tangent,
     const std::vector<std::shared_ptr<EigenmodeStrategy>> &eigenmode_solvers,
-    long numImages, bool estimateEigenvalues,
-    std::optional<size_t> bandIndex) {
+    long numImages, bool estimateEigenvalues, std::optional<size_t> bandIndex) {
   const size_t nframes = static_cast<size_t>(numImages) + 2;
   if (path.size() < nframes) {
     return {};

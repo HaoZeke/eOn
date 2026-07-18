@@ -162,4 +162,3 @@ def _structure_from_ase(cls, atoms):
 
 
 Structure.from_ase = classmethod(_structure_from_ase)  # type: ignore[attr-defined, assignment]
-

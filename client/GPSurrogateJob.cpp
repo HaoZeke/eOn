@@ -125,8 +125,9 @@ GPSurrogateJob::runFromMatter(std::shared_ptr<Matter> initial,
   // Keep a shared view for the caller before saveData takes ownership of unique
   std::shared_ptr<NudgedElasticBand> out(neb.release());
   // saveData expects unique_ptr - rebuild unique from shared is unsafe.
-  // Write results without consuming: call saveData on a temporary unique wrap fails.
-  // Instead write via a clone path: only return the band; file artifacts optional.
+  // Write results without consuming: call saveData on a temporary unique wrap
+  // fails. Instead write via a clone path: only return the band; file artifacts
+  // optional.
   return out;
 }
 

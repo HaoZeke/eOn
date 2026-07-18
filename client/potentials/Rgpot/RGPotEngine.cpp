@@ -12,10 +12,10 @@
 
 #include <capnp/message.h>
 
-#include "rgpot/CPMDPot/CPMDPot.hpp"
-#include "rgpot/NWChemPot/NWChemPot.hpp"
 #include "MetatomicEngineLoader.h"
 #include "XTBEngineLoader.h"
+#include "rgpot/CPMDPot/CPMDPot.hpp"
+#include "rgpot/NWChemPot/NWChemPot.hpp"
 #include "rgpot/rpc/Potentials.capnp.h"
 
 namespace {
@@ -189,9 +189,8 @@ RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
           "RGPOT(xtb): engine not available (set RGPOT_XTB_ENGINE or "
           "[RgpotPot] engine_path to libxtb_engine.so)");
   } else {
-    throw std::runtime_error(
-        "RGPOT: unknown backend '" + opt.backend +
-        "' (expected nwchemc, cpmdc, metatomic, or xtb)");
+    throw std::runtime_error("RGPOT: unknown backend '" + opt.backend +
+                             "' (expected nwchemc, cpmdc, metatomic, or xtb)");
   }
 }
 

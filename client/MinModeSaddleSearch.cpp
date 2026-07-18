@@ -281,8 +281,7 @@ int MinModeSaddleSearch::run(long max_iterations_override) {
       metadata.scalars.push_back({"angle", angle});
       metadata.scalars.push_back({"rotations", static_cast<double>(rotations)});
       if (retain_climb_frames_) {
-        climb_frames_.push_back(
-            eonc::io::matterToConFrame(*matter, &metadata));
+        climb_frames_.push_back(eonc::io::matterToConFrame(*matter, &metadata));
       }
       if (params.debug_options.write_movies) {
         if (!eonc::io::io_ok(

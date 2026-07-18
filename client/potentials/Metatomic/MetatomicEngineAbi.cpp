@@ -1,11 +1,12 @@
 /*
-** libmetatomic_engine.so — C ABI for RGPOT-metatomic (wraps MetatomicPotential).
+** libmetatomic_engine.so — C ABI for RGPOT-metatomic (wraps
+*MetatomicPotential).
 ** Fat eOn still uses MetatomicPotential directly via potential=Metatomic.
 */
 #define RGPOT_MTA_ENGINE_BUILD
+#include "../../Parameters.h"
 #include "../Rgpot/metatomic_c_abi.h"
 #include "MetatomicPotential.h"
-#include "../../Parameters.h"
 #include <cstdio>
 #include <cstring>
 #include <exception>

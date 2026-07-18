@@ -157,15 +157,25 @@ let job_pypi = {
     S.checkout_full,
     S.setup_python_default,
     S.run_script "Install build frontend" "python3 -m pip install --upgrade pip build",
-    S.run_script "Build sdist/wheel (meson-python)" m%"
+    S.run_script "Install sdist build deps" m%"
+      set -euo pipefail
+      sudo apt-get update
+      sudo apt-get install -y --no-install-recommends libeigen3-dev gfortran ninja-build cmake pkg-config zlib1g-dev build-essential
+      bash scripts/pyeonclient_manylinux_deps.sh
+      echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+      echo "/usr/local/lib64" | sudo tee -a /etc/ld.so.conf.d/usr-local.conf
+      sudo ldconfig
+      echo "LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+      echo "PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}" >> "$GITHUB_ENV"
+      echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
+      pkg-config --modversion quill
+    "%,
+    S.run_script "Build sdist (meson-python)" m%"
+      set -o pipefail
       python3 scripts/release_assert.py "${{ needs.gate.outputs.version }}" --require-changelog
-      if python3 -m build 2>&1 | tee "${RUNNER_TEMP}/pypi-build.log"; then
-        echo "build ok"
-      else
-        echo "::warning::python -m build failed (native deps missing on runner). Trying sdist via pip wheel isolation off."
-        exit 1
-      fi
+      python3 -m build --sdist 2>&1 | tee "${RUNNER_TEMP}/pypi-build.log"
       ls -la dist/
+      test -n "$(find dist -name '*.tar.gz' -print -quit)"
     "%,
     S.pypi_publish_step "${{ secrets.PYPI_API_TOKEN }}",
   ],

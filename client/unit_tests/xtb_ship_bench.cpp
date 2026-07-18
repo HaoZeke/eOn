@@ -15,9 +15,9 @@ using SteadyClock = std::chrono::steady_clock;
 using eonc::Parameters;
 using eonc::PotType;
 
-static const double water_pos[] = {
-    0.00000000, 0.00000000,  0.11779000, 0.00000000, 0.75545000,
-    -0.47116000, 0.00000000, -0.75545000, -0.47116000};
+static const double water_pos[] = {0.00000000, 0.00000000,  0.11779000,
+                                   0.00000000, 0.75545000,  -0.47116000,
+                                   0.00000000, -0.75545000, -0.47116000};
 static const int water_atmnrs[] = {8, 1, 1};
 static const double water_box[9] = {100, 0, 0, 0, 100, 0, 0, 0, 100};
 

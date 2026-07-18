@@ -119,8 +119,8 @@ void set_write_con_forces(bool enabled) noexcept;
 matterToConFrame(Matter &m, const ConFrameMetadata *metadata = nullptr);
 
 /**
- * Build NEB band ConFrames without writing (clone builder path of writeNebPath).
- * Empty vector on invalid input.
+ * Build NEB band ConFrames without writing (clone builder path of
+ * writeNebPath). Empty vector on invalid input.
  *
  * @param path length must equal metadata_per_image (endpoints included)
  */

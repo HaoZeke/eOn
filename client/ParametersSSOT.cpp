@@ -21,7 +21,6 @@ const std::unordered_set<std::string> &field_index() {
   return idx;
 }
 
-
 JobType job_from_ssot(std::string_view j) {
   if (j == "process_search")
     return JobType::Process_Search;

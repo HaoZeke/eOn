@@ -4,8 +4,8 @@
 #include "Matter.h"
 #include "Parameters.h"
 #include "Potential.h"
-#include "eigen_numpy.hpp"
 #include "bind_helpers.hpp"
+#include "eigen_numpy.hpp"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
@@ -53,14 +53,11 @@ void bind_ase(nb::module_ &m) {
         }
         auto np = nb::module_::import_("numpy");
 
-        nb::object pos_o =
-            np_contig(atoms.attr("get_positions")(), "float64");
+        nb::object pos_o = np_contig(atoms.attr("get_positions")(), "float64");
         nb::object cell_o =
             np_contig(np.attr("asarray")(atoms.attr("get_cell")()), "float64");
-        nb::object mass_o =
-            np_contig(atoms.attr("get_masses")(), "float64");
-        nb::object z_o =
-            np_contig(atoms.attr("get_atomic_numbers")(), "int32");
+        nb::object mass_o = np_contig(atoms.attr("get_masses")(), "float64");
+        nb::object z_o = np_contig(atoms.attr("get_atomic_numbers")(), "int32");
 
         ArrF64 pos = nb::cast<ArrF64>(pos_o);
         ArrF64 cell = nb::cast<ArrF64>(cell_o);
@@ -164,9 +161,9 @@ void bind_ase(nb::module_ &m) {
         }
 
         nb::object atoms =
-            Atoms(nb::arg("numbers") = numbers, nb::arg("positions") = positions,
-                  nb::arg("cell") = cell, nb::arg("pbc") = use_pbc,
-                  nb::arg("masses") = masses);
+            Atoms(nb::arg("numbers") = numbers,
+                  nb::arg("positions") = positions, nb::arg("cell") = cell,
+                  nb::arg("pbc") = use_pbc, nb::arg("masses") = masses);
 
         nb::list fixed_idx;
         for (long i = 0; i < n; ++i) {

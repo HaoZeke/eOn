@@ -1,6 +1,8 @@
 /*
-** Min-mode: chemist-facing Dimer(method=..., accelerant=...) plus low-level classes.
-** Default method is "improved". accelerant="gp" routes to AtomicGPDimer (WITH_GPRD).
+** Min-mode: chemist-facing Dimer(method=..., accelerant=...) plus low-level
+*classes.
+** Default method is "improved". accelerant="gp" routes to AtomicGPDimer
+*(WITH_GPRD).
 */
 #include "Davidson.h"
 #include "Dimer.h"
@@ -52,8 +54,8 @@ eonc::Parameters route_minmode_params(eonc::Parameters params,
 
   if (!acc.empty() && acc != "none" && acc != "gp") {
     throw std::runtime_error(
-        "Dimer: accelerant must be None/\"\" or \"gp\", got \"" + accelerant_in +
-        "\"");
+        "Dimer: accelerant must be None/\"\" or \"gp\", got \"" +
+        accelerant_in + "\"");
   }
   const bool want_gp = (acc == "gp");
 
@@ -135,9 +137,7 @@ struct PyDimer {
     eonc::eigenmodeCompute(*strategy, std::move(m), direction);
   }
 
-  double eigenvalue() const {
-    return eonc::eigenmodeGetEigenvalue(*strategy);
-  }
+  double eigenvalue() const { return eonc::eigenmodeGetEigenvalue(*strategy); }
 
   auto eigenvector() const {
     return matrix_to_numpy(eonc::eigenmodeGetEigenvector(*strategy));
@@ -187,8 +187,7 @@ nb::class_<Class> &bind_minmode_common(nb::class_<Class> &cls) {
            new (self) Class(std::move(matter), params, std::move(pot));
          },
          nb::arg("matter"), nb::arg("parameters"), nb::arg("potential"),
-         nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>(),
-         nb::keep_alive<1, 4>(),
+         nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>(), nb::keep_alive<1, 4>(),
          "Low-level solver: Matter + Parameters + Potential")
       .def(
           "compute",
@@ -260,10 +259,8 @@ void bind_eigenmode(nb::module_ &m) {
            "Converge lowest eigenmode. direction: float64 (n_atoms, 3)")
       .def_prop_ro("eigenvalue", &PyDimer::eigenvalue)
       .def_prop_ro("eigenvector", &PyDimer::eigenvector, nb::rv_policy::move)
-      .def_prop_ro("method",
-                   [](const PyDimer &d) { return d.method; })
-      .def_prop_ro("accelerant",
-                   [](const PyDimer &d) { return d.accelerant; })
+      .def_prop_ro("method", [](const PyDimer &d) { return d.method; })
+      .def_prop_ro("accelerant", [](const PyDimer &d) { return d.accelerant; })
       .def_prop_ro("total_force_calls", &PyDimer::total_force_calls)
       .def_prop_ro("total_iterations", &PyDimer::total_iterations)
       .def_prop_ro("stats_torque", &PyDimer::stats_torque)
@@ -297,10 +294,9 @@ void bind_eigenmode(nb::module_ &m) {
            nb::arg("mode"),
            "Lock rotation reference mode (OCI / mode tracking); (n,3) or 3n")
         .def("clear_reference_mode", &eonc::ImprovedDimer::clearReferenceMode)
-        .def_prop_ro("rotation_did_converge",
-                     [](const eonc::ImprovedDimer &s) {
-                       return s.rotationDidConverge;
-                     })
+        .def_prop_ro(
+            "rotation_did_converge",
+            [](const eonc::ImprovedDimer &s) { return s.rotationDidConverge; })
         .def_prop_ro("found_negative_curvature",
                      [](const eonc::ImprovedDimer &s) {
                        return s.foundNegativeCurvature;
