@@ -3,6 +3,7 @@ py.install_sources(
         'akmc.py',
         'akmcstatelist.py',
         'akmcstate.py',
+        'amsel_superbasin_gate.py',
         'askmc.py',
         'atoms.py',
         'basinhopping.py',
@@ -16,6 +17,7 @@ py.install_sources(
         'explorer.py',
         'fileio.py',
         '__init__.py',
+        '__main__.py',
         'locking.py',
         'server.py',
         'structure.py',
@@ -32,6 +34,8 @@ py.install_sources(
         'movie.py',
         'mpiwait.py',
         'parallelreplica.py',
+        'params_ssot.py',
+        '_params_ssot_catalog.py',
         'pyeonclient_bridge.py',
         'prstatelist.py',
         'prstate.py',
@@ -44,6 +48,10 @@ py.install_sources(
     ],
     pure: false,  # install next to compiled extension
     subdir: 'eon',
+    # Nested packages (geometry/, mcamc/) must keep their relative paths;
+    # without this meson flattens into site-packages/eon/ and
+    # `import eon.geometry` fails after meson install (CI server smoke).
+    preserve_path: true,
 )
 
 
