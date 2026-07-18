@@ -2,6 +2,23 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.2](https://github.com/TheochemUI/eOn/tree/2.17.2) - 2026-07-17
+
+### Added
+
+- pyeonclient 0.3.3: in-memory ``path_frames`` / ``to_conframes`` for NEB (same stamps as writePathCon), ``Matter.relax(retain_frames=…)`` movie frames, and ``MinModeSaddleSearch.run_retain_frames`` climb frames. ([#pyeonclient-path-frames](https://github.com/TheochemUI/eOn/issues/pyeonclient-path-frames))
+- Dimer supports `rotation_backend = classical|lanczos|davidson|lor` (Leng et al. JCP 2013 LOR for softest-mode with force translation; Lanczos/Davidson FD min-mode; classical constrained rotation). Climb remains on the dimer path.
+- Optional Superbasin gate via amsel.discover_decide_status ([amsel] / amsel_discover_decide) before MCAMC; rejected_no_metastable_basin falls back to AKMC.
+
+### Fixed
+
+- HessianJob FD eigen solve: ColMajor copy for SelfAdjointEigenSolver (avoids
+  RowMajor segfaults on partial VTST blocks), finite-force/index guards, optional
+  `[Hessian] atom_list` intersected with free atoms, and a stable mobile VectorXi
+  copy so moving-atom Hessians match PHVA-class active sets. ([#357](https://github.com/TheochemUI/eOn/issues/357))
+- Release CI installs quill/capnp so ``eon-akmc`` sdist and pyeonclient wheels configure cleanly on GitHub runners. ([#418](https://github.com/TheochemUI/eOn/issues/418))
+
+
 ## [2.17.1](https://github.com/TheochemUI/eOn/tree/2.17.1) - 2026-07-17
 
 ### Fixed
