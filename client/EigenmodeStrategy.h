@@ -53,8 +53,10 @@ buildEigenmodeStrategy(std::shared_ptr<Matter> matter, const Parameters &params,
 #ifdef WITH_GPRD
   else if (params.saddle_search_options.minmode_method ==
            LowestEigenmode::MINMODE_GPRDIMER) {
+    // AtomicGPDimer embeds atmd::AtomicDimer (unique_ptr + user dtor → not
+    // movable). Construct the alternative in place; do not pass a temporary.
     return std::make_shared<EigenmodeStrategy>(
-        AtomicGPDimer(matter, params, pot));
+        std::in_place_type<AtomicGPDimer>, matter, params, pot);
   }
 #endif
   // Default to improved dimer
