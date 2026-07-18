@@ -179,9 +179,8 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
     }
     // Assign moving and frozen atoms and list all frozen atoms as inactive
     gpr::Index_t counter_f = 0, counter_m = 0;
-    for (gpr::Index_t n = 0; n < static_cast<gpr::Index_t>(
-                                     atoms_config.is_frozen.size());
-         ++n) {
+    for (gpr::Index_t n = 0;
+         n < static_cast<gpr::Index_t>(atoms_config.is_frozen.size()); ++n) {
       if (atoms_config.is_frozen(0, n) == MOVING_ATOM)
         gpr::coord::set(atoms_config.atoms_mov.positions, 0, counter_m++,
                         gpr::coord::at(atoms_config.positions, n));
