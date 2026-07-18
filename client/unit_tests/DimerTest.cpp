@@ -29,6 +29,15 @@ namespace tests {
 
 static eonc::helpers::test::QuillTestLogger _quill_setup;
 
+// Deterministic soft-mode seed (atom 0 along +x). Random modes can land in
+// positive-curvature basins and flake REQUIRE(eigenvalue < 0) (XTB CI exit 42).
+static AtomMatrix softModeSeed(long nAtoms) {
+  AtomMatrix seed = AtomMatrix::Zero(nAtoms, 3);
+  seed(0, 0) = 1.0;
+  seed.normalize();
+  return seed;
+}
+
 class DimerFixture {
 protected:
   Parameters params;
@@ -58,10 +67,7 @@ protected:
     pos(0, 1) -= 0.2;
     matter->setPositions(pos);
 
-    // Random initial direction
-    long nAtoms = matter->numberOfAtoms();
-    mode = AtomMatrix::Random(nAtoms, 3);
-    mode.normalize();
+    mode = softModeSeed(matter->numberOfAtoms());
   }
 };
 
@@ -269,9 +275,7 @@ protected:
     pos(0, 1) -= 0.2;
     matter->setPositions(pos);
 
-    long nAtoms = matter->numberOfAtoms();
-    mode = AtomMatrix::Random(nAtoms, 3);
-    mode.normalize();
+    mode = softModeSeed(matter->numberOfAtoms());
   }
 };
 

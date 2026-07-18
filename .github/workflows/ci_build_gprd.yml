@@ -6,12 +6,16 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    paths:
+      - ".github/workflows/ci_build_gprd.yml"
+      - "client/AtomicGPDimer.*"
+      - "client/GPRHelpers.*"
+      - "client/meson.build"
+      - "meson_options.txt"
 jobs:
   build_eon:
     runs-on: ubuntu-latest
-    # TODO: the gpr_optim submodule pin (26242c8) is unreadable; this job is
-    # non-blocking until the pin is updated to a valid gpr_optim commit.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Setup SSH for private submodule
@@ -20,9 +24,13 @@ jobs:
           ssh-private-key: ${{ secrets.SUBMODULE_PRIVATE }}
       - name: Pull GPRD submodule
         run: |
-          git clone git@github.com:TheochemUI/gpr_optim.git subprojects/gpr_optim
+          # develop tip: 26242c8 is not on any branch after gpr_optim history rewrite
+          # (git clone then checkout fails with "unable to read tree").
+          git clone --branch develop --single-branch \
+            git@github.com:TheochemUI/gpr_optim.git subprojects/gpr_optim
           cd subprojects/gpr_optim
-          git checkout 26242c8e94569ef81103ece4662008c3250ada55
+          git checkout 365b78bdf4042f75915e1113396e1b4aa50edaa2
+          git rev-parse --short HEAD
       - uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: true
@@ -33,13 +41,15 @@ jobs:
       - name: Install cbindgen
         shell: bash
         run: command -v cbindgen || cargo install cbindgen
-      - name: Install eon
+      - name: Install eon with GPRD
         shell: pixi run bash -e {0}
         run: |
           meson setup --reconfigure bbdir  \
           --prefix=$CONDA_PREFIX           \
           --buildtype release              \
-          --libdir=lib
+          --libdir=lib                     \
+          -Dwith_gprd=true                 \
+          -Dwith_tests=true
           meson install -C bbdir
       - name: Integration Tests
         shell: pixi run bash -e {0}
