@@ -1,4 +1,4 @@
-"""Guard against drift between eon.schema and eon/config.yaml."""
+"""Guard against drift between eon-schema models and eon/config.yaml."""
 
 from __future__ import annotations
 
@@ -9,7 +9,11 @@ import unittest
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = REPO_ROOT / "eon/schema.py"
+# Authoritative L1 models live in eon-schema; eon/schema.py is a re-export stub
+# (star-import only) so AST drift checks must parse models.py, not the stub.
+SCHEMA_PATH = (
+    REPO_ROOT / "packages" / "eon-schema" / "src" / "eon_schema" / "config" / "models.py"
+)
 
 
 def _load_module(module_name: str, relative_path: str):
