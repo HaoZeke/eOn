@@ -3,6 +3,5 @@ directory = rgpot
 url = https://github.com/OmniPotentRPC/rgpot.git
 # Packaged install exports rgpot.pc (headers + nwchempot/cpmdpot/ptlrpc).
 # eOn prefers dependency('rgpot') when installed; wrap is the fallback.
-revision = 68dee6e7f619a1b5069dde1e301e8590bb9728b3
-# 2.5.2: VesinOptions ABI for vesin 0.6 (skin/n_threads); retag as v2.5.2 when released
+revision = v2.5.2
 depth = 1
