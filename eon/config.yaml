@@ -563,6 +563,19 @@ Dimer:
             kind: boolean
             default: True
 
+        rotation_backend:
+            kind: string
+            default: classical
+            values:
+                - classical
+                - lanczos
+                - davidson
+                - lor
+
+        lor_residual_tol:
+            kind: float
+            default: 0.1
+
         remove_rotation:
             kind: boolean
             default: False
@@ -1047,6 +1060,18 @@ Hessian:
         zero_freq_value:
             kind: float
             default: 1e-6
+
+        fd_scheme:
+            kind: string
+            default: one_sided
+
+        resume:
+            kind: bool
+            default: false
+
+        checkpoint_path:
+            kind: string
+            default: ""
 
 ################################################################################
 
@@ -1562,7 +1587,33 @@ Coarse Graining:
             kind: boolean
             default: True
 
+
 ################################################################################
+
+amsel:
+
+    options:
+
+        discover_decide:
+            kind: boolean
+            default: False
+
+        e_min_init:
+            kind: float
+            default: 0.5
+
+        e_min_step:
+            kind: float
+            default: 0.05
+
+        e_min_floor:
+            kind: float
+            default: 0.05
+
+        cv_threshold:
+            kind: float
+            default: 10.0
+
 
 Optimizer:
 
