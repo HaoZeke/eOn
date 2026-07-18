@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
 #include <capnp/message.h>
@@ -234,14 +235,15 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
     return;
   }
 
-  std::pair<double, AtomMatrix> result;
+  // rgpot >= 2.5.0: operator() returns (energy, forces, variance).
+  std::tuple<double, AtomMatrix, double> result;
   if (impl_->backend == Impl::Backend::Nwchemc)
     result = (*impl_->nwchem)(positions, atmtypes, cell);
   else
     result = (*impl_->cpmd)(positions, atmtypes, cell);
 
-  *U = result.first;
-  const auto &forces = result.second;
+  *U = std::get<0>(result);
+  const auto &forces = std::get<1>(result);
   for (long i = 0; i < N; ++i) {
     const int ii = static_cast<int>(i);
     F[3 * i + 0] = forces(ii, 0);
