@@ -361,8 +361,17 @@ nwchempot_dep = disabler()
 cpmdpot_dep = disabler()
 _rgpot_from_pkg = false
 if get_option('with_rgpot') or get_option('with_serve')
-    # 1) installed module
-    _rgpot_pkg = dependency('rgpot', required: false)
+    # 1) installed module only (never wrap fallback).
+    # dependency('rgpot') with default allow_fallback configures the wrap
+    # once with *default* options (with_rpc_client_only=false) before we
+    # can pass eOn's client-only opts; get_variable('nwchempot_dep') then
+    # fails because NWChemPot was never built. Force pkg-config-only here.
+    _rgpot_pkg = dependency(
+        'rgpot',
+        method: 'pkg-config',
+        required: false,
+        allow_fallback: false,
+    )
     if _rgpot_pkg.found()
         message('rgpot: using pkg-config (installed), not subproject wrap')
         _rgpot_from_pkg = true
