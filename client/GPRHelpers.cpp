@@ -14,6 +14,7 @@
 
 #include "subprojects/gpr_optim/data_types/EigenHelpers.h"
 
+#include <cstring>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -82,6 +83,19 @@ eonc::helpers::eon_parameters_to_gpr(const Parameters &parameters) {
   return p;
 }
 
+namespace {
+
+// AtomMatrix is row-major N×3; gpr::Coord is 1×(3N) with the same flat packing.
+void copyAtomMatrixToCoord(const AtomMatrix &src, gpr::Coord &dst) {
+  dst.resize(1, static_cast<Eigen::Index>(src.size()));
+  if (src.size() > 0) {
+    std::memcpy(dst.data(), src.data(),
+                static_cast<size_t>(src.size()) * sizeof(double));
+  }
+}
+
+} // namespace
+
 // FIXME: Take in the active / inactive pairs / atomtypes
 gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
   gpr::AtomsConfiguration atoms_config;
@@ -98,15 +112,20 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
   int fake_atype;          //!> False "atomtype" for GPR Dimer
 
   atoms_config.clear();
-  atoms_config.positions = matter->getPositions();
-  atoms_config.is_frozen.resize(1, matter->numberOfAtoms());
-  atoms_config.id.resize(1, matter->numberOfAtoms());
-  atoms_config.atomicNrs.resize(1, matter->numberOfAtoms());
-  for (auto i = 0; i < matter->numberOfAtoms(); i++) {
+  // gpr_optim stores positions as row-major 1×(3N), matching AtomMatrix flat
+  // layout.
+  copyAtomMatrixToCoord(matter->getPositions(), atoms_config.positions);
+  const auto nAtoms = matter->numberOfAtoms();
+  atoms_config.is_frozen.resize(1, nAtoms);
+  atoms_config.id.resize(1, nAtoms);
+  atoms_config.atomicNrs.resize(1, nAtoms);
+  for (auto i = 0; i < nAtoms; i++) {
     atomnrs.push_back(matter->getAtomicNr(i));
-    atoms_config.atomicNrs[i] = matter->getAtomicNr(i);
-    atoms_config.is_frozen[i] = matter->getFixed(i);
-    atoms_config.id[i] = i + 1;
+    // Field matrices are 1×N; use (0, i). getFixed is bool → MOVING/FROZEN.
+    atoms_config.atomicNrs(0, i) = matter->getAtomicNr(i);
+    atoms_config.is_frozen(0, i) =
+        matter->getFixed(i) ? FROZEN_ATOM : MOVING_ATOM;
+    atoms_config.id(0, i) = static_cast<gpr::Index_t>(i + 1);
   }
 
   unique_atomtypes = std::set<int>(atomnrs.begin(), atomnrs.end());
@@ -119,7 +138,9 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
   }
 
   number_of_mov_atoms = atoms_config.countMovingAtoms();
-  number_of_fro_atoms = atoms_config.is_frozen.size() - number_of_mov_atoms;
+  number_of_fro_atoms =
+      static_cast<gpr::Index_t>(atoms_config.is_frozen.size()) -
+      number_of_mov_atoms;
 
   if (number_of_fro_atoms > 0 && number_of_mov_atoms > 0) {
     // Resize structures for moving and frozen atoms
@@ -133,16 +154,16 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
     if (atype_to_gprd_atype.size() > 1) {
       int mov_counter = 0;
       int froz_inactive_counter = 0;
-      for (auto i = 0; i < matter->numberOfAtoms(); i++) {
+      for (auto i = 0; i < nAtoms; i++) {
         if (matter->getFixed(i)) {
           //!> Is a fixed atom
           //!> Use eOn's atomtype as a key for the GPR's fake atomtype
-          atoms_config.atoms_froz_inactive.type[froz_inactive_counter] =
+          atoms_config.atoms_froz_inactive.type(0, froz_inactive_counter) =
               atype_to_gprd_atype.at(atomnrs[i]);
           froz_inactive_counter++;
         } else {
           //!> Is moving
-          atoms_config.atoms_mov.type[mov_counter] =
+          atoms_config.atoms_mov.type(0, mov_counter) =
               atype_to_gprd_atype.at(atomnrs[i]);
           mov_counter++;
         }
@@ -158,8 +179,10 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
     }
     // Assign moving and frozen atoms and list all frozen atoms as inactive
     gpr::Index_t counter_f = 0, counter_m = 0;
-    for (gpr::Index_t n = 0; n < atoms_config.is_frozen.size(); ++n) {
-      if (atoms_config.is_frozen[n] == MOVING_ATOM)
+    for (gpr::Index_t n = 0; n < static_cast<gpr::Index_t>(
+                                     atoms_config.is_frozen.size());
+         ++n) {
+      if (atoms_config.is_frozen(0, n) == MOVING_ATOM)
         gpr::coord::set(atoms_config.atoms_mov.positions, 0, counter_m++,
                         gpr::coord::at(atoms_config.positions, n));
       else
@@ -183,8 +206,8 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
     //!> FIXME: Same caveats as documented above
     if (atype_to_gprd_atype.size() > 1) {
       int mov_counter = 0;
-      for (auto i = 0; i < matter->numberOfAtoms(); i++) {
-        atoms_config.atoms_mov.type[mov_counter] =
+      for (auto i = 0; i < nAtoms; i++) {
+        atoms_config.atoms_mov.type(0, mov_counter) =
             atype_to_gprd_atype.at(atomnrs[i]);
         mov_counter++;
       }
@@ -213,8 +236,10 @@ gpr::AtomsConfiguration eonc::helpers::eon_matter_to_atmconf(Matter *matter) {
 gpr::Observation eonc::helpers::eon_matter_to_init_obs(Matter *matter) {
   gpr::Observation o;
   o.clear();
-  o.R = matter->getPositions();
-  o.G = -1 * matter->getForces();
+  copyAtomMatrixToCoord(matter->getPositions(), o.R);
+  // Forces as negative gradients; same N×3 → 1×(3N) packing as positions.
+  AtomMatrix neg_forces = -matter->getForces();
+  copyAtomMatrixToCoord(neg_forces, o.G);
   o.E.resize(1, 1);
   o.E(0, 0) = matter->getPotentialEnergy();
   return o;
