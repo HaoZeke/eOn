@@ -17,7 +17,7 @@ Import::
 
 from __future__ import annotations
 
-__version__ = "0.2.2"
+__version__ = "0.2.1"
 
 from eon_schema.ssot import capnp_path, catalog_path, load_catalog
 

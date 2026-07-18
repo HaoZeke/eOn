@@ -1,6 +1,10 @@
 
 '''
-Con(figuration) i/o library
+Con(figuration) i/o library.
+
+``.con`` frames are read and written with the **readcon** package
+(:class:`readcon.ConFrame`). The in-memory working type is
+:class:`eon.structure.Structure` (alias ``Atoms``).
 '''
 import configparser
 #from io import BytesIO as StringIO
@@ -13,8 +17,8 @@ import os
 import pickle as pickle
 import readcon
 
-from eon import atoms
-from eon.config import config
+from eon.geometry.cell import box_to_length_angle, length_angle_to_box
+from eon.structure import Structure
 
 def save_prng_state():
     state = numpy.random.get_state()
@@ -26,46 +30,13 @@ def get_prng_state():
     state = pickle.load(fh)
     numpy.random.set_state(state)
 
-def length_angle_to_box(boxlengths, angles):
-    box = numpy.zeros( (3,3) )
-    angles *= numpy.pi/180.0
-    box[0][0] = 1.0
-    box[1][0] = numpy.cos(angles[0])
-    box[1][1] = numpy.sin(angles[0])
-    box[2][0] = numpy.cos(angles[1])
-    box[2][1] = (numpy.cos(angles[2])-box[1][0]*box[2][0])/box[1][1]
-    box[2][2] = numpy.sqrt(1.0-box[2][0]**2-box[2][1]**2)
-    box[0,:]*=boxlengths[0]
-    box[1,:]*=boxlengths[1]
-    box[2,:]*=boxlengths[2]
-    return box
-
-def box_to_length_angle(box):
-    lengths = numpy.zeros(3)
-    lengths[0] = numpy.linalg.norm(box[0,:])
-    lengths[1] = numpy.linalg.norm(box[1,:])
-    lengths[2] = numpy.linalg.norm(box[2,:])
-    angles = numpy.zeros(3)
-    angles[0] = numpy.arccos(numpy.dot(box[0,:]/lengths[0],box[1,:]/lengths[1]))
-    angles[1] = numpy.arccos(numpy.dot(box[0,:]/lengths[0],box[2,:]/lengths[2]))
-    angles[2] = numpy.arccos(numpy.dot(box[1,:]/lengths[1],box[2,:]/lengths[2]))
-    angles *= 180.0/numpy.pi
-    return lengths, angles
+# Re-export cell helpers (used by callers / POSCAR path)
+__all_cell__ = ("length_angle_to_box", "box_to_length_angle")
 
 
 def _frame_to_atoms(frame):
-    '''Convert a readcon.ConFrame to an eon Atoms object.'''
-    num_atoms = len(frame)
-    a = atoms.Atoms(num_atoms)
-    boxlengths = numpy.array(list(frame.cell))
-    boxangles = numpy.array(list(frame.angles))
-    a.box = length_angle_to_box(boxlengths, boxangles)
-    for i, atom in enumerate(frame.atoms):
-        a.r[i] = [atom.x, atom.y, atom.z]
-        a.names[i] = atom.symbol
-        a.mass[i] = atom.mass if atom.mass is not None else 0.0
-        a.free[i] = 0 if any(atom.fixed) else 1
-    return a
+    """Convert a readcon.ConFrame to a Structure (canonical bridge)."""
+    return Structure.from_conframe(frame)
 
 
 def loadcons(filename):
@@ -85,7 +56,7 @@ def loadposcars(filename):
 
 def loadcon(filein, reset = True):
     '''
-    Load a con file
+    Load a con file via readcon; return a Structure.
         filein: may be either a filename or a file-like object
     '''
     if hasattr(filein, 'readline'):
@@ -100,19 +71,23 @@ def loadcon(filein, reset = True):
     return _frame_to_atoms(frames[0])
 
 def _atoms_to_frame(p):
-    '''Convert an eon Atoms object to a readcon.ConFrame.'''
+    """Convert a Structure (or Structure-like) to a readcon.ConFrame."""
+    if isinstance(p, Structure):
+        return p.to_conframe()
     lengths, angles = box_to_length_angle(p.box)
     atom_list = []
     for i in range(len(p)):
-        atom_list.append(readcon.Atom(
-            symbol=p.names[i],
-            x=float(p.r[i][0]),
-            y=float(p.r[i][1]),
-            z=float(p.r[i][2]),
-            fixed=[p.free[i] == 0] * 3,
-            atom_id=i + 1,
-            mass=float(p.mass[i]),
-        ))
+        atom_list.append(
+            readcon.Atom(
+                symbol=p.names[i],
+                x=float(p.r[i][0]),
+                y=float(p.r[i][1]),
+                z=float(p.r[i][2]),
+                fixed=[p.free[i] == 0] * 3,
+                atom_id=i + 1,
+                mass=float(p.mass[i]),
+            )
+        )
     return readcon.ConFrame(
         cell=list(lengths),
         angles=list(angles),
@@ -123,9 +98,9 @@ def _atoms_to_frame(p):
 
 def savecon(fileout, p, w = 'w'):
     '''
-    Save a con file
+    Save a con file via readcon.
         fileout: can be either a file name or a file-like object
-        p:       information (in the form of an atoms object) to save
+        p:       Structure (or Structure-like) to save
         w:       write/append flag
     '''
     frame = _atoms_to_frame(p)
@@ -190,7 +165,7 @@ def save_results_dat(fileout, results):
 
 def modify_config(config_path, changes):
     parser = configparser.ConfigParser()
-    parser.read(config.config_path)
+    parser.read(config_path)
     for change in changes:
         parser.set(*change)
     config_str_io = StringIO()
@@ -250,9 +225,9 @@ def loadposcar(filein):
     NumAtomsPerType = []
     for l in line:
         NumAtomsPerType.append(int(l))
-    # Now have enough info to make the atoms object.
+    # Now have enough info to make the Structure object.
     num_atoms = sum(NumAtomsPerType)
-    p = atoms.Atoms(num_atoms)
+    p = Structure(num_atoms)
     # Fill in the box.
     p.box = box
     # Line 7: selective or cartesian

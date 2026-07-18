@@ -201,7 +201,10 @@ VectorXi eonc::Prefactor::movedAtoms(const Parameters &parameters, Matter *min1,
          parameters.prefactor_options.min_displacement) ||
         (diffMin2.row(i).norm() >
          parameters.prefactor_options.min_displacement)) {
-      if (!(moved.array() == i).any()) {
+      // Avoid Eigen Array == scalar in boolean context (C++20 / Eigen 3.3
+      // manylinux toolchains reject Array comparison as bool).
+      if (std::find(moved.data(), moved.data() + nMoved, i) ==
+          moved.data() + nMoved) {
         moved[nMoved] = i;
         nMoved++;
       }
@@ -210,7 +213,8 @@ VectorXi eonc::Prefactor::movedAtoms(const Parameters &parameters, Matter *min1,
 
         if (diffRSaddle < parameters.prefactor_options.within_radius &&
             (!saddle->getFixed(j))) {
-          if (!(moved.array() == j).any()) {
+          if (std::find(moved.data(), moved.data() + nMoved, j) ==
+              moved.data() + nMoved) {
             moved[nMoved] = j;
             nMoved++;
           }
@@ -266,7 +270,8 @@ VectorXi eonc::Prefactor::movedAtomsPct(const Parameters &parameters,
     int maxi = mini;
     for (int i = 0; i < nAtoms; i++) {
       if (diff[i] >= diff[maxi]) {
-        if (!(moved.array() == i).any()) {
+        if (std::find(moved.data(), moved.data() + nMoved, i) ==
+            moved.data() + nMoved) {
           maxi = i;
         }
       }
@@ -287,7 +292,8 @@ VectorXi eonc::Prefactor::movedAtomsPct(const Parameters &parameters,
       if (diffRSaddle < parameters.prefactor_options.within_radius &&
           (!saddle->getFixed(j))) {
 
-        if (!(moved.array() == j).any()) {
+        if (std::find(moved.data(), moved.data() + totalAtoms, j) ==
+            moved.data() + totalAtoms) {
           moved[totalAtoms++] = j;
         }
       }

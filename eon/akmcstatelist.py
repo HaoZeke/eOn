@@ -11,7 +11,6 @@
 #
 """ The statelist module. """
 
-from eon.config import config
 import logging
 logger = logging.getLogger('statelist')
 import math
@@ -21,7 +20,6 @@ from eon import atoms
 from eon import akmcstate
 from eon import statelist
 
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 
@@ -34,8 +32,10 @@ class AKMCStateList(statelist.StateList):
         max_thermal_window,
         initial_state=None,
         filter_hole=False,
-        config: ConfigClass = EON_CONFIG,
+        config: ConfigClass = None,
     ):
+        if config is None:
+            raise TypeError("akmcstatelist requires a ConfigClass instance")
         self.config = config
         statelist.StateList.__init__(self, akmcstate.AKMCState, initial_state, self.config)
         # aKMC data.
@@ -86,7 +86,7 @@ class AKMCStateList(statelist.StateList):
                     conf = product.get_process_product(id)
 
                     # The process is known but has not been accepted yet.
-                    if atoms.match(reactant_conf, conf, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, False):
+                    if atoms.match(reactant_conf, conf, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, False, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
 
                         # Reverse process table should be updated to ensure that the two processes (reac->prod & proc->reac) are symmetric.
                         reactant.load_process_table()
@@ -246,7 +246,7 @@ class AKMCStateList(statelist.StateList):
                     for state in energetically_close:
                         p = state.get_reactant()
                         # print "atoms.match between state, process, state: ",i," ",j," ",state
-                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True):
+                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                             # Update the reactant state to point at the new state id.
                             # print "structures match"
                             self.register_process(i.number, state.number, j)
@@ -276,7 +276,7 @@ class AKMCStateList(statelist.StateList):
                     for state in energetically_close:
                         p = state.get_reactant()
                         # print "atoms.match between state, process, state: ",i," ",j," ",state
-                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True):
+                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                             # Update the reactant state to point at the new state id.
                             # print "structures match"
                             self.register_process(i.number, state.number, j)
@@ -300,7 +300,7 @@ class AKMCStateList(statelist.StateList):
                     for state in energetically_close:
                         p = state.get_reactant()
                         # print "atoms.match between state, process, state: ",i," ",j," ",state
-                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True):
+                        if atoms.match(p, pnew, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, True, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical):
                             # Update the reactant state to point at the new state id.
                             # print "structures match"
                             self.register_process(i.number, state.number, j)

@@ -16,10 +16,21 @@ class PRState(state.State):
     search_result_header = "%8s %10s\n" % ("wuid", "result")
     search_result_header += "-" * len(search_result_header) + '\n'
     def __init__(self, statepath, statenumber, statelist, previous_state_num = -1,
-                 reactant_path = None):
+                 reactant_path = None, config=None):
         """ Creates a new state, with lazily loaded data. """
-        state.State.__init__(self,statepath, statenumber,statelist, previous_state_num,
-                    reactant_path)
+        # Match StateList / AKMCState: accept config= (PR previously dropped it).
+        kwargs = {}
+        if config is not None:
+            kwargs["config"] = config
+        state.State.__init__(
+            self,
+            statepath,
+            statenumber,
+            statelist,
+            previous_state_num,
+            reactant_path,
+            **kwargs,
+        )
 
     def add_process(self, result):
         """ Adds a process to this state. """

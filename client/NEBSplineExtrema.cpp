@@ -248,15 +248,15 @@ void printImageData(
   }
 }
 
-eonc::io::IoStatus writePathCon(
+std::vector<readcon::ConFrame> pathToConFrames(
     const std::vector<std::shared_ptr<Matter>> &path,
     const std::vector<std::shared_ptr<AtomMatrix>> &tangent,
     const std::vector<std::shared_ptr<EigenmodeStrategy>> &eigenmode_solvers,
-    long numImages, bool estimateEigenvalues, std::string filename,
+    long numImages, bool estimateEigenvalues,
     std::optional<size_t> bandIndex) {
   const size_t nframes = static_cast<size_t>(numImages) + 2;
   if (path.size() < nframes) {
-    return eonc::io::IoStatus::InvalidArgument;
+    return {};
   }
 
   double distTotal = 0.0;
@@ -272,10 +272,23 @@ eonc::io::IoStatus writePathCon(
                                        distTotal, bandIndex));
   }
 
-  // Clone-based single write of the full band (no per-image file re-read).
   std::vector<std::shared_ptr<Matter>> band(
       path.begin(), path.begin() + static_cast<std::ptrdiff_t>(nframes));
-  return eonc::io::writeNebPath(std::move(filename), band, metas);
+  return eonc::io::buildNebPathFrames(band, metas);
+}
+
+eonc::io::IoStatus writePathCon(
+    const std::vector<std::shared_ptr<Matter>> &path,
+    const std::vector<std::shared_ptr<AtomMatrix>> &tangent,
+    const std::vector<std::shared_ptr<EigenmodeStrategy>> &eigenmode_solvers,
+    long numImages, bool estimateEigenvalues, std::string filename,
+    std::optional<size_t> bandIndex) {
+  auto frames = pathToConFrames(path, tangent, eigenmode_solvers, numImages,
+                                estimateEigenvalues, bandIndex);
+  if (frames.empty()) {
+    return eonc::io::IoStatus::InvalidArgument;
+  }
+  return eonc::io::writeConFrames(std::move(filename), frames);
 }
 
 } // namespace eonc::neb

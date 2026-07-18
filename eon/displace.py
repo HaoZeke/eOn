@@ -8,11 +8,12 @@ import numpy
 from eon import atoms
 from eon import fileio as io
 
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 class DisplacementManager:
-    def __init__(self, reactant, moved_atoms, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, moved_atoms, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("DisplacementManager requires a ConfigClass instance")
         self.config = config
         self.reactant = reactant
         if self.config.displace_random_weight > 0:
@@ -151,7 +152,9 @@ class DisplaceError(Exception):
     pass
 
 class Displace:
-    def __init__(self, reactant, std_dev, radius, hole_epicenters, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev, radius, hole_epicenters, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         '''Reactant is an Atoms object. std_dev is the standard deviation
            of the normal distribution used to create the random displacements.
            radius is the distance to neighbors that will also be displaced.
@@ -278,7 +281,9 @@ class Displace:
         return new_epicenters
 
 class Undercoordinated(Displace):
-    def __init__(self, reactant, max_coordination, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, max_coordination, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.max_coordination = max_coordination
@@ -314,7 +319,9 @@ class Undercoordinated(Displace):
         return self.get_displacement(epicenter)
 
 class Leastcoordinated(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.leastcoordinated_atoms = []
@@ -338,7 +345,9 @@ class Leastcoordinated(Displace):
         return self.get_displacement(epicenter)
 
 class ListedAtoms(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, displace_all=False, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, displace_all=False, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.displace_all = displace_all
@@ -365,7 +374,9 @@ class ListedAtoms(Displace):
         return self.get_displacement(epicenter)
 
 class ListedTypes(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, displace_all=False, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, displace_all=False, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
 #        print self.config.disp_listed_types
@@ -393,7 +404,9 @@ class ListedTypes(Displace):
 
 
 class Random(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         # each item in this list is the index of a free atom
@@ -412,7 +425,9 @@ class Random(Displace):
         return self.get_displacement(epicenter)
 
 class NotFCCorHCP(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.not_HCP_or_FCC_atoms = []
@@ -437,7 +452,9 @@ class NotFCCorHCP(Displace):
         return self.get_displacement(epicenter)
 
 class NotTCPorBCC(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.not_TCP_or_BCC_atoms = []
@@ -462,7 +479,9 @@ class NotTCPorBCC(Displace):
         return self.get_displacement(epicenter)
 
 class NotTCP(Displace):
-    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = EON_CONFIG):
+    def __init__(self, reactant, std_dev=0.05, radius=5.0, hole_epicenters=None, cutoff=3.3, use_covalent=False, covalent_scale=1.3, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("displace helper requires a ConfigClass instance")
         Displace.__init__(self, reactant, std_dev, radius, hole_epicenters, config)
 
         self.not_TCP_atoms = []

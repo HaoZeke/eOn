@@ -278,7 +278,8 @@ public:
 bool eonc::helpers::relaxMatter(Matter &matter, const Parameters &params,
                                 bool quiet, bool writeMovie, bool checkpoint,
                                 std::string prefixMovie,
-                                std::string prefixCheckpoint) {
+                                std::string prefixCheckpoint,
+                                std::vector<readcon::ConFrame> *outFrames) {
   eonc::log::Scoped m_log;
   auto objf = std::make_shared<MatterObjectiveFunction>(matter, params);
   auto optim = eonc::helpers::create::mkOptim(
@@ -294,8 +295,13 @@ bool eonc::helpers::relaxMatter(Matter &matter, const Parameters &params,
     metadata.energy = matter.getPotentialEnergy();
     metadata.scalars.push_back({"step_size", stepSize});
     metadata.scalars.push_back({"convergence", objf->getConvergence()});
-    if (!eonc::io::io_ok(matter.matter2con(min.str(), append, &metadata))) {
-      QUILL_LOG_WARNING(m_log, "Failed to write movie frame {}", min.str());
+    if (outFrames) {
+      outFrames->push_back(eonc::io::matterToConFrame(matter, &metadata));
+    }
+    if (writeMovie) {
+      if (!eonc::io::io_ok(matter.matter2con(min.str(), append, &metadata))) {
+        QUILL_LOG_WARNING(m_log, "Failed to write movie frame {}", min.str());
+      }
     }
 
     if (params.debug_options.write_deprecated_outs) {
@@ -312,7 +318,7 @@ bool eonc::helpers::relaxMatter(Matter &matter, const Parameters &params,
       }
     }
   };
-  if (writeMovie) {
+  if (writeMovie || outFrames) {
     write_movie_frame(0, false, 0.0);
   }
 
@@ -344,7 +350,7 @@ bool eonc::helpers::relaxMatter(Matter &matter, const Parameters &params,
                       matter.getPotentialEnergy());
     }
 
-    if (writeMovie) {
+    if (writeMovie || outFrames) {
       write_movie_frame(static_cast<uint64_t>(iteration), true, stepSize);
     }
 

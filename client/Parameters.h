@@ -124,10 +124,10 @@ public:
     bool make_template_input{true};
   } socket_nwchem_options;
 
-  // [RgpotPot] — in-process rgpot NWChemPot / CPMDPot (dlopen engines; no
-  // potserv)
+  // [RgpotPot] — in-process rgpot (dlopen engines; no potserv). Packaging
+  // prefers metatomic/xtb via RGPOT over fat -Dwith_metatomic / -Dwith_xtb.
   struct rgpot_options_t {
-    /// "nwchemc" or "cpmdc" (also accepts nwchem / cpmd / NWChem / CPMD)
+    /// "nwchemc", "cpmdc", "metatomic", or "xtb"
     std::string backend{"nwchemc"};
     std::string basis{"sto-3g"};
     std::string theory{"scf"};
@@ -143,6 +143,21 @@ public:
     int memory_mb{0};
     std::string scratch_dir{};
     std::string input_block{};
+    // Metatomic dlopen (backend=metatomic)
+    std::string model_path{};
+    std::string device{"cpu"};
+    std::string length_unit{"angstrom"};
+    std::string extensions_directory{};
+    bool check_consistency{false};
+    double uncertainty_threshold{-1.0};
+    bool torch_determinism_strict{false};
+    // XTB dlopen (backend=xtb); dual-read [XTBPot] when unset
+    std::string xtb_paramset{"GFN2xTB"};
+    double xtb_accuracy{1.0};
+    double xtb_electronic_temperature{300.0};
+    int xtb_max_iterations{250};
+    double xtb_charge{0.0};
+    int xtb_uhf{0};
   } rgpot_options;
 
   // [Structure Comparison] //
@@ -253,6 +268,12 @@ public:
     double torque_max{1.0};
     double torque_min{0.1};
     bool remove_rotation{false};
+    // Mode estimation for dimer: classical rotation loop, or FD min-mode
+    // (Lanczos/Davidson) replacing constrained IDimerRot / Dimer::rotate.
+    DimerRotationBackend rotation_backend{DimerRotationBackend::Classical};
+    // LOR relative residual stop: ||F_perp|| / (|C_N|+1) < max(1e-3, this).
+    // Independent of classical torque_min (angular criterion).
+    double lor_residual_tol{0.1};
   } dimer_options;
 
   // [GPR Dimer] //
@@ -421,9 +442,18 @@ public:
   } prefactor_options;
 
   // [Hessian] //
+  // atom_list: mobile/displaced atoms for FD (hybrid/PHVA-class active set),
+  // or "All" = every non-fixed atom. Intersected with free flags in HessianJob.
   struct hessian_options_t {
     std::string atom_list{"All"};
     double zero_freq_value{1e-6};
+    // FD scheme: "one_sided" (default, ~3M force evals) or "central" (~6M).
+    // Step size is Main.finite_difference (dx).
+    std::string fd_scheme{"one_sided"};
+    // If true and checkpoint_path is set, resume FD columns from checkpoint.
+    bool resume{false};
+    // Column checkpoint file (e.g. hessian.ckpt). Cleared on successful finish.
+    std::string checkpoint_path{""};
   } hessian_options;
 
   // [Nudged Elastic Band] //

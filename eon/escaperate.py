@@ -14,14 +14,16 @@ import shutil
 import sys
 
 from eon import version
-from eon.config import config
+from eon.config import ConfigClass
 from eon import atoms
 from eon import communicator
 from eon import fileio as io
 from eon import locking
 from eon import prstatelist
 
-def parallelreplica():
+def parallelreplica(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("parallelreplica requires a ConfigClass instance")
     logger.info('Eon version: %s', version)
     # First of all, does the root directory even exist?
     if not os.path.isdir(config.path_root):
@@ -29,17 +31,17 @@ def parallelreplica():
         sys.exit(1)
 
     # load metadata
-    start_state_num, time, wuid = get_pr_metadata()
+    start_state_num, time, wuid = get_pr_metadata(config)
     logger.info("Simulation time is %e", time)
-    states = get_statelist()
+    states = get_statelist(config)
     current_state = states.get_state(start_state_num)
 
     # get communicator
-    comm = communicator.get_communicator()
+    comm = communicator.get_communicator(config)
 
     # Register all the results. There is no need to ever discard processes
     # like we do with akmc. There is no confidence to calculate.
-    num_registered, transition, sum_spdup = register_results(comm, current_state, states)
+    num_registered, transition, sum_spdup = register_results(comm, current_state, states, config)
 
     logger.info("Time in current state is %e", current_state.get_time())
 
@@ -50,7 +52,7 @@ def parallelreplica():
         #current_state, previous_state = step(time, current_state, states, transition)
         time += transition['time']
 
-    wuid = make_searches(comm, current_state, wuid)
+    wuid = make_searches(comm, current_state, wuid, config)
 
     # Write out metadata. XXX:ugly
     metafile = os.path.join(config.path_results, 'info.txt')
@@ -59,7 +61,9 @@ def parallelreplica():
     parser.write(open(metafile, 'w'))
     io.save_prng_state()
 
-def step(current_time, current_state, states, transition):
+def step(current_time, current_state, states, transition, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("step requires a ConfigClass instance")
     next_state = states.get_product_state(current_state.number, transition['process_id'])
     next_state.zero_time()
     dynamics = io.Dynamics(os.path.join(config.path_results, "dynamics.txt"))
@@ -74,11 +78,15 @@ def step(current_time, current_state, states, transition):
 
     return current_state, previous_state
 
-def get_statelist():
+def get_statelist(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_statelist requires a ConfigClass instance")
     initial_state_path = os.path.join(config.path_root, 'pos.con')
-    return prstatelist.PRStateList(initial_state_path)
+    return prstatelist.PRStateList(initial_state_path, config=config)
 
-def get_pr_metadata():
+def get_pr_metadata(config: ConfigClass = None):
+    if config is None:
+        raise TypeError("get_pr_metadata requires a ConfigClass instance")
     if not os.path.isdir(config.path_results):
         os.makedirs(config.path_results)
     metafile = os.path.join(config.path_results, 'info.txt')
@@ -111,7 +119,9 @@ def write_pr_metadata(parser, current_state_num, time, wuid):
     parser.set('Simulation Information', 'time_simulated', str(time))
     parser.set('Simulation Information', 'current_state', str(current_state_num))
 
-def make_searches(comm, current_state, wuid):
+def make_searches(comm, current_state, wuid, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("make_searches requires a ConfigClass instance")
     reactant = current_state.get_reactant()
     #XXX:what if the user changes the bundle size?
     num_in_buffer = comm.get_queue_size()*config.comm_job_bundle_size
@@ -152,7 +162,9 @@ def make_searches(comm, current_state, wuid):
     logger.info("Created " + str(num_to_make) + " searches")
     return wuid
 
-def register_results(comm, current_state, states):
+def register_results(comm, current_state, states, config: ConfigClass = None):
+    if config is None:
+        raise TypeError("register_results requires a ConfigClass instance")
     logger.info("Registering results")
     if os.path.isdir(config.path_jobs_in):
         shutil.rmtree(config.path_jobs_in)
@@ -200,7 +212,7 @@ def register_results(comm, current_state, states):
 
             for i in range(0, numres):
                 product2 = io.loadcon (os.path.join("states", "0", "procdata", "product_%i.con" % i))
-                if atoms.match(product, product2,config.comp_eps_r,config.comp_neighbor_cutoff,True):
+                if atoms.match(product, product2, config.comp_eps_r, config.comp_neighbor_cutoff, True, check_rotation=config.comp_check_rotation, use_identical=config.comp_use_identical):
                     if flag == 0:
                         state_match = number_state[i]
                         number_state[numres] = state_match
@@ -256,7 +268,9 @@ def register_results(comm, current_state, states):
         logger.info("Average speedup is  %f", speedup/num_registered)
     return num_registered, transition, speedup
 
-def main():
+def main(config: ConfigClass = None):
+    if config is None:
+        config = ConfigClass()
     optpar = optparse.OptionParser(usage="usage: %prog [options] config.ini")
     optpar.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False,help="only write to the log file")
     optpar.add_option("-n", "--no-submit", action="store_true", dest="no_submit", default=False,help="don't submit searches; only register finished results")
@@ -330,9 +344,9 @@ def main():
         if config.comm_type == 'mpi':
             from eon.mpiwait import mpiwait
             while True:
-                mpiwait()
-                parallelreplica()
-        parallelreplica()
+                mpiwait(config.mpi_poll_period)
+                parallelreplica(config)
+        parallelreplica(config)
     else:
         logger.warning("Couldn't get lock")
         sys.exit(1)

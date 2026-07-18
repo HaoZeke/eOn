@@ -15,10 +15,10 @@ import shutil
 from io import StringIO
 from typing import Callable, Optional
 
-from eon.config import config
+from eon.config import ConfigClass
 
 
-def select_job_runner(job: str) -> Optional[Callable[[], None]]:
+def select_job_runner(job: str) -> Optional[Callable[[ConfigClass], None]]:
     """Return the registered server runner for *job*, or None for fallback.
 
     Job modules are imported lazily so ``import eon.server`` stays light and
@@ -44,7 +44,7 @@ def select_job_runner(job: str) -> Optional[Callable[[], None]]:
     return None
 
 
-def _warn_pos_con_in_potfiles() -> None:
+def _warn_pos_con_in_potfiles(config: ConfigClass) -> None:
     fnames = [os.path.basename(f) for f in glob.glob(os.path.join(config.path_pot, "*"))]
     if "pos.con" in fnames:
         print(
@@ -54,13 +54,13 @@ def _warn_pos_con_in_potfiles() -> None:
         )
 
 
-def _fallback_single_job() -> None:
+def _fallback_single_job(config: ConfigClass) -> None:
     """Submit the current working directory as one client job via communicator."""
     from eon import communicator
     from eon import fileio as io
 
     config.path_scratch = config.path_root
-    comm = communicator.get_communicator()
+    comm = communicator.get_communicator(config)
 
     invariants = dict(io.load_potfiles(config.path_pot))
 
@@ -79,17 +79,24 @@ def _fallback_single_job() -> None:
     comm.submit_jobs([job], invariants)
 
 
-def server() -> None:
-    """Initialize config and dispatch to the configured main job."""
+def server(config: ConfigClass | None = None) -> None:
+    """Initialize config and dispatch to the configured main job.
+
+    *config* defaults to the process-edge module singleton for CLI
+    compatibility; callers should prefer constructing ``ConfigClass()`` and
+    passing it explicitly.
+    """
+    if config is None:
+        config = ConfigClass()
     config.init()
-    _warn_pos_con_in_potfiles()
+    _warn_pos_con_in_potfiles(config)
 
     job = config.main_job.lower()
     runner = select_job_runner(job)
     if runner is not None:
-        runner()
+        runner(config)
     else:
-        _fallback_single_job()
+        _fallback_single_job(config)
 
 
 def main() -> None:

@@ -5,7 +5,7 @@ name = "eOn"
 # NOTE: not every platform has 100% support other than Linux
 # e.g. LAMMPS and NWChem do not have builds for Windows
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
-version = "2.16.0"
+version = "2.17.0"
 
 [tasks]
 gen-ref = { cmd = "cd scripts/regression && snakemake -c4", description = "Generate SVN regression reference data (default: svn-Jul_01_2024)" }
@@ -36,7 +36,9 @@ rust = ">=1.88"
 
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
-readcon = ">=0.8.0, <0.9"
+readcon = ">=0.13.0, <0.14"
+vesin = ">=0.5.2, <0.7"
+nanobind = ">=2.4.0, <3"  # pyeonclient (stable ABI / free-threaded); not pybind11
 
 [pypi-options]
 # TODO(rg): only if the CPU version is needed
@@ -70,6 +72,8 @@ ams = {features = ["ams"]}
 nwchem = {features = ["nwchem"]}
 docs = {features = ["docs"]}
 docs-mta = {features = ["docs", "develop", "metatomic"]}
+# Fat/RGPOT/ASE metatomic backend bench (compare JSON + docs figure)
+mta-bench = { features = ["mta-bench", "metatomic", "develop"] }
 rel = {features = ["metatomic", "release"]}
 serve = {features = ["serve"]}
 dev-serve-mta = {features = ["serve", "metatomic", "develop"]}
@@ -88,6 +92,7 @@ platforms = ["linux-64", "osx-arm64", "win-64"]
 [feature.metatomic.pypi-dependencies]
 torch = ">=2.10, <2.11"
 metatomic-torch = ">=0.1.15, <0.2"
+metatomic-ase = ">=0.1.1, <0.2"
 metatensor-torch = ">=0.10.0, <0.11"
 vesin-torch = ">=0.5.2, <0.6"
 vesin = ">=0.5.2, <0.6"
@@ -134,8 +139,10 @@ uv = "*"
 [feature.docs.target.linux-64.dependencies]
 ira = ">=2"
 patchelf = "*"
+enchant = ">=2"
 
 [feature.docs.pypi-dependencies]
+matplotlib = "*"
 meson-python = ">=0.17"
 myst-nb = ">=1.1"
 sphinx-design = "*"
@@ -175,6 +182,29 @@ platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [feature.serve.dependencies]
 capnproto = ">=1.0,<2"
+
+# --- mta-bench: reproducible fat vs RGPOT vs ASE backend comparison ----------
+# Usage (from repo root):
+#   pixi run -e mta-bench mta-backend-bench
+# Needs PET-MAD under subprojects/gpr_optim/bench_data/petmad/ (rsynced by the
+# driver when ../gpr_optim exists) or EON_PET_MAD_MODEL / EON_PET_MAD_POS.
+[feature.mta-bench]
+platforms = ["linux-64", "osx-arm64"]
+
+[feature.mta-bench.pypi-dependencies]
+matplotlib = ">=3.8"
+
+[feature.mta-bench.tasks.mta-backend-bench]
+description = "Build fat+ASE pyeonclient, compare metatomic backends, write docs JSON + figure"
+cmd = "bash scripts/run_metatomic_backend_bench.sh"
+
+[feature.mta-bench.tasks.mta-backend-bench-skip-build]
+description = "Re-run compare+plot only (reuse bbdir-mta-bench*)"
+cmd = "EON_MTA_BENCH_SKIP_BUILD=1 bash scripts/run_metatomic_backend_bench.sh"
+
+[feature.mta-bench.tasks.mta-backend-plot]
+description = "Regenerate docs figure from committed JSON only (no build)"
+cmd = "python scripts/plot_metatomic_backend_bench.py"
 
 [feature.metatomic.tasks.mkeon]
 args = ["buildtype"]

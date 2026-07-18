@@ -11,6 +11,7 @@
 */
 #pragma once
 
+#include "ConFileIO.h"
 #include "Eigen.h"
 #include "EigenmodeStrategy.h"
 #include "EonLogger.h"
@@ -18,6 +19,7 @@
 #include <filesystem>
 #include <memory>
 #include <optional>
+#include <readcon-core.hpp>
 #include <string>
 #include <vector>
 
@@ -43,6 +45,15 @@ void printImageData(
     const std::vector<std::shared_ptr<EigenmodeStrategy>> &eigenmode_solvers,
     long numImages, bool estimateEigenvalues, bool writeToFile, size_t idx,
     eonc::log::Scoped log);
+
+/// Build stamped ConFrames for a NEB band (same metadata as writePathCon).
+/// Empty on invalid path size. Does not write to disk.
+[[nodiscard]] std::vector<readcon::ConFrame> pathToConFrames(
+    const std::vector<std::shared_ptr<Matter>> &path,
+    const std::vector<std::shared_ptr<AtomMatrix>> &tangent,
+    const std::vector<std::shared_ptr<EigenmodeStrategy>> &eigenmode_solvers,
+    long numImages, bool estimateEigenvalues,
+    std::optional<size_t> bandIndex = std::nullopt);
 
 /// Write a NEB band as a multi-frame .con via readcon ConFrameBuilder::clone().
 [[nodiscard]] eonc::io::IoStatus writePathCon(

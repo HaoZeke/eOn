@@ -54,7 +54,8 @@ AtomMatrix makeOrthogonal(
 bool relaxMatter(Matter &matter, const Parameters &params, bool quiet = false,
                  bool writeMovie = false, bool checkpoint = false,
                  std::string prefixMovie = std::string(),
-                 std::string prefixCheckpoint = std::string());
+                 std::string prefixCheckpoint = std::string(),
+                 std::vector<readcon::ConFrame> *outFrames = nullptr);
 void getTime(double *real, double *user, double *sys);
 bool existsFile(std::string filename); // does filename exist
 std::string

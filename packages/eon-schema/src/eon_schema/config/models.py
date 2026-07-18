@@ -612,7 +612,7 @@ class PotentialConfig(BaseModel):
      - ``pyamff``: Python implementation of the AMFF potential.
      - ``python``: Custom python potential.
      - ``qsc``: Quantum Sutton-Chen potential, for FCC metals.
-     - ``rgpot``: In-process rgpot backends (NWChem / CPMD via dlopen engines).
+     - ``rgpot``: In-process rgpot backends (NWChem / CPMD / metatomic / xTB via dlopen).
      - ``spce``: Simple Point Charge model for water.
      - ``sw_si``: Stillinger-Weber potential, for silicon.
      - ``tersoff_si``: Tersoff pair potential with angular terms, for silicon.
@@ -703,7 +703,11 @@ class RgpotPot(BaseModel):
 
     backend: str = Field(
         default="nwchemc",
-        description="rgpot backend: 'nwchemc' or 'cpmdc' (also accepts nwchem / cpmd).",
+        description=(
+            "rgpot backend: 'nwchemc', 'cpmdc', 'metatomic', or 'xtb' "
+            "(aliases: nwchem/cpmd/mta/gfn). metatomic/xtb dlopen "
+            "libmetatomic_engine.so / libxtb_engine.so for packaging."
+        ),
     )
     basis: str = Field(
         default="sto-3g", description="Basis set for the NWChem backend."
@@ -724,11 +728,57 @@ class RgpotPot(BaseModel):
     multiplicity: int = Field(default=1, description="Spin multiplicity.")
     engine_path: str = Field(
         default="",
-        description="Explicit path to the engine shared library (libnwchemc / libcpmdc).",
+        description=(
+            "Engine .so path (libnwchemc / libcpmdc / "
+            "libmetatomic_engine / libxtb_engine)."
+        ),
     )
     engine_library: str = Field(
         default="",
         description="Alias for engine_path; used when engine_path is empty.",
+    )
+    model_path: str = Field(
+        default="", description="Metatomic model path when backend=metatomic."
+    )
+    device: str = Field(
+        default="cpu", description="Metatomic device when backend=metatomic."
+    )
+    length_unit: str = Field(
+        default="angstrom",
+        description="Metatomic length unit when backend=metatomic.",
+    )
+    extensions_directory: str = Field(
+        default="",
+        description="Metatomic extensions directory when backend=metatomic.",
+    )
+    check_consistency: bool = Field(
+        default=False,
+        description="Metatomic consistency checks when backend=metatomic.",
+    )
+    uncertainty_threshold: float = Field(
+        default=-1.0,
+        description="Metatomic uncertainty threshold when backend=metatomic.",
+    )
+    torch_determinism_strict: bool = Field(
+        default=False,
+        description="Strict Torch determinism when backend=metatomic.",
+    )
+    paramset: Literal["GFNFF", "GFN0xTB", "GFN1xTB", "GFN2xTB"] = Field(
+        default="GFN2xTB",
+        description="XTB paramset when backend=xtb.",
+    )
+    accuracy: float = Field(
+        default=1.0, description="XTB accuracy when backend=xtb."
+    )
+    electronic_temperature: float = Field(
+        default=300.0,
+        description="XTB electronic temperature (K) when backend=xtb.",
+    )
+    max_iterations: int = Field(
+        default=250, description="XTB max iterations when backend=xtb."
+    )
+    uhf: int = Field(
+        default=0, description="XTB unpaired electrons when backend=xtb."
     )
     engine_root: str = Field(
         default="", description="Engine installation root (NWCHEM_ROOT / CPMD_ROOT)."

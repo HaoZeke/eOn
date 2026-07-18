@@ -1,10 +1,15 @@
 # Standalone PyPI package: pyeonclient
 #
-# Base wheels (always): RGPOT linked, no torch NEEDED — small manylinux.
+# Base wheels (always): RGPOT linked, no torch NEEDED - small manylinux.
 # Metatomic wheels (optional matrix): WITH_METATOMIC against CPU torch from PyPI
-#   (same distribution model as torch itself — not conda-forge-gated).
+#   (same distribution model as torch itself - not conda-forge-gated).
 #
 # Publish: tag pyeonclient-v* or workflow_dispatch with publish=true
+#
+# cibuildwheel version notes:
+# - v3.2+: CPython 3.14 (incl. freethreading cp314t) is default - no enable flag.
+# - v3.x still supports experimental cp313t via enable=cpython-freethreading.
+# - v4.0 removes 3.13 freethreading; we stay on v3.2.1 for both 313t + 314t.
 name: pyeonclient wheels
 concurrency:
   group: pyeonclient-wheels-${{ github.ref }}
@@ -20,9 +25,18 @@ on:
         description: "Also build CPU-metatomic wheels"
         type: boolean
         default: true
+  # NOTE: do not put paths: under push when also using tags:. With only tags
+  # listed (no branches), branch pushes never run. With tags+paths, a tag that
+  # does not touch those paths may not schedule either. Tags always run; branch
+  # pushes restricted to main + feat/* for CI cost.
   push:
     tags:
       - "pyeonclient-v*"
+    branches:
+      - "main"
+      - "feat/**"
+      - "fix/**"
+      - "ci/**"
   pull_request:
     paths:
       - "client/python/**"
@@ -48,29 +62,37 @@ jobs:
         include:
           - name: abi3-manylinux
             os: ubuntu-22.04
-            python: "3.12"
             free_threaded: false
             cibw_build: "cp312-manylinux_x86_64"
+            # empty: 3.14 freethreading is default in cibuildwheel 3.2+; base is abi3
+            cibw_enable: ""
             variant: base
+            build_frontend: "build"
           - name: cp313t-manylinux
             os: ubuntu-22.04
-            python: "3.13"
             free_threaded: true
             cibw_build: "cp313t-manylinux_x86_64"
+            # 3.13 freethreading still opt-in on cibuildwheel 3.x
+            cibw_enable: "cpython-freethreading"
             variant: base
+            build_frontend: "build"
           - name: cp314t-manylinux
             os: ubuntu-22.04
-            python: "3.14"
             free_threaded: true
             cibw_build: "cp314t-manylinux_x86_64"
+            # 3.14 freethreading is default - do NOT set cpython-freethreading
+            # (and do not use cibuildwheel 2.x which lacks cp314t tags).
+            cibw_enable: ""
             variant: base
-          # CPU Metatomic linked wheel (pip torch — not conda-forge)
+            build_frontend: "build"
           - name: abi3-manylinux-metatomic
             os: ubuntu-22.04
-            python: "3.12"
             free_threaded: false
             cibw_build: "cp312-manylinux_x86_64"
+            cibw_enable: ""
             variant: metatomic
+            # meson needs torch/metatensor modules in the *build* env
+            build_frontend: "build;args: --no-isolation"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -100,7 +122,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential gfortran cmake pkg-config \
-            libeigen3-dev ninja-build \
+            libeigen3-dev ninja-build zlib1g-dev \
             python3-pip patchelf
           cargo install cbindgen 2>/dev/null || \
             (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
@@ -111,9 +133,9 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         id: cfg
         run: |
-          # free-threaded: disable limited-api; metatomic: enable flags
           CFG=""
           if [[ "${{ matrix.free_threaded }}" == "true" ]]; then
+            # freethreaded CPython is not abi3
             CFG+="setup-args=-Dpython.allow_limited_api=false"$'\n'
           fi
           if [[ "${{ matrix.variant }}" == "metatomic" ]]; then
@@ -124,11 +146,8 @@ jobs:
             CFG+="setup-args=-Dwith_metatomic=false"$'\n'
             CFG+="setup-args=-Dwith_rgpot=true"$'\n'
           fi
-          # cibuildwheel uses CIBW_CONFIG_SETTINGS as space-separated
-          # key=value pairs; emit one line for the env file.
           {
             echo "CIBW_CONFIG_SETTINGS<<EOF"
-            # flatten to single line of setup-args=...
             while IFS= read -r line; do
               [[ -z "$line" ]] && continue
               echo -n "$line "
@@ -138,80 +157,57 @@ jobs:
           } >> "$GITHUB_ENV"
           echo "variant=${{ matrix.variant }}"
 
-      - uses: pypa/cibuildwheel@v2.23.3
+      # v3.2.1: 3.14 (+ freethreading) default; 3.13t via enable=cpython-freethreading
+      - uses: pypa/cibuildwheel@v3.2.1
         if: steps.gate.outputs.skip != 'true'
         env:
           CIBW_BUILD: ${{ matrix.cibw_build }}
-          CIBW_BUILD_FRONTEND: build
+          CIBW_ENABLE: ${{ matrix.cibw_enable }}
+          CIBW_BUILD_FRONTEND: ${{ matrix.build_frontend }}
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
           CIBW_ARCHS: native
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
-          CIBW_ENABLE: ${{ matrix.free_threaded && 'cpython-freethreading' || '' }}
           CIBW_ENVIRONMENT: >-
             PATH=/root/.cargo/bin:$PATH
             CARGO_HOME=/root/.cargo
+            LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:$LD_LIBRARY_PATH
             PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
             CMAKE_PREFIX_PATH=/usr/local
           CIBW_BEFORE_ALL_LINUX: |
-            yum install -y eigen3-devel gcc-gfortran patchelf || true
-            export CARGO_HOME=/root/.cargo
-            export PATH="/root/.cargo/bin:$PATH"
-            command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-            . /root/.cargo/env
-            command -v cbindgen || cargo install cbindgen
-            # Cap'n Proto (RGPOT / ptlrpc) — vendored into the wheel by auditwheel
-            if ! pkg-config --exists capnp 2>/dev/null; then
-              rm -rf /tmp/capnp-src /tmp/capnp-build
-              curl -fsSL -o /tmp/capnp.tgz \
-                https://capnproto.org/capnproto-c++-1.0.2.tar.gz
-              mkdir -p /tmp/capnp-src && tar -xzf /tmp/capnp.tgz -C /tmp/capnp-src --strip-components=1
-              cmake -S /tmp/capnp-src -B /tmp/capnp-build \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -DBUILD_TESTING=OFF
-              cmake --build /tmp/capnp-build -j$(nproc)
-              cmake --install /tmp/capnp-build
-              ldconfig || true
-            fi
-            if ! pkg-config --exists quill 2>/dev/null; then
-              rm -rf /tmp/quill-src /tmp/quill-build
-              curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz
-              mkdir -p /tmp/quill-src && tar -xzf /tmp/quill.tgz -C /tmp/quill-src --strip-components=1
-              cmake -S /tmp/quill-src -B /tmp/quill-build \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_INSTALL_PREFIX=/usr/local \
-                -DQUILL_BUILD_TESTS=OFF \
-                -DQUILL_BUILD_EXAMPLES=OFF
-              cmake --build /tmp/quill-build -j$(nproc)
-              cmake --install /tmp/quill-build
-            fi
+            bash scripts/pyeonclient_manylinux_deps.sh
           CIBW_BEFORE_BUILD: |
+            set -euo pipefail
+            export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}
             pip install -U pip nanobind meson ninja meson-python auditwheel
             pip install --only-binary=:all: numpy || pip install numpy
             if [[ "${{ matrix.variant }}" == "metatomic" ]]; then
-              # CPU torch from PyPI (not conda-forge)
+              # Must be visible to the build Python (no-isolation frontend).
               pip install --only-binary=:all: 'torch' \
                 || pip install 'torch' --index-url https://download.pytorch.org/whl/cpu
-              pip install 'metatensor' 'metatensor-torch' 'metatomic-torch' 'vesin' || true
+              pip install 'metatensor' 'metatensor-torch' 'metatomic-torch' 'vesin'
+              python -c "import torch, metatensor, metatensor.torch, metatomic.torch, vesin, pathlib; t=pathlib.Path(torch.__file__).resolve().parent; print('mta_modules_ok', torch.__version__, t); assert (t/'lib').is_dir(), t"
+              # so find_library(c10) / runtime can resolve torch libs during link+test
+              TORCH_LIB=$(python -c "import pathlib, torch; print(pathlib.Path(torch.__file__).resolve().parent / 'lib')")
+              export LD_LIBRARY_PATH="${TORCH_LIB}:/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}"
+              export LIBRARY_PATH="${TORCH_LIB}:${LIBRARY_PATH:-}"
+              echo "TORCH_LIB=${TORCH_LIB}"
+              ls "${TORCH_LIB}"/libc10* "${TORCH_LIB}"/libtorch* 2>/dev/null | head
             fi
-          # Vendor libcapnp/libkj (not on manylinux allowlist) + strip host RPATH.
-          # auditwheel when it works; our repair script always runs as the portableizer.
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
-            bash -c 'auditwheel repair -w {dest_dir} {wheel} 2>/dev/null
+            bash -c 'export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-};
+            auditwheel repair -w {dest_dir} {wheel} 2>/dev/null
             || cp -f {wheel} {dest_dir}/;
             bash scripts/pyeonclient_repair_wheel.sh {dest_dir}/pyeonclient-*.whl'
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: |
-            python -c "import pyeonclient as p, pathlib, subprocess; print(p.__version__, 'mta', p.built_with_metatomic(), 'rgpot', p.built_with_rgpot()); assert p.built_with_rgpot(); core=next(pathlib.Path(p.__file__).parent.glob('_core*.so')); out=subprocess.check_output(['readelf','-d',str(core)],text=True); assert 'libtorch' not in out; print('NEEDED_OK')"
+            python -c "import pyeonclient as p, pathlib, subprocess; print(p.__version__, 'mta', p.built_with_metatomic(), 'rgpot', p.built_with_rgpot()); assert p.built_with_rgpot(); core=next(pathlib.Path(p.__file__).parent.glob('_core*.so')); out=subprocess.check_output(['readelf','-d',str(core)],text=True); assert 'libtorch' not in out or p.built_with_metatomic(); print('NEEDED_OK'); assert hasattr(p.NudgedElasticBand, 'path_frames')"
 
       - name: Tag metatomic wheels with local version (never collide with base)
         if: steps.gate.outputs.skip != 'true' && matrix.variant == 'metatomic'
         run: |
-          # PyPI forbids local versions; these stay as GH artifacts only.
           mkdir -p wheelhouse-tagged
           for w in wheelhouse/*.whl; do
             base=$(basename "$w")
-            # pyeonclient-0.3.0-... -> pyeonclient-0.3.0+metatomic-...
             tagged=$(echo "$base" | sed -E 's/^(pyeonclient-[0-9]+\.[0-9]+\.[0-9]+)-/\1+metatomic-/')
             cp -v "$w" "wheelhouse-tagged/$tagged"
           done
@@ -237,14 +233,22 @@ jobs:
           python-version: "3.12"
       - name: Activate pyeonclient pyproject
         run: bash scripts/pyeonclient_prepare_pyproject.sh
-      - name: Host deps for meson-python sdist
+      - name: Host deps (quill + capnp SHARED+PIC + cbindgen)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libeigen3-dev gfortran ninja-build
-          cargo install cbindgen 2>/dev/null || true
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          bash scripts/pyeonclient_manylinux_deps.sh
+          echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/usr-local.conf
+          echo "/usr/local/lib64" | sudo tee -a /etc/ld.so.conf.d/usr-local.conf
+          sudo ldconfig
+          export LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib:${LD_LIBRARY_PATH:-}
+          export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH:-}
+          pkg-config --modversion quill
+          pkg-config --modversion capnp
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
       - run: |
           python -m pip install -U pip build nanobind numpy meson ninja meson-python
+          # sdist configures the project; quill/capnp must resolve
           python -m build --sdist
           ls -la dist/
       - uses: actions/upload-artifact@v4
@@ -272,9 +276,7 @@ jobs:
       - name: Flatten artifacts (PyPI = base only; exclude +metatomic)
         run: |
           mkdir -p upload
-          # sdist always
           find dist -type f -name '*.tar.gz' -exec cp -v {} upload/ \;
-          # base wheels only — never publish local-version metatomic binaries
           find dist -type f -name '*.whl' ! -name '*+metatomic*' -exec cp -v {} upload/ \;
           echo "=== upload set (must not contain +metatomic) ==="
           ls -la upload/
@@ -282,7 +284,6 @@ jobs:
             echo "refusing to publish metatomic local-version wheels to PyPI" >&2
             exit 1
           fi
-          # detect filename collisions (same basename twice)
           if [[ "$(ls upload | sort | uniq -d | wc -l)" -ne 0 ]]; then
             echo "duplicate basenames in upload/" >&2
             ls upload | sort | uniq -d

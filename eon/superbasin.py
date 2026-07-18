@@ -5,12 +5,11 @@ import numpy
 from eon.mcamc import mcamc
 import logging
 logger = logging.getLogger('superbasin')
-from eon.config import config
 
 
 class Superbasin:
 
-    def __init__(self, path, id, state_list=None, get_state=None):
+    def __init__(self, path, id, state_list=None, get_state=None, config=None):
         """Initialize superbasin.
 
         Must pass either state_list or get_state:
@@ -20,6 +19,9 @@ class Superbasin:
         """
         if (state_list is None) == (get_state is None):
             raise ValueError('Superbasin must either have a list of states or a reference to get_state of a StateList')
+        if config is None:
+            raise TypeError("Superbasin requires a ConfigClass instance")
+        self.config = config
         self.id = int(id)
         self.path = os.path.join(path, str(self.id))
         # Get the states.
@@ -36,6 +38,47 @@ class Superbasin:
             self.state_dict[state.number] = state
 
     def step(self, entry_state, get_product_state):
+        # Optional amsel discover_decide gate (L6): validate/split/reject the
+        # candidate basin *before* spending MCAMC on a non-metastable set.
+        # Off by default; requires the amsel Python package when enabled.
+        # [amsel] stanza (config.amsel_*); sb_amsel_* kept as back-compat aliases
+        _amsel_on = bool(
+            getattr(config, "amsel_discover_decide", False)
+            or getattr(config, "sb_amsel_discover_decide", False)
+        )
+        if _amsel_on:
+            from eon.amsel_superbasin_gate import (
+                apply_gate_to_superbasin,
+                discover_decide_for_superbasin,
+            )
+            decision = discover_decide_for_superbasin(
+                self,
+                entry_state,
+                e_min_init=float(
+                    getattr(config, "amsel_e_min_init",
+                            getattr(config, "sb_amsel_e_min_init", 0.5))
+                ),
+                e_min_step=float(
+                    getattr(config, "amsel_e_min_step",
+                            getattr(config, "sb_amsel_e_min_step", 0.05))
+                ),
+                e_min_floor=float(
+                    getattr(config, "amsel_e_min_floor",
+                            getattr(config, "sb_amsel_e_min_floor", 0.05))
+                ),
+                cv_threshold=float(
+                    getattr(config, "amsel_cv_threshold",
+                            getattr(config, "sb_amsel_cv_threshold", 10.0))
+                ),
+            )
+            status = apply_gate_to_superbasin(self, entry_state, decision)
+            logger.info(
+                "amsel discover_decide status=%s available=%s primary=%s",
+                status,
+                decision.get("available"),
+                decision.get("primary_transient"),
+            )
+
         # c_i (forming vector c) is the inverse of the sum of the rates for each transient state i
         # Q is the transient matrix of the canonical markov matrix.
         # R is the recurrent matrix of the canonical markov matrix.
@@ -79,16 +122,6 @@ class Superbasin:
                     Q[st2i[number], st2i[proc['product']]] += proc['rate']
                 else:
                     R[st2i[number], st2col[(number, id)]] += proc['rate']
-
-        #lei debug
-        print("################")
-        print(str(self.id)+" c is: ")
-        print(c)
-        print(str(self.id)+" Q is: ")
-        print(Q)
-        print(str(self.id)+" R is: ")
-        print(R)
-        # import pdb; pdb.set_trace()
 
         t, B, residual = mcamc(Q, R, c)
         logger.debug("residual %e" % residual)
@@ -155,12 +188,12 @@ class Superbasin:
 
         """
         # Do not filter states if superbasin_confidence is disabled.
-        if not config.sb_superbasin_confidence:
+        if not self.config.sb_superbasin_confidence:
             for state in self.states:
                 yield state
             return
         # The code for an enabled superbasin_confidence feature follows.
-        if config.saddle_method == "dynamics":
+        if self.config.saddle_method == "dynamics":
             # Use time spent in dynamics.
             try:
                 max_time = max(state.get_time()
@@ -207,7 +240,7 @@ class Superbasin:
         # state happens to have no exit but another one has, we will
         # never find anything. When we sort by time spent searching,
         # though, we will cycle the search through all states.
-        if config.saddle_method == "dynamics":
+        if self.config.saddle_method == "dynamics":
             return sorted(self._get_filtered_states(),
                           key=lambda state: (state.get_confidence(self), state.get_time())
                           )[0]

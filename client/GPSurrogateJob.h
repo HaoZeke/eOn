@@ -31,7 +31,16 @@ public:
   GPSurrogateJob(std::unique_ptr<Parameters> parameters)
       : Job(std::move(parameters)) {
     eonc::ensure_interpreter();
-    // debugging
+#ifndef NDEBUG
+    py::module_ sys_mod = py::module_::import("sys");
+    py::module_ ipdb_mod = py::module_::import("ipdb");
+    sys_mod.attr("breakpointhook") = ipdb_mod.attr("set_trace");
+#endif // NDEBUG
+  }
+  GPSurrogateJob(std::shared_ptr<Potential> potPassed,
+                 const Parameters &parameters)
+      : Job(potPassed, parameters) {
+    eonc::ensure_interpreter();
 #ifndef NDEBUG
     py::module_ sys_mod = py::module_::import("sys");
     py::module_ ipdb_mod = py::module_::import("ipdb");
@@ -40,6 +49,10 @@ public:
   }
   ~GPSurrogateJob() = default;
   std::vector<std::string> run() override;
+  /// Matter-first NEB surrogate path (endpoints as Matter).
+  std::shared_ptr<NudgedElasticBand>
+  runFromMatter(std::shared_ptr<Matter> initial,
+                std::shared_ptr<Matter> final_state);
 
 private:
   void saveData(NudgedElasticBand::NEBStatus status,
