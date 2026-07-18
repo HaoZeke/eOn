@@ -2,6 +2,17 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.1](https://github.com/TheochemUI/eOn/tree/2.17.1) - 2026-07-17
+
+### Fixed
+
+- Restore ``with_pyeonclient`` and ``install_eon_server`` meson options dropped
+  from ``meson_options.txt`` in the v2.17.0 merge (configure failed with
+  ``Option with_pyeonclient does not exist``).
+- RGPotEngine accepts rgpot >= 2.5 ``operator()`` return type
+  ``std::tuple<double, AtomMatrix, double>`` (energy, forces, variance).
+
+
 ## [2.17.0](https://github.com/TheochemUI/eOn/tree/2.17.0) - 2026-07-17
 
 ### Added
