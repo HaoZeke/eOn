@@ -17,6 +17,8 @@
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
 #include <atomic>
+#include <filesystem>
+#include <system_error>
 #include <mutex>
 #include <source_location>
 #include <string>
@@ -121,10 +123,26 @@ get_file(std::string_view name, std::string_view filename,
   }
 
   try {
+    // Durable absolute path: optimizers open "_lbfgs.log" etc. under CWD.
+    // Job integration fixtures chdir into /tmp/eon_test_job_* then delete that
+    // tree when the case ends, while Quill's process-lifetime FileSink still
+    // flushes — "fopen failed after 3 attempts". Keep logs under a stable
+    // temp subdir instead of the disposable workdir.
+    namespace fs = std::filesystem;
+    fs::path path{std::string(filename)};
+    if (!path.is_absolute()) {
+      static const fs::path log_dir = [] {
+        fs::path d = fs::temp_directory_path() / "eon_logs";
+        std::error_code ec;
+        fs::create_directories(d, ec);
+        return d;
+      }();
+      path = log_dir / path.filename();
+    }
     quill::FileSinkConfig cfg;
     cfg.set_open_mode('w');
     auto file_sink = quill::Frontend::create_or_get_sink<quill::FileSink>(
-        std::string(filename), cfg);
+        path.string(), cfg);
     return quill::Frontend::create_or_get_logger(
         std::string(name), std::move(file_sink),
         quill::PatternFormatterOptions{std::string(pattern)},

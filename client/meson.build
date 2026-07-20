@@ -1344,9 +1344,12 @@ if get_option('with_tests')
                 'systems',
             ),
         )
+        # Optional nwchemc/cpmdc engines: tests SKIP when absent. Catch2 exits 4
+        # when every case is skipped unless --allow-running-no-tests is set.
         test(
             'test_rgpot_pot',
             test_rgpot_exe,
+            args: ['--allow-running-no-tests'],
             timeout: 120,
             suite: 'rgpot',
             is_parallel: false,
