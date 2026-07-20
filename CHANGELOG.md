@@ -2,6 +2,16 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.10](https://github.com/TheochemUI/eOn/tree/2.17.10) - 2026-07-20
+
+### Fixed
+
+- Optimizer file logs (``_lbfgs.log`` etc.) use a durable temp directory so
+  fixture workdir cleanup no longer races Quill file sinks.
+- Packaging: Catch2 ``--allow-running-no-tests`` for the optional rgpot embed
+  suite so all-SKIP without nwchemc/cpmdc is a clean success.
+
+
 ## [2.17.9](https://github.com/TheochemUI/eOn/tree/2.17.9) - 2026-07-20
 
 ### Fixed
