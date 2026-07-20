@@ -2,6 +2,18 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.3](https://github.com/TheochemUI/eOn/tree/2.17.3) - 2026-07-20
+
+### Fixed
+
+- Pin metatomic builds to vesin>=0.6 and rgpot>=2.5.2 so RGPOT
+  ``libmetatomic_engine`` and fat Metatomic share a matching VesinOptions ABI
+  (skin/n_threads). Bump the rgpot wrap to the 2.5.2 fix commit.
+- Unit tests SKIP when packaging fixtures or optional engines are missing
+  (``EON_TEST_SYSTEMS_DIR`` / ``EON_POTENTIALS_PATH`` / nwchemc·cpmdc), so
+  ``meson test`` succeeds for installable client builds without local test data.
+
+
 ## [2.17.2](https://github.com/TheochemUI/eOn/tree/2.17.2) - 2026-07-17
 
 ### Added
