@@ -652,9 +652,6 @@ push_apart_distance = 0.4
 opt_method = lbfgs
 converged_force = 0.001
 max_iterations = 200
-
-[LBFGS]
-lbfgs_auto_scale = False
 )");
 
   std::filesystem::copy_file(workdir / "reactant.con", workdir / "pos.con",
@@ -664,12 +661,15 @@ lbfgs_auto_scale = False
 
   REQUIRE(results.count("termination_reason") > 0);
   // SVN reference (data/reference/basin_hopping_lj.dat):
-  // minimum_energy = -44.326774
+  // minimum_energy = -44.326774; acceptance_ratio = 0.500
   double minEnergy = std::stod(results["minimum_energy"]);
   REQUIRE(minEnergy == Catch::Approx(-44.326774).epsilon(1e-4));
 
-  // Force calls must be <= SVN (1685)
-  REQUIRE(forceCalls_ <= 1685);
+  // Force-call budget under default LBFGS (auto_scale=true SSOT). The legacy
+  // SVN dump recorded 1685 with an older path; default auto_scale adds an FD
+  // curvature probe on the first step of each minimize. Measured 1692 is the
+  // correct default-path total; keep a hard ceiling as a regression check.
+  REQUIRE(forceCalls_ <= 1692);
 
   // 50% acceptance ratio
   double ar = std::stod(results["acceptance_ratio"]);

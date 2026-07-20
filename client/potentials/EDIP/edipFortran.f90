@@ -795,7 +795,6 @@
 !$       iam=omp_get_thread_num()
 
          max_nbrs=30
-         istopg=0
 
         if (npr.ne.1) then
 ! PARALLEL CASE
@@ -805,16 +804,21 @@
         allocate(txyz(3,nat),s2(max_nbrs,8),s3(max_nbrs,7),sz(max_nbrs,6),  &
                  num2(max_nbrs),num3(max_nbrs),numz(max_nbrs))
 !$omp end critical
-        if (iam.eq.0) then
+! Zero shared accumulators under a single+barrier. The old "if (iam.eq.0)"
+! zero without a barrier races: other threads can critical-add into ener/fxyz
+! before thread 0 clears them, so energy is wrong while forces still look
+! plausible under OMP_NUM_THREADS>1.
+!$omp single
         ener=0.d0
         ener2=0.d0
         coord=0.d0
         coord2=0.d0
+        istopg=0
         do 121,iat=1,nat
         fxyz(1,iat)=0.d0
         fxyz(2,iat)=0.d0
 121     fxyz(3,iat)=0.d0
-        endif
+!$omp end single
 
 ! Each thread treats at most lot atoms
         lot=int(float(nat)/float(npr)+.999999999999d0)
@@ -843,6 +847,7 @@
 
         else
 ! SERIAL CASE
+        istopg=0
         iat1=1
         iat2=nat
         allocate(s2(max_nbrs,8),s3(max_nbrs,7),sz(max_nbrs,6),  &
