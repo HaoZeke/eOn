@@ -1206,7 +1206,12 @@ if get_option('with_tests')
     endif
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
-        test_array += [['test_mta_engine_abi', 'MetatomicEngineAbiTest.cpp', '']]
+        # MetatomicEngineAbiTest uses POSIX dlopen/dlsym; client/DynLib.h is the
+        # Windows-safe loader for production paths. Skip the ABI unit test on
+        # MSVC until the test is rewritten against DynLib + .dll naming.
+        if not is_windows
+            test_array += [['test_mta_engine_abi', 'MetatomicEngineAbiTest.cpp', '']]
+        endif
     endif
     if get_option('with_xtb')
         test_array += [['test_xtb', 'XTBTest.cpp', 'sulfolene']]
