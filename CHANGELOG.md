@@ -2,6 +2,14 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.7](https://github.com/TheochemUI/eOn/tree/2.17.7) - 2026-07-20
+
+### Fixed
+
+- Un-nest SW CG minimization TEST_CASE in SiPotTest (was inside LBFGS case after
+  packaging SKIP refactor, breaking with_tests packaging builds).
+
+
 ## [2.17.6](https://github.com/TheochemUI/eOn/tree/2.17.6) - 2026-07-20
 
 ### Fixed
