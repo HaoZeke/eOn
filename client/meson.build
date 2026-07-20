@@ -1237,6 +1237,14 @@ if get_option('with_tests')
         _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / 'Metatomic'
     endif
     _test_env = environment()
+    _systems_dir = join_paths(
+        meson.project_source_root(),
+        'client',
+        'unit_tests',
+        'data',
+        'systems',
+    )
+    _test_env.set('EON_TEST_SYSTEMS_DIR', _systems_dir)
     if _fortran_pot_dirs.length() > 0
         _test_env.set('EON_POTENTIALS_PATH', ':'.join(_fortran_pot_dirs))
     endif
@@ -1325,12 +1333,24 @@ if get_option('with_tests')
             cpp_args: test_args,
             link_with: _linkto,
         )
+        _rgpot_test_env = environment()
+        _rgpot_test_env.set(
+            'EON_TEST_SYSTEMS_DIR',
+            join_paths(
+                meson.project_source_root(),
+                'client',
+                'unit_tests',
+                'data',
+                'systems',
+            ),
+        )
         test(
             'test_rgpot_pot',
             test_rgpot_exe,
             timeout: 120,
             suite: 'rgpot',
             is_parallel: false,
+            env: _rgpot_test_env,
             workdir: meson.project_source_root() +
                      '/client/unit_tests/data/systems/rgpot_nwchem_test',
         )
