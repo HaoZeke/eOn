@@ -134,24 +134,21 @@ protected:
     return true;
   }
 
-}
+  std::map<std::string, std::string> runJob() {
+    // Change to workdir, load params, create and run job
+    std::filesystem::current_path(workdir);
 
-std::map<std::string, std::string>
-runJob() {
-  // Change to workdir, load params, create and run job
-  std::filesystem::current_path(workdir);
+    params = std::make_unique<Parameters>();
+    params->load("config.ini");
 
-  params = std::make_unique<Parameters>();
-  params->load("config.ini");
+    size_t before = PotRegistry::get().total_force_calls();
+    auto job = eonc::helpers::makeJob(std::move(params));
+    job->run();
+    forceCalls_ = PotRegistry::get().total_force_calls() - before;
 
-  size_t before = PotRegistry::get().total_force_calls();
-  auto job = eonc::helpers::makeJob(std::move(params));
-  job->run();
-  forceCalls_ = PotRegistry::get().total_force_calls() - before;
-
-  std::filesystem::current_path(originalDir);
-  return parseResultsDat((workdir / "results.dat").string());
-}
+    std::filesystem::current_path(originalDir);
+    return parseResultsDat((workdir / "results.dat").string());
+  }
 };
 
 TEST_CASE_METHOD(JobIntegrationFixture,
