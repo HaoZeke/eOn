@@ -2,6 +2,16 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.9](https://github.com/TheochemUI/eOn/tree/2.17.9) - 2026-07-20
+
+### Fixed
+
+- EDIP OpenMP: zero shared energy/force accumulators under ``!$omp single``
+  before partial reduction (fixes wrong PointJob energies with multi-thread OMP).
+- Basin-hopping force-call reference updated for default LBFGS auto_scale path
+  (1692); energy and acceptance assertions unchanged.
+
+
 ## [2.17.8](https://github.com/TheochemUI/eOn/tree/2.17.8) - 2026-07-20
 
 ### Fixed
