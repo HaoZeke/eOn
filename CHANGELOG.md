@@ -2,6 +2,16 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.8](https://github.com/TheochemUI/eOn/tree/2.17.8) - 2026-07-20
+
+### Fixed
+
+- Evaluate EDIP serially under OpenMP (Fortran energy reduction race under
+  OMP_NUM_THREADS>1 gave wrong PointJob energies with plausible forces).
+- Basin-hopping integration test pins LBFGS auto_scale off so force-call
+  budget matches the SVN reference path.
+
+
 ## [2.17.7](https://github.com/TheochemUI/eOn/tree/2.17.7) - 2026-07-20
 
 ### Fixed
