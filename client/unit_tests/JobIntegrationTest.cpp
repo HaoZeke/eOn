@@ -29,6 +29,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -82,9 +83,41 @@ protected:
     f << content;
   }
 
+  /// Resolve a systems/ data directory. Prefer EON_TEST_SYSTEMS_DIR (set by
+  /// meson); fall back to parent of CWD when meson workdir is systems/<name>.
+  static std::filesystem::path systemsDir() {
+    if (const char *e = std::getenv("EON_TEST_SYSTEMS_DIR")) {
+      return std::filesystem::path(e);
+    }
+    return std::filesystem::current_path().parent_path();
+  }
+
+  /// Copy files from a test system. Accepts ".", "foo", or legacy "../foo".
+  /// SKIP when the directory is missing (packaging installs have no fixtures).
   void copyTestData(const std::string &srcDir) {
     namespace fs = std::filesystem;
-    for (auto &entry : fs::directory_iterator(srcDir)) {
+    fs::path src;
+    if (srcDir.empty() || srcDir == ".") {
+      src = fs::current_path();
+    } else {
+      std::string name = srcDir;
+      if (name.rfind("../", 0) == 0) {
+        name = name.substr(3);
+      }
+      src = systemsDir() / name;
+      if (!fs::is_directory(src)) {
+        // last resort: relative to CWD (in-tree meson workdir layout)
+        fs::path rel = fs::current_path() / srcDir;
+        if (fs::is_directory(rel)) {
+          src = rel;
+        }
+      }
+    }
+    if (!fs::is_directory(src)) {
+      SKIP("test system data not found: "
+           << src << " (set EON_TEST_SYSTEMS_DIR or run via meson test)");
+    }
+    for (auto &entry : fs::directory_iterator(src)) {
       if (entry.is_regular_file()) {
         fs::copy_file(entry.path(), workdir / entry.path().filename(),
                       fs::copy_options::overwrite_existing);
