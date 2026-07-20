@@ -152,28 +152,29 @@ TEST_CASE("SW minimization energy matches SVN", "[pot][sw][si][minimization]") {
     SIPOT_REQUIRE_LOADED(e, "sw_si");
     REQUIRE(e == Catch::Approx(-16.204961).epsilon(1e-4));
   }
+}
 
-  TEST_CASE("SW CG minimization matches SVN",
-            "[pot][sw][si][minimization][cg]") {
-    SIPOT_REQUIRE_POS_CON();
-    Parameters params;
-    params.potential_options.potential = PotType::SW_SI;
-    params.optimizer_options.method = OptType::CG;
-    params.optimizer_options.converged_force = 0.001;
-    params.optimizer_options.max_iterations = 200;
-    auto pot = eonc::helpers::makePotential(params);
-    auto matter = std::make_shared<Matter>(pot, params);
-    matter->con2matter(std::string("pos.con"));
+TEST_CASE("SW CG minimization matches SVN",
+          "[pot][sw][si][minimization][cg]") {
+  SIPOT_REQUIRE_POS_CON();
+  Parameters params;
+  params.potential_options.potential = PotType::SW_SI;
+  params.optimizer_options.method = OptType::CG;
+  params.optimizer_options.converged_force = 0.001;
+  params.optimizer_options.max_iterations = 200;
+  auto pot = eonc::helpers::makePotential(params);
+  auto matter = std::make_shared<Matter>(pot, params);
+  matter->con2matter(std::string("pos.con"));
 
-    matter->relax(false, false, false, "sw_cg_test", "sw_cg_test");
+  matter->relax(false, false, false, "sw_cg_test", "sw_cg_test");
 
-    // SVN reference (data/reference/minimization_sw_cg.dat):
-    // energy = -16.204961, 9 force calls
-    {
-      double e = matter->getPotentialEnergy();
-      SIPOT_REQUIRE_LOADED(e, "sw_si");
-      REQUIRE(e == Catch::Approx(-16.204961).epsilon(1e-4));
-    }
+  // SVN reference (data/reference/minimization_sw_cg.dat):
+  // energy = -16.204961, 9 force calls
+  {
+    double e = matter->getPotentialEnergy();
+    SIPOT_REQUIRE_LOADED(e, "sw_si");
+    REQUIRE(e == Catch::Approx(-16.204961).epsilon(1e-4));
   }
+}
 
 } /* namespace tests */
