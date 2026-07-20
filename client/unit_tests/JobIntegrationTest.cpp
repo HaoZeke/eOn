@@ -652,6 +652,9 @@ push_apart_distance = 0.4
 opt_method = lbfgs
 converged_force = 0.001
 max_iterations = 200
+
+[LBFGS]
+lbfgs_auto_scale = False
 )");
 
   std::filesystem::copy_file(workdir / "reactant.con", workdir / "pos.con",
