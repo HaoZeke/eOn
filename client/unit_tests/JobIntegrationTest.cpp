@@ -93,8 +93,8 @@ protected:
   }
 
   /// Copy files from a test system. Accepts ".", "foo", or legacy "../foo".
-  /// SKIP when the directory is missing (packaging installs have no fixtures).
-  void copyTestData(const std::string &srcDir) {
+  /// Returns false when the directory is missing.
+  bool copyTestData(const std::string &srcDir) {
     namespace fs = std::filesystem;
     fs::path src;
     if (srcDir.empty() || srcDir == ".") {
@@ -114,14 +114,22 @@ protected:
       }
     }
     if (!fs::is_directory(src)) {
-      SKIP("test system data not found: "
-           << src << " (set EON_TEST_SYSTEMS_DIR or run via meson test)");
+      return false;
     }
     for (auto &entry : fs::directory_iterator(src)) {
       if (entry.is_regular_file()) {
         fs::copy_file(entry.path(), workdir / entry.path().filename(),
                       fs::copy_options::overwrite_existing);
       }
+    }
+    return true;
+  }
+
+  /// Catch2 SKIP must expand in the TEST_CASE body (not nested helpers).
+  void requireTestData(const std::string &srcDir) {
+    if (!copyTestData(srcDir)) {
+      SKIP("test system data not found for '"
+           << srcDir << "' (set EON_TEST_SYSTEMS_DIR or run via meson test)");
     }
   }
 
@@ -146,7 +154,7 @@ TEST_CASE_METHOD(JobIntegrationFixture,
                  "PointJob produces correct energy for LJ cluster",
                  "[job][point][integration]") {
   // The test workdir is set to neb_morse which has reactant.con
-  copyTestData("."); // copy everything from CWD (neb_morse data)
+  requireTestData("."); // copy everything from CWD (neb_morse data)
   writeConfig(R"(
 [Main]
 job = point
@@ -173,7 +181,7 @@ potential = lj
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "MinimizationJob converges for LJ cluster",
                  "[job][minimization][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = minimization
@@ -205,7 +213,7 @@ max_iterations = 500
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "MinimizationJob FIRE matches SVN on LJ",
                  "[job][minimization][fire][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = minimization
@@ -228,7 +236,7 @@ max_iterations = 500
 
 TEST_CASE_METHOD(JobIntegrationFixture, "MinimizationJob CG matches SVN on LJ",
                  "[job][minimization][cg][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = minimization
@@ -252,7 +260,7 @@ max_iterations = 500
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "FiniteDifferenceJob curvatures match SVN reference",
                  "[job][finite_difference][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = finite_difference
@@ -289,7 +297,7 @@ potential = lj
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "FiniteDifferenceJob Morse Pt curvatures match SVN",
                  "[job][finite_difference][morse_pt][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = finite_difference
@@ -319,7 +327,7 @@ potential = morse_pt
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "HessianJob force calls match SVN reference",
                  "[job][hessian][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = hessian
@@ -356,7 +364,7 @@ TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob matches SVN on Morse Pt",
                  "[job][saddle_search][integration]") {
   // Use the actual saddle_search test system with Morse Pt
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   // The saddle_search dir already has pos.con, displacement.con, direction.dat
   // and config.ini. Overwrite config with our version to ensure consistency.
   writeConfig(R"(
@@ -408,7 +416,7 @@ max_energy = 10.0
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob Lanczos matches SVN on Morse Pt",
                  "[job][saddle_search][lanczos][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = saddle_search
@@ -451,7 +459,7 @@ max_energy = 10.0
 
 TEST_CASE_METHOD(JobIntegrationFixture, "NEB LJ matches SVN reference",
                  "[job][neb][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = nudged_elastic_band
@@ -507,7 +515,7 @@ max_move = 0.2
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "NEB movies embed structured metadata in con outputs",
                  "[job][neb][integration][metadata]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = nudged_elastic_band
@@ -553,7 +561,7 @@ write_movies = true
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "MinimizationJob Morse Pt frozen layers matches SVN",
                  "[job][minimization][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = minimization
@@ -586,7 +594,7 @@ max_iterations = 200
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "Minimization deprecated outputs remain available behind flag",
                  "[job][minimization][integration][deprecated]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = minimization
@@ -624,7 +632,7 @@ write_deprecated_outs = true
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "BasinHoppingJob LJ cluster matches SVN reference",
                  "[job][basin_hopping][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = basin_hopping
@@ -667,7 +675,7 @@ max_iterations = 200
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "DynamicsJob runs and produces final.con",
                  "[job][dynamics][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = dynamics
@@ -710,7 +718,7 @@ andersen_alpha = 1.0
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "PointJob Morse Pt matches SVN reference",
                  "[job][point][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = point
@@ -732,7 +740,7 @@ potential = morse_pt
 
 TEST_CASE_METHOD(JobIntegrationFixture, "MonteCarloJob runs on LJ cluster",
                  "[job][monte_carlo][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = monte_carlo
@@ -762,7 +770,7 @@ step_size = 0.001
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "GlobalOptimizationJob runs on LJ cluster",
                  "[job][global_optimization][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = global_optimization
@@ -808,7 +816,7 @@ max_iterations = 200
 
 TEST_CASE_METHOD(JobIntegrationFixture, "ParallelReplicaJob runs on Morse Pt",
                  "[job][parallel_replica][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = parallel_replica
@@ -851,7 +859,7 @@ corr_time = 10.0
 
 TEST_CASE_METHOD(JobIntegrationFixture, "ReplicaExchangeJob runs on LJ cluster",
                  "[job][replica_exchange][integration]") {
-  copyTestData(".");
+  requireTestData(".");
   writeConfig(R"(
 [Main]
 job = replica_exchange
@@ -889,7 +897,7 @@ exchange_period = 25.0
 
 TEST_CASE_METHOD(JobIntegrationFixture, "TADJob runs on Morse Pt",
                  "[job][tad][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = tad
@@ -937,7 +945,7 @@ TEST_CASE_METHOD(JobIntegrationFixture, "PrefactorJob runs on Morse Pt saddle",
                  "[job][prefactor][integration]") {
   // Prefactor needs reactant.con, saddle.con, product.con
   // Use saddle_search data which has pos.con as reactant
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
 
   // First run saddle search to get saddle.con and product.con
   writeConfig(R"(
@@ -1005,7 +1013,7 @@ within_radius = 3.3
 
 TEST_CASE_METHOD(JobIntegrationFixture, "ProcessSearchJob runs on Morse Pt",
                  "[job][process_search][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1060,7 +1068,7 @@ TEST_CASE_METHOD(JobIntegrationFixture,
                  "[job][saddle_search][artn][integration]") {
   if (!eonc::get_artn_resource().is_loaded())
     SKIP("libartn not available at runtime");
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = saddle_search
@@ -1122,7 +1130,7 @@ TEST_CASE_METHOD(JobIntegrationFixture,
                  "[job][process_search][artn][integration]") {
   if (!eonc::get_artn_resource().is_loaded())
     SKIP("libartn not available at runtime");
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1182,7 +1190,7 @@ max_spawns = 5
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob standalone ARTn works without direction file",
                  "[job][saddle_search][artn][optional-mode][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   std::filesystem::remove(workdir / "direction.dat");
   std::filesystem::remove(workdir / "displacement.con");
   writeConfig(R"(
@@ -1217,7 +1225,7 @@ max_iterations = 5
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob rejects standalone ARTn when not compiled",
                  "[job][saddle_search][artn][config][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = saddle_search
@@ -1238,7 +1246,7 @@ method = artn
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob rejects ARTn min-mode when not compiled",
                  "[job][saddle_search][artn][min_mode][config][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = saddle_search
@@ -1259,7 +1267,7 @@ min_mode_method = artn
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "ProcessSearchJob rejects standalone ARTn when not compiled",
                  "[job][process_search][artn][config][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1281,7 +1289,7 @@ method = artn
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "SaddleSearchJob ARTn parameters parsed correctly",
                  "[job][saddle_search][artn][params][integration]") {
-  copyTestData("../saddle_search");
+  requireTestData("../saddle_search");
   writeConfig(R"(
 [Main]
 job = saddle_search
@@ -1332,7 +1340,7 @@ use_pbc = true
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "ProcessSearch with dynamics saddle search",
                  "[job][process_search][dynamics][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1371,7 +1379,7 @@ refine_transition = false
 
 TEST_CASE_METHOD(JobIntegrationFixture, "ProcessSearch with BGSD saddle search",
                  "[job][process_search][bgsd][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1405,7 +1413,7 @@ gradient_finite_difference = 0.000001
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "ProcessSearch with basin_hopping saddle search",
                  "[job][process_search][bh_saddle][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   writeConfig(R"(
 [Main]
 job = process_search
@@ -1442,7 +1450,7 @@ steps = 5
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "StructureComparisonJob runs without crash",
                  "[job][structure_comparison][integration]") {
-  copyTestData("../Pt_Heptamer_FrozenLayers");
+  requireTestData("../Pt_Heptamer_FrozenLayers");
   // StructureComparison needs matter1.con
   std::filesystem::copy_file(workdir / "pos.con", workdir / "matter1.con",
                              std::filesystem::copy_options::overwrite_existing);
@@ -1521,7 +1529,7 @@ TEST_CASE_METHOD(JobIntegrationFixture,
                  "ProcessSearchJob zero fixed-atom drift with stale "
                  "displacement.con",
                  "[job][process_search][fixed_atom][invariant][integration]") {
-  copyTestData("../process_search_fixed_drift");
+  requireTestData("../process_search_fixed_drift");
 
   // Verify the test data actually has stale fixed-atom positions so the
   // test is not vacuously passing because drift was zero to begin with.
@@ -1700,7 +1708,7 @@ TEST_CASE("makeJob creates correct job type for each JobType",
 #ifdef WITH_FORTRAN
 TEST_CASE_METHOD(JobIntegrationFixture, "PointJob SW Si matches SVN reference",
                  "[job][point][sw][integration][fortran]") {
-  copyTestData("../si_diamond");
+  requireTestData("../si_diamond");
   writeConfig(R"(
 [Main]
 job = point
@@ -1717,7 +1725,7 @@ potential = sw_si
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "PointJob Tersoff Si matches SVN reference",
                  "[job][point][tersoff][integration][fortran]") {
-  copyTestData("../si_diamond");
+  requireTestData("../si_diamond");
   writeConfig(R"(
 [Main]
 job = point
@@ -1734,7 +1742,7 @@ potential = tersoff_si
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "PointJob EDIP Si matches SVN reference",
                  "[job][point][edip][integration][fortran]") {
-  copyTestData("../si_diamond");
+  requireTestData("../si_diamond");
   writeConfig(R"(
 [Main]
 job = point
@@ -1751,7 +1759,7 @@ potential = edip
 TEST_CASE_METHOD(JobIntegrationFixture,
                  "PointJob Lenosky Si matches SVN reference",
                  "[job][point][lenosky][integration][fortran]") {
-  copyTestData("../si_diamond");
+  requireTestData("../si_diamond");
   writeConfig(R"(
 [Main]
 job = point

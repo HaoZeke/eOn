@@ -20,31 +20,26 @@ namespace tests {
 
 static eonc::helpers::test::QuillTestLogger _quill_setup;
 
-namespace {
+// Catch2 SKIP must expand in TEST_CASE body, not nested helpers.
+#define SIPOT_REQUIRE_POS_CON()                                                \
+  do {                                                                         \
+    if (!std::filesystem::exists("pos.con")) {                                 \
+      SKIP("pos.con missing (expected meson workdir systems/si_diamond)");     \
+    }                                                                          \
+  } while (0)
 
-bool file_exists(const char *path) { return std::filesystem::exists(path); }
-
-/// Packaging builds may ship with_fortran pots that fail to dlopen when
-/// EON_POTENTIALS_PATH is wrong; treat unloaded pot (energy ~ 0) as skip.
-void require_loaded_pot(double energy, const char *name) {
-  if (!std::isfinite(energy) || std::abs(energy) < 1e-12) {
-    SKIP("potential "
-         << name
-         << " returned no energy (fortran .so missing or EON_POTENTIALS_PATH)");
-  }
-}
-
-void require_pos_con() {
-  if (!file_exists("pos.con")) {
-    SKIP("pos.con missing (expected meson workdir systems/si_diamond)");
-  }
-}
-
-} // namespace
+#define SIPOT_REQUIRE_LOADED(energy, name)                                     \
+  do {                                                                         \
+    if (!std::isfinite(energy) || std::abs(energy) < 1e-12) {                  \
+      SKIP("potential " << (name)                                              \
+                        << " returned no energy (fortran .so missing or "      \
+                           "EON_POTENTIALS_PATH)");                            \
+    }                                                                          \
+  } while (0)
 
 TEST_CASE("SW potential returns finite energy and forces on Si diamond",
           "[pot][sw][si]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::SW_SI;
   auto pot = eonc::helpers::makePotential(params);
@@ -53,7 +48,7 @@ TEST_CASE("SW potential returns finite energy and forces on Si diamond",
 
   // SVN reference (data/reference/point_sw_si.dat):
   double energy = matter->getPotentialEnergy();
-  require_loaded_pot(energy, "si");
+  SIPOT_REQUIRE_LOADED(energy, "si");
   REQUIRE(energy == Catch::Approx(-16.204955).epsilon(1e-4));
 
   double maxForce = matter->getForces().rowwise().norm().maxCoeff();
@@ -66,7 +61,7 @@ TEST_CASE("SW potential returns finite energy and forces on Si diamond",
 }
 
 TEST_CASE("Tersoff energy matches SVN on Si diamond", "[pot][tersoff][si]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::TERSOFF_SI;
   auto pot = eonc::helpers::makePotential(params);
@@ -75,7 +70,7 @@ TEST_CASE("Tersoff energy matches SVN on Si diamond", "[pot][tersoff][si]") {
 
   // SVN reference (data/reference/point_tersoff_si.dat):
   double energy = matter->getPotentialEnergy();
-  require_loaded_pot(energy, "si");
+  SIPOT_REQUIRE_LOADED(energy, "si");
   REQUIRE(energy == Catch::Approx(-17.440266).epsilon(1e-4));
 
   double maxForce = matter->getForces().rowwise().norm().maxCoeff();
@@ -83,7 +78,7 @@ TEST_CASE("Tersoff energy matches SVN on Si diamond", "[pot][tersoff][si]") {
 }
 
 TEST_CASE("EDIP energy matches SVN on Si diamond", "[pot][edip][si]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::EDIP;
   auto pot = eonc::helpers::makePotential(params);
@@ -92,7 +87,7 @@ TEST_CASE("EDIP energy matches SVN on Si diamond", "[pot][edip][si]") {
 
   // SVN reference (data/reference/point_edip.dat):
   double energy = matter->getPotentialEnergy();
-  require_loaded_pot(energy, "si");
+  SIPOT_REQUIRE_LOADED(energy, "si");
   REQUIRE(energy == Catch::Approx(-18.838135).epsilon(1e-4));
 
   double maxForce = matter->getForces().rowwise().norm().maxCoeff();
@@ -100,7 +95,7 @@ TEST_CASE("EDIP energy matches SVN on Si diamond", "[pot][edip][si]") {
 }
 
 TEST_CASE("Lenosky energy matches SVN on Si diamond", "[pot][lenosky][si]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::LENOSKY_SI;
   auto pot = eonc::helpers::makePotential(params);
@@ -109,7 +104,7 @@ TEST_CASE("Lenosky energy matches SVN on Si diamond", "[pot][lenosky][si]") {
 
   // SVN reference (data/reference/point_lenosky_si.dat):
   double energy = matter->getPotentialEnergy();
-  require_loaded_pot(energy, "si");
+  SIPOT_REQUIRE_LOADED(energy, "si");
   REQUIRE(energy == Catch::Approx(-17.284558).epsilon(1e-4));
 
   double maxForce = matter->getForces().rowwise().norm().maxCoeff();
@@ -118,7 +113,7 @@ TEST_CASE("Lenosky energy matches SVN on Si diamond", "[pot][lenosky][si]") {
 
 TEST_CASE("SW and Tersoff give different energies on same Si system",
           "[pot][si]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
 
   params.potential_options.potential = PotType::SW_SI;
@@ -126,20 +121,20 @@ TEST_CASE("SW and Tersoff give different energies on same Si system",
   auto m1 = std::make_shared<Matter>(pot_sw, params);
   m1->con2matter(std::string("pos.con"));
   double e_sw = m1->getPotentialEnergy();
-  require_loaded_pot(e_sw, "sw_si");
+  SIPOT_REQUIRE_LOADED(e_sw, "sw_si");
 
   params.potential_options.potential = PotType::TERSOFF_SI;
   auto pot_tersoff = eonc::helpers::makePotential(params);
   auto m2 = std::make_shared<Matter>(pot_tersoff, params);
   m2->con2matter(std::string("pos.con"));
   double e_tersoff = m2->getPotentialEnergy();
-  require_loaded_pot(e_tersoff, "tersoff_si");
+  SIPOT_REQUIRE_LOADED(e_tersoff, "tersoff_si");
 
   REQUIRE(e_sw != e_tersoff);
 }
 
 TEST_CASE("SW minimization energy matches SVN", "[pot][sw][si][minimization]") {
-  require_pos_con();
+  SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::SW_SI;
   params.optimizer_options.method = OptType::LBFGS;
@@ -154,13 +149,13 @@ TEST_CASE("SW minimization energy matches SVN", "[pot][sw][si][minimization]") {
   // SVN reference: minimized energy = -16.204961
   {
     double e = matter->getPotentialEnergy();
-    require_loaded_pot(e, "sw_si");
+    SIPOT_REQUIRE_LOADED(e, "sw_si");
     REQUIRE(e == Catch::Approx(-16.204961).epsilon(1e-4));
   }
 
   TEST_CASE("SW CG minimization matches SVN",
             "[pot][sw][si][minimization][cg]") {
-    require_pos_con();
+    SIPOT_REQUIRE_POS_CON();
     Parameters params;
     params.potential_options.potential = PotType::SW_SI;
     params.optimizer_options.method = OptType::CG;
@@ -176,7 +171,7 @@ TEST_CASE("SW minimization energy matches SVN", "[pot][sw][si][minimization]") {
     // energy = -16.204961, 9 force calls
     {
       double e = matter->getPotentialEnergy();
-      require_loaded_pot(e, "sw_si");
+      SIPOT_REQUIRE_LOADED(e, "sw_si");
       REQUIRE(e == Catch::Approx(-16.204961).epsilon(1e-4));
     }
   }
