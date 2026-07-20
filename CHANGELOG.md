@@ -2,6 +2,14 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.6](https://github.com/TheochemUI/eOn/tree/2.17.6) - 2026-07-20
+
+### Fixed
+
+- Keep JobIntegrationFixture::runJob a class method after SKIP macro refactor
+  (stray brace broke TEST_CASE_METHOD inheritance under packaging builds).
+
+
 ## [2.17.5](https://github.com/TheochemUI/eOn/tree/2.17.5) - 2026-07-20
 
 ### Fixed
