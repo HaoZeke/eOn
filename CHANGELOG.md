@@ -2,6 +2,13 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.5](https://github.com/TheochemUI/eOn/tree/2.17.5) - 2026-07-20
+
+### Fixed
+
+- Catch2 SKIP only via macros in job integration tests (helpers cannot call SKIP).
+
+
 ## [2.17.4](https://github.com/TheochemUI/eOn/tree/2.17.4) - 2026-07-20
 
 ### Fixed
