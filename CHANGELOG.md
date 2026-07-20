@@ -2,6 +2,14 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.4](https://github.com/TheochemUI/eOn/tree/2.17.4) - 2026-07-20
+
+### Fixed
+
+- Fix Catch2 SKIP usage in unit-test helpers (macros / fixture require path)
+so packaging builds compile with ``-Dwith_tests=true``.
+
+
 ## [2.17.3](https://github.com/TheochemUI/eOn/tree/2.17.3) - 2026-07-20
 
 ### Fixed
