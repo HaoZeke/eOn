@@ -10,28 +10,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # win-64 is in feature.metatomic platforms (pixi.toml). Feedstock win
-        # builds with_metatomic + default with_tests; GHA must exercise that
-        # surface so MSVC-only unit tests (e.g. MetatomicEngineAbiTest / DynLib)
-        # fail here instead of only on conda-forge.
-        # windows-2022: windows-latest currently ships VS 18 only; ilammy/msvc-dev-cmd
-        # fails there (invalid params on 18, or "VS not found" if pinned to 2022).
+        # windows-2022: same runner family as metatomic/metatensor torch CI.
+        # windows-latest currently ships VS 18 only and breaks msvc-dev-cmd.
         os: [ubuntu-22.04, macos-14, windows-2022]
     steps:
       - uses: actions/checkout@v4
-      - uses: prefix-dev/setup-pixi@v0.9.4
+
+      # --- Unix: hermetic pixi (conda + pypi torch) ---
+      - name: Setup pixi [unix]
+        if: runner.os != 'Windows'
+        uses: prefix-dev/setup-pixi@v0.9.4
         with:
           cache: true
           cache-write: true
-          # Do not use activate-environment on Windows: setup-pixi fails with
-          # "Unable to handle environment activation which does not only append
-          # to PATH" for dev-mta (conda compiler activation rewrites PATH).
-          # Match ci_build_akmc: pixi run -e dev-mta per step.
+          activate-environment: true
           environments: >-
             dev-mta
-      - name: Install cbindgen
+
+      - name: Install cbindgen [unix]
+        if: runner.os != 'Windows'
         shell: bash
         run: command -v cbindgen || cargo install cbindgen
+
       - name: Use Homebrew gfortran (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -39,12 +39,7 @@ jobs:
           FC=$(find "$(brew --prefix gcc)/bin" -name 'gfortran-*' | head -1)
           echo "FC=$FC" >> "$GITHUB_ENV"
           echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
-      - name: Activate MSVC (Windows)
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-          vsversion: "2022"
+
       - name: Install eon [unix]
         if: runner.os != 'Windows'
         shell: pixi run -e dev-mta bash -e {0}
@@ -58,22 +53,89 @@ jobs:
           -Dwith_tests=True                \
           -Dpip_metatomic=True
           meson install -C bbdir
-      - name: Install eon [windows]
-        if: runner.os == 'Windows'
+
+      - name: Run tests [unix]
+        if: runner.os != 'Windows'
         shell: pixi run -e dev-mta bash -e {0}
         run: |
-          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
-          # pip torch DLLs: use Git-Bash colon paths (not Windows ';') + add_dll_directory
-          # via tools/win_pip_torch_path.py. Wrong separators caused WinError 127 on shm.dll.
-          _bash_dll=$(python tools/win_pip_torch_path.py --bash-path)
-          export PATH="${_bash_dll}:${PATH}"
-          echo "Windows native lib PATH prepend: ${_bash_dll}"
-          python tools/win_pip_torch_path.py --import-check
-          # Align with ci_build_akmc Windows + feedstock build.bat: static
-          # default-library for MSVC; pip_metatomic for torch/metatomic wheels.
+          meson test -C bbdir --print-errorlogs
+
+      # --- Windows: follow metatomic/metatensor torch CI ---
+      # setup-python + pip CPU torch + MSVC. Do NOT load pip torch from a
+      # conda/pixi env that also activates compilers (WinError 127 on shm.dll
+      # from DLL/search-order clashes). pixi only supplies C++ deps (eigen,
+      # quill, rust for readcon-core).
+      # Ref: metatensor/metatomic .github/workflows/torch-tests.yml
+      - name: Setup Python [windows]
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup pixi C++ deps [windows]
+        if: runner.os == 'Windows'
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          cache: true
+          cache-write: true
+          # No activate-environment: keep setup-python as the active interpreter.
+          environments: >-
+            dev-mta
+
+      - name: Install cbindgen [windows]
+        if: runner.os == 'Windows'
+        shell: bash
+        run: command -v cbindgen || cargo install cbindgen
+
+      - name: Activate MSVC [windows]
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install pip torch + metatomic stack [windows]
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          # Same as metatomic torch-tests / wheel builds
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        run: |
+          set -euo pipefail
+          # Prefer actions/setup-python over any conda/pixi python on PATH
+          export PATH="${pythonLocation}:${pythonLocation}/Scripts:${PATH}"
+          python -m pip install -U pip
+          python -m pip install meson ninja
+          python -m pip install "torch>=2.10,<2.11"
+          python -m pip install \
+            "metatomic-torch>=0.1.15,<0.2" \
+            "metatensor-torch>=0.10,<0.11" \
+            "vesin>=0.6,<0.7" \
+            "vesin-torch>=0.6,<0.7"
+          python -c "import torch, vesin, metatensor, metatensor.torch, metatomic.torch as m; print('pip_metatomic ok', torch.__version__, torch.__file__)"
+
+      - name: Install eon [windows]
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        run: |
+          set -euo pipefail
+          # setup-python first; drop Git usr/bin (shadows MSVC link) and MinGW
+          export PATH="${pythonLocation}:${pythonLocation}/Scripts:${PATH}"
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -vE '/usr/bin$|[Mm]ingw' | paste -sd:)
+          # C++ deps from pixi (eigen, quill, …); do not use pixi python/torch
+          PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
+          if [ -d "$PIXI_PRE/Library" ]; then
+            export PKG_CONFIG_PATH="${PIXI_PRE}/Library/lib/pkgconfig:${PIXI_PRE}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            export CMAKE_PREFIX_PATH="${PIXI_PRE}/Library;${PIXI_PRE};${CMAKE_PREFIX_PATH:-}"
+            # Include headers/libs for MSVC without putting conda compiler bins first
+            export INCLUDE="${PIXI_PRE}/Library/include;${INCLUDE:-}"
+            export LIB="${PIXI_PRE}/Library/lib;${LIB:-}"
+          fi
+          # Drop conda compiler LDFLAGS that inject clang_rt into MSVC link
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
+          export CC=cl CXX=cl
+          python -c "import torch, vesin, metatensor, metatensor.torch, metatomic.torch; print('pre-meson import ok')"
           meson setup bbdir \
-            --prefix=$CONDA_PREFIX \
+            --prefix="${PIXI_PRE}" \
             --libdir=lib \
             --buildtype release \
             --default-library=static \
@@ -82,7 +144,14 @@ jobs:
             -Dwith_tests=True \
             -Dpip_metatomic=True
           meson install -C bbdir
-      - name: Run tests
-        shell: pixi run -e dev-mta bash -e {0}
+
+      - name: Run tests [windows]
+        if: runner.os == 'Windows'
+        shell: bash
         run: |
+          set -euo pipefail
+          export PATH="${pythonLocation}:${pythonLocation}/Scripts:${PATH}"
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -vE '/usr/bin$|[Mm]ingw' | paste -sd:)
+          PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
+          export PATH="${PIXI_PRE}/Library/bin:${PIXI_PRE}/Scripts:${PATH}"
           meson test -C bbdir --print-errorlogs
