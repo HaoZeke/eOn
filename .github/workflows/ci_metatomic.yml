@@ -23,7 +23,10 @@ jobs:
         with:
           cache: true
           cache-write: true
-          activate-environment: true
+          # Do not use activate-environment on Windows: setup-pixi fails with
+          # "Unable to handle environment activation which does not only append
+          # to PATH" for dev-mta (conda compiler activation rewrites PATH).
+          # Match ci_build_akmc: pixi run -e dev-mta per step.
           environments: >-
             dev-mta
       - name: Install cbindgen
@@ -44,7 +47,7 @@ jobs:
           vsversion: "2022"
       - name: Install eon [unix]
         if: runner.os != 'Windows'
-        shell: pixi run bash -e {0}
+        shell: pixi run -e dev-mta bash -e {0}
         run: |
           meson setup --reconfigure bbdir  \
           --prefix=$CONDA_PREFIX           \
@@ -57,7 +60,7 @@ jobs:
           meson install -C bbdir
       - name: Install eon [windows]
         if: runner.os == 'Windows'
-        shell: pixi run bash -e {0}
+        shell: pixi run -e dev-mta bash -e {0}
         run: |
           # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
           export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
@@ -74,6 +77,6 @@ jobs:
             -Dpip_metatomic=True
           meson install -C bbdir
       - name: Run tests
-        shell: pixi run bash -e {0}
+        shell: pixi run -e dev-mta bash -e {0}
         run: |
           meson test -C bbdir --print-errorlogs
