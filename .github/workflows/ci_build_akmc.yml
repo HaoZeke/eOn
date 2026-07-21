@@ -64,16 +64,18 @@ jobs:
           export CC=cl CXX=cl
           export AR=lib
           export ARFLAGS=
-          # Absolute FC so meson does not fail with WinError 2 on bare "flang".
-          if [ -x "${CONDA_PREFIX}/Library/bin/flang.exe" ]; then
+          # conda-forge win-64 flang 19 ships flang-new.exe (activate sets FC=flang-new).
+          if [ -x "${CONDA_PREFIX}/Library/bin/flang-new.exe" ]; then
+            export FC="${CONDA_PREFIX}/Library/bin/flang-new.exe"
+          elif [ -x "${CONDA_PREFIX}/Library/bin/flang.exe" ]; then
             export FC="${CONDA_PREFIX}/Library/bin/flang.exe"
-          elif [ -x "${CONDA_PREFIX}/Library/bin/flang" ]; then
-            export FC="${CONDA_PREFIX}/Library/bin/flang"
+          elif command -v flang-new >/dev/null 2>&1; then
+            export FC="$(command -v flang-new)"
           elif command -v flang >/dev/null 2>&1; then
             export FC="$(command -v flang)"
           else
-            echo "flang not found under CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
-            ls -la "${CONDA_PREFIX}/Library/bin" 2>/dev/null | head -40 || true
+            echo "flang-new/flang not found under CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
+            ls -la "${CONDA_PREFIX}/Library/bin"/flang* 2>/dev/null || true
             exit 1
           fi
           echo "FC=$FC"
