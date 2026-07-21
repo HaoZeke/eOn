@@ -193,7 +193,10 @@ jobs:
             -Dtorch_version=2.10 \
             -Dwith_tests=True \
             -Dpip_metatomic=True \
-            -Dwith_fortran=false
+            -Dwith_fortran=false \
+            -Dwith_cuh2=false
+          # with_fortran/cuh2 off: avoids FortranRuntime.dynamic.lib (flang) on
+          # the pure MSVC + pip-torch link line; AKMC Windows covers Fortran pots.
           meson install -C bbdir
 
       - name: Run tests [windows]
