@@ -51,7 +51,13 @@ jobs:
             --default-library=static -Dwith_fortran=true -Dwith_cuh2=true
           meson install -C bbdir
 
-      - name: Run tests
+      - name: Run Catch2 unit tests
+        shell: pixi run bash -e {0}
+        run: |
+          # with_tests defaults true; catch MSVC-only compile/link failures in
+          # unit tests that never run on the Unix-only feature workflows.
+          meson test -C bbdir --print-errorlogs
+      - name: Run server smoke tests
         shell: pixi run bash -e {0}
         run: |
           python tests/test_config_metadata.py

@@ -10,8 +10,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO(rg): Handle the windows-2022 later, issues linking fmt
-        os: [ubuntu-22.04, macos-14]
+        # win-64 is in feature.metatomic platforms (pixi.toml). Feedstock win
+        # builds with_metatomic + default with_tests; GHA must exercise that
+        # surface so MSVC-only unit tests (e.g. MetatomicEngineAbiTest / DynLib)
+        # fail here instead of only on conda-forge.
+        os: [ubuntu-22.04, macos-14, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.9.4
@@ -31,7 +34,11 @@ jobs:
           FC=$(find "$(brew --prefix gcc)/bin" -name 'gfortran-*' | head -1)
           echo "FC=$FC" >> "$GITHUB_ENV"
           echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
-      - name: Install eon
+      - name: Activate MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install eon [unix]
+        if: runner.os != 'Windows'
         shell: pixi run bash -e {0}
         run: |
           meson setup --reconfigure bbdir  \
@@ -43,7 +50,25 @@ jobs:
           -Dwith_tests=True                \
           -Dpip_metatomic=True
           meson install -C bbdir
-      - name: Run tests
-        shell: bash -el {0}
+      - name: Install eon [windows]
+        if: runner.os == 'Windows'
+        shell: pixi run bash -e {0}
         run: |
-          meson test -C bbdir
+          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          # Align with ci_build_akmc Windows + feedstock build.bat: static
+          # default-library for MSVC; pip_metatomic for torch/metatomic wheels.
+          meson setup bbdir \
+            --prefix=$CONDA_PREFIX \
+            --libdir=lib \
+            --buildtype release \
+            --default-library=static \
+            -Dwith_metatomic=True \
+            -Dtorch_version=2.10 \
+            -Dwith_tests=True \
+            -Dpip_metatomic=True
+          meson install -C bbdir
+      - name: Run tests
+        shell: pixi run bash -e {0}
+        run: |
+          meson test -C bbdir --print-errorlogs
