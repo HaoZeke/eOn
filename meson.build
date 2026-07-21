@@ -51,7 +51,12 @@ if get_option('pip_metatomic')
     # We don't need the runtime, so we don't change py_embed
 endif
 
-py = import('python').find_installation(pure: false, modules: py_modules)
+# On Windows, conda/pixi often put a PE binary at `python` (no .exe). Meson then
+# tries to read it as a shebang script, hits UnicodeDecodeError on the MZ header
+# ("Unusable script"), and find_installation fails the pip_metatomic modules.
+# Prefer python.exe so ExternalProgram treats it as a real Windows binary.
+_py_cmd = host_system == 'windows' ? 'python.exe' : 'python3'
+py = import('python').find_installation(_py_cmd, pure: false, modules: py_modules)
 if py_embed
     python_dep = py.dependency(embed: py_embed)
     _deps += python_dep
