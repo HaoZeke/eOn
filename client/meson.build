@@ -767,11 +767,12 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
             # MSVC has no -isystem; /external:I is opt-in. Use -I style via include_directories.
             mts_inc_args += ['-I' + d]
         endforeach
-        # Windows wheels ship import libs as metatensor.lib and/or libmetatensor.lib
-        # (same as non-pip MSVC fallback below). Try both names in each lib dir.
-        _mts_lib_candidates = is_windows ? ['metatensor', 'libmetatensor'] : ['metatensor']
-        _mts_torch_candidates = is_windows ? ['metatensor_torch', 'libmetatensor_torch'] : ['metatensor_torch']
-        _mta_torch_candidates = is_windows ? ['metatomic_torch', 'libmetatomic_torch'] : ['metatomic_torch']
+        # Windows wheels: import libs may be foo.lib, libfoo.lib, or foo.dll.lib
+        # (metatensor-core win ships metatensor.dll.lib). Meson find_library('x')
+        # probes x.lib / libx.lib; pass 'x.dll' to hit x.dll.lib.
+        _mts_lib_candidates = is_windows ? ['metatensor', 'libmetatensor', 'metatensor.dll'] : ['metatensor']
+        _mts_torch_candidates = is_windows ? ['metatensor_torch', 'libmetatensor_torch', 'metatensor_torch.dll'] : ['metatensor_torch']
+        _mta_torch_candidates = is_windows ? ['metatomic_torch', 'libmetatomic_torch', 'metatomic_torch.dll'] : ['metatomic_torch']
         _mts_core_found = disabler()
         foreach _n : _mts_lib_candidates
             if not _mts_core_found.found()
