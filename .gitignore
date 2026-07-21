@@ -1,5 +1,5 @@
 # Custom, other things are auto-ignored
-subprojects
+# subprojects extracted trees ignored under Meson section; wraps + packagefiles kept
 artn_gitinfo.h
 ira_gitinfo.h
 **/artn_gitinfo.h
@@ -607,9 +607,11 @@ Temporary Items
 # Edit at https://www.toptal.com/developers/gitignore?templates=meson
 
 ### Meson ###
-# subproject directories
+# subproject directories (extracted sources stay ignored; wraps + packagefiles tracked)
 /subprojects/*
 !/subprojects/*.wrap
+!/subprojects/packagefiles/
+!/subprojects/packagefiles/**
 
 # Meson Directories
 meson-logs

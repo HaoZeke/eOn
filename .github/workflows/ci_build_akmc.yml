@@ -48,10 +48,38 @@ jobs:
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
-          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe.
+          # Also drop MinGW/Strawberry so they cannot reappear mid-build.
+          export PATH=$(echo "$PATH" | tr ':' '\n' \
+            | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
+            | paste -sd:)
+          # conda LDFLAGS inject -Wl,... which GNU link mis-parses as --W and
+          # MSVC link rejects; strip them for MSVC.
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
+          export CC=cl CXX=cl
+          export AR=lib
+          export ARFLAGS=
+          export FC=flang
+          # flang_rt import libs (LNK1104 FortranRuntime / flang_rt otherwise).
+          FLANG_RT_DIR=""
+          if command -v flang >/dev/null 2>&1; then
+            _res="$(flang -print-resource-dir 2>/dev/null || true)"
+            if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
+              FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
+            fi
+          fi
+          if [ -z "$FLANG_RT_DIR" ] && [ -n "${CONDA_PREFIX:-}" ]; then
+            for _d in "${CONDA_PREFIX}/lib/clang"/*/lib/x86_64-pc-windows-msvc \
+                      "${CONDA_PREFIX}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc; do
+              if [ -d "$_d" ]; then FLANG_RT_DIR="$_d"; break; fi
+            done
+          fi
+          if [ -n "$FLANG_RT_DIR" ]; then
+            export LIB="${FLANG_RT_DIR};${LIB:-}"
+            echo "Using flang_rt LIBPATH: $FLANG_RT_DIR"
+          fi
           # Align with conda-forge/eon-feedstock#15 / build.bat: in-tree Fortran ON
-          # (m2w64/gfortran pots + MSVC C++; /STACK:16M in meson for GAGAFE; CuH2 on).
+          # (flang pots + MSVC C++; /STACK:16M in meson for GAGAFE; CuH2 on).
           meson setup bbdir --prefix=$CONDA_PREFIX --libdir=lib --buildtype release \
             --default-library=static -Dwith_fortran=true -Dwith_cuh2=true
           meson install -C bbdir
@@ -59,6 +87,14 @@ jobs:
       - name: Run Catch2 unit tests
         shell: pixi run bash -e {0}
         run: |
+          # Same PATH hygiene as compile: meson test may rebuild targets and
+          # must not pick Git usr/bin/link or conda -Wl LDFLAGS.
+          export PATH=$(echo "$PATH" | tr ':' '\n' \
+            | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
+            | paste -sd:)
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
+          export CC=cl CXX=cl
+          export AR=lib
           # with_tests defaults true; catch MSVC-only compile/link failures in
           # unit tests that never run on the Unix-only feature workflows.
           meson test -C bbdir --print-errorlogs

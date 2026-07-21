@@ -16,6 +16,8 @@ on:
 jobs:
   build_eon:
     runs-on: ubuntu-latest
+    # Private gpr_optim clone needs SUBMODULE_PRIVATE; skip on forks/PRs without it.
+    if: ${{ secrets.SUBMODULE_PRIVATE != '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup SSH for private submodule

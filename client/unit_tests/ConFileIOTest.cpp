@@ -118,9 +118,12 @@ TEST_CASE_METHOD(
   REQUIRE(eonc::io::io_ok(movie->matter2con(tmpfile, false, &first)));
   REQUIRE(eonc::io::io_ok(movie->matter2con(tmpfile, true, &second)));
 
-  std::ifstream file(tmpfile);
-  std::string file_contents((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
+  std::string file_contents;
+  {
+    std::ifstream file(tmpfile);
+    file_contents.assign((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+  }
   REQUIRE_FALSE(file_contents.empty());
   REQUIRE(file_contents.front() != '\n');
   REQUIRE(file_contents.find("\"frame_index\":0") != std::string::npos);
@@ -176,10 +179,12 @@ TEST_CASE_METHOD(ConFileIOFixture, "XYZ output is finite and non-empty",
   REQUIRE(size > 0);
 
   // Read first line -- should be atom count
-  std::ifstream f(tmpfile);
-  int natoms;
-  f >> natoms;
-  REQUIRE(natoms == original->numberOfAtoms());
+  {
+    std::ifstream f(tmpfile);
+    int natoms;
+    f >> natoms;
+    REQUIRE(natoms == original->numberOfAtoms());
+  }
 
   std::remove(tmpfile.c_str());
 }
@@ -282,9 +287,12 @@ TEST_CASE("ConFileIO embeds movie metadata in frame JSON",
   std::string tmpfile = tmppath.string();
   m->matter2con(tmpfile, false, &metadata);
 
-  std::ifstream in(tmpfile);
-  std::string file_contents((std::istreambuf_iterator<char>(in)),
-                            std::istreambuf_iterator<char>());
+  std::string file_contents;
+  {
+    std::ifstream in(tmpfile);
+    file_contents.assign((std::istreambuf_iterator<char>(in)),
+                         std::istreambuf_iterator<char>());
+  }
   REQUIRE(file_contents.find("\"frame_index\":7") != std::string::npos);
   REQUIRE(file_contents.find("\"energy\":-12.5") != std::string::npos);
   REQUIRE(file_contents.find("\"step_size\":0.125") != std::string::npos);
@@ -324,9 +332,12 @@ TEST_CASE("ConFileIO preserves metadata across append-mode movie frames",
   second.scalars.push_back({"step_size", 0.25});
   REQUIRE(eonc::io::io_ok(m->matter2con(tmpfile, true, &second)));
 
-  std::ifstream in(tmpfile);
-  std::string file_contents((std::istreambuf_iterator<char>(in)),
-                            std::istreambuf_iterator<char>());
+  std::string file_contents;
+  {
+    std::ifstream in(tmpfile);
+    file_contents.assign((std::istreambuf_iterator<char>(in)),
+                         std::istreambuf_iterator<char>());
+  }
   REQUIRE(file_contents.find("\"frame_index\":0") != std::string::npos);
   REQUIRE(file_contents.find("\"frame_index\":1") != std::string::npos);
   REQUIRE(file_contents.find("\"step_size\":0.25") != std::string::npos);
@@ -359,15 +370,21 @@ TEST_CASE("ConFileIO append mode rejects corrupt existing files",
     out << "not a valid con file\n";
   }
 
-  std::ifstream before_in(tmpfile);
-  std::string before((std::istreambuf_iterator<char>(before_in)),
-                     std::istreambuf_iterator<char>());
+  std::string before;
+  {
+    std::ifstream before_in(tmpfile);
+    before.assign((std::istreambuf_iterator<char>(before_in)),
+                  std::istreambuf_iterator<char>());
+  }
 
   REQUIRE_FALSE(eonc::io::io_ok(m->matter2con(tmpfile, true)));
 
-  std::ifstream after_in(tmpfile);
-  std::string after((std::istreambuf_iterator<char>(after_in)),
-                    std::istreambuf_iterator<char>());
+  std::string after;
+  {
+    std::ifstream after_in(tmpfile);
+    after.assign((std::istreambuf_iterator<char>(after_in)),
+                 std::istreambuf_iterator<char>());
+  }
   REQUIRE(after == before);
 
   std::filesystem::remove(tmpfile);
@@ -433,9 +450,12 @@ TEST_CASE("NEB path writer embeds structured frame metadata",
   REQUIRE(eonc::io::io_ok(eonc::neb::writePathCon(
       path, tangent, eigenmode_solvers, 1, false, tmpfile, 12)));
 
-  std::ifstream in(tmpfile);
-  std::string file_contents((std::istreambuf_iterator<char>(in)),
-                            std::istreambuf_iterator<char>());
+  std::string file_contents;
+  {
+    std::ifstream in(tmpfile);
+    file_contents.assign((std::istreambuf_iterator<char>(in)),
+                         std::istreambuf_iterator<char>());
+  }
   REQUIRE(file_contents.find("\"neb_band\":12") != std::string::npos);
   REQUIRE(file_contents.find("\"neb_bead\":1") != std::string::npos);
   REQUIRE(file_contents.find("\"reaction_coordinate\"") != std::string::npos);

@@ -55,7 +55,8 @@ if is_windows
         # conda-forge flang ships flang_rt import libs under the clang resource
         # dir (e.g. Library/lib/clang/19/lib/x86_64-pc-windows-msvc/).  Meson
         # links Fortran objects with MSVC link.exe, which does not search that
-        # path by default and fails with LNK1104 on flang_rt.runtime.dynamic.lib.
+        # path by default and fails with LNK1104 on FortranRuntime.dynamic.lib
+        # / flang_rt.runtime.dynamic.lib. Feedstock also puts this dir on LIB.
         if use_fortran and fc.get_id() == 'flang'
             _flang_rt_libpath = run_command(
                 fc,
@@ -71,6 +72,18 @@ if is_windows
                 )
                 if fs.is_dir(_flang_rt_dir)
                     _linkargs += ['/LIBPATH:' + _flang_rt_dir]
+                    # Named import libs differ across flang releases; pass the
+                    # first that exists so MSVC link resolves defaultlib drectves.
+                    foreach _frt : [
+                        'flang_rt.runtime.dynamic.lib',
+                        'FortranRuntime.dynamic.lib',
+                        'flang_rt.dynamic.lib',
+                    ]
+                        if fs.is_file(join_paths(_flang_rt_dir, _frt))
+                            _linkargs += [join_paths(_flang_rt_dir, _frt)]
+                            break
+                        endif
+                    endforeach
                 endif
             endif
         endif

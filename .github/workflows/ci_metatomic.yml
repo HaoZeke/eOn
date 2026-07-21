@@ -125,7 +125,7 @@ jobs:
           export PATH=$(echo "$PATH" | tr ':' '\n' \
             | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
             | paste -sd:)
-          # C++ deps from pixi (eigen, quill, …); do not use pixi python/torch
+          # C++ deps from pixi (eigen, quill, flang, …); do not use pixi python/torch
           PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
           if [ ! -d "$PIXI_PRE/Library" ]; then
             echo "pixi env missing: $PIXI_PRE" >&2
@@ -158,14 +158,39 @@ jobs:
             || { echo "eigen headers missing under $PIXI_PRE"; find "$PIXI_PRE" -name 'Core' -path '*Eigen*' 2>/dev/null | head; exit 1; }
           export INCLUDE="${PIXI_PRE}/Library/include;${INCLUDE:-}"
           export LIB="${PIXI_PRE}/Library/lib;${LIB:-}"
-          # Put pixi Library/bin on PATH for DLLs, after MSVC tools
+          # pixi Library/bin: flang, flang_rt DLLs (after MSVC tools on PATH)
           export PATH="${PIXI_PRE}/Library/bin:${PATH}"
-          # Drop conda compiler flags; force MSVC for CMake probes
+          # Drop conda GNU-style flags; force MSVC for CMake probes + archives
+          # (feedstock build.bat: AR=lib so flang does not select llvm-ar).
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
+          export AR=lib
+          export ARFLAGS=
+          export FC=flang
           export CMAKE_C_COMPILER=cl
           export CMAKE_CXX_COMPILER=cl
           export CMAKE_GENERATOR=Ninja
+          # flang_rt import libs under clang resource dir (LNK1104 otherwise).
+          # Same search as conda-forge/eon-feedstock recipe/build.bat.
+          FLANG_RT_DIR=""
+          if command -v flang >/dev/null 2>&1; then
+            _res="$(flang -print-resource-dir 2>/dev/null || true)"
+            if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
+              FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
+            fi
+          fi
+          if [ -z "$FLANG_RT_DIR" ]; then
+            for _d in "${PIXI_PRE}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc; do
+              if [ -d "$_d" ]; then FLANG_RT_DIR="$_d"; break; fi
+            done
+          fi
+          if [ -n "$FLANG_RT_DIR" ]; then
+            export LIB="${FLANG_RT_DIR};${LIB}"
+            echo "Using flang_rt LIBPATH: $FLANG_RT_DIR"
+            ls "$FLANG_RT_DIR"/*.{lib,dll} 2>/dev/null | head -20 || ls "$FLANG_RT_DIR" | head -20
+          else
+            echo "WARNING: flang_rt resource dir not found" >&2
+          fi
           python -c "import torch, vesin, metatensor, metatensor.torch, metatomic.torch; print('pre-meson import ok')"
           # Help diagnose find_library against pip wheel layout
           python - <<'PY'
@@ -184,6 +209,7 @@ jobs:
               if d.is_dir():
                   print("  ", sorted(p.name for p in d.iterdir())[:40])
           PY
+          # In-tree Fortran + CuH2 ON (same as feedstock / AKMC Windows).
           meson setup bbdir \
             --prefix="${PIXI_PRE}" \
             --libdir=lib \
@@ -193,10 +219,8 @@ jobs:
             -Dtorch_version=2.10 \
             -Dwith_tests=True \
             -Dpip_metatomic=True \
-            -Dwith_fortran=false \
-            -Dwith_cuh2=false
-          # with_fortran/cuh2 off: avoids FortranRuntime.dynamic.lib (flang) on
-          # the pure MSVC + pip-torch link line; AKMC Windows covers Fortran pots.
+            -Dwith_fortran=true \
+            -Dwith_cuh2=true
           meson install -C bbdir
 
       - name: Run tests [windows]
@@ -212,8 +236,9 @@ jobs:
             | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
             | paste -sd:)
           PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
-          # DLLs only (torch + conda runtime), not pixi python/meson
+          # DLLs: torch + pixi runtime (flang_rt) for Fortran pot plugins
           export PATH="${pythonLocation}/Lib/site-packages/torch/lib:${PIXI_PRE}/Library/bin:${PATH}"
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           which meson
           meson --version
           meson test -C bbdir --print-errorlogs
