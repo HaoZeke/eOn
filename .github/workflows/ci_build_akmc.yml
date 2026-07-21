@@ -48,25 +48,40 @@ jobs:
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
+          set -euo pipefail
           # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe.
           # Also drop MinGW/Strawberry so they cannot reappear mid-build.
           export PATH=$(echo "$PATH" | tr ':' '\n' \
             | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
             | paste -sd:)
+          # pixi/conda put flang under Library/bin; keep it first after MSVC.
+          if [ -n "${CONDA_PREFIX:-}" ]; then
+            export PATH="${CONDA_PREFIX}/Library/bin:${CONDA_PREFIX}/bin:${PATH}"
+          fi
           # conda LDFLAGS inject -Wl,... which GNU link mis-parses as --W and
           # MSVC link rejects; strip them for MSVC.
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
           export AR=lib
           export ARFLAGS=
-          export FC=flang
+          # Absolute FC so meson does not fail with WinError 2 on bare "flang".
+          if [ -x "${CONDA_PREFIX}/Library/bin/flang.exe" ]; then
+            export FC="${CONDA_PREFIX}/Library/bin/flang.exe"
+          elif [ -x "${CONDA_PREFIX}/Library/bin/flang" ]; then
+            export FC="${CONDA_PREFIX}/Library/bin/flang"
+          elif command -v flang >/dev/null 2>&1; then
+            export FC="$(command -v flang)"
+          else
+            echo "flang not found under CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
+            ls -la "${CONDA_PREFIX}/Library/bin" 2>/dev/null | head -40 || true
+            exit 1
+          fi
+          echo "FC=$FC"
           # flang_rt import libs (LNK1104 FortranRuntime / flang_rt otherwise).
           FLANG_RT_DIR=""
-          if command -v flang >/dev/null 2>&1; then
-            _res="$(flang -print-resource-dir 2>/dev/null || true)"
-            if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
-              FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
-            fi
+          _res="$("$FC" -print-resource-dir 2>/dev/null || true)"
+          if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
+            FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
           fi
           if [ -z "$FLANG_RT_DIR" ] && [ -n "${CONDA_PREFIX:-}" ]; then
             for _d in "${CONDA_PREFIX}/lib/clang"/*/lib/x86_64-pc-windows-msvc \
@@ -84,20 +99,31 @@ jobs:
             --default-library=static -Dwith_fortran=true -Dwith_cuh2=true
           meson install -C bbdir
 
-      - name: Run Catch2 unit tests
+      - name: Run Catch2 unit tests [unix]
+        if: runner.os != 'Windows'
         shell: pixi run bash -e {0}
         run: |
+          # with_tests defaults true; catch compile/link failures in unit tests.
+          meson test -C bbdir --print-errorlogs
+
+      - name: Run Catch2 unit tests [windows]
+        if: runner.os == 'Windows'
+        shell: pixi run bash -e {0}
+        run: |
+          set -euo pipefail
           # Same PATH hygiene as compile: meson test may rebuild targets and
           # must not pick Git usr/bin/link or conda -Wl LDFLAGS.
           export PATH=$(echo "$PATH" | tr ':' '\n' \
             | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
             | paste -sd:)
+          if [ -n "${CONDA_PREFIX:-}" ]; then
+            export PATH="${CONDA_PREFIX}/Library/bin:${CONDA_PREFIX}/bin:${PATH}"
+          fi
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
           export AR=lib
-          # with_tests defaults true; catch MSVC-only compile/link failures in
-          # unit tests that never run on the Unix-only feature workflows.
           meson test -C bbdir --print-errorlogs
+
       - name: Run server smoke tests
         shell: pixi run bash -e {0}
         run: |

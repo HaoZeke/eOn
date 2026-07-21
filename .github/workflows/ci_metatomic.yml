@@ -159,25 +159,36 @@ jobs:
           export INCLUDE="${PIXI_PRE}/Library/include;${INCLUDE:-}"
           export LIB="${PIXI_PRE}/Library/lib;${LIB:-}"
           # pixi Library/bin: flang, flang_rt DLLs (after MSVC tools on PATH)
-          export PATH="${PIXI_PRE}/Library/bin:${PATH}"
+          export PATH="${PIXI_PRE}/Library/bin:${PIXI_PRE}/bin:${PATH}"
           # Drop conda GNU-style flags; force MSVC for CMake probes + archives
           # (feedstock build.bat: AR=lib so flang does not select llvm-ar).
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
           export AR=lib
           export ARFLAGS=
-          export FC=flang
+          # Absolute FC path: bare "flang" fails meson detection (WinError 2)
+          # when the shell does not resolve Library/bin the same way as meson.
+          if [ -x "${PIXI_PRE}/Library/bin/flang.exe" ]; then
+            export FC="${PIXI_PRE}/Library/bin/flang.exe"
+          elif [ -x "${PIXI_PRE}/Library/bin/flang" ]; then
+            export FC="${PIXI_PRE}/Library/bin/flang"
+          elif command -v flang >/dev/null 2>&1; then
+            export FC="$(command -v flang)"
+          else
+            echo "flang not found under PIXI_PRE=${PIXI_PRE}" >&2
+            ls -la "${PIXI_PRE}/Library/bin" 2>/dev/null | head -40 || true
+            exit 1
+          fi
+          echo "FC=$FC"
           export CMAKE_C_COMPILER=cl
           export CMAKE_CXX_COMPILER=cl
           export CMAKE_GENERATOR=Ninja
           # flang_rt import libs under clang resource dir (LNK1104 otherwise).
           # Same search as conda-forge/eon-feedstock recipe/build.bat.
           FLANG_RT_DIR=""
-          if command -v flang >/dev/null 2>&1; then
-            _res="$(flang -print-resource-dir 2>/dev/null || true)"
-            if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
-              FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
-            fi
+          _res="$("$FC" -print-resource-dir 2>/dev/null || true)"
+          if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
+            FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
           fi
           if [ -z "$FLANG_RT_DIR" ]; then
             for _d in "${PIXI_PRE}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc; do
