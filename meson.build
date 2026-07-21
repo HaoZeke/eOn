@@ -57,21 +57,41 @@ endif
 # Prefer python.exe so ExternalProgram treats it as a real Windows binary.
 _py_cmd = host_system == 'windows' ? 'python.exe' : 'python3'
 # find_installation(..., modules:) only reports "missing modules" with no stderr.
-# On Windows pip torch/metatensor, imports often fail with DLL load errors; check
-# each module via run_command so the real ImportError surfaces in the log.
+# On Windows pip torch, imports need DLL directories registered; use the helper
+# for a single stack check. Elsewhere check each module so ImportError is logged.
 py = import('python').find_installation(_py_cmd, pure: false)
-foreach _mod : py_modules
-    _r = run_command(py, '-c', 'import ' + _mod, check: false)
-    if _r.returncode() != 0
-        error(
-            'Python module "' + _mod + '" is not importable with '
-            + py.full_path()
-            + ':\n'
-            + _r.stderr()
-            + _r.stdout(),
+if py_modules.length() > 0
+    if host_system == 'windows' and get_option('pip_metatomic')
+        _r = run_command(
+            py,
+            meson.project_source_root() / 'tools' / 'win_pip_torch_path.py',
+            '--import-check',
+            check: false,
         )
+        if _r.returncode() != 0
+            error(
+                'pip_metatomic Python stack not importable with '
+                + py.full_path()
+                + ':\n'
+                + _r.stderr()
+                + _r.stdout(),
+            )
+        endif
+    else
+        foreach _mod : py_modules
+            _r = run_command(py, '-c', 'import ' + _mod, check: false)
+            if _r.returncode() != 0
+                error(
+                    'Python module "' + _mod + '" is not importable with '
+                    + py.full_path()
+                    + ':\n'
+                    + _r.stderr()
+                    + _r.stdout(),
+                )
+            endif
+        endforeach
     endif
-endforeach
+endif
 if py_embed
     python_dep = py.dependency(embed: py_embed)
     _deps += python_dep
