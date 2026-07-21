@@ -204,8 +204,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          export PATH="${pythonLocation}:${pythonLocation}/Scripts:${PATH}"
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -vE '/usr/bin$|[Mm]ingw' | paste -sd:)
+          # Same interpreter/meson as Install eon (pip meson in setup-python).
+          # Do not prepend pixi Scripts — that puts a different meson first and
+          # meson test then rejects build.dat from the pip meson configure.
+          export PATH="${pythonLocation}/Scripts:${pythonLocation}:${PATH}"
+          export PATH=$(echo "$PATH" | tr ':' '\n' \
+            | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
+            | paste -sd:)
           PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
-          export PATH="${PIXI_PRE}/Library/bin:${PIXI_PRE}/Scripts:${PATH}"
+          # DLLs only (torch + conda runtime), not pixi python/meson
+          export PATH="${pythonLocation}/Lib/site-packages/torch/lib:${PIXI_PRE}/Library/bin:${PATH}"
+          which meson
+          meson --version
           meson test -C bbdir --print-errorlogs
