@@ -166,21 +166,16 @@ jobs:
           export CC=cl CXX=cl
           export AR=lib
           export ARFLAGS=
-          # conda-forge win-64 flang 19 ships flang-new.exe (activate: FC=flang-new).
-          if [ -x "${PIXI_PRE}/Library/bin/flang-new.exe" ]; then
-            export FC="${PIXI_PRE}/Library/bin/flang-new.exe"
-          elif [ -x "${PIXI_PRE}/Library/bin/flang.exe" ]; then
-            export FC="${PIXI_PRE}/Library/bin/flang.exe"
-          elif command -v flang-new >/dev/null 2>&1; then
-            export FC="$(command -v flang-new)"
-          elif command -v flang >/dev/null 2>&1; then
-            export FC="$(command -v flang)"
-          else
-            echo "flang-new/flang not found under PIXI_PRE=${PIXI_PRE}" >&2
+          # conda-forge flang_win-64 activate.bat: FC=flang-new (see also SciPy
+          # feedstock: trust compiler activation; meson searches flang-new).
+          # setup-python + pixi without full bat activation needs this explicitly.
+          export FC=flang-new
+          if ! command -v flang-new >/dev/null 2>&1; then
+            echo "flang-new not on PATH; PIXI_PRE=${PIXI_PRE}" >&2
             ls -la "${PIXI_PRE}/Library/bin"/flang* 2>/dev/null || true
             exit 1
           fi
-          echo "FC=$FC"
+          echo "FC=$(command -v flang-new)"
           export CMAKE_C_COMPILER=cl
           export CMAKE_CXX_COMPILER=cl
           export CMAKE_GENERATOR=Ninja

@@ -1303,7 +1303,13 @@ if get_option('with_tests')
     )
     _test_env.set('EON_TEST_SYSTEMS_DIR', _systems_dir)
     if _fortran_pot_dirs.length() > 0
-        _test_env.set('EON_POTENTIALS_PATH', ':'.join(_fortran_pot_dirs))
+        # FortranPotLoader splits on ';' on Windows (drive letters break ':').
+        # Same pathsep rule as PATH: win=';' unix=':'.
+        _pot_pathsep = is_windows ? ';' : ':'
+        _test_env.set(
+            'EON_POTENTIALS_PATH',
+            _pot_pathsep.join(_fortran_pot_dirs),
+        )
     endif
 
     foreach test : test_array

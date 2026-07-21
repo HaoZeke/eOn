@@ -16,7 +16,7 @@
 /// Uses dlopen (POSIX) or LoadLibrary (Windows) to load Fortran potential
 /// libraries at runtime. The search order is:
 ///   1. Paths from the [Potential] potentials_path config key
-///   2. EON_POTENTIALS_PATH environment variable (colon-separated)
+///   2. EON_POTENTIALS_PATH environment variable (';' on Windows, ':' elsewhere)
 ///   3. Default system library search path (LD_LIBRARY_PATH, etc.)
 ///
 /// Call add_config_paths() once at startup (before any potential constructor)

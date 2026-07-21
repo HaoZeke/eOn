@@ -64,21 +64,17 @@ jobs:
           export CC=cl CXX=cl
           export AR=lib
           export ARFLAGS=
-          # conda-forge win-64 flang 19 ships flang-new.exe (activate sets FC=flang-new).
-          if [ -x "${CONDA_PREFIX}/Library/bin/flang-new.exe" ]; then
-            export FC="${CONDA_PREFIX}/Library/bin/flang-new.exe"
-          elif [ -x "${CONDA_PREFIX}/Library/bin/flang.exe" ]; then
-            export FC="${CONDA_PREFIX}/Library/bin/flang.exe"
-          elif command -v flang-new >/dev/null 2>&1; then
-            export FC="$(command -v flang-new)"
-          elif command -v flang >/dev/null 2>&1; then
-            export FC="$(command -v flang)"
-          else
-            echo "flang-new/flang not found under CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
+          # conda-forge flang_win-64 activate.bat sets FC=flang-new (binary is
+          # flang-new.exe). SciPy feedstock relies on that activation; pixi bash
+          # does not always apply .bat activate.d, so set the same value here.
+          # Meson also lists flang-new in its default Fortran compiler search.
+          export FC=flang-new
+          if ! command -v flang-new >/dev/null 2>&1; then
+            echo "flang-new not on PATH; CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
             ls -la "${CONDA_PREFIX}/Library/bin"/flang* 2>/dev/null || true
             exit 1
           fi
-          echo "FC=$FC"
+          echo "FC=$(command -v flang-new)"
           # flang_rt import libs (LNK1104 FortranRuntime / flang_rt otherwise).
           FLANG_RT_DIR=""
           _res="$("$FC" -print-resource-dir 2>/dev/null || true)"
