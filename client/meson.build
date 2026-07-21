@@ -186,36 +186,9 @@ features_list = [
     ['EMBED_PYTHON', 'Embedded Python'],
 ]
 
-# Join _args into a single string for checking
-_args_str = ' '.join(_args)
-
-features_string = ''
-foreach feature : features_list
-    feature_flag = feature[0]
-    feature_name = feature[1]
-    if '-D' + feature_flag in _args_str
-        features_string += '  ' + feature_name + ': enabled\n'
-    else
-        features_string += '  ' + feature_name + ': disabled\n'
-    endif
-endforeach
-
-# Configure the header file
-configure_file(
-    input: 'version.h.in',
-    output: 'version.h',
-    configuration: {
-        'VERSION': version,
-        'VERSION_MAJOR': version_major,
-        'VERSION_MINOR': version_minor,
-        'VERSION_PATCH': version_patch,
-        'BUILD_DATE': build_date,
-        'OS_INFO': host_system,
-        'ARCH': architecture,
-        'GIT_HASH': git_hash,
-        'FEATURES': features_string,
-    },
-)
+# features_string + version.h are assembled AFTER optional with_* blocks append
+# -DWITH_* to _args (metatomic, xtb, serve, artn, …). Scanning earlier under-reports
+# enabled features in eonclient --features even when those flags are linked in.
 
 # Dependencies
 if not is_windows
@@ -1060,6 +1033,35 @@ else
     _deps += [readcon_dep]
 endif
 
+# version.h FEATURES must see every -DWITH_* appended by the blocks above.
+_args_str = ' '.join(_args)
+features_string = ''
+foreach feature : features_list
+    feature_flag = feature[0]
+    feature_name = feature[1]
+    if '-D' + feature_flag in _args_str
+        features_string += '  ' + feature_name + ': enabled\n'
+    else
+        features_string += '  ' + feature_name + ': disabled\n'
+    endif
+endforeach
+
+configure_file(
+    input: 'version.h.in',
+    output: 'version.h',
+    configuration: {
+        'VERSION': version,
+        'VERSION_MAJOR': version_major,
+        'VERSION_MINOR': version_minor,
+        'VERSION_PATCH': version_patch,
+        'BUILD_DATE': build_date,
+        'OS_INFO': host_system,
+        'ARCH': architecture,
+        'GIT_HASH': git_hash,
+        'FEATURES': features_string,
+    },
+)
+
 # --------------------- Library
 
 eclib = library(
@@ -1206,6 +1208,7 @@ if get_option('with_tests')
     endif
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
+        # DynLib.h (LoadLibrary / dlopen) — builds on MSVC and POSIX.
         test_array += [['test_mta_engine_abi', 'MetatomicEngineAbiTest.cpp', '']]
     endif
     if get_option('with_xtb')
