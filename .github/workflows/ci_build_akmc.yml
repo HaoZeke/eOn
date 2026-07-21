@@ -10,7 +10,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-latest]
+        # windows-2022: windows-latest currently ships VS 18 only; ilammy/msvc-dev-cmd
+        # fails there (invalid params on 18, or "VS not found" if pinned to 2022).
+        os: [ubuntu-22.04, macos-14, windows-2022]
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.9.4
@@ -40,7 +42,6 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-          # windows-latest may expose VS 18; pin 2022 (pixi / conda-forge MSVC).
           vsversion: "2022"
 
       - name: Compile and install [windows]
