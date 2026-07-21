@@ -64,6 +64,37 @@ jobs:
         run: |
           # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
           export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          # pip torch / metatensor / metatomic ship native DLLs under site-packages;
+          # Windows LoadLibrary needs those dirs on PATH before import/meson probes.
+          _dll_path=$(
+            python - <<'PY'
+          import pathlib, site
+          roots = []
+          for sp in site.getsitepackages():
+              p = pathlib.Path(sp)
+              for rel in (
+                  "torch/lib",
+                  "torch/bin",
+                  "metatensor",
+                  "metatensor_torch",
+                  "metatomic",
+                  "vesin",
+              ):
+                  d = p / rel
+                  if d.is_dir():
+                      roots.append(str(d.resolve()))
+                  # nested torch-versioned lib dirs (metatensor_torch/torch-2.10/lib)
+                  for sub in p.glob(rel.replace("\\", "/") + "/**/lib"):
+                      if sub.is_dir():
+                          roots.append(str(sub.resolve()))
+          print(";".join(dict.fromkeys(roots)))
+          PY
+          )
+          if [ -n "$_dll_path" ]; then
+            export PATH="${_dll_path};${PATH}"
+            echo "Windows native lib PATH prepend: ${_dll_path}"
+          fi
+          python -c "import vesin, metatensor, metatensor.torch, metatomic.torch; print('pip_metatomic imports ok')"
           # Align with ci_build_akmc Windows + feedstock build.bat: static
           # default-library for MSVC; pip_metatomic for torch/metatomic wheels.
           meson setup bbdir \

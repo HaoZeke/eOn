@@ -56,7 +56,22 @@ endif
 # ("Unusable script"), and find_installation fails the pip_metatomic modules.
 # Prefer python.exe so ExternalProgram treats it as a real Windows binary.
 _py_cmd = host_system == 'windows' ? 'python.exe' : 'python3'
-py = import('python').find_installation(_py_cmd, pure: false, modules: py_modules)
+# find_installation(..., modules:) only reports "missing modules" with no stderr.
+# On Windows pip torch/metatensor, imports often fail with DLL load errors; check
+# each module via run_command so the real ImportError surfaces in the log.
+py = import('python').find_installation(_py_cmd, pure: false)
+foreach _mod : py_modules
+    _r = run_command(py, '-c', 'import ' + _mod, check: false)
+    if _r.returncode() != 0
+        error(
+            'Python module "' + _mod + '" is not importable with '
+            + py.full_path()
+            + ':\n'
+            + _r.stderr()
+            + _r.stdout(),
+        )
+    endif
+endforeach
 if py_embed
     python_dep = py.dependency(embed: py_embed)
     _deps += python_dep
