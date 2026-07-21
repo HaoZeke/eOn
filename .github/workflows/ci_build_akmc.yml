@@ -38,6 +38,10 @@ jobs:
       - name: Activate MSVC (Windows)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          # windows-latest may expose VS 18; pin 2022 (pixi / conda-forge MSVC).
+          vsversion: "2022"
 
       - name: Compile and install [windows]
         if: runner.os == 'Windows'
