@@ -764,31 +764,71 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
         endif
         mts_inc_args = []
         foreach d : [_mts_core_inc, _mts_torch_inc_new, _mts_torch_inc_old, _mta_inc]
-            mts_inc_args += ['-isystem', d]
+            # MSVC has no -isystem; /external:I is opt-in. Use -I style via include_directories.
+            mts_inc_args += ['-I' + d]
         endforeach
+        # Windows wheels ship import libs as metatensor.lib and/or libmetatensor.lib
+        # (same as non-pip MSVC fallback below). Try both names in each lib dir.
+        _mts_lib_candidates = is_windows ? ['metatensor', 'libmetatensor'] : ['metatensor']
+        _mts_torch_candidates = is_windows ? ['metatensor_torch', 'libmetatensor_torch'] : ['metatensor_torch']
+        _mta_torch_candidates = is_windows ? ['metatomic_torch', 'libmetatomic_torch'] : ['metatomic_torch']
+        _mts_core_found = disabler()
+        foreach _n : _mts_lib_candidates
+            if not _mts_core_found.found()
+                _mts_core_found = cppc.find_library(_n, dirs: [_mts_core_lib], required: false)
+            endif
+        endforeach
+        if not _mts_core_found.found()
+            error(
+                'pip_metatomic: C library metatensor not found under '
+                + _mts_core_lib
+                + ' (tried '
+                + ', '.join(_mts_lib_candidates)
+                + ')',
+            )
+        endif
+        _mts_torch_found = disabler()
+        foreach _n : _mts_torch_candidates
+            if not _mts_torch_found.found()
+                _mts_torch_found = cppc.find_library(
+                    _n,
+                    dirs: _mts_torch_lib_dirs,
+                    required: false,
+                )
+            endif
+        endforeach
+        if not _mts_torch_found.found()
+            error(
+                'pip_metatomic: C library metatensor_torch not found under '
+                + ' '.join(_mts_torch_lib_dirs),
+            )
+        endif
+        _mta_torch_found = disabler()
+        foreach _n : _mta_torch_candidates
+            if not _mta_torch_found.found()
+                _mta_torch_found = cppc.find_library(_n, dirs: [_mta_lib], required: false)
+            endif
+        endforeach
+        if not _mta_torch_found.found()
+            error(
+                'pip_metatomic: C library metatomic_torch not found under ' + _mta_lib,
+            )
+        endif
         mts_dep = declare_dependency(
-            dependencies: [
-                cppc.find_library('metatensor', dirs: [_mts_core_lib]),
-                cppc.find_library('metatensor_torch', dirs: _mts_torch_lib_dirs),
-                cppc.find_library('metatomic_torch', dirs: [_mta_lib]),
-            ],
+            dependencies: [_mts_core_found, _mts_torch_found, _mta_torch_found],
             compile_args: mts_inc_args,
         )
-        vesin_dep = cppc.find_library(
-            'vesin',
-            dirs: [_vesin_lib],
-            required: false,
-        )
+        _vesin_candidates = is_windows ? ['vesin', 'libvesin'] : ['vesin']
+        vesin_dep = disabler()
+        foreach _n : _vesin_candidates
+            if not vesin_dep.found()
+                vesin_dep = cppc.find_library(_n, dirs: [_vesin_lib], required: false)
+            endif
+        endforeach
         if vesin_dep.found()
             vesin_dep = declare_dependency(
-                dependencies: [
-                    cppc.find_library(
-                        'vesin',
-                        dirs: [_vesin_lib],
-                        required: false,
-                    ),
-                ],
-                compile_args: ['-isystem', _vesin_inc],
+                dependencies: [vesin_dep],
+                compile_args: ['-I' + _vesin_inc],
             )
         endif
     else

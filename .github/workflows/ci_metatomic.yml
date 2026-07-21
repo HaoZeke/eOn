@@ -167,6 +167,23 @@ jobs:
           export CMAKE_CXX_COMPILER=cl
           export CMAKE_GENERATOR=Ninja
           python -c "import torch, vesin, metatensor, metatensor.torch, metatomic.torch; print('pre-meson import ok')"
+          # Help diagnose find_library against pip wheel layout
+          python - <<'PY'
+          import pathlib, site, torch
+          sp = pathlib.Path(torch.__file__).resolve().parent.parent
+          tv = ".".join(torch.__version__.split(".")[:2])
+          for rel in (
+              "metatensor/lib",
+              f"metatensor_torch/torch-{tv}/lib",
+              f"metatomic/torch/torch-{tv}/lib",
+              "vesin/lib",
+              "torch/lib",
+          ):
+              d = sp / rel
+              print(rel, "exists" if d.is_dir() else "MISSING", d)
+              if d.is_dir():
+                  print("  ", sorted(p.name for p in d.iterdir())[:40])
+          PY
           meson setup bbdir \
             --prefix="${PIXI_PRE}" \
             --libdir=lib \
