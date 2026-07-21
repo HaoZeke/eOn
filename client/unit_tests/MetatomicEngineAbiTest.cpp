@@ -6,8 +6,8 @@
 #include <vector>
 
 // Structural + optional live check: libmetatomic_engine exports rgpot_mta_*
-// ABI. Uses DynLib (LoadLibrary on Windows, dlopen elsewhere) — not raw
-// dlfcn.h — so the test builds and runs on MSVC.
+// ABI. Uses DynLib (LoadLibrary on Windows, dlopen elsewhere) - not raw
+// dlfcn.h - so the test builds and runs on MSVC.
 TEST_CASE("metatomic engine C ABI symbols present when engine is loadable",
           "[metatomic][rgpot][engine]") {
   const char *env = std::getenv("RGPOT_METATOMIC_ENGINE");
