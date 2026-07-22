@@ -36,7 +36,8 @@ rust = ">=1.88"
 
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
-readcon = ">=0.13.0, <0.14"
+# eOn 2.16 / plot stack (rgpycrumbs>=1.9) need readcon IoStatus API.
+readcon = ">=0.13.1,<0.14"
 vesin = ">=0.5.2, <0.7"
 nanobind = ">=2.4.0, <3"  # pyeonclient (stable ABI / free-threaded); not pybind11
 
@@ -156,8 +157,9 @@ sphinxcontrib-bibtex = "*"
 sphinxcontrib-spelling = "*"
 autodoc-pydantic = "*"
 sphinx-autodoc2 = "*"
-rgpycrumbs = { version = ">=1.8.0,<2", extras = ["analysis"] }
-chemparseplot = { version = ">=1.8.0,<2", extras = ["neb", "plot"] }
+# Plot stack: 1:1 (s,d) landscapes, full NEB strips, titled min plots (plt-min/plt-neb).
+rgpycrumbs = { version = ">=1.9.9,<2", extras = ["analysis"] }
+chemparseplot = { version = ">=1.9.7,<2", extras = ["neb", "plot"] }
 adjustText = "*"
 
 [feature.docs.tasks.makedocs]
