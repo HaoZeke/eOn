@@ -57,20 +57,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
-          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
-          # Ensure MSVC link is first; prefer link.exe next to cl.exe
-          CLDIR=$(dirname "$(command -v cl.exe || true)")
-          if [ -n "$CLDIR" ]; then export PATH="$CLDIR:$PATH"; fi
-          # pip_metatomic modules must import for meson find_installation
-          python - <<'PY2'
-          import importlib
-          for m in ("vesin", "metatensor", "metatensor.torch", "metatomic.torch"):
-              importlib.import_module(m)
-              print("ok", m)
-          PY2
-          # Align with ci_build_akmc Windows + feedstock build.bat: static
-          # default-library for MSVC; pip_metatomic for torch/metatomic wheels.
+          # Windows: conda DLL path first (torch/shm.dll), then MSVC tools,
+          # and drop Git Bash /usr/bin so GNU link.exe cannot shadow MSVC.
+          export PATH=$(echo "$PATH" | tr ':' '
+' | grep -v '^/usr/bin$' | paste -sd:)
+          export PATH="$CONDA_PREFIX/Scripts:$CONDA_PREFIX:$CONDA_PREFIX/Library/bin:$PATH"
+          CLDIR=$(dirname "$(command -v cl.exe 2>/dev/null || true)")
+          if [ -n "$CLDIR" ] && [ -x "$CLDIR/link.exe" ]; then
+            export PATH="$CLDIR:$PATH"
+          fi
+          # pixi compilers set LD=lld-link / clang LDFLAGS; use MSVC for this build
+          unset LDFLAGS || true
+          export LD=link
+          export CC=cl
+          export CXX=cl
+          python -c "import vesin, metatensor, metatensor.torch, metatomic.torch; print('pip_metatomic imports ok')"
           meson setup bbdir \
             --prefix=$CONDA_PREFIX \
             --libdir=lib \
@@ -85,6 +86,18 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-            export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          # Windows: conda DLL path first (torch/shm.dll), then MSVC tools,
+          # and drop Git Bash /usr/bin so GNU link.exe cannot shadow MSVC.
+          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          export PATH="$CONDA_PREFIX/Scripts:$CONDA_PREFIX:$CONDA_PREFIX/Library/bin:$PATH"
+          CLDIR=$(dirname "$(command -v cl.exe 2>/dev/null || true)")
+          if [ -n "$CLDIR" ] && [ -x "$CLDIR/link.exe" ]; then
+            export PATH="$CLDIR:$PATH"
+          fi
+          # pixi compilers set LD=lld-link / clang LDFLAGS; use MSVC for this build
+          unset LDFLAGS || true
+          export LD=link
+          export CC=cl
+          export CXX=cl
           fi
           meson test -C bbdir --print-errorlogs
