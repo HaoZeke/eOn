@@ -1,5 +1,5 @@
-#include "catch2/catch_amalgamated.hpp"
 #include "DynLib.h"
+#include "catch2/catch_amalgamated.hpp"
 
 #include <cstdlib>
 #include <string>

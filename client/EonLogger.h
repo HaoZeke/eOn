@@ -18,11 +18,11 @@
 #include "quill/sinks/FileSink.h"
 #include <atomic>
 #include <filesystem>
-#include <system_error>
 #include <mutex>
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace eonc::log {
 
