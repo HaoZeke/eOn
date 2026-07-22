@@ -33,6 +33,8 @@ endif
 host_system = host_machine.system()
 is_windows = host_system == 'windows'
 is_mingw = is_windows and cc.get_id() == 'gcc'
+# Populated when flang_rt import libs are located (Windows MSVC + flang).
+_flang_rt_dir = ''
 
 # Add conditionals
 if host_system == 'darwin'
@@ -700,6 +702,41 @@ eonclib_sources += fortran_pot_cpp_sources
 # Fortran shared libraries: built only when a Fortran compiler is available,
 # installed separately, and loaded at runtime via dlopen.
 _fortran_pot_libs = []
+# Windows: conda-forge flang ships FortranRuntime*.lib but often no matching
+# .dll. Pot plugins are LoadLibrary'd; if they depend on FortranRuntime.dynamic
+# the load fails. Prefer static flang runtime objects inside each pot DLL.
+_fortran_pot_link_args = []
+if get_option('with_fortran') and is_windows and fc.get_id() in ['flang', 'llvm-flang', 'flang-new']
+    _fc_path = fc.cmd_array()[0]
+    _fc_dir = fs.parent(_fc_path)
+    _lib_root = fs.parent(_fc_dir)
+    _static_search = [join_paths(_lib_root, 'lib')]
+    if _flang_rt_dir != ''
+        _static_search += [_flang_rt_dir]
+    endif
+    foreach _static_frt : [
+        'FortranRuntime.static.lib',
+        'FortranDecimal.static.lib',
+    ]
+        foreach _sdir : _static_search
+            _probe = join_paths(_sdir, _static_frt)
+            if fs.is_file(_probe)
+                _fortran_pot_link_args += [_probe]
+                break
+            endif
+        endforeach
+    endforeach
+    if _fortran_pot_link_args.length() > 0
+        message(
+            'Fortran pot plugins: static flang_rt '
+            + ', '.join(_fortran_pot_link_args),
+        )
+    else
+        warning(
+            'Fortran pot plugins: no static flang_rt libs; LoadLibrary may need runtime DLLs',
+        )
+    endif
+endif
 if get_option('with_fortran')
     subdir('potentials/Aluminum')
     subdir('potentials/EDIP')

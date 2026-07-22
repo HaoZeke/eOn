@@ -108,22 +108,13 @@ jobs:
           # shellcheck source=scripts/ci/win_flang_rt.sh
           source scripts/ci/win_flang_rt.sh
           eon_export_flang_rt "${CONDA_PREFIX:-}" --required
-          # Prove pot DLLs exist in the build tree and LoadLibrary can resolve
-          # flang_rt deps (fails fast with a clear dump if not).
+          # Prove pot DLLs exist and LoadLibrary works (static flang_rt preferred).
           for _pot in Aluminum SW EDIP FeHe Lenosky Tersoff; do
             ls -la "bbdir/client/potentials/${_pot}"/eon_*.dll \
               "bbdir/client/potentials/${_pot}"/libeon_*.dll 2>/dev/null || true
           done
-          if [ -z "${FLANG_RT_DLL_DIR:-}" ]; then
-            echo "FLANG_RT_DLL_DIR unset after eon_export_flang_rt" >&2
-            exit 1
-          fi
-          echo "FLANG_RT_DLL_DIR=$FLANG_RT_DLL_DIR"
-          ls -la "${FLANG_RT_DLL_DIR}"/FortranRuntime*.dll \
-            "${FLANG_RT_DLL_DIR}"/flang_rt*.dll \
-            "${FLANG_RT_DLL_DIR}"/FortranDecimal*.dll 2>/dev/null | head -20
           python - <<'PY'
-          import ctypes, os, sys
+          import ctypes, os, sys, subprocess
           from pathlib import Path
           pot = Path("bbdir/client/potentials/SW")
           cands = list(pot.glob("eon_*.dll")) + list(pot.glob("libeon_*.dll"))
@@ -137,7 +128,21 @@ jobs:
               print("LoadLibrary OK")
           except OSError as e:
               print("LoadLibrary FAILED:", e)
-              print("PATH head:", os.environ.get("PATH", "")[:500])
+              print("PATH head:", os.environ.get("PATH", "")[:800])
+              # dumpbin shows missing deps when present
+              for tool in ("dumpbin", "llvm-readobj"):
+                  try:
+                      out = subprocess.check_output(
+                          [tool, "/dependents", dll]
+                          if tool == "dumpbin"
+                          else [tool, "--coff-imports", dll],
+                          text=True,
+                          stderr=subprocess.STDOUT,
+                      )
+                      print(out[:2000])
+                      break
+                  except Exception as ex:
+                      print(tool, "failed:", ex)
               sys.exit(1)
           PY
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true

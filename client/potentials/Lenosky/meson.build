@@ -2,6 +2,7 @@
 eon_lenosky = shared_library('eon_lenosky',
            'lenoskyFortran.f90',
            fortran_args : _fargs,
+           link_args : _fortran_pot_link_args,
            install : true)
 
 # C++ wrapper (compiled into client, loads Fortran lib at runtime)

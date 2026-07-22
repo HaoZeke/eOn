@@ -2,6 +2,7 @@
 eon_fehe = shared_library('eon_fehe',
            'feforce.f',
            fortran_args : _fargs,
+           link_args : _fortran_pot_link_args,
            install : true)
 
 # C++ wrapper (compiled into client, loads Fortran lib at runtime)

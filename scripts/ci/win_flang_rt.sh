@@ -147,12 +147,18 @@ eon_find_first() {
 }
 
 eon_export_flang_rt() {
+  # --required: must find import libs (MSVC link). Runtime DLLs are optional:
+  # conda-forge flang often ships only .lib; pot plugins should link static
+  # FortranRuntime (see client/meson.build _fortran_pot_link_args).
   local required=0
+  local require_dll=0
   local roots=()
   local arg
   for arg in "$@"; do
     if [ "$arg" = "--required" ]; then
       required=1
+    elif [ "$arg" = "--require-dll" ]; then
+      require_dll=1
     elif [ -n "$arg" ]; then
       roots+=("$arg")
     fi
@@ -212,9 +218,8 @@ eon_export_flang_rt() {
     ls "$dll_dir"/FortranRuntime*.dll "$dll_dir"/flang_rt*.dll \
        "$dll_dir"/FortranDecimal*.dll 2>/dev/null | head -20 || true
   else
-    echo "WARNING: flang_rt runtime DLL dir not found (LoadLibrary of pots may fail)" >&2
-    # --required means tests will LoadLibrary Fortran pots: hard-fail without DLLs.
-    if [ "$required" -eq 1 ]; then
+    echo "NOTE: no flang_rt runtime DLLs in env (pot plugins should use static flang_rt)" >&2
+    if [ "$require_dll" -eq 1 ]; then
       return 1
     fi
   fi

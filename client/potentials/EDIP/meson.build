@@ -2,6 +2,7 @@
 eon_edip = shared_library('eon_edip',
            'edipFortran.f90',
            fortran_args : _fargs,
+           link_args : _fortran_pot_link_args,
            install : true)
 
 # C++ wrapper (compiled into client, loads Fortran lib at runtime)

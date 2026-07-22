@@ -8,6 +8,7 @@ eon_aluminum = shared_library('eon_aluminum',
            'embedenergy.f',
            'sumembforce.f',
            fortran_args : _fargs,
+           link_args : _fortran_pot_link_args,
            install : true)
 
 # C++ wrapper (compiled into client, loads Fortran lib at runtime)
