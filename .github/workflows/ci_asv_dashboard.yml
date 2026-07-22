@@ -121,24 +121,14 @@ jobs:
           QUICK: ${{ (github.event_name == 'schedule' || inputs.force_full) && 'false' || 'true' }}
         run: |
           set -e
-          # existing: env cannot take a git range — loop SHAs with --set-commit-hash
           EXTRA=""
-          if [ "$QUICK" = "true" ]; then EXTRA="--quick"; fi
           N=5
-          if [ "$QUICK" != "true" ]; then N=8; fi
-          pixi run bash -c "
-            set -e
-            export PATH=\"\$CONDA_PREFIX/bin:\$PATH\"
-            PY=\$(which python)
-            mapfile -t SHAS < <(git rev-list --max-count=$N HEAD)
-            # oldest first so history is chronological
-            for ((i=\${#SHAS[@]}-1; i>=0; i--)); do
-              sha=\${SHAS[i]}
-              echo "=== asv run $EXTRA --set-commit-hash \$sha ==="
-              asv run -E \"existing:\$PY\" --set-commit-hash \"\$sha\" --record-samples $EXTRA \
-                || asv run -E \"existing:\$PY\" --set-commit-hash \"\$sha\" --record-samples $EXTRA -v
-            done
-          "
+          if [ "$QUICK" = "true" ]; then
+            EXTRA="--quick"
+          else
+            N=8
+          fi
+          pixi run bash scripts/asv_run_history.sh "$N" "$EXTRA"
 
       - name: asv publish + tachyon UI
         working-directory: src
