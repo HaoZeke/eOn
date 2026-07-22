@@ -37,7 +37,8 @@ jobs:
 
       - name: Activate MSVC (Windows)
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        shell: pwsh
+        run: pwsh -File scripts/ci/activate_msvc_gha.ps1
 
       - name: Compile and install [windows]
         if: runner.os == 'Windows'
@@ -56,6 +57,10 @@ jobs:
         run: |
           # with_tests defaults true; catch MSVC-only compile/link failures in
           # unit tests that never run on the Unix-only feature workflows.
+          # Strip Git Bash /usr/bin so MSVC link.exe is not shadowed by GNU link.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          fi
           meson test -C bbdir --print-errorlogs
       - name: Run server smoke tests
         shell: pixi run bash -e {0}

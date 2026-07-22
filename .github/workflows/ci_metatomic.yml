@@ -34,9 +34,12 @@ jobs:
           FC=$(find "$(brew --prefix gcc)/bin" -name 'gfortran-*' | head -1)
           echo "FC=$FC" >> "$GITHUB_ENV"
           echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+      # pixi/conda vs* activation leaves VSINSTALLDIR / CMAKE_GENERATOR_TOOLSET that
+      # break VsDevCmd when windows-latest ships VS 18 and vswhere picks it.
       - name: Activate MSVC (Windows)
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
+        shell: pwsh
+        run: pwsh -File scripts/ci/activate_msvc_gha.ps1
       - name: Install eon [unix]
         if: runner.os != 'Windows'
         shell: pixi run bash -e {0}
@@ -71,4 +74,7 @@ jobs:
       - name: Run tests
         shell: pixi run bash -e {0}
         run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          fi
           meson test -C bbdir --print-errorlogs
