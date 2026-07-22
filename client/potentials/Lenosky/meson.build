@@ -1,5 +1,5 @@
-# Fortran-only shared library: loaded at runtime via dlopen
-eon_lenosky = shared_library('eon_lenosky',
+# Fortran-only shared module: loaded at runtime via dlopen/LoadLibrary
+eon_lenosky = shared_module('eon_lenosky',
            'lenoskyFortran.f90',
            fortran_args : _fargs,
            link_args : _fortran_pot_link_args,

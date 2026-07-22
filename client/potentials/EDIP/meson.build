@@ -1,5 +1,5 @@
-# Fortran-only shared library: loaded at runtime via dlopen
-eon_edip = shared_library('eon_edip',
+# Fortran-only shared module: loaded at runtime via dlopen/LoadLibrary
+eon_edip = shared_module('eon_edip',
            'edipFortran.f90',
            fortran_args : _fargs,
            link_args : _fortran_pot_link_args,

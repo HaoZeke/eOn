@@ -1,5 +1,5 @@
-# Fortran-only shared library: loaded at runtime via dlopen
-eon_aluminum = shared_library('eon_aluminum',
+# Fortran-only shared module: loaded at runtime via dlopen/LoadLibrary
+eon_aluminum = shared_module('eon_aluminum',
            'fofrhoDblexp.f',
            'dfrhoDblexp.f',
            'potinit.f',

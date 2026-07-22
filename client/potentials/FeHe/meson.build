@@ -1,5 +1,5 @@
-# Fortran-only shared library: loaded at runtime via dlopen
-eon_fehe = shared_library('eon_fehe',
+# Fortran-only shared module: loaded at runtime via dlopen/LoadLibrary
+eon_fehe = shared_module('eon_fehe',
            'feforce.f',
            fortran_args : _fargs,
            link_args : _fortran_pot_link_args,

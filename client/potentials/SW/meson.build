@@ -1,5 +1,5 @@
-# Fortran-only shared library: loaded at runtime via dlopen
-eon_sw = shared_library('eon_sw',
+# Fortran-only shared module: loaded at runtime via dlopen/LoadLibrary
+eon_sw = shared_module('eon_sw',
            'SWFortran.f90',
            fortran_args : _fargs,
            link_args : _fortran_pot_link_args,
