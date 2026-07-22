@@ -123,9 +123,12 @@ TEST_CASE("VerifyForceBearingWrite", "[approval][confileio][modern]") {
   REQUIRE(eonc::io::io_ok(m->matter2con(tmp.string(), false)));
   eonc::io::set_write_con_forces(false);
 
-  std::ifstream in(tmp);
-  std::string body((std::istreambuf_iterator<char>(in)),
-                   std::istreambuf_iterator<char>());
+  std::string body;
+  {
+    std::ifstream in(tmp);
+    body.assign((std::istreambuf_iterator<char>(in)),
+                std::istreambuf_iterator<char>());
+  }
 
   Parameters params;
   params.potential_options.potential = PotType::LJ;
@@ -159,9 +162,12 @@ TEST_CASE("VerifyDefaultWriteHasNoForceSections",
   const auto tmp = make_tmp_con("default_no_forces");
   REQUIRE(eonc::io::io_ok(m->matter2con(tmp.string(), false)));
 
-  std::ifstream in(tmp);
-  std::string body((std::istreambuf_iterator<char>(in)),
-                   std::istreambuf_iterator<char>());
+  std::string body;
+  {
+    std::ifstream in(tmp);
+    body.assign((std::istreambuf_iterator<char>(in)),
+                std::istreambuf_iterator<char>());
+  }
 
   // Classic layout: no per-component force sections and no forces entry in
   // the metadata sections list, so ASE-class readers keep parsing our output.
@@ -193,9 +199,12 @@ TEST_CASE("VerifyNebPathCloneWrite", "[approval][confileio][neb]") {
   const auto tmp = make_tmp_con("neb_band");
   REQUIRE(eonc::io::io_ok(eonc::io::writeNebPath(tmp.string(), path, metas)));
 
-  std::ifstream in(tmp);
-  std::string body((std::istreambuf_iterator<char>(in)),
-                   std::istreambuf_iterator<char>());
+  std::string body;
+  {
+    std::ifstream in(tmp);
+    body.assign((std::istreambuf_iterator<char>(in)),
+                std::istreambuf_iterator<char>());
+  }
   fs::remove(tmp);
 
   std::ostringstream summary;

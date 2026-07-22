@@ -33,6 +33,8 @@ endif
 host_system = host_machine.system()
 is_windows = host_system == 'windows'
 is_mingw = is_windows and cc.get_id() == 'gcc'
+# Populated when flang_rt import libs are located (Windows MSVC + flang).
+_flang_rt_dir = ''
 
 # Add conditionals
 if host_system == 'darwin'
@@ -55,8 +57,11 @@ if is_windows
         # conda-forge flang ships flang_rt import libs under the clang resource
         # dir (e.g. Library/lib/clang/19/lib/x86_64-pc-windows-msvc/).  Meson
         # links Fortran objects with MSVC link.exe, which does not search that
-        # path by default and fails with LNK1104 on flang_rt.runtime.dynamic.lib.
-        if use_fortran and fc.get_id() == 'flang'
+        # path by default and fails with LNK1104 on FortranRuntime.dynamic.lib
+        # / flang_rt.runtime.dynamic.lib. Feedstock also puts this dir on LIB.
+        # flang-new reports id 'llvm-flang' or 'flang' depending on Meson.
+        if use_fortran and fc.get_id() in ['flang', 'llvm-flang', 'flang-new']
+            _flang_rt_candidates = []
             _flang_rt_libpath = run_command(
                 fc,
                 '-print-resource-dir',
@@ -64,14 +69,96 @@ if is_windows
             )
             if _flang_rt_libpath.returncode() == 0
                 _flang_rt_res = _flang_rt_libpath.stdout().strip()
-                _flang_rt_dir = join_paths(
+                # Normalize D:\... to D:/... so join_paths / fs.is_* work.
+                _flang_rt_res = _flang_rt_res.replace('\\', '/')
+                _flang_rt_candidates += [
+                    join_paths(_flang_rt_res, 'lib', 'x86_64-pc-windows-msvc'),
+                    join_paths(_flang_rt_res, 'lib'),
                     _flang_rt_res,
-                    'lib',
-                    'x86_64-pc-windows-msvc',
-                )
-                if fs.is_dir(_flang_rt_dir)
-                    _linkargs += ['/LIBPATH:' + _flang_rt_dir]
+                ]
+            endif
+            # Fallback: conda/pixi layout under the compiler's bindir parents.
+            # win-64 flang often ships import libs in Library/lib (not only under
+            # the clang resource triple dir).
+            _fc_path = fc.cmd_array()[0]
+            _fc_dir = fs.parent(_fc_path)
+            # .../Library/bin/flang-new.exe -> .../Library
+            _lib_root = fs.parent(_fc_dir)
+            _flang_rt_candidates += [
+                join_paths(_lib_root, 'lib'),
+                join_paths(_lib_root, 'lib', 'clang'),
+                join_paths(_lib_root, 'bin'),
+            ]
+            _flang_rt_dir = ''
+            foreach _cand : _flang_rt_candidates
+                if _flang_rt_dir != ''
+                    break
                 endif
+                if not fs.is_dir(_cand)
+                    continue
+                endif
+                # Direct match or clang/<ver>/lib/x86_64-pc-windows-msvc under cand
+                foreach _probe : [
+                    _cand,
+                    join_paths(_cand, 'lib', 'x86_64-pc-windows-msvc'),
+                ]
+                    foreach _frt : [
+                        'flang_rt.runtime.dynamic.lib',
+                        'FortranRuntime.dynamic.lib',
+                        'flang_rt.dynamic.lib',
+                    ]
+                        if fs.is_file(join_paths(_probe, _frt))
+                            _flang_rt_dir = _probe
+                            break
+                        endif
+                    endforeach
+                    if _flang_rt_dir != ''
+                        break
+                    endif
+                endforeach
+                # Walk clang version dirs one level if cand is .../lib/clang
+                if _flang_rt_dir == '' and fs.name(_cand) == 'clang'
+                    # Meson has no readdir; try common versions from recent flang.
+                    foreach _ver : ['21', '20', '19', '18', '17']
+                        _probe = join_paths(
+                            _cand,
+                            _ver,
+                            'lib',
+                            'x86_64-pc-windows-msvc',
+                        )
+                        foreach _frt : [
+                            'flang_rt.runtime.dynamic.lib',
+                            'FortranRuntime.dynamic.lib',
+                            'flang_rt.dynamic.lib',
+                        ]
+                            if fs.is_file(join_paths(_probe, _frt))
+                                _flang_rt_dir = _probe
+                                break
+                            endif
+                        endforeach
+                        if _flang_rt_dir != ''
+                            break
+                        endif
+                    endforeach
+                endif
+            endforeach
+            if _flang_rt_dir != ''
+                _linkargs += ['/LIBPATH:' + _flang_rt_dir]
+                message('flang_rt LIBPATH: ' + _flang_rt_dir)
+                foreach _frt : [
+                    'flang_rt.runtime.dynamic.lib',
+                    'FortranRuntime.dynamic.lib',
+                    'flang_rt.dynamic.lib',
+                ]
+                    if fs.is_file(join_paths(_flang_rt_dir, _frt))
+                        _linkargs += [join_paths(_flang_rt_dir, _frt)]
+                        break
+                    endif
+                endforeach
+            else
+                warning(
+                    'flang_rt import lib dir not found; MSVC link may LNK1104',
+                )
             endif
         endif
     endif
@@ -615,6 +702,41 @@ eonclib_sources += fortran_pot_cpp_sources
 # Fortran shared libraries: built only when a Fortran compiler is available,
 # installed separately, and loaded at runtime via dlopen.
 _fortran_pot_libs = []
+# Windows: conda-forge flang ships FortranRuntime*.lib but often no matching
+# .dll. Pot plugins are LoadLibrary'd; if they depend on FortranRuntime.dynamic
+# the load fails. Prefer static flang runtime objects inside each pot DLL.
+_fortran_pot_link_args = []
+if get_option('with_fortran') and is_windows and fc.get_id() in ['flang', 'llvm-flang', 'flang-new']
+    _fc_path = fc.cmd_array()[0]
+    _fc_dir = fs.parent(_fc_path)
+    _lib_root = fs.parent(_fc_dir)
+    _static_search = [join_paths(_lib_root, 'lib')]
+    if _flang_rt_dir != ''
+        _static_search += [_flang_rt_dir]
+    endif
+    foreach _static_frt : [
+        'FortranRuntime.static.lib',
+        'FortranDecimal.static.lib',
+    ]
+        foreach _sdir : _static_search
+            _probe = join_paths(_sdir, _static_frt)
+            if fs.is_file(_probe)
+                _fortran_pot_link_args += [_probe]
+                break
+            endif
+        endforeach
+    endforeach
+    if _fortran_pot_link_args.length() > 0
+        message(
+            'Fortran pot plugins: static flang_rt '
+            + ', '.join(_fortran_pot_link_args),
+        )
+    else
+        warning(
+            'Fortran pot plugins: no static flang_rt libs; LoadLibrary may need runtime DLLs',
+        )
+    endif
+endif
 if get_option('with_fortran')
     subdir('potentials/Aluminum')
     subdir('potentials/EDIP')
@@ -764,31 +886,72 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
         endif
         mts_inc_args = []
         foreach d : [_mts_core_inc, _mts_torch_inc_new, _mts_torch_inc_old, _mta_inc]
-            mts_inc_args += ['-isystem', d]
+            # MSVC has no -isystem; /external:I is opt-in. Use -I style via include_directories.
+            mts_inc_args += ['-I' + d]
         endforeach
+        # Windows wheels: import libs may be foo.lib, libfoo.lib, or foo.dll.lib
+        # (metatensor-core win ships metatensor.dll.lib). Meson find_library('x')
+        # probes x.lib / libx.lib; pass 'x.dll' to hit x.dll.lib.
+        _mts_lib_candidates = is_windows ? ['metatensor', 'libmetatensor', 'metatensor.dll'] : ['metatensor']
+        _mts_torch_candidates = is_windows ? ['metatensor_torch', 'libmetatensor_torch', 'metatensor_torch.dll'] : ['metatensor_torch']
+        _mta_torch_candidates = is_windows ? ['metatomic_torch', 'libmetatomic_torch', 'metatomic_torch.dll'] : ['metatomic_torch']
+        _mts_core_found = disabler()
+        foreach _n : _mts_lib_candidates
+            if not _mts_core_found.found()
+                _mts_core_found = cppc.find_library(_n, dirs: [_mts_core_lib], required: false)
+            endif
+        endforeach
+        if not _mts_core_found.found()
+            error(
+                'pip_metatomic: C library metatensor not found under '
+                + _mts_core_lib
+                + ' (tried '
+                + ', '.join(_mts_lib_candidates)
+                + ')',
+            )
+        endif
+        _mts_torch_found = disabler()
+        foreach _n : _mts_torch_candidates
+            if not _mts_torch_found.found()
+                _mts_torch_found = cppc.find_library(
+                    _n,
+                    dirs: _mts_torch_lib_dirs,
+                    required: false,
+                )
+            endif
+        endforeach
+        if not _mts_torch_found.found()
+            error(
+                'pip_metatomic: C library metatensor_torch not found under '
+                + ' '.join(_mts_torch_lib_dirs),
+            )
+        endif
+        _mta_torch_found = disabler()
+        foreach _n : _mta_torch_candidates
+            if not _mta_torch_found.found()
+                _mta_torch_found = cppc.find_library(_n, dirs: [_mta_lib], required: false)
+            endif
+        endforeach
+        if not _mta_torch_found.found()
+            error(
+                'pip_metatomic: C library metatomic_torch not found under ' + _mta_lib,
+            )
+        endif
         mts_dep = declare_dependency(
-            dependencies: [
-                cppc.find_library('metatensor', dirs: [_mts_core_lib]),
-                cppc.find_library('metatensor_torch', dirs: _mts_torch_lib_dirs),
-                cppc.find_library('metatomic_torch', dirs: [_mta_lib]),
-            ],
+            dependencies: [_mts_core_found, _mts_torch_found, _mta_torch_found],
             compile_args: mts_inc_args,
         )
-        vesin_dep = cppc.find_library(
-            'vesin',
-            dirs: [_vesin_lib],
-            required: false,
-        )
+        _vesin_candidates = is_windows ? ['vesin', 'libvesin'] : ['vesin']
+        vesin_dep = disabler()
+        foreach _n : _vesin_candidates
+            if not vesin_dep.found()
+                vesin_dep = cppc.find_library(_n, dirs: [_vesin_lib], required: false)
+            endif
+        endforeach
         if vesin_dep.found()
             vesin_dep = declare_dependency(
-                dependencies: [
-                    cppc.find_library(
-                        'vesin',
-                        dirs: [_vesin_lib],
-                        required: false,
-                    ),
-                ],
-                compile_args: ['-isystem', _vesin_inc],
+                dependencies: [vesin_dep],
+                compile_args: ['-I' + _vesin_inc],
             )
         endif
     else
@@ -1249,7 +1412,13 @@ if get_option('with_tests')
     )
     _test_env.set('EON_TEST_SYSTEMS_DIR', _systems_dir)
     if _fortran_pot_dirs.length() > 0
-        _test_env.set('EON_POTENTIALS_PATH', ':'.join(_fortran_pot_dirs))
+        # FortranPotLoader splits on ';' on Windows (drive letters break ':').
+        # Same pathsep rule as PATH: win=';' unix=':'.
+        _pot_pathsep = is_windows ? ';' : ':'
+        _test_env.set(
+            'EON_POTENTIALS_PATH',
+            _pot_pathsep.join(_fortran_pot_dirs),
+        )
     endif
 
     foreach test : test_array
@@ -1265,6 +1434,9 @@ if get_option('with_tests')
                 dependencies: test_deps,
                 include_directories: _incdirs,
                 cpp_args: test_args,
+                # Include /STACK:16M (Windows) so EAM Al Fortran pots do not
+                # SIGSEGV with STATUS_STACK_OVERFLOW (default stack is 1 MB).
+                link_args: _linkargs,
                 link_with: _linkto,
                 build_rpath: ':'.join(_runtime_rpath),
             ),

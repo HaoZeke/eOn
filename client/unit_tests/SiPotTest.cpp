@@ -154,8 +154,7 @@ TEST_CASE("SW minimization energy matches SVN", "[pot][sw][si][minimization]") {
   }
 }
 
-TEST_CASE("SW CG minimization matches SVN",
-          "[pot][sw][si][minimization][cg]") {
+TEST_CASE("SW CG minimization matches SVN", "[pot][sw][si][minimization][cg]") {
   SIPOT_REQUIRE_POS_CON();
   Parameters params;
   params.potential_options.potential = PotType::SW_SI;

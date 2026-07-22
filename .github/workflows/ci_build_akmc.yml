@@ -10,7 +10,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-latest]
+        # windows-2022: windows-latest currently ships VS 18 only; ilammy/msvc-dev-cmd
+        # fails there (invalid params on 18, or "VS not found" if pinned to 2022).
+        os: [ubuntu-22.04, macos-14, windows-2022]
     steps:
       - uses: actions/checkout@v4
       - uses: prefix-dev/setup-pixi@v0.9.4
@@ -38,25 +40,121 @@ jobs:
       - name: Activate MSVC (Windows)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          vsversion: "2022"
 
       - name: Compile and install [windows]
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
-          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          set -euo pipefail
+          # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe.
+          # Also drop MinGW/Strawberry so they cannot reappear mid-build.
+          export PATH=$(echo "$PATH" | tr ':' '\n' \
+            | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
+            | paste -sd:)
+          # pixi/conda put flang under Library/bin; keep it first after MSVC.
+          if [ -n "${CONDA_PREFIX:-}" ]; then
+            export PATH="${CONDA_PREFIX}/Library/bin:${CONDA_PREFIX}/bin:${PATH}"
+          fi
+          # conda LDFLAGS inject -Wl,... which GNU link mis-parses as --W and
+          # MSVC link rejects; strip them for MSVC.
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
+          export CC=cl CXX=cl
+          export AR=lib
+          export ARFLAGS=
+          # conda-forge flang_win-64 activate.bat sets FC=flang-new (binary is
+          # flang-new.exe). SciPy feedstock relies on that activation; pixi bash
+          # does not always apply .bat activate.d, so set the same value here.
+          # Meson also lists flang-new in its default Fortran compiler search.
+          export FC=flang-new
+          if ! command -v flang-new >/dev/null 2>&1; then
+            echo "flang-new not on PATH; CONDA_PREFIX=${CONDA_PREFIX:-unset}" >&2
+            ls -la "${CONDA_PREFIX}/Library/bin"/flang* 2>/dev/null || true
+            exit 1
+          fi
+          echo "FC=$(command -v flang-new)"
+          # flang_rt import libs (LNK1104) + runtime DLLs for pot plugins.
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${CONDA_PREFIX:-}" --required
           # Align with conda-forge/eon-feedstock#15 / build.bat: in-tree Fortran ON
-          # (m2w64/gfortran pots + MSVC C++; /STACK:16M in meson for GAGAFE; CuH2 on).
+          # (flang pots + MSVC C++; /STACK:16M in meson for GAGAFE; CuH2 on).
           meson setup bbdir --prefix=$CONDA_PREFIX --libdir=lib --buildtype release \
             --default-library=static -Dwith_fortran=true -Dwith_cuh2=true
           meson install -C bbdir
 
-      - name: Run Catch2 unit tests
+      - name: Run Catch2 unit tests [unix]
+        if: runner.os != 'Windows'
         shell: pixi run bash -e {0}
         run: |
-          # with_tests defaults true; catch MSVC-only compile/link failures in
-          # unit tests that never run on the Unix-only feature workflows.
+          # with_tests defaults true; catch compile/link failures in unit tests.
           meson test -C bbdir --print-errorlogs
+
+      - name: Run Catch2 unit tests [windows]
+        if: runner.os == 'Windows'
+        shell: pixi run bash -e {0}
+        run: |
+          set -euo pipefail
+          # Same PATH hygiene as compile: meson test may rebuild targets and
+          # must not pick Git usr/bin/link or conda -Wl LDFLAGS.
+          export PATH=$(echo "$PATH" | tr ':' '\n' \
+            | grep -vE '/usr/bin$|[Mm]ingw|[Ss]trawberry' \
+            | paste -sd:)
+          if [ -n "${CONDA_PREFIX:-}" ]; then
+            export PATH="${CONDA_PREFIX}/Library/bin:${CONDA_PREFIX}/bin:${PATH}"
+          fi
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${CONDA_PREFIX:-}" --required
+          # Prove pot DLLs exist and LoadLibrary works (static flang_rt preferred).
+          for _pot in Aluminum SW EDIP FeHe Lenosky Tersoff; do
+            ls -la "bbdir/client/potentials/${_pot}"/eon_*.dll \
+              "bbdir/client/potentials/${_pot}"/libeon_*.dll 2>/dev/null || true
+          done
+          python - <<'PY'
+          import ctypes, os, sys, subprocess
+          from pathlib import Path
+          pot = Path("bbdir/client/potentials/SW")
+          cands = list(pot.glob("eon_*.dll")) + list(pot.glob("libeon_*.dll"))
+          print("SW pot candidates:", cands)
+          if not cands:
+              sys.exit("no SW pot DLL in build tree")
+          dll = str(cands[0].resolve())
+          print("LoadLibrary", dll)
+          try:
+              h = ctypes.WinDLL(dll)
+              print("LoadLibrary OK")
+          except OSError as e:
+              print("LoadLibrary FAILED:", e)
+              print("PATH head:", os.environ.get("PATH", "")[:800])
+              sys.exit(1)
+          # Fortran symbols must be exported (Windows PE); catch missing exports early.
+          found = None
+          for name in ("sw_", "SW_", "_sw_", "sw__", "SW__"):
+              try:
+                  getattr(h, name)
+                  found = name
+                  break
+              except AttributeError:
+                  pass
+          print("sw symbol:", found)
+          try:
+              out = subprocess.check_output(
+                  ["dumpbin", "/exports", dll], text=True, stderr=subprocess.STDOUT
+              )
+              print(out[:2500])
+          except Exception as ex:
+              print("dumpbin /exports failed:", ex)
+          if not found:
+              sys.exit("eon_sw.dll loads but does not export sw_ (check .def / link)")
+          PY
+          unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
+          export CC=cl CXX=cl
+          export AR=lib
+          meson test -C bbdir --print-errorlogs
+
       - name: Run server smoke tests
         shell: pixi run bash -e {0}
         run: |

@@ -121,6 +121,8 @@ dynlib::Handle FortranPotLoader::open_lib(const char *lib_base) {
 
   auto names = lib_names(lib_base);
   dynlib::Handle h{};
+  std::string last_err;
+  bool any_file = false;
 
   // Try each search path (config paths precede env-var paths in m_search_paths)
   for (const auto &dir : m_search_paths) {
@@ -131,6 +133,10 @@ dynlib::Handle FortranPotLoader::open_lib(const char *lib_base) {
         m_handles[lib_base] = h;
         return h;
       }
+      // Capture immediately after LoadLibrary/dlopen (GetLastError/dlerror).
+      last_err = dynlib::error();
+      if (std::filesystem::exists(full))
+        any_file = true;
     }
   }
 
@@ -141,8 +147,13 @@ dynlib::Handle FortranPotLoader::open_lib(const char *lib_base) {
       m_handles[lib_base] = h;
       return h;
     }
+    last_err = dynlib::error();
   }
 
+  // Stash diagnostics for throw_not_found (thread-local; open is
+  // mutex-guarded).
+  m_last_load_error = last_err;
+  m_last_load_saw_file = any_file;
   m_handles[lib_base] = nullptr;
   return nullptr;
 }
@@ -164,6 +175,15 @@ void FortranPotLoader::throw_not_found(const char *lib_base,
     for (const auto &p : m_search_paths) {
       oss << "  " << p << "\n";
     }
+  }
+  if (m_last_load_saw_file) {
+    oss << "A matching file was present but LoadLibrary/dlopen failed";
+    if (!m_last_load_error.empty())
+      oss << ": " << m_last_load_error;
+    oss << "\n(often a missing flang_rt / FortranRuntime dependency on "
+           "PATH).\n";
+  } else if (!m_last_load_error.empty()) {
+    oss << "Loader error: " << m_last_load_error << "\n";
   }
   oss << "Set [Potential] potentials_path in config.ini, "
          "or set EON_POTENTIALS_PATH,\n"
