@@ -121,17 +121,23 @@ jobs:
           QUICK: ${{ (github.event_name == 'schedule' || inputs.force_full) && 'false' || 'true' }}
         run: |
           set -e
+          # existing: env cannot take a git range — loop SHAs with --set-commit-hash
           EXTRA=""
           if [ "$QUICK" = "true" ]; then EXTRA="--quick"; fi
+          N=5
+          if [ "$QUICK" != "true" ]; then N=8; fi
           pixi run bash -c "
+            set -e
             export PATH=\"\$CONDA_PREFIX/bin:\$PATH\"
             PY=\$(which python)
-            if git rev-parse HEAD~5 >/dev/null 2>&1; then
-              asv run -E \"existing:\$PY\" HEAD~5..HEAD --record-samples \$EXTRA || \
-              asv run -E \"existing:\$PY\" HEAD --record-samples \$EXTRA
-            else
-              asv run -E \"existing:\$PY\" HEAD --record-samples \$EXTRA
-            fi
+            mapfile -t SHAS < <(git rev-list --max-count=$N HEAD)
+            # oldest first so history is chronological
+            for ((i=\${#SHAS[@]}-1; i>=0; i--)); do
+              sha=\${SHAS[i]}
+              echo "=== asv run $EXTRA --set-commit-hash \$sha ==="
+              asv run -E \"existing:\$PY\" --set-commit-hash \"\$sha\" --record-samples $EXTRA \
+                || asv run -E \"existing:\$PY\" --set-commit-hash \"\$sha\" --record-samples $EXTRA -v
+            done
           "
 
       - name: asv publish + tachyon UI
