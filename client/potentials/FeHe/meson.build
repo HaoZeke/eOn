@@ -6,7 +6,7 @@ eon_fehe = shared_module(
     link_args: _fortran_pot_link_args
     + (
         is_windows ? [
-            '/DEF:'
+            '-Wl,/DEF:'
             + join_paths(
                 meson.project_source_root(),
                 'client',
