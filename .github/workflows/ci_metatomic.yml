@@ -59,6 +59,16 @@ jobs:
         run: |
           # Git Bash puts GNU link.exe on PATH which shadows MSVC link.exe
           export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
+          # Ensure MSVC link is first; prefer link.exe next to cl.exe
+          CLDIR=$(dirname "$(command -v cl.exe || true)")
+          if [ -n "$CLDIR" ]; then export PATH="$CLDIR:$PATH"; fi
+          # pip_metatomic modules must import for meson find_installation
+          python - <<'PY2'
+          import importlib
+          for m in ("vesin", "metatensor", "metatensor.torch", "metatomic.torch"):
+              importlib.import_module(m)
+              print("ok", m)
+          PY2
           # Align with ci_build_akmc Windows + feedstock build.bat: static
           # default-library for MSVC; pip_metatomic for torch/metatomic wheels.
           meson setup bbdir \

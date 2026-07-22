@@ -1,5 +1,6 @@
-# Clear conda-forge vs* leftovers that break VsDevCmd when the runner has VS 18+
-# and vswhere selects a different install than conda's VSINSTALLDIR.
+# Activate MSVC for GitHub Actions without clobbering the pixi/conda env.
+# Clears conda-forge vs* leftovers that break VsDevCmd when vswhere selects VS 18.
+
 $kill = @(
   'VSINSTALLDIR','VS_VERSION','VS_MAJOR','VS_YEAR','VCVARSBAT',
   'NEWER_VS_WITH_OLDER_VC','WindowsSdkDir','WindowsSDKVer','MSSdk',
@@ -8,7 +9,8 @@ $kill = @(
   'CMAKE_GEN','CMAKE_PLAT','USE_NEW_CMAKE_GEN_SYNTAX','VSCMD_VER',
   'VSCMD_ARG_TGT_ARCH','VSCMD_ARG_HOST_ARCH','UniversalCRTSdkDir',
   'UCRTVersion','WindowsLibPath','WindowsSdkLibPath','WindowsSdkVerBinPath',
-  'WindowsSDKVersion','ExtensionSdkDir','VCToolsRedistDir'
+  'WindowsSDKVersion','ExtensionSdkDir','VCToolsRedistDir','FrameworkDir',
+  'FrameworkDir64','FrameworkVersion','FrameworkVersion64','Framework40Version'
 )
 foreach ($v in $kill) {
   Remove-Item "Env:$v" -ErrorAction SilentlyContinue
@@ -26,14 +28,41 @@ $vcvars = Join-Path $installPath "VC\Auxiliary\Build\vcvars64.bat"
 if (-not (Test-Path $vcvars)) { throw "vcvars64.bat missing: $vcvars" }
 
 Write-Host "Using $vcvars"
-# Capture environment after vcvars64
-$cmdOut = cmd.exe /c "`"$vcvars`" >nul 2>&1 && set"
-foreach ($line in $cmdOut) {
-  if ($line -match '^([^=]+)=(.*)$') {
-    $name = $Matches[1]
-    $value = $Matches[2]
-    # Skip empty names; append to GITHUB_ENV for subsequent steps
-    if ($name) {
+
+# Snapshot env before/after vcvars; only push MSVC-related deltas + PATH/INCLUDE/LIB*
+$before = @{}
+cmd.exe /c set | ForEach-Object {
+  if ($_ -match '^([^=]+)=(.*)$') { $before[$Matches[1]] = $Matches[2] }
+}
+
+$afterLines = cmd.exe /c "`"$vcvars`" >nul 2>&1 && set"
+$after = @{}
+foreach ($line in $afterLines) {
+  if ($line -match '^([^=]+)=(.*)$') { $after[$Matches[1]] = $Matches[2] }
+}
+
+# Always take these from vcvars (required for cl/link)
+$must = @('PATH','INCLUDE','LIB','LIBPATH','VCINSTALLDIR','VCToolsInstallDir',
+  'VCToolsVersion','WindowsSdkDir','WindowsSDKVersion','WindowsSdkVerBinPath',
+  'UniversalCRTSdkDir','UCRTVersion','WindowsLibPath','WindowsSdkLibPath',
+  'VSINSTALLDIR','VSCMD_VER','VSCMD_ARG_TGT_ARCH','VSCMD_ARG_HOST_ARCH',
+  'FrameworkDir','FrameworkDir64','FrameworkVersion','FrameworkVersion64',
+  'DevEnvDir','ExtensionSdkDir','VCToolsRedistDir','WindowsSdkBinPath',
+  'WindowsSdkDir','IFCPATH','NETFXSDKDir','ExternalCompilerOptions')
+
+foreach ($name in $must) {
+  if ($after.ContainsKey($name)) {
+    $value = $after[$name]
+    Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
+    Set-Item -Path "Env:$name" -Value $value
+  }
+}
+
+# Also export any VSCMD_* / VC* / WindowsSDK* newly set by vcvars
+foreach ($name in $after.Keys) {
+  if ($name -match '^(VSCMD_|VC|WindowsSDK|WindowsSdk|UniversalCRT|Framework|DevEnv|IFC|NETFX)') {
+    if (-not ($must -contains $name)) {
+      $value = $after[$name]
       Add-Content -Path $env:GITHUB_ENV -Value "$name=$value"
       Set-Item -Path "Env:$name" -Value $value
     }
