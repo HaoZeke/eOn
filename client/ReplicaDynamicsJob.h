@@ -31,6 +31,9 @@ public:
   using Job::Job;
   ~ReplicaDynamicsJob() override = default;
   std::vector<std::string> run() override;
+  /// Matter-first entry: seed geometry, skip con2matter load.
+  /// Returns final trajectory Matter (current).
+  std::shared_ptr<Matter> runFromMatter(std::shared_ptr<Matter> initial);
 
 protected:
   // -- Shared matter objects --

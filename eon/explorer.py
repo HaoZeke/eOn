@@ -18,17 +18,18 @@ from eon import fileio as io
 from eon import recycling
 from eon import eon_kdb as kdb
 
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
-def get_minmodexplorer(config: ConfigClass = EON_CONFIG):
+def get_minmodexplorer(config: ConfigClass):
     if config.akmc_server_side_process_search:
         return ServerMinModeExplorer
     else:
         return ClientMinModeExplorer
 
 class Explorer:
-    def __init__(self, superbasin=None, config: ConfigClass = EON_CONFIG):
+    def __init__(self, superbasin=None, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("Explorer requires a ConfigClass instance")
         self.config = config
         self.wuid_path = os.path.join(self.config.path_scratch, "wuid")
         self.superbasin = superbasin
@@ -56,7 +57,7 @@ class Explorer:
 
 
 class MinModeExplorer(Explorer):
-    def __init__(self, states, previous_state, state, superbasin=None, config: ConfigClass = EON_CONFIG):
+    def __init__(self, states, previous_state, state, superbasin=None, config: ConfigClass = None):
         """Init MinModeExplorer.
 
         If superbasin is passed, all states in the superbasin will be
@@ -101,7 +102,7 @@ class MinModeExplorer(Explorer):
                 for q in queried:
                     f.write("%d\n" % q)
                 f.close()
-                kdb.query(self.state)
+                kdb.query(self.state, self.config)
 
         # If a per-state displacement atom list script was used, inject the
         # cached result into the config so DisplacementManager's ListedAtoms
@@ -130,7 +131,7 @@ class MinModeExplorer(Explorer):
             if self.config.kdb_on:
                 logger.info("Adding relevant processes to kinetic database")
                 for process_id in self.state.get_process_ids():
-                    output = kdb.insert(self.state, process_id)
+                    output = kdb.insert(self.state, process_id, self.config)
                     logger.debug("kdb insert: %s", output)
 
     def generate_displacement(self):
@@ -141,7 +142,7 @@ class MinModeExplorer(Explorer):
                 return displacement, mode, 'recycling'
 
         if self.config.kdb_on:
-            displacement, mode = kdb.make_suggestion()
+            displacement, mode = kdb.make_suggestion(self.config)
             if displacement:
                 displacement.mass = self.reactant.mass
                 logger.info('Made a KDB suggestion')
@@ -155,8 +156,8 @@ class MinModeExplorer(Explorer):
 
 
 class ClientMinModeExplorer(MinModeExplorer):
-    def __init__(self, states, previous_state, state, superbasin=None):
-        MinModeExplorer.__init__(self, states, previous_state, state, superbasin)
+    def __init__(self, states, previous_state, state, superbasin=None, config=None):
+        MinModeExplorer.__init__(self, states, previous_state, state, superbasin, config=config)
         job_table_path = os.path.join(self.config.path_root, "jobs.tbl")
         job_table_columns = [ 'state', 'wuid', 'type']
         self.job_table = io.Table(job_table_path, job_table_columns)
@@ -365,7 +366,7 @@ class ClientMinModeExplorer(MinModeExplorer):
 
 class ServerMinModeExplorer(MinModeExplorer):
 
-    def __init__(self, states, previous_state, state, superbasin=None):
+    def __init__(self, states, previous_state, state, superbasin=None, config=None):
         #XXX: need to init somehow
         self.search_id = 0
 
@@ -379,7 +380,7 @@ class ServerMinModeExplorer(MinModeExplorer):
             f.close()
             self.__dict__.update(tmp_dict)
 
-        MinModeExplorer.__init__(self, states, previous_state, state, superbasin)
+        MinModeExplorer.__init__(self, states, previous_state, state, superbasin, config=config)
 
     def save(self):
         f = open("explorer.pickle", "w")
@@ -755,9 +756,7 @@ class ProcessSearch:
         self.data['force_calls_minimization'] += results_dat1['total_force_calls']
         self.data['force_calls_minimization'] += results_dat2['total_force_calls']
 
-        is_reactant = lambda a: atoms.match(a, self.reactant,
-                                            self.config.comp_eps_r,
-                                            self.config.comp_neighbor_cutoff, False)
+        is_reactant = lambda a: atoms.match(a, self.reactant, self.config.comp_eps_r, self.config.comp_neighbor_cutoff, False, check_rotation=self.config.comp_check_rotation, use_identical=self.config.comp_use_identical)
 
         tc1 = io.parse_results(result1['results.dat'])['termination_reason']
         tc2 = io.parse_results(result2['results.dat'])['termination_reason']

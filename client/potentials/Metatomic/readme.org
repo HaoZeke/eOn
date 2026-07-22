@@ -108,3 +108,13 @@ Out[2]: np.float64(98374.87753058573)
 In [6]: np.max(np.linalg.norm(atoms.get_forces(), axis=1))
 Out[6]: np.float64(109591.90837618345)
 #+end_src
+
+* Runtime C ABI (dlopen)
+
+Host =eonclient= / =libeonclib= never links torch. The pot is
+=libmetatomic_pot.so=, exporting =eon_mta_*= (see =metatomic_c_abi.h=).
+=MetatomicDynPot= loads it via =DynLib= using =EON_POTENTIALS_PATH= /
+=LD_LIBRARY_PATH= / =[Potential] potentials_path=.
+
+Build plugin: =-Dwith_metatomic=true= (and =-Dpip_metatomic=true= or system
+metatomic/torch).

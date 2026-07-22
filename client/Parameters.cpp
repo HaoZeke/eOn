@@ -12,6 +12,7 @@
 #include "Parameters.h"
 #include "ParametersINI.h"
 #include "ParametersJSON.h"
+#include "ParametersSSOT.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <INIReader.h>
@@ -23,7 +24,9 @@
 #include "EonLogger.h"
 
 Parameters::Parameters() {
-  // All simple defaults are NSDMI in Parameters.h.
+  // Covered groups: defaults originate from schema/eon_params.capnp via
+  // apply_ssot_defaults (codegen). Uncovered groups still use NSDMI.
+  eonc::config::apply_ssot_defaults(*this);
   // Resolve computed fields via validate_and_link.
   eonc::config::validate_and_link(*this);
 }

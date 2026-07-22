@@ -1,5 +1,4 @@
 /*
-#include <stdexcept>
 ** This file is part of eOn.
 **
 ** SPDX-License-Identifier: BSD-3-Clause
@@ -15,12 +14,30 @@
 #include "Dynamics.h"
 #include "ForceCallTimer.h"
 #include "HelperFunctions.h"
+#include <stdexcept>
 
 #include <format>
 #include <fstream>
 
 std::vector<std::string> ReplicaDynamicsJob::run() {
-  current = std::make_shared<Matter>(pot, params);
+  auto seed = std::make_shared<Matter>(pot, params);
+  std::string reactantFilename =
+      eonc::helpers::getRelevantFile(params.main_options.conFilename);
+  if (!eonc::io::io_ok(seed->con2matter(reactantFilename))) {
+    QUILL_LOG_CRITICAL(log, "Failed to load {}", reactantFilename);
+    throw std::runtime_error("failed to load " + reactantFilename);
+  }
+  (void)runFromMatter(std::move(seed));
+  return returnFiles;
+}
+
+std::shared_ptr<Matter>
+ReplicaDynamicsJob::runFromMatter(std::shared_ptr<Matter> initial) {
+  if (!initial) {
+    throw std::runtime_error("runFromMatter: initial Matter is null");
+  }
+  current = initial;
+  current->setPotential(pot);
   reactant = std::make_shared<Matter>(pot, params);
   saddle = std::make_shared<Matter>(pot, params);
   product = std::make_shared<Matter>(pot, params);
@@ -29,13 +46,6 @@ std::vector<std::string> ReplicaDynamicsJob::run() {
 
   minimizeFCalls = mdFCalls = refineFCalls = dephaseFCalls = 0;
   time = 0.0;
-
-  std::string reactantFilename =
-      eonc::helpers::getRelevantFile(params.main_options.conFilename);
-  if (!eonc::io::io_ok(current->con2matter(reactantFilename))) {
-    QUILL_LOG_CRITICAL(log, "Failed to load {}", reactantFilename);
-    throw std::runtime_error("failed to load " + reactantFilename);
-  }
 
   QUILL_LOG_DEBUG(log, "Minimizing initial reactant");
   {
@@ -51,7 +61,7 @@ std::vector<std::string> ReplicaDynamicsJob::run() {
   saveData(status);
   reportResults();
 
-  return returnFiles;
+  return current;
 }
 
 bool ReplicaDynamicsJob::checkState(Matter *curr, Matter *react) {

@@ -204,6 +204,12 @@ int SafeHyperJob::dynamics() {
           static_cast<double>(100.0 * step / params.dynamics_options.steps),
           maxAtomDistance, step, params.dynamics_options.steps);
     }
+
+    // Honor dynamics step budget (parity with TADJob); without this the
+    // loop only exits on a confidence-gated transition and can run forever.
+    if (step >= params.dynamics_options.steps) {
+      stopFlag = true;
+    }
   }
 
   avgT = sumT / step;
@@ -226,7 +232,12 @@ int SafeHyperJob::dynamics() {
     newStateFlag = false;
   }
 
-  *product = *finalState;
+  // finalState is only filled on transition; keep product valid otherwise.
+  if (newStateFlag && finalState) {
+    *product = *finalState;
+  } else if (current) {
+    *product = *current;
+  }
 
   if (newStateFlag) {
     return 1;

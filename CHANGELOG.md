@@ -2,6 +2,164 @@
 
 <!-- towncrier release notes start -->
 
+## [2.17.10](https://github.com/TheochemUI/eOn/tree/2.17.10) - 2026-07-20
+
+### Fixed
+
+- Optimizer file logs (``_lbfgs.log`` etc.) use a durable temp directory so
+  fixture workdir cleanup no longer races Quill file sinks.
+- Packaging: Catch2 ``--allow-running-no-tests`` for the optional rgpot embed
+  suite so all-SKIP without nwchemc/cpmdc is a clean success.
+
+
+## [2.17.9](https://github.com/TheochemUI/eOn/tree/2.17.9) - 2026-07-20
+
+### Fixed
+
+- EDIP OpenMP: zero shared energy/force accumulators under ``!$omp single``
+  before partial reduction (fixes wrong PointJob energies with multi-thread OMP).
+- Basin-hopping force-call reference updated for default LBFGS auto_scale path
+  (1692); energy and acceptance assertions unchanged.
+
+
+## [2.17.8](https://github.com/TheochemUI/eOn/tree/2.17.8) - 2026-07-20
+
+### Fixed
+
+- Evaluate EDIP serially under OpenMP (Fortran energy reduction race under
+  OMP_NUM_THREADS>1 gave wrong PointJob energies with plausible forces).
+- Basin-hopping integration test pins LBFGS auto_scale off so force-call
+  budget matches the SVN reference path.
+
+
+## [2.17.7](https://github.com/TheochemUI/eOn/tree/2.17.7) - 2026-07-20
+
+### Fixed
+
+- Un-nest SW CG minimization TEST_CASE in SiPotTest (was inside LBFGS case after
+  packaging SKIP refactor, breaking with_tests packaging builds).
+
+
+## [2.17.6](https://github.com/TheochemUI/eOn/tree/2.17.6) - 2026-07-20
+
+### Fixed
+
+- Keep JobIntegrationFixture::runJob a class method after SKIP macro refactor
+  (stray brace broke TEST_CASE_METHOD inheritance under packaging builds).
+
+
+## [2.17.5](https://github.com/TheochemUI/eOn/tree/2.17.5) - 2026-07-20
+
+### Fixed
+
+- Catch2 SKIP only via macros in job integration tests (helpers cannot call SKIP).
+
+
+## [2.17.4](https://github.com/TheochemUI/eOn/tree/2.17.4) - 2026-07-20
+
+### Fixed
+
+- Fix Catch2 SKIP usage in unit-test helpers (macros / fixture require path)
+so packaging builds compile with ``-Dwith_tests=true``.
+
+
+## [2.17.3](https://github.com/TheochemUI/eOn/tree/2.17.3) - 2026-07-20
+
+### Fixed
+
+- Pin metatomic builds to vesin>=0.6 and rgpot>=2.5.2 so RGPOT
+  ``libmetatomic_engine`` and fat Metatomic share a matching VesinOptions ABI
+  (skin/n_threads). Bump the rgpot wrap to the 2.5.2 fix commit.
+- Unit tests SKIP when packaging fixtures or optional engines are missing
+  (``EON_TEST_SYSTEMS_DIR`` / ``EON_POTENTIALS_PATH`` / nwchemc·cpmdc), so
+  ``meson test`` succeeds for installable client builds without local test data.
+
+
+## [2.17.2](https://github.com/TheochemUI/eOn/tree/2.17.2) - 2026-07-17
+
+### Added
+
+- pyeonclient 0.3.3: in-memory ``path_frames`` / ``to_conframes`` for NEB (same stamps as writePathCon), ``Matter.relax(retain_frames=…)`` movie frames, and ``MinModeSaddleSearch.run_retain_frames`` climb frames. ([#pyeonclient-path-frames](https://github.com/TheochemUI/eOn/issues/pyeonclient-path-frames))
+- Dimer supports `rotation_backend = classical|lanczos|davidson|lor` (Leng et al. JCP 2013 LOR for softest-mode with force translation; Lanczos/Davidson FD min-mode; classical constrained rotation). Climb remains on the dimer path.
+- Optional Superbasin gate via amsel.discover_decide_status ([amsel] / amsel_discover_decide) before MCAMC; rejected_no_metastable_basin falls back to AKMC.
+
+### Fixed
+
+- HessianJob FD eigen solve: ColMajor copy for SelfAdjointEigenSolver (avoids
+  RowMajor segfaults on partial VTST blocks), finite-force/index guards, optional
+  `[Hessian] atom_list` intersected with free atoms, and a stable mobile VectorXi
+  copy so moving-atom Hessians match PHVA-class active sets. ([#357](https://github.com/TheochemUI/eOn/issues/357))
+- Release CI installs quill/capnp so ``eon-akmc`` sdist and pyeonclient wheels configure cleanly on GitHub runners. ([#418](https://github.com/TheochemUI/eOn/issues/418))
+- Republish pyeonclient as **0.3.4** with the full wheel matrix (abi3 + freethreading) after incomplete 0.3.3 tag CI.
+
+
+## [2.17.1](https://github.com/TheochemUI/eOn/tree/2.17.1) - 2026-07-17
+
+### Fixed
+
+- Restore ``with_pyeonclient`` and ``install_eon_server`` meson options dropped
+  from ``meson_options.txt`` in the v2.17.0 merge (configure failed with
+  ``Option with_pyeonclient does not exist``).
+- RGPotEngine accepts rgpot >= 2.5 ``operator()`` return type
+  ``std::tuple<double, AtomMatrix, double>`` (energy, forces, variance).
+
+
+## [2.17.0](https://github.com/TheochemUI/eOn/tree/2.17.0) - 2026-07-17
+
+### Added
+
+- Distribution packaging: prefer installed ``rgpot`` via pkg-config (wrap pin
+  ``v2.5.0``) and installed ``nlohmann_json`` (module with wrap fallback, same
+  pattern as readcon). RGPOT ``backend=metatomic`` / ``backend=xtb`` dlopen
+  ``libmetatomic_engine.so`` / ``libxtb_engine.so`` so packaging keeps
+  ``-Dwith_xtb=false`` (native XTBPot deprecation warning) and avoids fat
+  metatomic links into eOn.
+- SafeMath accepts Eigen 5 ``EIGEN_CORE_MODULE_H`` as well as Eigen < 5
+  ``EIGEN_CORE_H``.
+
+- Add ``eon_schema.config`` INI helpers (``write_ini``, ``hydrate_ini``,
+  ``unknown_ini_keys``, ``write_models_ini``) so tooling can author validated
+  ``config.ini`` from L0/L1 without importing eon-akmc. ([#eon-schema-ini](https://github.com/TheochemUI/eOn/issues/eon-schema-ini))
+- Parameter field graph for Main, Potential, Optimizer, Structure Comparison, and Process Search is authored in ``schema/eon_params.capnp`` (Cap'n Proto L0 SSoT) with INI/JSON adapters; parity tests gate ``config.yaml`` / ``eon.schema`` against the catalog. ([#params-ssot](https://github.com/TheochemUI/eOn/issues/params-ssot))
+- Public step composition for Matter-first NEB/min: ``write_neb_results``,
+  ``pot_registry_total_force_calls`` at package root; ``NEB.find_extrema``;
+  GIL release on ``forces_free`` / ``max_force``. NebSpec covers EW/CI/OCI-MMF. ([#pyeonclient-step-compose](https://github.com/TheochemUI/eOn/issues/pyeonclient-step-compose))
+- Add packages/eon-schema (PyPI eon-schema): vendored Cap'n Proto SSoT copy, optional pydantic API models; full-tree/conda-forge eon path unchanged. ([#eon-schema-0.1](https://github.com/TheochemUI/eOn/issues/eon-schema-0.1))
+- Add pyeonclient nanobind module (Matter/Parameters/Potential); stable ABI abi3 on CPython 3.12+, free-threaded when Py_GIL_DISABLED; no pybind11. ([#372](https://github.com/TheochemUI/eOn/issues/372))
+- pyeonclient Matter end-to-end: LocalInProcess communicator (comm_type local_lib/inprocess); NbGuard without pybind11; ASE embed polarity documented. ([#373](https://github.com/TheochemUI/eOn/issues/373))
+- Expand pyeonclient: full enums, Job/make_job/run_job_in_directory, Potential.get_ef, ASE to_ase/from_ase and Structure helpers. ([#374](https://github.com/TheochemUI/eOn/issues/374))
+- Standalone PyPI package pyeonclient (pyproject-pyeonclient.toml): abi3 + cp313t + cp314t wheels via pyeonclient-wheels.yml. ([#375](https://github.com/TheochemUI/eOn/issues/375))
+- RGPOT backend ``metatomic`` loads ``libmetatomic_engine.so`` (thin host path).
+  Native ``potential = Metatomic`` is unchanged for conda-forge packaging. ([#377](https://github.com/TheochemUI/eOn/issues/377))
+- Document fat vs RGPOT-dlopen vs ASE metatomic backends; benchmark figure is
+  generated from committed JSON at ``sphinx-build`` time (not checked in).
+- Add ``pixi`` environment ``mta-bench`` and ``mta-backend-bench`` task to
+  reproducibly build fat/ASE pyeonclient, refresh the metatomic backend compare
+  JSON, and regenerate the docs figure.
+
+### Developer
+
+- Multi-flag Codecov coverage for Python, C++, and Fortran (OIDC uploads). ([#367](https://github.com/TheochemUI/eOn/issues/367))
+- CPython server entry points fixed (`eon-server` → `eon.server:main`); vectorized atoms neighbor/free-atom hot paths. ([#368](https://github.com/TheochemUI/eOn/issues/368))
+
+### Changed
+
+- Move full job-config pydantic models into ``eon-schema`` (``eon_schema.config``).
+  ``eon.schema`` and ``pyeonclient.models`` re-export the shared package so both
+  eon-akmc and pyeonclient share one schema surface. ([#eon-schema-l1](https://github.com/TheochemUI/eOn/issues/eon-schema-l1))
+- Structure is readcon-backed (ConFrame bridge); geometry PBC/NL via vesin; process-atom selection uses vesin shells. Retires aselite-era atoms container as storage source of truth. ([#371](https://github.com/TheochemUI/eOn/issues/371))
+
+### Fixed
+
+- Release the GIL around Matter energy/force accessors and NEB construction,
+  ``update_forces``, and per-image energy reads so metatomic/torch autograd can
+  run from C++ without deadlocking. Optional ``torch/cuda.h`` and ``torch/mps.h``
+  includes (``__has_include``) so CPU-only pip torch builds compile without
+  CUDA/MPS headers. ([#gil-torch-autograd](https://github.com/TheochemUI/eOn/issues/gil-torch-autograd))
+- get_process_atoms returns plain Python ints so recycling metadata repr/eval round-trips (no np.int64). ([#369](https://github.com/TheochemUI/eOn/issues/369))
+- Standalone pyeonclient wheels omit eon server package and eonclient binary (install_eon_server=false). ([#376](https://github.com/TheochemUI/eOn/issues/376))
+
+
 ## [2.16.0](https://github.com/TheochemUI/eOn/tree/2.16.0) - 2026-07-03
 
 ### Added

@@ -1,308 +1,78 @@
+"""Atoms / structure helpers for the eOn Python server.
 
-""" The atoms module. """
-from eon.config import config
+Storage and I/O
+    :class:`eon.structure.Structure` (alias :class:`Atoms`) is the in-memory
+    working type. On disk, structures are ``readcon.ConFrame`` values
+    (see :func:`eon.structure.Structure.from_conframe`).
 
-from math import cos, sin, acos
+Geometry kernels
+    PBC, neighbor lists (vesin), and process-atom selection live under
+    :mod:`eon.geometry`. This module re-exports them for compatibility and
+    keeps structure-matching / CNA helpers plus the element table.
+"""
 import numpy
 import logging
-logger = logging.getLogger('atoms')
+logger = logging.getLogger("atoms")
 
-class Atoms:
-    """ The Atoms class. """
+from eon.structure import Atoms, Structure  # noqa: F401
+from eon.geometry import (  # noqa: F401
+    box_to_length_angle,
+    brute_neighbor_list,
+    coordination_numbers,
+    get_process_atoms,
+    least_coordinated,
+    length_angle_to_box,
+    neighbor_list,
+    neighbor_list_vectors,
+    pbc,
+    per_atom_norm,
+    per_atom_norm_gen,
+)
 
-    def __init__(self, n_atoms):
-        self.r = numpy.zeros((n_atoms,3))
-        self.free = numpy.ones(n_atoms)
-        self.box = numpy.zeros((3,3))
-        self.names = ['']*n_atoms
-        self.mass = numpy.zeros(n_atoms)
+# --- structure comparison / CNA (unchanged algorithms) ---
 
-    def __len__(self):
-        '''
-        Returns the number of atoms in the object'''
-        return len(self.r)
-
-    def copy(self):
-        p = Atoms(len(self))
-        p.r = self.r.copy()
-        p.free = self.free.copy()
-        p.box = self.box.copy()
-        p.names = self.names[:]
-        p.mass = self.mass.copy()
-        return p
-
-    def free_r(self):
-        nfree = sum(self.free)
-        temp = numpy.zeros((nfree, 3))
-        index = 0
-        for i in range(len(self.r)):
-            if self.free[i]:
-                temp[index] = self.r[i]
-                index += 1
-        return temp
-
-    def append(self, r, free, name, mass):
-        self.r = numpy.append(self.r, [r], 0)
-        self.free = numpy.append(self.free, free)
-        self.names.append(name)
-        self.mass = numpy.append(self.mass, mass)
-
-def pbc(r, box, ibox = None):
-    """
-    Applies periodic boundary conditions.
-    Parameters:
-        r:      the vector the boundary conditions are applied to
-        box:    the box that defines the boundary conditions
-        ibox:   the inverse of the box. This will be calcluated if not provided.
-    """
-    if ibox is None:
-        ibox = numpy.linalg.inv(box)
-    vdir = numpy.dot(r, ibox)
-    vdir = (vdir % 1.0 + 1.5) % 1.0 - 0.5
-    return numpy.dot(vdir, box)
-
-def per_atom_norm(v, box, ibox = None):
-    '''
-    Returns a length N numpy array containing per atom distance
-        v:      an Nx3 numpy array
-        box:    box matrix that defines the boundary conditions
-        ibox:   the inverse of the box. will be calculated if not provided
-    '''
-    diff = pbc(v, box, ibox)
-    return numpy.sqrt(numpy.sum(diff**2.0, axis=1))
-
-def per_atom_norm_gen(v, box, ibox = None):
-    '''
-    Returns a generator which yields the distance between pairs of atoms
-        v:      an Nx3 numpy array
-        box:    box matrix that defines the boundary conditions
-        ibox:   the inverse of the box. will be calculated if not provided
-    '''
-    diff = pbc(v, box, ibox)
-    for d in diff:
-        yield numpy.linalg.norm(d)
-
-def get_process_atoms(r, p, epsilon_r=0.2, nshells=1):
-    '''
-    Given the reactant and product configurations of a process, return
-    the atoms that move significantly and their neighbors along the trajectory.
-    '''
-    mobileAtoms = []
-    r2p = per_atom_norm(p.r - r.r, r.box)
-    for i in range(len(r)):
-        if r2p[i] > epsilon_r:
-            mobileAtoms.append(i)
-    if len(mobileAtoms) == 0:
-        mobileAtoms.append(list(r2p).index(max(r2p)))
-    neighborAtoms = []
-    for atom in mobileAtoms:
-        r1 = elements[r.names[atom]]["radius"]
-        for i in range(len(r)):
-            if i in mobileAtoms or i in neighborAtoms:
-                continue
-            r2 = elements[r.names[i]]["radius"]
-            maxDist = (r1 + r2) * (1.0 + 0.2)*nshells
-            if numpy.linalg.norm(pbc(p.r[atom] - p.r[i], p.box)) < maxDist:
-                neighborAtoms.append(i)
-    return mobileAtoms + neighborAtoms
-
-def identical(atoms1, atoms2):
-    '''
-    Determines whether two structures are identical if atoms of the same
-    element are considered indistinguishable.
-           atoms1:  first atoms object for comparison
-           atoms2:  second atoms object for comparison
-        epsilon_r:  distance (in angstroms) that two atoms must be seperated by
-                    in order to be considered different
-    '''
-    #XXX: n^2
-    epsilon_r = config.comp_eps_r
-    if len(atoms1) != len(atoms2):
+def match(a, b, eps_r, neighbor_cutoff, indistinguishable,
+          check_rotation=False, use_identical=False):
+    if len(a) != len(b):
         return False
 
-    for i in range(3):
-        for j in range(3):
-            #XXX: Hardcoded comparison criteria
-            if abs(atoms1.box[i][j] - atoms2.box[i][j]) > .0001:
-                logger.warning("Identical returned false because boxes were not the same")
-                return False
-    box = atoms1.box
-    ibox = numpy.linalg.inv(box)
-
-    mismatch = []
-    pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
-    for i in range(len(pan)):
-        if pan[i] > epsilon_r:
-            mismatch.append(i)
-        elif atoms1.names[i] != atoms2.names[i]:
-            return False
-
-    for i in mismatch:
-        pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
-        minpan = 1e300
-        minj = 0
-        for j in range(len(pan)):
-            if i == j:
-                continue
-            if pan[j] < minpan:
-                minpan = pan[j]
-                minj = j
-        if not (minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]):
-            return False
-    return True
-
-
-def brute_neighbor_list(p, cutoff):
-    nl = []
-    ibox = numpy.linalg.inv(p.box)
-    for a in range(len(p)):
-        nl.append([])
-        for b in range(len(p)):
-            if b != a:
-                dist = numpy.linalg.norm(pbc(p.r[a] - p.r[b], p.box, ibox))
-                if dist < cutoff:
-                    nl[a].append(b)
-    return nl
-
-
-def sweep_and_prune(p_in, cutoff, strict = True, bc = True):
-    """ Returns a list of nearest neighbors within cutoff for each atom.
-        Parameters:
-            p_in:   Atoms object
-            cutoff: the radius within which two atoms are considered to intersect.
-            strict: perform an actual distance check if True
-            bc:     include neighbors across pbc's """
-    #TODO: Get rid of 'cutoff' and use the covalent bond radii. (Rye can do)
-        # Do we want to use covalent radii? I think the displace class wants to allow for user-defined cutoffs.
-            # We should have both options available. -Rye
-    #TODO: Make work for nonorthogonal boxes.
-    p = p_in.copy()
-    p.r = pbc(p.r, p.box)
-    p.r -= numpy.array([min(p.r[:,0]), min(p.r[:,1]), min(p.r[:,2])])
-    numatoms = len(p)
-    coord_list = []
-    for i in range(numatoms):
-        coord_list.append([i, p.r[i]])
-    for axis in range(3):
-        sorted_axis = sorted(coord_list, key = lambda foo: foo[1][axis])
-        intersect_axis = []
-        for i in range(numatoms):
-            intersect_axis.append([])
-        for i in range(numatoms):
-            done = False
-            j = i + 1
-            if not bc and j >= numatoms:
-                done = True
-            while not done:
-                j = j % numatoms
-                if j == i:
-                    done = True
-                dist = abs(sorted_axis[j][1][axis] - sorted_axis[i][1][axis])
-                if p.box[axis][axis] - sorted_axis[i][1][axis] < cutoff:
-                    dist = min(dist, (p.box[axis][axis] - sorted_axis[i][1][axis]) + sorted_axis[j][1][axis])
-                if dist < cutoff:
-                    intersect_axis[sorted_axis[i][0]].append(sorted_axis[j][0])
-                    intersect_axis[sorted_axis[j][0]].append(sorted_axis[i][0])
-                    j += 1
-                    if not bc and j >= numatoms:
-                        done = True
-                else:
-                    done = True
-        if axis == 0:
-            intersect = []
-            for i in range(numatoms):
-                intersect.append([])
-                intersect[i] = intersect_axis[i]
+    if check_rotation:
+        if indistinguishable and use_identical:
+            return get_mappings(a, b, eps_r, neighbor_cutoff)
         else:
-            for i in range(numatoms):
-                intersect[i] = list(set(intersect[i]).intersection(intersect_axis[i]))
-    if strict:
-        ibox = numpy.linalg.inv(p.box)
-        for i in range(numatoms):
-            l = intersect[i][:]
-            for j in l:
-                dist = numpy.linalg.norm(pbc(p.r[i] - p.r[j], p.box, ibox))
-                if dist > cutoff:
-                    intersect[i].remove(j)
-                    intersect[j].remove(i)
-    return intersect
-
-def neighbor_list(p, cutoff, brute=False):
-    if brute:
-        nl = brute_neighbor_list(p, cutoff)
+            return rot_match(a, b, eps_r)
     else:
-        nl = sweep_and_prune(p, cutoff)
-    return nl
-
-def neighbor_list_vectors(p, cutoff, brute=False):
-    '''Points from center to neighbor'''
-    nl = neighbor_list(p, cutoff, brute=brute)
-    nl_vec = []
-
-    ibox = numpy.linalg.inv(p.box)
-    for center_index in range(len(p)):
-        nl_vec.append([])
-        for neighbor_index in nl[center_index]:
-            vec = pbc(p.r[neighbor_index] - p.r[center_index], p.box, ibox)
-            nl_vec[center_index].append(vec)
-    return nl_vec
-
-def coordination_numbers(p, cutoff, brute=False):
-    """ Returns a list of coordination numbers for each atom in p """
-    nl = neighbor_list(p, cutoff, brute)
-    return [len(l) for l in nl]
-
-def least_coordinated(p, cutoff, brute=False):
-    """ Returns a list of atom indices in p with the lowest coordination numbers
-        for unfrozen atoms"""
-    cn = coordination_numbers(p, cutoff, brute)
-    maxcoord = max(cn)
-    mincoord = min(cn)
-    while mincoord <= maxcoord:
-        least = []
-        for i in range(len(cn)):
-            if cn[i] <= mincoord and p.free[i]:
-                least.append(i)
-        if len(least) > 0:
-            return least
-        mincoord += 1
-
-
-def match(a,b,eps_r,neighbor_cutoff,indistinguishable):
-    if len(a)!=len(b):
-        return False
-
-    if config.comp_check_rotation:
-        if indistinguishable and config.comp_use_identical:
-            return get_mappings(a,b,eps_r,neighbor_cutoff)
+        if indistinguishable and use_identical:
+            return identical(a, b)
         else:
-            return rot_match(a,b)
-    else:
-        if indistinguishable and config.comp_use_identical:
-            return identical(a,b)
-        else:
-            diff = pbc(a.r-b.r, a.box)
+            diff = pbc(a.r - b.r, a.box)
             return numpy.max(numpy.sum(diff**2.0, axis=1)) < eps_r**2.0
             #return max(per_atom_norm(a.r-b.r, a.box))<eps_r
 
 
-def point_energy_match(file_a, energy_a, file_b, energy_b):
+def point_energy_match(file_a, energy_a, file_b, energy_b, eps_e, eps_r,
+                       neighbor_cutoff, check_rotation=False, use_identical=False):
     import eon.fileio as io
-    if abs(energy_a - energy_b) > config.comp_eps_e:
+    if abs(energy_a - energy_b) > eps_e:
         return False
     a = io.loadcon(file_a)
     b = io.loadcon(file_b)
-    if match(a, b, config.comp_eps_r, config.comp_neighbor_cutoff, False):
+    if match(a, b, eps_r, neighbor_cutoff, False,
+             check_rotation=check_rotation, use_identical=use_identical):
         return True
 
-def points_energies_match(file_a, energy_a, files_b, energies_b):
+def points_energies_match(file_a, energy_a, files_b, energies_b, eps_e, eps_r,
+                          neighbor_cutoff, check_rotation=False, use_identical=False):
     for i in range(len(files_b)):
-        if point_energy_match(file_a, energy_a, files_b[i], energies_b[i]):
+        if point_energy_match(file_a, energy_a, files_b[i], energies_b[i],
+                              eps_e, eps_r, neighbor_cutoff,
+                              check_rotation=check_rotation,
+                              use_identical=use_identical):
             return i
     return None
 
 
-def rot_match(a, b):
+def rot_match(a, b, eps_r):
     if not (a.free.all() and b.free.all()):
         logger.warning("Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly")
     acm = sum(a.r)/len(a)
@@ -319,7 +89,7 @@ def rot_match(a, b):
         R = numpy.dot(U, V)
     ta_r = numpy.dot(ta_r, R)
     dist = max(numpy.linalg.norm(ta_r - tb_r, axis=1))
-    return dist < config.comp_eps_r
+    return dist < eps_r
 
     ''' Quaternion algorithm
     ta = a.copy()

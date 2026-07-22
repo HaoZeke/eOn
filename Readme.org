@@ -2,6 +2,7 @@
 
 #+begin_export markdown
 [![Build](https://github.com/TheochemUI/eOn/actions/workflows/ci_build_akmc.yml/badge.svg)](https://github.com/TheochemUI/eOn/actions/workflows/ci_build_akmc.yml)
+[![codecov](https://codecov.io/gh/TheochemUI/eOn/graph/badge.svg)](https://app.codecov.io/gh/TheochemUI/eOn)
 [![Benchmarks](https://img.shields.io/badge/benchmarks-asv--perch-orange)](https://github.com/HaoZeke/asv-perch)
 [![License: BSD-3](https://img.shields.io/badge/License-BSD--3-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 #+end_export

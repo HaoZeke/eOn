@@ -16,8 +16,7 @@ namespace eonc {
 
 class TADJob : public ReplicaDynamicsJob {
 public:
-  TADJob(std::unique_ptr<Parameters> parameters)
-      : ReplicaDynamicsJob(std::move(parameters)) {}
+  using ReplicaDynamicsJob::ReplicaDynamicsJob;
   ~TADJob() = default;
 
 private:

@@ -508,9 +508,12 @@ metatensor_torch::TensorBlock MetatomicPotential::computeNeighbors(
 
   auto cutoff = request->engine_cutoff(m_metatomic_opts.length_unit);
 
-  VesinOptions options{}; // zero-initialize all fields (incl. algorithm=0=Auto)
+  // Zero-init so vesin 0.6 skin/n_threads stay 0 when compiling against 0.6
+  // headers (must match linked libvesin — pin vesin>=0.6 for metatomic builds).
+  VesinOptions options{};
   options.cutoff = cutoff;
   options.full = request->full_list();
+  options.sorted = false;
   options.return_shifts = true;
   options.return_distances = false; // we don't need distances
   options.return_vectors = true;    // metatomic uses vectors for autograd
@@ -529,6 +532,9 @@ metatensor_torch::TensorBlock MetatomicPotential::computeNeighbors(
     std::string err_str = "vesin_neighbors failed";
     if (error_message != nullptr) {
       err_str += ": " + std::string(error_message);
+    } else {
+      err_str += " (no message; vesin header/lib ABI mismatch? need vesin>=0.6 "
+                 "with matching engine)";
     }
     delete vesin_neighbor_list;
     throw std::runtime_error(err_str);

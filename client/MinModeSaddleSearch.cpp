@@ -190,6 +190,17 @@ int MinModeSaddleSearch::run() {
   return run(params.saddle_search_options.max_iterations);
 }
 
+int MinModeSaddleSearch::runRetainFrames(long max_iterations_override) {
+  retain_climb_frames_ = true;
+  climb_frames_.clear();
+  const long maxIter = max_iterations_override < 0
+                           ? params.saddle_search_options.max_iterations
+                           : max_iterations_override;
+  const int st = run(maxIter);
+  retain_climb_frames_ = false;
+  return st;
+}
+
 int MinModeSaddleSearch::run(long max_iterations_override) {
   long effectiveMaxIter = max_iterations_override;
   QUILL_LOG_DEBUG(
@@ -269,9 +280,15 @@ int MinModeSaddleSearch::run(long max_iterations_override) {
       metadata.scalars.push_back({"torque", torque});
       metadata.scalars.push_back({"angle", angle});
       metadata.scalars.push_back({"rotations", static_cast<double>(rotations)});
-      if (!eonc::io::io_ok(matter->matter2con(climbLabel, append, &metadata))) {
-        QUILL_LOG_WARNING(log, "Failed to write climb movie frame {}",
-                          climbLabel);
+      if (retain_climb_frames_) {
+        climb_frames_.push_back(eonc::io::matterToConFrame(*matter, &metadata));
+      }
+      if (params.debug_options.write_movies) {
+        if (!eonc::io::io_ok(
+                matter->matter2con(climbLabel, append, &metadata))) {
+          QUILL_LOG_WARNING(log, "Failed to write climb movie frame {}",
+                            climbLabel);
+        }
       }
 
       if (params.debug_options.write_deprecated_outs) {
@@ -290,7 +307,7 @@ int MinModeSaddleSearch::run(long max_iterations_override) {
         }
       }
     };
-    if (params.debug_options.write_movies) {
+    if (params.debug_options.write_movies || retain_climb_frames_) {
       write_climb_frame(0, false, 0.0, 0.0, objf->getConvergence(),
                         eonc::eigenmodeGetEigenvalue(*minModeMethod), 0.0, 0.0,
                         0);
@@ -394,7 +411,7 @@ int MinModeSaddleSearch::run(long max_iterations_override) {
             iteration, stepSize, de, conv, eigenval, torque, angle, rotations);
       }
 
-      if (params.debug_options.write_movies) {
+      if (params.debug_options.write_movies || retain_climb_frames_) {
         write_climb_frame(static_cast<uint64_t>(iteration), true, stepSize, de,
                           conv, eigenval, torque, angle, rotations);
       }

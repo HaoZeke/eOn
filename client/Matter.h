@@ -117,6 +117,11 @@ public:
   // using resize()
   Matter(const Matter &matter);                  // create a copy of matter
   const Matter &operator=(const Matter &matter); // copy the matter object
+  /// Move: transfers retained movie ConFrames (move-only). User copy
+  /// suppresses implicit move — without this, relax(inplace=False,
+  /// retain_frames=True) loses frames when returning the working Matter.
+  Matter(Matter &&other) noexcept;
+  Matter &operator=(Matter &&other) noexcept;
   bool compare(const Matter &matter, bool indistinguishable = false);
 
   double
@@ -140,7 +145,19 @@ public:
       double velocity); // set the velocity of atom along axis to velocity
   bool relax(bool quiet = false, bool writeMovie = false,
              bool checkpoint = false, std::string prefixMovie = std::string(),
-             std::string prefixCheckpoint = std::string());
+             std::string prefixCheckpoint = std::string(),
+             bool retainMovieFrames = false);
+
+  /// In-memory minimization movie (same stamps as writeMovie CON). Cleared
+  /// when retainMovieFrames=false on the next relax, or via clearMovieFrames().
+  [[nodiscard]] const std::vector<readcon::ConFrame> &movieFrames() const {
+    return movie_frames_;
+  }
+  void clearMovieFrames() { movie_frames_.clear(); }
+  /// Take ownership of retained frames (leaves storage empty).
+  [[nodiscard]] std::vector<readcon::ConFrame> takeMovieFrames() {
+    return std::move(movie_frames_);
+  }
 
   AtomMatrix pbc(const AtomMatrix &diff) const {
     return eonc::pbc::apply(diff, cell, cellInverse);
@@ -347,6 +364,7 @@ private:
   Matrix3d cell;
   Matrix3d cellInverse;
   mutable double energyVariance;
+  std::vector<readcon::ConFrame> movie_frames_;
   mutable double potentialEnergy;
 };
 

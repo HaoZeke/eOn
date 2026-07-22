@@ -1,13 +1,15 @@
 [project]
 name = "eon-akmc"
-version = "2.16.0"
+version = "2.17.10"
 description = "eOn kinetic Monte Carlo / AKMC (PyPI: eon-akmc; import eon)"
 authors = [
     {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
 ]
 dependencies = [
     "numpy>=1.26.4",
-    "readcon>=0.8.0",
+    "readcon>=0.13.0",
+    "vesin>=0.6.0",
+    "eon-schema>=0.2.0",
 ]
 requires-python = ">=3.11"
 # Org readme is not a meson-python/packaging content-type; keep long form in repo only.
@@ -56,10 +58,12 @@ dist = ['--include-subprojects']
 
 
 [project.scripts]
-eon-server = "eon.main:main"
+# Real CPython server entry (legacy target eon.main was never shipped).
+eon-server = "eon.server:main"
 
 [dependency-groups]
 docs = [
+    "matplotlib>=3.8",
     "sphinx>=7.3.7",
     "sphinx-contributors>=0.2.7",
     "sphinx-copybutton>=0.5.2",

@@ -126,9 +126,13 @@ if get_option('buildtype') != 'release'
     _args += ['-DEON_CHECKS=TRUE']
 endif
 
-# Release optimization flags
+# Release optimization flags.
+# Do NOT pass -flto here: compile-only LTO without matching link flags breaks
+# shared pot plugins (liblammps_pot etc.) with undefined std::__format symbols
+# under GCC+sccache. Use Meson's -Db_lto=true when full LTO is wanted (it
+# applies LTO to both compile and link).
 if get_option('buildtype') == 'release' or get_option('buildtype') == 'debugoptimized'
-    _opt_args = cppc.get_supported_arguments(['-O3', '-flto=auto'])
+    _opt_args = cppc.get_supported_arguments(['-O3'])
     _args += _opt_args
     if get_option('native_arch')
         _args += cppc.get_supported_arguments(['-march=native'])
@@ -182,36 +186,9 @@ features_list = [
     ['EMBED_PYTHON', 'Embedded Python'],
 ]
 
-# Join _args into a single string for checking
-_args_str = ' '.join(_args)
-
-features_string = ''
-foreach feature : features_list
-    feature_flag = feature[0]
-    feature_name = feature[1]
-    if '-D' + feature_flag in _args_str
-        features_string += '  ' + feature_name + ': enabled\n'
-    else
-        features_string += '  ' + feature_name + ': disabled\n'
-    endif
-endforeach
-
-# Configure the header file
-configure_file(
-    input: 'version.h.in',
-    output: 'version.h',
-    configuration: {
-        'VERSION': version,
-        'VERSION_MAJOR': version_major,
-        'VERSION_MINOR': version_minor,
-        'VERSION_PATCH': version_patch,
-        'BUILD_DATE': build_date,
-        'OS_INFO': host_system,
-        'ARCH': architecture,
-        'GIT_HASH': git_hash,
-        'FEATURES': features_string,
-    },
-)
+# features_string + version.h are assembled AFTER optional with_* blocks append
+# -DWITH_* to _args (metatomic, xtb, serve, artn, …). Scanning earlier under-reports
+# enabled features in eonclient --features even when those flags are linked in.
 
 # Dependencies
 if not is_windows
@@ -236,28 +213,51 @@ if not eigen_dep.found()
 endif
 _deps += [eigen_dep]
 
-quill_dep = dependency('quill', required: true)
+# conda-forge ships quill.pc; source installs often only export CMake config.
+quill_dep = dependency('quill', required: false)
+if not quill_dep.found()
+    quill_dep = dependency(
+        'quill',
+        method: 'cmake',
+        modules: ['quill::quill'],
+        required: false,
+    )
+endif
+if not quill_dep.found()
+    quill_dep = dependency(
+        'Quill',
+        method: 'cmake',
+        modules: ['quill::quill'],
+        required: true,
+    )
+endif
 _deps += quill_dep
 _args += ['-DQUILL_DISABLE_NON_PREFIXED_MACROS']
 
-inireader_dep = dependency('INIReader', required: false)
+# Always use the inih wrap as a *static* library. Shared libINIReader.so is
+# not on the manylinux allowlist and breaks auditwheel repair for pyeonclient.
+inireader_dep = dependency('INIReader', required: false, static: true)
 if not inireader_dep.found()
     inireader_dep = dependency(
         'inireader',
         fallback: ['inih', 'INIReader_dep'],
         required: true,
+        static: true,
         default_options: ['default_library=static'],
     )
 endif
 _deps += inireader_dep
 
-# Always use the subproject: system nlohmann_json cmake configs can export
-# -I/usr/include which breaks conda-forge sysroot isolation on rolling distros.
-nlohmann_json_proj = subproject(
+# Prefer installed nlohmann_json (EasyBuild/system pkg-config or cmake
+# module — same pattern as readcon). Wrap fallback for hermetic/pixi builds.
+# Conda rolling-distro isolation: if system CMake configs inject -I/usr/include
+# into the conda sysroot, pass --force-fallback-for=nlohmann_json.
+nlohmann_json_dep = dependency(
     'nlohmann_json',
+    fallback: ['nlohmann_json', 'nlohmann_json_dep'],
+    required: true,
     default_options: ['default_library=static'],
 )
-nlohmann_json_dep = nlohmann_json_proj.get_variable('nlohmann_json_dep')
 _deps += nlohmann_json_dep
 
 # Highway SIMD (optional, for vectorized potentials)
@@ -322,24 +322,67 @@ subdir('potentials/NewPot')
 #   with_rgpot  -> nwchempot_dep + cpmdpot_dep (direct dlopen engines in eOn)
 #   with_serve  -> ptlrpc_dep (eOn is Cap'n Proto RPC server)
 # potserv RPC *client* is not wired as an eOn Potential.
+#
+# Prefer an *installed* rgpot (pkg-config) for distro/EasyBuild packaging;
+# fall back to subprojects/rgpot.wrap for pixi/dev. Wrap defaults (document
+# for matching standalone installs — no torch/xtb at link time):
+#   with_rpc_client_only=true, pure_lib=true, with_tests=false,
+#   with_examples=false  (+ with_xtb=false, with_metatomic=false for packages)
 _rgpot_proj = []
 ptlrpc_dep = disabler()
+nwchempot_dep = disabler()
+cpmdpot_dep = disabler()
+_rgpot_from_pkg = false
 if get_option('with_rgpot') or get_option('with_serve')
-    rgpot_opts = {
-        'with_rpc_client_only': true,
-        'pure_lib': true,
-        'with_tests': false,
-        'with_examples': false,
-    }
-    _rgpot_proj = subproject('rgpot', default_options: rgpot_opts)
+    # 1) installed module only (never wrap fallback).
+    # dependency('rgpot') with default allow_fallback configures the wrap
+    # once with *default* options (with_rpc_client_only=false) before we
+    # can pass eOn's client-only opts; get_variable('nwchempot_dep') then
+    # fails because NWChemPot was never built. Force pkg-config-only here.
+    _rgpot_pkg = dependency(
+        'rgpot',
+        method: 'pkg-config',
+        required: false,
+        allow_fallback: false,
+    )
+    if _rgpot_pkg.found()
+        message('rgpot: using pkg-config (installed), not subproject wrap')
+        _rgpot_from_pkg = true
+        nwchempot_dep = _rgpot_pkg
+        cpmdpot_dep = _rgpot_pkg
+        ptlrpc_dep = _rgpot_pkg
+    else
+        # 2) wrap / multi-source fallback
+        message('rgpot: pkg-config not found; falling back to subproject wrap')
+        rgpot_opts = {
+            'with_rpc_client_only': true,
+            'pure_lib': true,
+            'with_tests': false,
+            'with_examples': false,
+            # engines stay runtime dlopen; do not force fat metatomic/xtb link
+            'with_xtb': false,
+            'with_metatomic': false,
+        }
+        _rgpot_proj = subproject('rgpot', default_options: rgpot_opts)
+        if get_option('with_serve')
+            ptlrpc_dep = _rgpot_proj.get_variable('ptlrpc_dep')
+        endif
+        if get_option('with_rgpot') and not is_windows
+            nwchempot_dep = _rgpot_proj.get_variable('nwchempot_dep')
+            cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
+        endif
+    endif
 endif
 if get_option('with_serve')
     serve_capnp_dep = dependency('capnp-rpc', required: true)
-    ptlrpc_dep = _rgpot_proj.get_variable('ptlrpc_dep')
+    if not ptlrpc_dep.found()
+        error('with_serve requires ptlrpc from rgpot (pkg-config or subproject)')
+    endif
 endif
 if get_option('with_rgpot') and not is_windows
-    nwchempot_dep = _rgpot_proj.get_variable('nwchempot_dep')
-    cpmdpot_dep = _rgpot_proj.get_variable('cpmdpot_dep')
+    if not nwchempot_dep.found() or not cpmdpot_dep.found()
+        error('with_rgpot requires nwchempot/cpmdpot from rgpot (pkg-config or subproject)')
+    endif
     _deps += [nwchempot_dep, cpmdpot_dep]
     _args += ['-DWITH_RGPOT']
     subdir('potentials/Rgpot')
@@ -367,6 +410,7 @@ eonclib_sources = [
     'Parameters.cpp',
     'ParametersINI.cpp',
     'ParametersJSON.cpp',
+    'ParametersSSOT.cpp',
     'ConFileIO.cpp',
     'GeometryAnalysis.cpp',
     'Optimizer.cpp',
@@ -382,6 +426,7 @@ eonclib_sources = [
     'StructureComparisonJob.cpp',
     'SteepestDescent.cpp',
     'ImprovedDimer.cpp',
+    'LORRotation.cpp',
     'PointJob.cpp',
     'Prefactor.cpp',
     'ConjugateGradients.cpp',
@@ -434,11 +479,17 @@ eonclient_sources = ['ClientEON.cpp', 'CommandLine.cpp']
 
 # ------------------- Options
 
+# gpr_optim (+ nested rgpot) must not land in the shared pot-plugin dep set:
+# those plugins link with --no-undefined and would inherit HDF5/zlib (and
+# rgpot) link flags they do not need. Attach only to eonclib / executables.
+_gprd_extra_deps = []
 if get_option('with_gprd')
     gprd_opts = {
         'default_library': 'static',
         'use_mkl': get_option('use_mkl'),
-        'use_hdf5': true,
+        # AtomicGPDimer does not use gpr_optim HDF5 logs; keep HDF5 off so
+        # gpr_optim_deps do not require -lz in lean CI envs.
+        'use_hdf5': false,
         'do_install': true,
         'buildtype': 'release',
         'linalg_backend': get_option('gprd_linalg_backend'),
@@ -450,7 +501,7 @@ if get_option('with_gprd')
     # potentials += [ gprpot ]
     _args += ['-DWITH_GPRD']
     eonclib_sources += ['AtomicGPDimer.cpp', 'GPRHelpers.cpp']
-    _deps += [libgprd, gprd_deps]
+    _gprd_extra_deps = [libgprd, gprd_deps]
 endif
 
 if get_option('with_gp_surrogate')
@@ -615,6 +666,18 @@ if get_option('with_metatomic')
         # Setting up Torch..
         LIB_TORCH_PATH = get_option('torch_path')
         message('Ensure your versions are correct for metatensor and metatomic')
+    elif get_option('pip_metatomic')
+        # Resolve the installed torch package (site-packages layout varies by
+        # venv / manylinux / no-isolation builds). Prefer import path over
+        # py.get_install_dir()/torch which can miss platlib installs.
+        _torch_loc = run_command(
+            py,
+            '-c',
+            'import pathlib, torch; print(pathlib.Path(torch.__file__).resolve().parent)',
+            check: true,
+        )
+        LIB_TORCH_PATH = _torch_loc.stdout().strip()
+        message('pip_metatomic: torch at', LIB_TORCH_PATH)
     else
         LIB_TORCH_PATH = py.get_install_dir() / 'torch'
     endif
@@ -653,56 +716,67 @@ if get_option('with_metatomic')
     )
 
     if get_option('pip_metatomic')
-        torch_ver = get_option('torch_version')
-        # metatensor-torch >=0.10 installs as top-level metatensor_torch/;
-        # older wheels used metatensor/torch/torch-X.Y/. Probe both layouts.
-        _mts_torch_lib_new = py.get_install_dir() / 'metatensor_torch' / f'torch-@torch_ver@' / 'lib'
-        _mts_torch_lib_old = py.get_install_dir() / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'lib'
-        _mts_torch_inc_new = py.get_install_dir() / 'metatensor_torch' / f'torch-@torch_ver@' / 'include'
-        _mts_torch_inc_old = py.get_install_dir() / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'include'
+        # Resolve site-packages + torch major.minor from the *build* interpreter
+        # (py.get_install_dir() misses platlib in manylinux/no-isolation; default
+        # torch_version option often lags the installed torch).
+        _pip_mts = run_command(
+            py,
+            '-c',
+            '''
+import pathlib, torch
+site = pathlib.Path(torch.__file__).resolve().parent.parent
+tv = ".".join(torch.__version__.split(".")[:2])
+# torch_version meson option override when non-default probe fails later
+print(site)
+print(tv)
+for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
+    p = site / name
+    print(name, "ok" if p.is_dir() else "missing", p)
+''',
+            check: true,
+        )
+        _pip_mts_lines = _pip_mts.stdout().strip().split('\n')
+        _site_pkg = _pip_mts_lines[0].strip()
+        torch_ver = _pip_mts_lines[1].strip()
+        message('pip_metatomic: site-packages at', _site_pkg, 'torch_ver', torch_ver)
+        # metatensor-torch >=0.10: top-level metatensor_torch/; older: metatensor/torch/
+        _mts_torch_lib_new = _site_pkg / 'metatensor_torch' / f'torch-@torch_ver@' / 'lib'
+        _mts_torch_lib_old = _site_pkg / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'lib'
+        _mts_torch_inc_new = _site_pkg / 'metatensor_torch' / f'torch-@torch_ver@' / 'include'
+        _mts_torch_inc_old = _site_pkg / 'metatensor' / 'torch' / f'torch-@torch_ver@' / 'include'
+        _mts_core_lib = _site_pkg / 'metatensor' / 'lib'
+        _mts_core_inc = _site_pkg / 'metatensor' / 'include'
+        _mta_lib = _site_pkg / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib'
+        _mta_inc = _site_pkg / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'include'
+        _vesin_lib = _site_pkg / 'vesin' / 'lib'
+        _vesin_inc = _site_pkg / 'vesin' / 'include'
         _mts_torch_lib_dirs = [_mts_torch_lib_new, _mts_torch_lib_old]
         pip_metatomic_runtime_dirs = [
             LIB_TORCH_LIB_PATH,
-            py.get_install_dir() / 'metatensor' / 'lib',
+            _mts_core_lib,
             _mts_torch_lib_new,
             _mts_torch_lib_old,
-            py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib',
-            py.get_install_dir() / 'vesin' / 'lib',
+            _mta_lib,
+            _vesin_lib,
         ]
         if not is_windows
             _runtime_rpath += pip_metatomic_runtime_dirs
         endif
         mts_inc_args = []
-        foreach d : [
-            py.get_install_dir() / 'metatensor' / 'include',
-            _mts_torch_inc_new,
-            _mts_torch_inc_old,
-            py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'include',
-        ]
+        foreach d : [_mts_core_inc, _mts_torch_inc_new, _mts_torch_inc_old, _mta_inc]
             mts_inc_args += ['-isystem', d]
         endforeach
         mts_dep = declare_dependency(
             dependencies: [
-                cppc.find_library(
-                    'metatensor',
-                    dirs: [py.get_install_dir() / 'metatensor' / 'lib'],
-                ),
-                cppc.find_library(
-                    'metatensor_torch',
-                    dirs: _mts_torch_lib_dirs,
-                ),
-                cppc.find_library(
-                    'metatomic_torch',
-                    dirs: [
-                        py.get_install_dir() / 'metatomic' / 'torch' / f'torch-@torch_ver@' / 'lib',
-                    ],
-                ),
+                cppc.find_library('metatensor', dirs: [_mts_core_lib]),
+                cppc.find_library('metatensor_torch', dirs: _mts_torch_lib_dirs),
+                cppc.find_library('metatomic_torch', dirs: [_mta_lib]),
             ],
             compile_args: mts_inc_args,
         )
         vesin_dep = cppc.find_library(
             'vesin',
-            dirs: [py.get_install_dir() / 'vesin' / 'lib'],
+            dirs: [_vesin_lib],
             required: false,
         )
         if vesin_dep.found()
@@ -710,11 +784,11 @@ if get_option('with_metatomic')
                 dependencies: [
                     cppc.find_library(
                         'vesin',
-                        dirs: [py.get_install_dir() / 'vesin' / 'lib'],
+                        dirs: [_vesin_lib],
                         required: false,
                     ),
                 ],
-                compile_args: ['-isystem', py.get_install_dir() / 'vesin' / 'include'],
+                compile_args: ['-isystem', _vesin_inc],
             )
         endif
     else
@@ -724,10 +798,13 @@ if get_option('with_metatomic')
         message(
             'If this is flaky, pass pip_metatomic=True with the torch version and let pip handle everything',
         )
-        # Try system dependency() first (pkg-config / cmake), fall back to find_library
+        # Prefer pkg-config/cmake vesin before manual find_library / vendored tree.
         # xref: https://github.com/metatensor/metatensor/issues/930
         # On Windows (MSVC), static libraries are often prefixed with 'lib'
         vesin_dep = dependency('vesin', required: false)
+        if not vesin_dep.found()
+            vesin_dep = dependency('vesin', method: 'cmake', required: false)
+        endif
         if not vesin_dep.found()
             vesin_dep = cppc.find_library('vesin', required: false)
         endif
@@ -775,10 +852,20 @@ if get_option('with_metatomic')
             include_directories: include_directories('thirdparty/vesin'),
         )
     endif
+    # Fat Metatomic (potential = Metatomic) + deps for RGPOT engine .so.
+    mta_plugin_deps = _deps + [vesin_dep, mts_dep, torch_deps]
     _deps += [vesin_dep, mts_dep, torch_deps]
-    subdir('potentials/Metatomic')
-    potentials += [metatomic_pot]
     _args += ['-DWITH_METATOMIC']
+    metatomic_pot = library(
+        'metatomic_pot',
+        'potentials/Metatomic/MetatomicPotential.cpp',
+        dependencies: _deps,
+        cpp_args: _args,
+        link_with: _linkto,
+        include_directories: _incdirs,
+        install: true,
+    )
+    potentials += [metatomic_pot]
 endif
 
 if get_option('with_parallel_neb')
@@ -946,13 +1033,42 @@ else
     _deps += [readcon_dep]
 endif
 
+# version.h FEATURES must see every -DWITH_* appended by the blocks above.
+_args_str = ' '.join(_args)
+features_string = ''
+foreach feature : features_list
+    feature_flag = feature[0]
+    feature_name = feature[1]
+    if '-D' + feature_flag in _args_str
+        features_string += '  ' + feature_name + ': enabled\n'
+    else
+        features_string += '  ' + feature_name + ': disabled\n'
+    endif
+endforeach
+
+configure_file(
+    input: 'version.h.in',
+    output: 'version.h',
+    configuration: {
+        'VERSION': version,
+        'VERSION_MAJOR': version_major,
+        'VERSION_MINOR': version_minor,
+        'VERSION_PATCH': version_patch,
+        'BUILD_DATE': build_date,
+        'OS_INFO': host_system,
+        'ARCH': architecture,
+        'GIT_HASH': git_hash,
+        'FEATURES': features_string,
+    },
+)
+
 # --------------------- Library
 
 eclib = library(
     'eonclib',
     sources: eonclib_sources,
     include_directories: _incdirs,
-    dependencies: _deps,
+    dependencies: _deps + _gprd_extra_deps,
     link_with: _linkto,
     cpp_args: _args,
     link_args: _linkargs,
@@ -963,8 +1079,27 @@ eclib = library(
 
 _linkto += eclib
 
+# RGPOT-metatomic engine (slow path); fat pot already in potentials above.
+if get_option('with_metatomic')
+    metatomic_engine = library(
+        'metatomic_engine',
+        [
+            'potentials/Metatomic/MetatomicPotential.cpp',
+            'potentials/Metatomic/MetatomicEngineAbi.cpp',
+        ],
+        dependencies: mta_plugin_deps,
+        cpp_args: _args + ['-DRGPOT_MTA_ENGINE_BUILD'],
+        link_with: [eclib, eoncbase],
+        include_directories: _incdirs,
+        build_rpath: ':'.join(_runtime_rpath),
+        install_rpath: ':'.join(_runtime_rpath),
+        install: true,
+        gnu_symbol_visibility: 'default',
+    )
+endif
+
 # Full deps including readcon link_args (for executables and tests only)
-_exe_deps = _deps + [readcon_dep]
+_exe_deps = _deps + [readcon_dep] + _gprd_extra_deps
 
 # Export variable
 eclib_dep = declare_dependency(
@@ -973,6 +1108,12 @@ eclib_dep = declare_dependency(
     compile_args: _fargs + _args,
     dependencies: _exe_deps,
 )
+
+
+# --------------------- pyeonclient (nanobind)
+if get_option('with_pyeonclient')
+    subdir('python')
+endif
 
 # ---------------------- Executable
 
@@ -986,7 +1127,8 @@ ec = executable(
     link_args: _linkargs,
     build_rpath: ':'.join(_runtime_rpath),
     install_rpath: ':'.join(_runtime_rpath),
-    install: true,
+    # Standalone pyeonclient wheels only need the extension + shared libs.
+    install: get_option('install_eon_server'),
 )
 
 if get_option('with_tests')
@@ -1048,6 +1190,7 @@ if get_option('with_tests')
         ['test_hessian', 'HessianTest.cpp', 'neb_morse'],
         ['test_geom', 'GeometryAnalysisTest.cpp', 'neb_morse'],
         ['test_params_json', 'ParametersJSONTest.cpp', ''],
+        ['test_params_ssot', 'ParametersSSOTTest.cpp', ''],
         ['test_bondboost', 'BondBoostTest.cpp', 'neb_morse'],
         ['test_emt_cu', 'EMTCuTest.cpp', 'cu_fcc'],
         ['test_neb_subsystem', 'NEBSubsystemTest.cpp', ''],
@@ -1065,6 +1208,8 @@ if get_option('with_tests')
     endif
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
+        # DynLib.h (LoadLibrary / dlopen) — builds on MSVC and POSIX.
+        test_array += [['test_mta_engine_abi', 'MetatomicEngineAbiTest.cpp', '']]
     endif
     if get_option('with_xtb')
         test_array += [['test_xtb', 'XTBTest.cpp', 'sulfolene']]
@@ -1089,7 +1234,20 @@ if get_option('with_tests')
             _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / sub
         endforeach
     endif
+    # Metatomic C-ABI plugin lives next to MetatomicPotential sources in the build tree.
+    if get_option('with_metatomic')
+        _fortran_pot_dirs += meson.project_build_root() / 'client'
+        _fortran_pot_dirs += meson.project_build_root() / 'client' / 'potentials' / 'Metatomic'
+    endif
     _test_env = environment()
+    _systems_dir = join_paths(
+        meson.project_source_root(),
+        'client',
+        'unit_tests',
+        'data',
+        'systems',
+    )
+    _test_env.set('EON_TEST_SYSTEMS_DIR', _systems_dir)
     if _fortran_pot_dirs.length() > 0
         _test_env.set('EON_POTENTIALS_PATH', ':'.join(_fortran_pot_dirs))
     endif
@@ -1117,6 +1275,19 @@ if get_option('with_tests')
             env: _test_env,
         )
     endforeach
+    if get_option('with_xtb')
+        # Timing harness for linked ship vs rgpot dlopen (not a Catch suite).
+        executable(
+            'xtb_ship_bench',
+            sources: ['unit_tests/xtb_ship_bench.cpp'],
+            dependencies: test_deps,
+            include_directories: _incdirs,
+            cpp_args: test_args,
+            link_with: _linkto,
+            build_rpath: ':'.join(_runtime_rpath),
+            install: false,
+        )
+    endif
     # Special handling for the nwchem test (due to the client server bit)
     nwchem_exe = find_program('nwchem', required: false)
     bash_exe = find_program('bash', required: false)
@@ -1165,12 +1336,27 @@ if get_option('with_tests')
             cpp_args: test_args,
             link_with: _linkto,
         )
+        _rgpot_test_env = environment()
+        _rgpot_test_env.set(
+            'EON_TEST_SYSTEMS_DIR',
+            join_paths(
+                meson.project_source_root(),
+                'client',
+                'unit_tests',
+                'data',
+                'systems',
+            ),
+        )
+        # Optional nwchemc/cpmdc engines: tests SKIP when absent. Catch2 exits 4
+        # when every case is skipped unless --allow-running-no-tests is set.
         test(
             'test_rgpot_pot',
             test_rgpot_exe,
+            args: ['--allow-running-no-tests'],
             timeout: 120,
             suite: 'rgpot',
             is_parallel: false,
+            env: _rgpot_test_env,
             workdir: meson.project_source_root() +
                      '/client/unit_tests/data/systems/rgpot_nwchem_test',
         )

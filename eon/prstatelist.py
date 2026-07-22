@@ -10,8 +10,8 @@ from eon import statelist
 
 class PRStateList(statelist.StateList):
     """ The StateList class.  Serves as an interface to State objects and StateList metadata. """
-    def __init__(self, initial_state = None):
-        statelist.StateList.__init__(self, prstate.PRState, initial_state)
+    def __init__(self, initial_state = None, config=None):
+        statelist.StateList.__init__(self, prstate.PRState, initial_state, config=config)
 
     def register_process(self, reactant_number, product_number, process_id):
         # Get the reactant and product state objects.

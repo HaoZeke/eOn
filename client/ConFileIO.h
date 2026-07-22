@@ -112,6 +112,30 @@ void set_write_con_forces(bool enabled) noexcept;
 [[nodiscard]] IoStatus writeTibble(Matter &m, std::string filename);
 
 /**
+ * Build a single stamped ConFrame from Matter (same builder as matter2con).
+ * Does not write to disk.
+ */
+[[nodiscard]] readcon::ConFrame
+matterToConFrame(Matter &m, const ConFrameMetadata *metadata = nullptr);
+
+/**
+ * Build NEB band ConFrames without writing (clone builder path of
+ * writeNebPath). Empty vector on invalid input.
+ *
+ * @param path length must equal metadata_per_image (endpoints included)
+ */
+[[nodiscard]] std::vector<readcon::ConFrame>
+buildNebPathFrames(const std::vector<std::shared_ptr<Matter>> &path,
+                   const std::vector<ConFrameMetadata> &metadata_per_image);
+
+/**
+ * Write already-built ConFrames to a multi-frame .con (temp or durable).
+ */
+[[nodiscard]] IoStatus
+writeConFrames(std::string filename,
+               const std::vector<readcon::ConFrame> &frames);
+
+/**
  * Write a full NEB path as one multi-frame .con using ConFrameBuilder::clone().
  *
  * Seeds identity (symbols/fixed/mass/id/cell headers) from path[0] only, then

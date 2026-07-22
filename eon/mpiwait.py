@@ -2,7 +2,6 @@
 import logging
 import logging.handlers
 logger = logging.getLogger('mpiwait')
-from eon.config import config
 from time import sleep
 from sys import exit
 import signal
@@ -14,7 +13,7 @@ def signal_handler(signum, frame):
     logger.info('Signal handler caught signal %i', signum)
 
 
-def mpiwait():
+def mpiwait(poll_period=1.0):
     from mpi4py import MPI
 
     signal.signal(signal.SIGINT,  signal_handler)
@@ -25,7 +24,7 @@ def mpiwait():
         signal.signal(signal.SIGUSR2, signal_handler)
 
     while True:
-        sleep(config.mpi_poll_period)
+        sleep(poll_period)
         if QUIT:
             exit(0)
 

@@ -1,0 +1,40 @@
+{
+  "model": "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/subprojects/gpr_optim/bench_data/petmad/pet-mad-s-v1.5.0.pt",
+  "pos": "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/subprojects/gpr_optim/bench_data/petmad/d016_pos.con",
+  "engine": "/home/rgoswami/Git/Github/TheochemUI/eOn-pyeon-final/build-mta-compare/client/libmetatomic_engine.so",
+  "device": "cpu",
+  "built_with_metatomic": true,
+  "built_with_rgpot": true,
+  "results": [
+    {
+      "backend": "metatomic",
+      "ok": true,
+      "energy": -71.98018646240234,
+      "max_force": 37.64625250327842,
+      "force_rms": 8.156940942675106,
+      "n_atoms": 14,
+      "seconds_per_call": 0.021683600343142945,
+      "n_repeat": 3
+    },
+    {
+      "backend": "rgpot_metatomic",
+      "ok": true,
+      "energy": -71.98018646240234,
+      "max_force": 37.64625250327842,
+      "force_rms": 8.156940942675106,
+      "n_atoms": 14,
+      "seconds_per_call": 0.02256485229978959,
+      "n_repeat": 3
+    },
+    {
+      "backend": "ase_metatomic",
+      "ok": true,
+      "energy": -71.98019409179688,
+      "max_force": 37.646253254589006,
+      "force_rms": 8.156941176775307,
+      "n_atoms": 14,
+      "seconds_per_call": 0.2060986030070732,
+      "n_repeat": 3
+    }
+  ]
+}

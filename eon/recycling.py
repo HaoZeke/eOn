@@ -3,7 +3,6 @@ import os
 import numpy
 from eon import atoms
 from eon import fileio as io
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 class SB_Recycling:
@@ -275,10 +274,14 @@ class Recycling:
     """
 
 
-    def __init__(self, states, suggested_ref_state, new_state, move_distance, save=False, from_sb=False, config: ConfigClass = EON_CONFIG):
-        """ Initialize the data for the recycling object.
-            If there is a file containing the data for the current state,
-            use this file.  Otherwise, the previous state will be the reference. """
+    def __init__(self, states, suggested_ref_state, new_state, move_distance, save=False, from_sb=False, config: ConfigClass = None):
+        """Initialize the data for the recycling object.
+
+        If there is a file containing the data for the current state,
+        use this file.  Otherwise, the previous state will be the reference.
+        """
+        if config is None:
+            raise TypeError("Recycling requires a ConfigClass instance")
         self.config = config
         self.states = states
         self.ref_state = suggested_ref_state

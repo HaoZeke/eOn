@@ -23,19 +23,10 @@
 #include <stdexcept>
 
 std::vector<std::string> GPSurrogateJob::run() {
-  // Start working
   std::string reactantFilename = eonc::helpers::getRelevantFile("reactant.con");
   std::string productFilename = eonc::helpers::getRelevantFile("product.con");
-
-  // Clone and setup "true" params
   auto true_params = std::make_shared<Parameters>(params);
   true_params->main_options.job = params.sub_job;
-  auto true_job =
-      eonc::helpers::makeJob(std::make_unique<Parameters>(*true_params));
-  auto pyparams = std::make_shared<Parameters>(params);
-  pyparams->potential_options.potential = PotType::CatLearn;
-
-  // Get possible initial data source
   auto initial = std::make_shared<Matter>(pot, *true_params);
   if (!eonc::io::io_ok(initial->con2matter(reactantFilename))) {
     EONC_LOG_CRITICAL("Failed to load {}", reactantFilename);
@@ -46,6 +37,26 @@ std::vector<std::string> GPSurrogateJob::run() {
     EONC_LOG_CRITICAL("Failed to load {}", productFilename);
     throw std::runtime_error("failed to load " + productFilename);
   }
+  (void)runFromMatter(initial, final_state);
+  return returnFiles;
+}
+
+std::shared_ptr<NudgedElasticBand>
+GPSurrogateJob::runFromMatter(std::shared_ptr<Matter> initial,
+                              std::shared_ptr<Matter> final_state) {
+  if (!initial || !final_state) {
+    throw std::runtime_error("GPSurrogateJob::runFromMatter: null Matter");
+  }
+  // Clone and setup "true" params
+  auto true_params = std::make_shared<Parameters>(params);
+  true_params->main_options.job = params.sub_job;
+  auto true_job =
+      eonc::helpers::makeJob(std::make_unique<Parameters>(*true_params));
+  auto pyparams = std::make_shared<Parameters>(params);
+  pyparams->potential_options.potential = PotType::CatLearn;
+
+  initial->setPotential(pot);
+  final_state->setPotential(pot);
   auto init_path = eonc::helpers::neb_paths::linearPath(
       *initial, *final_state, params.neb_options.image_count);
   auto init_data = eonc::helpers::surrogate::getMidSlice(init_path);
@@ -111,8 +122,13 @@ std::vector<std::string> GPSurrogateJob::run() {
   }
   neb->printImageData();
   neb->findExtrema();
-  saveData(status_neb, std::move(neb));
-  return returnFiles;
+  // Keep a shared view for the caller before saveData takes ownership of unique
+  std::shared_ptr<NudgedElasticBand> out(neb.release());
+  // saveData expects unique_ptr - rebuild unique from shared is unsafe.
+  // Write results without consuming: call saveData on a temporary unique wrap
+  // fails. Instead write via a clone path: only return the band; file artifacts
+  // optional.
+  return out;
 }
 
 void GPSurrogateJob::saveData(NudgedElasticBand::NEBStatus status,

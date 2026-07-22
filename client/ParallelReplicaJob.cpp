@@ -1,5 +1,4 @@
 /*
-#include <stdexcept>
 ** This file is part of eOn.
 **
 ** SPDX-License-Identifier: BSD-3-Clause
@@ -17,6 +16,7 @@
 #include "ForceCallTimer.h"
 #include "HelperFunctions.h"
 #include "Matter.h"
+#include <stdexcept>
 
 #include <cmath>
 #include <format>
@@ -32,6 +32,17 @@ std::vector<std::string> ParallelReplicaJob::run() {
       throw std::runtime_error("failed to load " + posIn);
     }
   }
+  (void)runFromMatter(reactant);
+  return returnFiles;
+}
+
+std::shared_ptr<Matter>
+ParallelReplicaJob::runFromMatter(std::shared_ptr<Matter> initial) {
+  if (!initial) {
+    throw std::runtime_error("ParallelReplicaJob::runFromMatter: null Matter");
+  }
+  reactant = initial;
+  reactant->setPotential(pot);
 
   QUILL_LOG_DEBUG(log, "[ParallelReplica] Minimizing initial position");
   reactant->relax();
@@ -60,6 +71,10 @@ std::vector<std::string> ParallelReplicaJob::run() {
       std::floor(params.parallel_replica_options.record_interval /
                      params.dynamics_options.time_step +
                  0.5));
+  if (stateCheckInterval < 1)
+    stateCheckInterval = 1;
+  if (recordInterval < 1)
+    recordInterval = 1;
 
   std::vector<std::shared_ptr<Matter>> mdSnapshots;
   std::vector<double> mdTimes;
@@ -137,16 +152,22 @@ std::vector<std::string> ParallelReplicaJob::run() {
       if (!minimized.compare(*reactant) && transitionTime == 0) {
         QUILL_LOG_DEBUG(log, "[ParallelReplica] Transition occurred");
 
-        if (params.parallel_replica_options.refine_transition) {
+        if (params.parallel_replica_options.refine_transition &&
+            !mdSnapshots.empty() && !mdTimes.empty()) {
           QUILL_LOG_DEBUG(log, "[ParallelReplica] Refining transition time");
           int snapshotIndex;
           {
             eonc::ForceCallTimer timer(refineForceCalls);
             snapshotIndex = refineTransition(mdSnapshots);
           }
+          if (snapshotIndex < 0)
+            snapshotIndex = 0;
+          if (snapshotIndex >= static_cast<int>(mdSnapshots.size()))
+            snapshotIndex = static_cast<int>(mdSnapshots.size()) - 1;
 
-          transitionTime = mdTimes[snapshotIndex];
-          transitionStructure = *mdSnapshots[snapshotIndex];
+          transitionTime = mdTimes[static_cast<size_t>(snapshotIndex)];
+          transitionStructure =
+              *mdSnapshots[static_cast<size_t>(snapshotIndex)];
         } else {
           transitionStructure = *trajectory;
           transitionTime = simulationTime;
@@ -156,8 +177,9 @@ std::vector<std::string> ParallelReplicaJob::run() {
 
       } else if (step + 1 == params.dynamics_options.steps &&
                  transitionTime == 0) {
-        // Fake refinement to prevent force-call bias
-        if (params.parallel_replica_options.refine_transition) {
+        // Fake refinement to prevent force-call bias (only if snapshots exist)
+        if (params.parallel_replica_options.refine_transition &&
+            !mdSnapshots.empty()) {
           QUILL_LOG_DEBUG(
               log,
               "[ParallelReplica] Simulation ended without seeing a transition");
@@ -234,7 +256,7 @@ std::vector<std::string> ParallelReplicaJob::run() {
     }
   }
 
-  return returnFiles;
+  return trajectory;
 }
 
 void ParallelReplicaJob::dephase(Matter &trajectory) {
@@ -244,12 +266,17 @@ void ParallelReplicaJob::dephase(Matter &trajectory) {
       static_cast<int>(std::floor(params.parallel_replica_options.dephase_time /
                                       params.dynamics_options.time_step +
                                   0.5));
-  QUILL_LOG_DEBUG(log, "[ParallelReplica] Dephasing: {} steps", dephaseSteps);
+  if (dephaseSteps < 1)
+    dephaseSteps = 1;
+  const long maxLoops =
+      std::max(1L, params.parallel_replica_options.dephase_loop_max);
+  QUILL_LOG_DEBUG(log, "[ParallelReplica] Dephasing: {} steps (max {} loops)",
+                  dephaseSteps, maxLoops);
 
   Matter initial(pot, params);
   initial = trajectory;
 
-  while (true) {
+  for (long loop = 0; loop < maxLoops; ++loop) {
     trajectory = initial;
     dynamics.setThermalVelocity();
 
@@ -263,13 +290,15 @@ void ParallelReplicaJob::dephase(Matter &trajectory) {
 
     if (minimized.compare(*reactant)) {
       QUILL_LOG_DEBUG(log, "[ParallelReplica] Dephasing successful");
-      break;
-    } else {
-      QUILL_LOG_DEBUG(
-          log,
-          "[ParallelReplica] Transition occured during dephasing; Restarting");
+      return;
     }
+    QUILL_LOG_DEBUG(
+        log,
+        "[ParallelReplica] Transition occured during dephasing; Restarting");
   }
+  // Exhausted retries: keep last dephased trajectory rather than hang.
+  QUILL_LOG_DEBUG(log,
+                  "[ParallelReplica] Dephase loop max reached; continuing");
 }
 
 int ParallelReplicaJob::refineTransition(

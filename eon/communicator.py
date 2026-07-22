@@ -15,7 +15,6 @@ import re
 import numpy
 import sys
 
-from eon.config import config as EON_CONFIG
 from eon.config import ConfigClass # Typing
 
 def tryint(s):
@@ -36,28 +35,61 @@ def sort_nicely(l):
     l.sort(key=alphanum_key)
 
 
-def get_communicator(config: ConfigClass = EON_CONFIG):
-    # This is an ugly hack to "remember" a communicator as it isn't possible to construct
-    # the MPI communicator multiple times and it needs to remember its object level variables.
-    if hasattr(get_communicator, 'comm'):
-        return get_communicator.comm
+# MPI may only be constructed once per process; non-MPI communicators are
+# cached per ConfigClass instance so dual-config / tests do not cross-wire.
+_mpi_communicator = None
+_comm_by_config_id = {}
 
-    if config.comm_type=='cluster':
+
+def reset_communicators():
+    """Clear non-MPI communicator cache (tests / multi-config isolation)."""
+    global _mpi_communicator
+    _comm_by_config_id.clear()
+    # MPI is not reset: mpi4py world may only be initialized once.
+
+
+def get_communicator(config: ConfigClass):
+    """Return a communicator for *config*.
+
+    *config* is required (no process-wide default). Non-MPI communicators are
+    memoized by ``id(config)``. MPI uses a single process-wide instance.
+    """
+    global _mpi_communicator
+
+    if config is None:
+        raise TypeError("get_communicator() requires a ConfigClass instance")
+
+    if config.comm_type == 'mpi':
+        if _mpi_communicator is not None:
+            return _mpi_communicator
+        comm = MPI(config.path_scratch, config.comm_job_bundle_size, config=config)
+        _mpi_communicator = comm
+        return comm
+
+    key = id(config)
+    if key in _comm_by_config_id:
+        return _comm_by_config_id[key]
+
+    if config.comm_type == 'cluster':
         comm = Script(config.path_scratch, config.comm_job_bundle_size,
                                    config.comm_script_name_prefix,
                                    config.comm_script_path,
                                    config.comm_script_queued_jobs_cmd,
                                    config.comm_script_cancel_job_cmd,
-                                   config.comm_script_submit_job_cmd)
-    elif config.comm_type=='local':
+                                   config.comm_script_submit_job_cmd,
+                                   config=config)
+    elif config.comm_type in ('local_lib', 'inprocess', 'local_inprocess'):
+        from eon.communicator_inprocess import LocalInProcess
+        bundle = getattr(config, 'comm_job_bundle_size', 1)
+        comm = LocalInProcess(config.path_scratch, bundle, config=config)
+    elif config.comm_type == 'local':
         comm = Local(config.path_scratch, config.comm_local_client,
-                                  config.comm_local_ncpus, config.comm_job_bundle_size)
-    elif config.comm_type=='mpi':
-        comm = MPI(config.path_scratch, config.comm_job_bundle_size)
+                                  config.comm_local_ncpus, config.comm_job_bundle_size,
+                                  config=config)
     else:
         logger.error(str(config.comm_type)+" is an unknown communicator.")
         raise ValueError()
-    get_communicator.comm = comm
+    _comm_by_config_id[key] = comm
     return comm
 
 
@@ -75,7 +107,9 @@ class EONClientError(Exception):
 
 
 class Communicator:
-    def __init__(self, scratchpath, bundle_size=1, config: ConfigClass = EON_CONFIG):
+    def __init__(self, scratchpath, bundle_size=1, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("Communicator requires a ConfigClass instance")
         self.config = config
         if not os.path.isdir(scratchpath):
             # should probably log this event
@@ -239,7 +273,7 @@ class Communicator:
 
 
 class MPI(Communicator):
-    def __init__(self, scratchpath, bundle_size, config: ConfigClass = EON_CONFIG):
+    def __init__(self, scratchpath, bundle_size, config: ConfigClass = None):
         Communicator.__init__(self, scratchpath, bundle_size, config = config)
         from mpi4py.MPI import COMM_WORLD
         self.comm = COMM_WORLD
@@ -342,7 +376,7 @@ class MPI(Communicator):
 
 
 class Local(Communicator):
-    def __init__(self, scratchpath, client, ncpus, bundle_size, config: ConfigClass = EON_CONFIG):
+    def __init__(self, scratchpath, client, ncpus, bundle_size, config: ConfigClass = None):
         Communicator.__init__(self, scratchpath, bundle_size, config = config)
 
         # number of cpus to use
@@ -478,7 +512,7 @@ class Local(Communicator):
 class Script(Communicator):
 
     def __init__(self, scratch_path, bundle_size, name_prefix, scripts_path,
-                 queued_jobs_cmd, cancel_job_cmd, submit_job_cmd, config: ConfigClass = EON_CONFIG):
+                 queued_jobs_cmd, cancel_job_cmd, submit_job_cmd, config: ConfigClass = None):
         Communicator.__init__(self, scratch_path, bundle_size, config=config)
 
         self.queued_jobs_cmd = os.path.join(scripts_path, queued_jobs_cmd)

@@ -238,6 +238,58 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.Get(sec, "scratch_dir", params.rgpot_options.scratch_dir);
     params.rgpot_options.input_block =
         ini.Get(sec, "input_block", params.rgpot_options.input_block);
+    params.rgpot_options.model_path =
+        ini.Get(sec, "model_path", params.rgpot_options.model_path);
+    params.rgpot_options.device =
+        ini.Get(sec, "device", params.rgpot_options.device);
+    params.rgpot_options.length_unit =
+        ini.Get(sec, "length_unit", params.rgpot_options.length_unit);
+    params.rgpot_options.extensions_directory = ini.Get(
+        sec, "extensions_directory", params.rgpot_options.extensions_directory);
+    params.rgpot_options.check_consistency = ini.GetBoolean(
+        sec, "check_consistency", params.rgpot_options.check_consistency);
+    params.rgpot_options.uncertainty_threshold =
+        ini.GetReal(sec, "uncertainty_threshold",
+                    params.rgpot_options.uncertainty_threshold);
+    params.rgpot_options.torch_determinism_strict =
+        ini.GetBoolean(sec, "torch_determinism_strict",
+                       params.rgpot_options.torch_determinism_strict);
+    // XTB dlopen knobs (also accept [XTBPot] when backend=xtb)
+    params.rgpot_options.xtb_paramset = ini.Get(
+        sec, "paramset",
+        ini.Get(sec, "xtb_paramset", params.rgpot_options.xtb_paramset));
+    params.rgpot_options.xtb_accuracy = ini.GetReal(
+        sec, "accuracy",
+        ini.GetReal(sec, "xtb_accuracy", params.rgpot_options.xtb_accuracy));
+    params.rgpot_options.xtb_electronic_temperature = ini.GetReal(
+        sec, "electronic_temperature",
+        ini.GetReal(sec, "xtb_electronic_temperature",
+                    params.rgpot_options.xtb_electronic_temperature));
+    params.rgpot_options.xtb_max_iterations = static_cast<int>(ini.GetInteger(
+        sec, "max_iterations",
+        ini.GetInteger(sec, "xtb_max_iterations",
+                       params.rgpot_options.xtb_max_iterations)));
+    params.rgpot_options.xtb_charge = ini.GetReal(
+        sec, "xtb_charge", static_cast<double>(params.rgpot_options.charge));
+    params.rgpot_options.xtb_uhf = static_cast<int>(ini.GetInteger(
+        sec, "uhf",
+        ini.GetInteger(sec, "xtb_uhf", params.rgpot_options.xtb_uhf)));
+    const std::string be = toLowerCase(params.rgpot_options.backend);
+    if (be == "xtb" || be == "xtbpot" || be == "gfn" || be == "gfnxtb") {
+      params.rgpot_options.xtb_paramset =
+          ini.Get("XTBPot", "paramset", params.rgpot_options.xtb_paramset);
+      params.rgpot_options.xtb_accuracy =
+          ini.GetReal("XTBPot", "accuracy", params.rgpot_options.xtb_accuracy);
+      params.rgpot_options.xtb_electronic_temperature =
+          ini.GetReal("XTBPot", "electronic_temperature",
+                      params.rgpot_options.xtb_electronic_temperature);
+      params.rgpot_options.xtb_max_iterations = static_cast<int>(ini.GetInteger(
+          "XTBPot", "max_iterations", params.rgpot_options.xtb_max_iterations));
+      params.rgpot_options.xtb_uhf = static_cast<int>(
+          ini.GetInteger("XTBPot", "uhf", params.rgpot_options.xtb_uhf));
+      params.rgpot_options.xtb_charge =
+          ini.GetReal("XTBPot", "charge", params.rgpot_options.xtb_charge);
+    }
   }
 
   // [Debug] //
@@ -412,6 +464,16 @@ int load_ini(INIReader &ini, Parameters &params) {
       ini.GetReal("Dimer", "torque_max", params.dimer_options.torque_max);
   params.dimer_options.remove_rotation = ini.GetBoolean(
       "Dimer", "remove_rotation", params.dimer_options.remove_rotation);
+  params.dimer_options.lor_residual_tol = ini.GetReal(
+      "Dimer", "lor_residual_tol", params.dimer_options.lor_residual_tol);
+  {
+    const auto rotTok =
+        toLowerCase(ini.Get("Dimer", "rotation_backend", "classical"));
+    params.dimer_options.rotation_backend =
+        magic_enum::enum_cast<DimerRotationBackend>(
+            rotTok, magic_enum::case_insensitive)
+            .value_or(DimerRotationBackend::Classical);
+  }
 
   // GP Surrogate Parameters
   params.gp_surrogate_options.enabled =
@@ -722,6 +784,12 @@ int load_ini(INIReader &ini, Parameters &params) {
       ini.Get("Hessian", "atom_list", params.hessian_options.atom_list));
   params.hessian_options.zero_freq_value = ini.GetReal(
       "Hessian", "zero_freq_value", params.hessian_options.zero_freq_value);
+  params.hessian_options.fd_scheme = toLowerCase(
+      ini.Get("Hessian", "fd_scheme", params.hessian_options.fd_scheme));
+  params.hessian_options.resume =
+      ini.GetBoolean("Hessian", "resume", params.hessian_options.resume);
+  params.hessian_options.checkpoint_path = ini.Get(
+      "Hessian", "checkpoint_path", params.hessian_options.checkpoint_path);
 
   // [Nudged Elastic Band] //
   const std::string neb_section = "Nudged Elastic Band";

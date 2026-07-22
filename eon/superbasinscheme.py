@@ -5,7 +5,6 @@ logger = logging.getLogger('superbasinscheme')
 import sys
 import math
 
-from eon.config import config
 from eon import superbasin
 
 class SuperbasinScheme:
@@ -13,8 +12,11 @@ class SuperbasinScheme:
         to which superbasins, the SuperBasin object of those superbasins, and
         superbasining criteria. It also expands and merges superbasins'''
 
-    def __init__(self, superbasin_path, states, kT):
+    def __init__(self, superbasin_path, states, kT, config=None):
 
+        if config is None:
+            raise TypeError("SuperbasinScheme requires a ConfigClass instance")
+        self.config = config
         self.path = superbasin_path
         self.path_storage = os.path.join(superbasin_path, "storage")
 
@@ -34,7 +36,8 @@ class SuperbasinScheme:
             self.next_sb_num = max(self.next_sb_num, int(i))
             self.superbasins.append(
                 superbasin.Superbasin(self.path, i,
-                                      get_state=states.get_state)
+                                      get_state=states.get_state,
+                                      config=self.config)
             )
 
         self.next_sb_num += 1
@@ -63,11 +66,11 @@ class SuperbasinScheme:
             end_states.update(sb.states)
 
         # Is there an upper limit for the size of a superbasin?
-        if config.sb_max_size:
+        if self.config.sb_max_size:
             numstates = len(start_states) + len(end_states)
             # if number of states in the new superbasin will be larger
             # than the maximum size, do not proceed
-            if numstates > config.sb_max_size:
+            if numstates > self.config.sb_max_size:
                 return
 
         # Now start creating the new superbasin.
@@ -95,14 +98,15 @@ class SuperbasinScheme:
 
         self.superbasins.append(
             superbasin.Superbasin(self.path, self.next_sb_num,
-                                  state_list=new_sb_states)
+                                  state_list=new_sb_states,
+                                  config=self.config)
         )
         logger.info("Created superbasin with states " + str([i.number for i in new_sb_states]))
         self.next_sb_num += 1
 
     def make_basin(self, merge_states):
         # Is there an upper limit for the size of a superbasin?
-        if config.sb_max_size:
+        if self.config.sb_max_size:
             # first determine how many states will be in the new superbasin
             numstates = 0
             for i in merge_states:
@@ -113,7 +117,7 @@ class SuperbasinScheme:
                     numstates += len(sb.states)
             # if number of states in the new superbasin will be larger
             # than the maximum size, do not proceed
-            if numstates > config.sb_max_size:
+            if numstates > self.config.sb_max_size:
                 return
         # Now start creating the new superbasin.
         new_sb_states = set()
@@ -138,7 +142,8 @@ class SuperbasinScheme:
 
         self.superbasins.append(
             superbasin.Superbasin(self.path, self.next_sb_num,
-                                  state_list=new_sb_states)
+                                  state_list=new_sb_states,
+                                  config=self.config)
         )
         logger.info("Created superbasin with states " + str([i.number for i in new_sb_states]))
         self.next_sb_num += 1
@@ -161,20 +166,20 @@ class SuperbasinScheme:
     #        dirs = os.listdir(self.path)
     #        for i in dirs:
     #            path = os.path.join(self.path, i)
-    #            self.superbasins[int(i)] = superbasin.Superbasin(path)
+    #            self.superbasins[int(i)] = superbasin.Superbasin(path, config=self.config)
 
 
 class TransitionCounting(SuperbasinScheme):
     ''' Implements the transition counting scheme for superbasin detection '''
 
-    def __init__(self, superbasin_path, states, kT, num_transitions):
+    def __init__(self, superbasin_path, states, kT, num_transitions, config=None):
         self.num_transitions = num_transitions
-        SuperbasinScheme.__init__(self,superbasin_path, states, kT)
+        SuperbasinScheme.__init__(self, superbasin_path, states, kT, config=config)
 
     def register_transition(self, start_state, end_state):
         logger.debug('Registering transitions')
 
-        if start_state == end_state and not config.comp_use_identical:
+        if start_state == end_state and not self.config.comp_use_identical:
             return
 
         start_count = self.get_count(start_state)
@@ -190,7 +195,7 @@ class TransitionCounting(SuperbasinScheme):
     def write_data(self):
         logger.debug('writing')
         for start_state in self.count:
-            data_path = os.path.join(start_state.path, config.sb_state_file)
+            data_path = os.path.join(start_state.path, self.config.sb_state_file)
             f = open(data_path, 'w')
             for end_state in self.count[start_state]:
                 #print(end_state.number, self.count[start_state][end_state], f)
@@ -205,7 +210,7 @@ class TransitionCounting(SuperbasinScheme):
         try:
             return self.count[state]
         except KeyError:
-            data_path = os.path.join(state.path, config.sb_state_file)
+            data_path = os.path.join(state.path, self.config.sb_state_file)
             self.count[state] = {}
             if os.path.isfile(data_path):
                 f = open(data_path, 'r')
@@ -218,12 +223,12 @@ class TransitionCounting(SuperbasinScheme):
 
 class EnergyLevel(SuperbasinScheme):
 
-    def __init__(self, superbasin_path, states, kT, energy_increment):
+    def __init__(self, superbasin_path, states, kT, energy_increment, config=None):
         self.energy_increment = energy_increment
         self.levels = {}
         # Lowest state energy seen in this run (seeded from states on resume).
         self.global_energy_min = None
-        SuperbasinScheme.__init__(self,superbasin_path, states, kT)
+        SuperbasinScheme.__init__(self, superbasin_path, states, kT, config=config)
 
     def _note_state_energy(self, energy):
         if self.global_energy_min is None or energy < self.global_energy_min:
@@ -249,7 +254,7 @@ class EnergyLevel(SuperbasinScheme):
            of the end_state if it hasn't been visited before.'''
 
         # error
-        if start_state == end_state and not config.comp_use_identical:
+        if start_state == end_state and not self.config.comp_use_identical:
         #if start_state == end_state:
             return
 
@@ -313,7 +318,7 @@ class EnergyLevel(SuperbasinScheme):
         logger.debug('reading')
         for i in range(self.states.get_num_states()):
             state = self.states.get_state(i)
-            data_path = os.path.join(state.path, config.sb_state_file)
+            data_path = os.path.join(state.path, self.config.sb_state_file)
             if os.path.isfile(data_path):
                 f = open(data_path, 'r')
                 self.levels[self.states.get_state(i)] = float(f.read().strip())
@@ -324,7 +329,7 @@ class EnergyLevel(SuperbasinScheme):
     def write_data(self):
         logger.debug('writing')
         for i in self.levels:
-            data_path = os.path.join(i.path, config.sb_state_file)
+            data_path = os.path.join(i.path, self.config.sb_state_file)
             f = open(data_path, 'w')
             #print("%f\n" % self.levels[i], f)
             f.write("%f\n" % self.levels[i])
@@ -335,7 +340,7 @@ class RateThreshold(SuperbasinScheme):
     ''' Implements a superbasin scheme where states are merged if the transition
         rate between them is faster than a specified threshold. '''
 
-    def __init__(self, superbasin_path, states, kT, rate_threshold):
+    def __init__(self, superbasin_path, states, kT, rate_threshold, config=None):
         """
         Initializes the RateThreshold scheme.
 
@@ -347,7 +352,7 @@ class RateThreshold(SuperbasinScheme):
                                     will be merged into a superbasin.
         """
         self.rate_threshold = rate_threshold
-        SuperbasinScheme.__init__(self, superbasin_path, states, kT)
+        SuperbasinScheme.__init__(self, superbasin_path, states, kT, config=config)
         logger.info(f"Initialized RateThreshold scheme with a threshold of {self.rate_threshold:.2e}")
 
     def register_transition(self, start_state, end_state):
@@ -358,7 +363,7 @@ class RateThreshold(SuperbasinScheme):
         logger.debug(f'Checking rate between state {start_state.number} and {end_state.number}')
 
         # Do not process self-transitions if configured to ignore them
-        if start_state == end_state and not config.comp_use_identical:
+        if start_state == end_state and not self.config.comp_use_identical:
             return
 
         # Efficiently check if both states are already in the same superbasin

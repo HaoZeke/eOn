@@ -11,6 +11,8 @@ option('with_cuh2', type : 'boolean', value : true)
 option('with_tests', type : 'boolean', value : true)
 option('with_gp_surrogate', type : 'boolean', value : false)
 option('with_catlearn', type : 'boolean', value : false)
+# Native linked libxtb (fat host). Prefer -Dwith_rgpot=true + RGPOT backend=xtb
+# (dlopen libxtb_engine.so) for packaging; leave this false by default.
 option('with_xtb', type : 'boolean', value : false)
 option('with_ase_orca', type : 'boolean', value : false)
 option('with_ase_nwchem', type : 'boolean', value : false)
@@ -38,3 +40,10 @@ option('ira_includedir', type : 'string', value : '', description : 'Path to ira
 option('torch_path', type : 'string', value : '', description: 'path to Torch, either provide this or torch_version for pip')
 option('torch_version', type : 'string', value : '2.9', description: 'path to Torch')
 option('pip_metatomic', type : 'boolean', value : false, description: 'use pip versions of torch, metatensor, torch, and metatomic')
+
+# Python nanobind bindings for client Matter / Parameters / Potential
+option('with_pyeonclient', type : 'boolean', value : false,
+       description : 'Build pyeonclient (nanobind only; stable ABI abi3 on 3.12+, free-threaded when Py_GIL_DISABLED)')
+# Install eon/ server package + eonclient CLI (disable for pyeonclient-only wheels)
+option('install_eon_server', type : 'boolean', value : true,
+       description : 'Install eon Python package and eonclient binary (false for standalone pyeonclient)')

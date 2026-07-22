@@ -1,0 +1,126 @@
+[project]
+name = "pyeonclient"
+version = "0.3.6"
+description = "Nanobind bindings to the eOn C++ client (Matter, Parameters, Potential, Jobs, NEB, RGPOT)"
+authors = [
+    {name = "Rohit Goswami", email = "rgoswami@ieee.org"},
+]
+readme = "client/python/README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26.4",
+    "readcon>=0.8.0",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Free Threading :: 2 - Beta",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+keywords = ["eOn", "AKMC", "nanobind", "Matter", "metatomic", "NEB", "rgpot"]
+
+[project.optional-dependencies]
+# Runtime Python deps only — same idea as torch extras, not a recompile.
+ase = ["ase>=3.22"]
+# Typed DimerSpec / NebSpec (Pydantic v2). Core Dimer/NEB work without it;
+# C++ still enforces accelerant=gp ⇒ method=improved.
+models = ["eon-schema>=0.2.1"]
+# models-pydantic = ["pydantic>=2.0"]
+# Metatomic stack from PyPI (install torch first or let pip resolve).
+# Does NOT inject WITH_METATOMIC into a prebuilt wheel; use the metatomic
+# wheel artifact or a from-source build (see README).
+metatomic = [
+    # Engines from rgpot cover torch 2.7+ (same floor as rgpot multi-ABI).
+    # rgpot>=2.5.2 engines match vesin 0.6 VesinOptions (skin/n_threads).
+    "torch>=2.7",
+    "rgpot>=2.5.2",
+    "metatensor>=0.1.0",
+    "metatensor-torch>=0.6.0",
+    "metatomic-torch>=0.1.0",
+    "vesin>=0.6.0",
+]
+# Cookbook-ish helper stack (config writing lives in rgpycrumbs).
+# No conda-forge eOn / eonclient required.
+cookbook = [
+    "pyeonclient[metatomic,ase,models]",
+    "rgpycrumbs>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/TheochemUI/eOn"
+Documentation = "https://theochemuieon.readthedocs.io/"
+Repository = "https://github.com/TheochemUI/eOn"
+Issues = "https://github.com/TheochemUI/eOn/issues"
+Changelog = "https://github.com/TheochemUI/eOn/blob/main/CHANGELOG.md"
+
+[build-system]
+requires = [
+    "meson-python>=0.16",
+    "meson>=1.3",
+    "ninja",
+    "numpy>=1.26.4",
+    "nanobind>=2.2",
+]
+build-backend = "mesonpy"
+
+[tool.meson-python]
+limited-api = true
+
+# Default PyPI wheel: RGPOT linked (dlopen engines at runtime), no torch NEEDED.
+# Metatomic-linked wheels: override setup-args with -Dwith_metatomic=true
+# (see scripts/pyeonclient_build_wheel.sh and pyeonclient-wheels.yml).
+[tool.meson-python.args]
+setup = [
+    "-Dwith_pyeonclient=true",
+    "-Dinstall_eon_server=false",
+    "-Dwith_tests=false",
+    "-Dwith_ase=false",
+    "-Dwith_metatomic=false",
+    "-Dwith_rgpot=true",
+    "-Dwith_xtb=false",
+    "-Dwith_serve=false",
+    "-Dwith_fortran=true",
+    "-Dwith_cuh2=true",
+    "-Dwrap_mode=forcefallback",
+    "-Db_lto=false",
+]
+install = ["--skip-subprojects"]
+dist = ["--include-subprojects"]
+
+[tool.cibuildwheel]
+build-frontend = "build[uv]"
+skip = ["pp*", "*-win32", "*-manylinux_i686", "*-musllinux*"]
+test-requires = ["pytest", "numpy"]
+test-command = "python -c \"import pyeonclient as p; assert p.built_with_rgpot(); print(p.__version__, p.built_with_metatomic(), p.built_with_rgpot())\""
+
+[tool.cibuildwheel.linux]
+before-all = """
+  yum install -y eigen3-devel gcc-gfortran || yum install -y eigen3 gcc-gfortran || true
+  export CARGO_HOME=/root/.cargo
+  export PATH="/root/.cargo/bin:$PATH"
+  command -v rustc || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  . /root/.cargo/env
+  command -v cbindgen || cargo install cbindgen
+  if ! pkg-config --exists quill 2>/dev/null; then
+    rm -rf /tmp/quill-src /tmp/quill-build
+    curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz
+    mkdir -p /tmp/quill-src && tar -xzf /tmp/quill.tgz -C /tmp/quill-src --strip-components=1
+    cmake -S /tmp/quill-src -B /tmp/quill-build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DQUILL_BUILD_TESTS=OFF \
+      -DQUILL_BUILD_EXAMPLES=OFF
+    cmake --build /tmp/quill-build -j$(nproc)
+    cmake --install /tmp/quill-build
+  fi
+"""
+environment = { PATH = "/root/.cargo/bin:$PATH", CARGO_HOME = "/root/.cargo", PKG_CONFIG_PATH = "/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH", CMAKE_PREFIX_PATH = "/usr/local" }

@@ -24,6 +24,10 @@
 #include "ObjectiveFunction.h"
 #include "Parameters.h"
 
+#include <optional>
+#include <readcon-core.hpp>
+#include <vector>
+
 namespace eonc::neb {
 class OCINEBController;
 }
@@ -59,6 +63,12 @@ public:
   double convergenceForce(void);
   void findExtrema(void);
   void printImageData(bool writeToFile = false, size_t idx = 0);
+
+  /// In-memory ConFrames with the same NEB stamps as writePathCon / neb.con.
+  /// Empty if path is incomplete. Does not write to disk.
+  [[nodiscard]] std::vector<readcon::ConFrame>
+  pathFrames(std::optional<size_t> bandIndex = std::nullopt);
+
   std::vector<std::shared_ptr<EigenmodeStrategy>> eigenmode_solvers;
 
   int atoms{0};
