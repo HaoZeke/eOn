@@ -18,6 +18,24 @@ eon_win_to_unix_path() {
   fi
 }
 
+eon_unix_to_win_path() {
+  # MSVC link.exe reads LIB with Windows paths. MSYS converts PATH for native
+  # children but does NOT rewrite LIB — Unix /d/... entries are ignored → LNK1104.
+  local p="$1"
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$p"
+    return
+  fi
+  if [[ "$p" =~ ^/([a-zA-Z])/(.*)$ ]]; then
+    local drive rest
+    drive="$(echo "${BASH_REMATCH[1]}" | tr 'a-z' 'A-Z')"
+    rest="${BASH_REMATCH[2]//\//\\}"
+    echo "${drive}:\\${rest}"
+  else
+    echo "${p//\//\\}"
+  fi
+}
+
 eon_dir_has() {
   # $1=dir $2=glob-ish name prefix (FortranRuntime or flang_rt) $3=ext (lib|dll)
   local d="$1" base="$2" ext="$3" f
@@ -175,11 +193,16 @@ eon_export_flang_rt() {
 
   if [ -n "$lib_dir" ]; then
     export FLANG_RT_LIB_DIR="$lib_dir"
-    export LIB="${lib_dir};${LIB:-}"
-    echo "Using flang_rt LIB: $lib_dir"
+    local lib_win
+    lib_win="$(eon_unix_to_win_path "$lib_dir")"
+    export LIB="${lib_win};${LIB:-}"
+    echo "Using flang_rt LIB: $lib_dir (win=$lib_win)"
     ls "$lib_dir"/FortranRuntime* "$lib_dir"/flang_rt* 2>/dev/null | head -20 || true
   else
     echo "WARNING: flang_rt import lib dir not found (link may LNK1104)" >&2
+    if [ "$required" -eq 1 ]; then
+      return 1
+    fi
   fi
 
   if [ -n "$dll_dir" ]; then

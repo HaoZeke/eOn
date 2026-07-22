@@ -76,16 +76,16 @@ if is_windows
                 ]
             endif
             # Fallback: conda/pixi layout under the compiler's bindir parents.
+            # win-64 flang often ships import libs in Library/lib (not only under
+            # the clang resource triple dir).
             _fc_path = fc.cmd_array()[0]
             _fc_dir = fs.parent(_fc_path)
             # .../Library/bin/flang-new.exe -> .../Library
             _lib_root = fs.parent(_fc_dir)
             _flang_rt_candidates += [
-                join_paths(
-                    _lib_root,
-                    'lib',
-                    'clang',
-                ),
+                join_paths(_lib_root, 'lib'),
+                join_paths(_lib_root, 'lib', 'clang'),
+                join_paths(_lib_root, 'bin'),
             ]
             _flang_rt_dir = ''
             foreach _cand : _flang_rt_candidates
