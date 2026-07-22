@@ -17,12 +17,28 @@ jobs:
   build_eon:
     runs-on: ubuntu-latest
     steps:
+      # Private gpr_optim clone needs SUBMODULE_PRIVATE. Fork PRs do not receive
+      # repo secrets; exit 0 so the check stays green without a fake build.
+      - name: Check submodule SSH secret
+        id: gate
+        env:
+          SUBMODULE_PRIVATE: ${{ secrets.SUBMODULE_PRIVATE }}
+        run: |
+          if [ -z "$SUBMODULE_PRIVATE" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "SUBMODULE_PRIVATE unavailable; skipping GPRD build"
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.available == 'true'
       - name: Setup SSH for private submodule
+        if: steps.gate.outputs.available == 'true'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SUBMODULE_PRIVATE }}
       - name: Pull GPRD submodule
+        if: steps.gate.outputs.available == 'true'
         run: |
           # develop tip: 26242c8 is not on any branch after gpr_optim history rewrite
           # (git clone then checkout fails with "unable to read tree").
@@ -32,6 +48,7 @@ jobs:
           git checkout 365b78bdf4042f75915e1113396e1b4aa50edaa2
           git rev-parse --short HEAD
       - uses: prefix-dev/setup-pixi@v0.9.4
+        if: steps.gate.outputs.available == 'true'
         with:
           cache: true
           cache-write: true
@@ -39,9 +56,11 @@ jobs:
           environments: >-
             dev
       - name: Install cbindgen
+        if: steps.gate.outputs.available == 'true'
         shell: bash
         run: command -v cbindgen || cargo install cbindgen
       - name: Install eon with GPRD
+        if: steps.gate.outputs.available == 'true'
         shell: pixi run bash -e {0}
         run: |
           meson setup --reconfigure bbdir  \
@@ -52,6 +71,7 @@ jobs:
           -Dwith_tests=true
           meson install -C bbdir
       - name: Integration Tests
+        if: steps.gate.outputs.available == 'true'
         shell: pixi run bash -e {0}
         run: |
           cd client/unit_tests/data/systems/saddle_search/

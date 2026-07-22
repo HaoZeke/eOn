@@ -16,7 +16,8 @@
 /// Uses dlopen (POSIX) or LoadLibrary (Windows) to load Fortran potential
 /// libraries at runtime. The search order is:
 ///   1. Paths from the [Potential] potentials_path config key
-///   2. EON_POTENTIALS_PATH environment variable (colon-separated)
+///   2. EON_POTENTIALS_PATH environment variable (';' on Windows, ':'
+///   elsewhere)
 ///   3. Default system library search path (LD_LIBRARY_PATH, etc.)
 ///
 /// Call add_config_paths() once at startup (before any potential constructor)
@@ -77,6 +78,9 @@ private:
   std::vector<std::string> m_search_paths;
   std::mutex m_mutex;
   std::unordered_map<std::string, dynlib::Handle> m_handles;
+  /// Last dynlib::error() from a failed open (for throw_not_found).
+  std::string m_last_load_error;
+  bool m_last_load_saw_file = false;
 };
 
 } // namespace eonc
