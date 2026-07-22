@@ -180,24 +180,10 @@ jobs:
           export CMAKE_CXX_COMPILER=cl
           export CMAKE_GENERATOR=Ninja
           # flang_rt import libs under clang resource dir (LNK1104 otherwise).
-          # Same search as conda-forge/eon-feedstock recipe/build.bat.
-          FLANG_RT_DIR=""
-          _res="$("$FC" -print-resource-dir 2>/dev/null || true)"
-          if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
-            FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
-          fi
-          if [ -z "$FLANG_RT_DIR" ]; then
-            for _d in "${PIXI_PRE}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc; do
-              if [ -d "$_d" ]; then FLANG_RT_DIR="$_d"; break; fi
-            done
-          fi
-          if [ -n "$FLANG_RT_DIR" ]; then
-            export LIB="${FLANG_RT_DIR};${LIB}"
-            echo "Using flang_rt LIBPATH: $FLANG_RT_DIR"
-            ls "$FLANG_RT_DIR"/*.{lib,dll} 2>/dev/null | head -20 || ls "$FLANG_RT_DIR" | head -20
-          else
-            echo "WARNING: flang_rt resource dir not found" >&2
-          fi
+          # Also put runtime DLLs on PATH for LoadLibrary of pot plugins.
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${PIXI_PRE}" --required
           python -c "import torch, vesin, metatensor, metatensor.torch, metatomic.torch; print('pre-meson import ok')"
           # Help diagnose find_library against pip wheel layout
           python - <<'PY'
@@ -245,6 +231,9 @@ jobs:
           PIXI_PRE="${PIXI_PROJECT_ROOT:-$PWD}/.pixi/envs/dev-mta"
           # DLLs: torch + pixi runtime (flang_rt) for Fortran pot plugins
           export PATH="${pythonLocation}/Lib/site-packages/torch/lib:${PIXI_PRE}/Library/bin:${PATH}"
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${PIXI_PRE}" --required
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           which meson
           meson --version

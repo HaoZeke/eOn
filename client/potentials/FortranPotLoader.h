@@ -78,6 +78,9 @@ private:
   std::vector<std::string> m_search_paths;
   std::mutex m_mutex;
   std::unordered_map<std::string, dynlib::Handle> m_handles;
+  /// Last dynlib::error() from a failed open (for throw_not_found).
+  std::string m_last_load_error;
+  bool m_last_load_saw_file = false;
 };
 
 } // namespace eonc

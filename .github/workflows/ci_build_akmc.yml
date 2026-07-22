@@ -75,22 +75,10 @@ jobs:
             exit 1
           fi
           echo "FC=$(command -v flang-new)"
-          # flang_rt import libs (LNK1104 FortranRuntime / flang_rt otherwise).
-          FLANG_RT_DIR=""
-          _res="$("$FC" -print-resource-dir 2>/dev/null || true)"
-          if [ -n "$_res" ] && [ -d "$_res/lib/x86_64-pc-windows-msvc" ]; then
-            FLANG_RT_DIR="$_res/lib/x86_64-pc-windows-msvc"
-          fi
-          if [ -z "$FLANG_RT_DIR" ] && [ -n "${CONDA_PREFIX:-}" ]; then
-            for _d in "${CONDA_PREFIX}/lib/clang"/*/lib/x86_64-pc-windows-msvc \
-                      "${CONDA_PREFIX}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc; do
-              if [ -d "$_d" ]; then FLANG_RT_DIR="$_d"; break; fi
-            done
-          fi
-          if [ -n "$FLANG_RT_DIR" ]; then
-            export LIB="${FLANG_RT_DIR};${LIB:-}"
-            echo "Using flang_rt LIBPATH: $FLANG_RT_DIR"
-          fi
+          # flang_rt import libs (LNK1104) + runtime DLLs for pot plugins.
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${CONDA_PREFIX:-}" --required
           # Align with conda-forge/eon-feedstock#15 / build.bat: in-tree Fortran ON
           # (flang pots + MSVC C++; /STACK:16M in meson for GAGAFE; CuH2 on).
           meson setup bbdir --prefix=$CONDA_PREFIX --libdir=lib --buildtype release \
@@ -117,6 +105,9 @@ jobs:
           if [ -n "${CONDA_PREFIX:-}" ]; then
             export PATH="${CONDA_PREFIX}/Library/bin:${CONDA_PREFIX}/bin:${PATH}"
           fi
+          # shellcheck source=scripts/ci/win_flang_rt.sh
+          source scripts/ci/win_flang_rt.sh
+          eon_export_flang_rt "${CONDA_PREFIX:-}" --required
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
           export AR=lib
