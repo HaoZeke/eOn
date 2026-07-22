@@ -34,8 +34,6 @@ jobs:
           FC=$(find "$(brew --prefix gcc)/bin" -name 'gfortran-*' | head -1)
           echo "FC=$FC" >> "$GITHUB_ENV"
           echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
-      # pixi/conda vs* activation leaves VSINSTALLDIR / CMAKE_GENERATOR_TOOLSET that
-      # break VsDevCmd when windows-latest ships VS 18 and vswhere picks it.
       - name: Activate MSVC (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -57,20 +55,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pixi run bash -e {0}
         run: |
-          # Windows: conda DLL path first (torch/shm.dll), then MSVC tools,
-          # and drop Git Bash /usr/bin so GNU link.exe cannot shadow MSVC.
-          export PATH=$(echo "$PATH" | tr ':' '
-' | grep -v '^/usr/bin$' | paste -sd:)
-          export PATH="$CONDA_PREFIX/Scripts:$CONDA_PREFIX:$CONDA_PREFIX/Library/bin:$PATH"
-          CLDIR=$(dirname "$(command -v cl.exe 2>/dev/null || true)")
-          if [ -n "$CLDIR" ] && [ -x "$CLDIR/link.exe" ]; then
-            export PATH="$CLDIR:$PATH"
-          fi
-          # pixi compilers set LD=lld-link / clang LDFLAGS; use MSVC for this build
-          unset LDFLAGS || true
-          export LD=link
-          export CC=cl
-          export CXX=cl
+          # shellcheck source=scripts/ci/win_msvc_path.sh
+          source scripts/ci/win_msvc_path.sh
           python -c "import vesin, metatensor, metatensor.torch, metatomic.torch; print('pip_metatomic imports ok')"
           meson setup bbdir \
             --prefix=$CONDA_PREFIX \
@@ -86,18 +72,7 @@ jobs:
         shell: pixi run bash -e {0}
         run: |
           if [ "$RUNNER_OS" = "Windows" ]; then
-          # Windows: conda DLL path first (torch/shm.dll), then MSVC tools,
-          # and drop Git Bash /usr/bin so GNU link.exe cannot shadow MSVC.
-          export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v '^/usr/bin$' | paste -sd:)
-          export PATH="$CONDA_PREFIX/Scripts:$CONDA_PREFIX:$CONDA_PREFIX/Library/bin:$PATH"
-          CLDIR=$(dirname "$(command -v cl.exe 2>/dev/null || true)")
-          if [ -n "$CLDIR" ] && [ -x "$CLDIR/link.exe" ]; then
-            export PATH="$CLDIR:$PATH"
-          fi
-          # pixi compilers set LD=lld-link / clang LDFLAGS; use MSVC for this build
-          unset LDFLAGS || true
-          export LD=link
-          export CC=cl
-          export CXX=cl
+            # shellcheck source=scripts/ci/win_msvc_path.sh
+            source scripts/ci/win_msvc_path.sh
           fi
           meson test -C bbdir --print-errorlogs
