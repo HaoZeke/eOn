@@ -1434,6 +1434,9 @@ if get_option('with_tests')
                 dependencies: test_deps,
                 include_directories: _incdirs,
                 cpp_args: test_args,
+                # Include /STACK:16M (Windows) so EAM Al Fortran pots do not
+                # SIGSEGV with STATUS_STACK_OVERFLOW (default stack is 1 MB).
+                link_args: _linkargs,
                 link_with: _linkto,
                 build_rpath: ':'.join(_runtime_rpath),
             ),
