@@ -124,26 +124,31 @@ jobs:
           dll = str(cands[0].resolve())
           print("LoadLibrary", dll)
           try:
-              ctypes.WinDLL(dll)
+              h = ctypes.WinDLL(dll)
               print("LoadLibrary OK")
           except OSError as e:
               print("LoadLibrary FAILED:", e)
               print("PATH head:", os.environ.get("PATH", "")[:800])
-              # dumpbin shows missing deps when present
-              for tool in ("dumpbin", "llvm-readobj"):
-                  try:
-                      out = subprocess.check_output(
-                          [tool, "/dependents", dll]
-                          if tool == "dumpbin"
-                          else [tool, "--coff-imports", dll],
-                          text=True,
-                          stderr=subprocess.STDOUT,
-                      )
-                      print(out[:2000])
-                      break
-                  except Exception as ex:
-                      print(tool, "failed:", ex)
               sys.exit(1)
+          # Fortran symbols must be exported (Windows PE); catch missing exports early.
+          found = None
+          for name in ("sw_", "SW_", "_sw_", "sw__", "SW__"):
+              try:
+                  getattr(h, name)
+                  found = name
+                  break
+              except AttributeError:
+                  pass
+          print("sw symbol:", found)
+          try:
+              out = subprocess.check_output(
+                  ["dumpbin", "/exports", dll], text=True, stderr=subprocess.STDOUT
+              )
+              print(out[:2500])
+          except Exception as ex:
+              print("dumpbin /exports failed:", ex)
+          if not found:
+              sys.exit("eon_sw.dll loads but does not export sw_ (check .def / link)")
           PY
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           export CC=cl CXX=cl
