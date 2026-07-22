@@ -180,6 +180,10 @@ eon_export_flang_rt() {
     ls "$lib_dir"/FortranRuntime* "$lib_dir"/flang_rt* 2>/dev/null | head -20 || true
   else
     echo "WARNING: flang_rt import lib dir not found (link may LNK1104)" >&2
+    # --required: need import libs for MSVC link of Fortran objects / CuH2.
+    if [ "$required" -eq 1 ]; then
+      return 1
+    fi
   fi
 
   if [ -n "$dll_dir" ]; then
@@ -189,11 +193,12 @@ eon_export_flang_rt() {
     ls "$dll_dir"/FortranRuntime*.dll "$dll_dir"/flang_rt*.dll \
        "$dll_dir"/FortranDecimal*.dll 2>/dev/null | head -20 || true
   else
-    echo "WARNING: flang_rt runtime DLL dir not found (LoadLibrary of pots may fail)" >&2
-    # --required means tests will LoadLibrary Fortran pots: hard-fail without DLLs.
-    if [ "$required" -eq 1 ]; then
-      return 1
-    fi
+    # conda-forge win-64 libflang 19 ships import/static .lib under Library/lib
+    # and often no separate FortranRuntime*.dll; flang links the runtime into
+    # pot plugins at pot-DLL link time (same as feedstock MSVC+flang). Do not
+    # hard-fail: missing DLL dir is only a LoadLibrary risk if pots were
+    # linked dynamic against a runtime DLL that is not installed.
+    echo "WARNING: flang_rt runtime DLL dir not found (ok if pots link static RT)" >&2
   fi
 
   # Keep prefix bin on PATH (conda puts many runtime DLLs there).

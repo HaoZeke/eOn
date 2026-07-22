@@ -150,7 +150,8 @@ dynlib::Handle FortranPotLoader::open_lib(const char *lib_base) {
     last_err = dynlib::error();
   }
 
-  // Stash diagnostics for throw_not_found (thread-local; open is mutex-guarded).
+  // Stash diagnostics for throw_not_found (thread-local; open is
+  // mutex-guarded).
   m_last_load_error = last_err;
   m_last_load_saw_file = any_file;
   m_handles[lib_base] = nullptr;
@@ -179,7 +180,8 @@ void FortranPotLoader::throw_not_found(const char *lib_base,
     oss << "A matching file was present but LoadLibrary/dlopen failed";
     if (!m_last_load_error.empty())
       oss << ": " << m_last_load_error;
-    oss << "\n(often a missing flang_rt / FortranRuntime dependency on PATH).\n";
+    oss << "\n(often a missing flang_rt / FortranRuntime dependency on "
+           "PATH).\n";
   } else if (!m_last_load_error.empty()) {
     oss << "Loader error: " << m_last_load_error << "\n";
   }
