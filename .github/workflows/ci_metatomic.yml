@@ -234,6 +234,13 @@ jobs:
           # shellcheck source=scripts/ci/win_flang_rt.sh
           source scripts/ci/win_flang_rt.sh
           eon_export_flang_rt "${PIXI_PRE}" --required
+          if [ -z "${FLANG_RT_DLL_DIR:-}" ]; then
+            echo "FLANG_RT_DLL_DIR unset after eon_export_flang_rt" >&2
+            exit 1
+          fi
+          echo "FLANG_RT_DLL_DIR=$FLANG_RT_DLL_DIR"
+          ls -la "${FLANG_RT_DLL_DIR}"/FortranRuntime*.dll \
+            "${FLANG_RT_DLL_DIR}"/flang_rt*.dll 2>/dev/null | head -20 || true
           unset LDFLAGS CFLAGS CXXFLAGS FCFLAGS || true
           which meson
           meson --version

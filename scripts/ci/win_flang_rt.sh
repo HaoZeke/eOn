@@ -1,52 +1,49 @@
 # shellcheck shell=bash
-# Locate conda-forge flang_rt import libs + runtime DLLs for MSVC link and
-# LoadLibrary of Fortran pot plugins. Source from Windows GHA bash steps:
-#   source scripts/ci/win_flang_rt.sh
-#   eon_export_flang_rt "${CONDA_PREFIX:-$PIXI_PRE}"
+# Locate conda-forge flang_rt for:
+#   - MSVC link: import libs (FortranRuntime.dynamic.lib / flang_rt*.lib) via LIB
+#   - LoadLibrary of pot plugins: runtime DLLs via PATH
 #
-# Sets FLANG_RT_DIR and prepends it to LIB (link) and PATH (runtime DLLs).
-# Exits 1 if required and the dir cannot be found.
+# Source: source scripts/ci/win_flang_rt.sh
+# Use:    eon_export_flang_rt "${CONDA_PREFIX:-}" --required
 
 eon_win_to_unix_path() {
-  # flang -print-resource-dir often emits D:\...; Git Bash [ -d ] needs /d/...
   local p="${1//\\//}"
   if [[ "$p" =~ ^([A-Za-z]):(.*)$ ]]; then
-    local drive="${BASH_REMATCH[1]}"
-    local rest="${BASH_REMATCH[2]}"
-    # lower-case drive for Git Bash
-    drive="$(echo "$drive" | tr 'A-Z' 'a-z')"
+    local drive rest
+    drive="$(echo "${BASH_REMATCH[1]}" | tr 'A-Z' 'a-z')"
+    rest="${BASH_REMATCH[2]}"
     echo "/${drive}${rest}"
   else
     echo "$p"
   fi
 }
 
-eon_flang_rt_has_artifacts() {
-  local d="$1"
+eon_dir_has() {
+  # $1=dir $2=glob-ish name prefix (FortranRuntime or flang_rt) $3=ext (lib|dll)
+  local d="$1" base="$2" ext="$3" f
   [ -d "$d" ] || return 1
-  # Import libs (MSVC link) and/or runtime DLLs (LoadLibrary of pot plugins)
-  local f
-  for f in \
-    flang_rt.runtime.dynamic.lib \
-    FortranRuntime.dynamic.lib \
-    flang_rt.dynamic.lib \
-    flang_rt.runtime.dynamic.dll \
-    FortranRuntime.dynamic.dll \
-    flang_rt.dynamic.dll
+  for f in "$d"/"${base}".dynamic."${ext}" \
+           "$d"/"${base}".dynamic_dbg."${ext}" \
+           "$d"/"${base}"."${ext}" \
+           "$d"/"${base}"*."${ext}"
   do
-    if [ -f "$d/$f" ]; then
-      return 0
-    fi
+    case "$f" in *\**) continue ;; esac
+    [ -f "$f" ] && return 0
   done
-  # Some layouts only ship versioned names
-  ls "$d"/flang_rt*.lib "$d"/FortranRuntime*.lib \
-     "$d"/flang_rt*.dll "$d"/FortranRuntime*.dll \
-     >/dev/null 2>&1
+  ls "$d"/${base}*."${ext}" >/dev/null 2>&1
 }
 
-eon_find_flang_rt_dir() {
-  # Optional roots: conda/pixi prefixes to search when -print-resource-dir fails
-  local root res candidate found
+eon_has_import_lib() {
+  eon_dir_has "$1" FortranRuntime lib || eon_dir_has "$1" flang_rt lib
+}
+
+eon_has_runtime_dll() {
+  eon_dir_has "$1" FortranRuntime dll || eon_dir_has "$1" flang_rt dll \
+    || eon_dir_has "$1" FortranDecimal dll
+}
+
+eon_candidate_list() {
+  local root res candidate
   local roots=()
   for root in "$@"; do
     [ -n "$root" ] || continue
@@ -63,57 +60,75 @@ eon_find_flang_rt_dir() {
   if [ -n "$res" ]; then
     res="$(eon_win_to_unix_path "$res")"
     echo "flang -print-resource-dir -> $res" >&2
+    # Prefer the MSVC triple layout first (feedstock / clang resource dir).
+    echo "${res}/lib/x86_64-pc-windows-msvc"
+    echo "${res}/lib"
+    echo "${res}"
   fi
 
-  local candidates=()
-  if [ -n "$res" ]; then
-    candidates+=(
-      "${res}/lib/x86_64-pc-windows-msvc"
-      "${res}/lib"
-      "${res}"
-    )
-  fi
   for root in "${roots[@]}"; do
     # shellcheck disable=SC2086
     for candidate in \
       "${root}/Library/lib/clang"/*/lib/x86_64-pc-windows-msvc \
       "${root}/lib/clang"/*/lib/x86_64-pc-windows-msvc \
+      "${root}/Library/bin" \
       "${root}/Library/lib" \
-      "${root}/Library/bin"
+      "${root}/bin" \
+      "${root}/lib"
     do
-      candidates+=("$candidate")
+      case "$candidate" in *\**) continue ;; esac
+      echo "$candidate"
     done
   done
+}
 
-  for candidate in "${candidates[@]}"; do
-    # Unmatched globs stay literal; skip those
-    case "$candidate" in
-      *\**) continue ;;
-    esac
-    if eon_flang_rt_has_artifacts "$candidate"; then
-      echo "$candidate"
+eon_find_first() {
+  # $1=predicate function name; remaining args = roots
+  local pred="$1"
+  shift
+  local c
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    if "$pred" "$c"; then
+      echo "$c"
       return 0
     fi
-  done
-
-  # Last resort: find import lib under roots
-  for root in "${roots[@]}"; do
+  done < <(eon_candidate_list "$@")
+  # find(1) fallback under roots
+  local root found name
+  if [ "$pred" = eon_has_import_lib ]; then
+    name='FortranRuntime.dynamic.lib'
+  else
+    name='FortranRuntime.dynamic.dll'
+  fi
+  for root in "$@"; do
+    [ -n "$root" ] || continue
+    root="$(eon_win_to_unix_path "$root")"
     [ -d "$root" ] || continue
-    found="$(find "$root" \( \
-      -name 'flang_rt.runtime.dynamic.lib' -o \
-      -name 'FortranRuntime.dynamic.lib' -o \
-      -name 'flang_rt.dynamic.lib' \
-    \) 2>/dev/null | head -1 || true)"
+    found="$(find "$root" -name "$name" 2>/dev/null | head -1 || true)"
     if [ -n "$found" ]; then
       dirname "$found"
       return 0
+    fi
+    # alternate names
+    found="$(find "$root" \( -name 'flang_rt*.dll' -o -name 'flang_rt*.lib' \
+      -o -name 'FortranRuntime*.dll' -o -name 'FortranRuntime*.lib' \) \
+      2>/dev/null | head -1 || true)"
+    if [ -n "$found" ]; then
+      if [ "$pred" = eon_has_import_lib ] && [[ "$found" == *.lib ]]; then
+        dirname "$found"
+        return 0
+      fi
+      if [ "$pred" = eon_has_runtime_dll ] && [[ "$found" == *.dll ]]; then
+        dirname "$found"
+        return 0
+      fi
     fi
   done
   return 1
 }
 
 eon_export_flang_rt() {
-  # Usage: eon_export_flang_rt [prefix ...] [--required]
   local required=0
   local roots=()
   local arg
@@ -125,29 +140,74 @@ eon_export_flang_rt() {
     fi
   done
 
-  local dir
-  if ! dir="$(eon_find_flang_rt_dir "${roots[@]}")"; then
-    echo "WARNING: flang_rt resource dir not found (roots: ${roots[*]:-none})" >&2
-    if [ -n "${CONDA_PREFIX:-}" ]; then
-      echo "CONDA_PREFIX=$CONDA_PREFIX" >&2
-      ls -la "${CONDA_PREFIX}/Library/lib/clang" 2>/dev/null || true
-    fi
+  local lib_dir dll_dir
+  lib_dir="$(eon_find_first eon_has_import_lib "${roots[@]}")" || lib_dir=""
+  dll_dir="$(eon_find_first eon_has_runtime_dll "${roots[@]}")" || dll_dir=""
+
+  # Library/bin often holds the runtime DLLs even when import libs live in Library/lib
+  if [ -z "$dll_dir" ]; then
+    local root
+    for root in "${roots[@]}"; do
+      root="$(eon_win_to_unix_path "$root")"
+      if eon_has_runtime_dll "${root}/Library/bin"; then
+        dll_dir="${root}/Library/bin"
+        break
+      fi
+    done
+  fi
+
+  if [ -z "$lib_dir" ] && [ -z "$dll_dir" ]; then
+    echo "WARNING: flang_rt import libs and runtime DLLs not found (roots: ${roots[*]:-none})" >&2
     if command -v flang-new >/dev/null 2>&1; then
       echo "flang-new=$(command -v flang-new)" >&2
       flang-new -print-resource-dir 2>&1 || true
     fi
+    for root in "${roots[@]}"; do
+      root="$(eon_win_to_unix_path "$root")"
+      echo "find under $root:" >&2
+      find "$root" \( -name 'FortranRuntime*' -o -name 'flang_rt*' \) 2>/dev/null | head -30 >&2 || true
+    done
     if [ "$required" -eq 1 ]; then
       return 1
     fi
     return 0
   fi
 
-  export FLANG_RT_DIR="$dir"
-  # LIB uses Windows-style ';' separators for MSVC link.exe
-  export LIB="${FLANG_RT_DIR};${LIB:-}"
-  # Runtime DLLs for LoadLibrary of eon_*.dll pot plugins
-  export PATH="${FLANG_RT_DIR}:${PATH}"
-  echo "Using flang_rt LIBPATH+PATH: $FLANG_RT_DIR"
-  ls "$FLANG_RT_DIR"/*.{lib,dll} 2>/dev/null | head -30 || ls "$FLANG_RT_DIR" | head -30
+  if [ -n "$lib_dir" ]; then
+    export FLANG_RT_LIB_DIR="$lib_dir"
+    export LIB="${lib_dir};${LIB:-}"
+    echo "Using flang_rt LIB: $lib_dir"
+    ls "$lib_dir"/FortranRuntime* "$lib_dir"/flang_rt* 2>/dev/null | head -20 || true
+  else
+    echo "WARNING: flang_rt import lib dir not found (link may LNK1104)" >&2
+  fi
+
+  if [ -n "$dll_dir" ]; then
+    export FLANG_RT_DLL_DIR="$dll_dir"
+    export PATH="${dll_dir}:${PATH}"
+    echo "Using flang_rt PATH (runtime DLLs): $dll_dir"
+    ls "$dll_dir"/FortranRuntime*.dll "$dll_dir"/flang_rt*.dll \
+       "$dll_dir"/FortranDecimal*.dll 2>/dev/null | head -20 || true
+  else
+    echo "WARNING: flang_rt runtime DLL dir not found (LoadLibrary of pots may fail)" >&2
+    # --required means tests will LoadLibrary Fortran pots: hard-fail without DLLs.
+    if [ "$required" -eq 1 ]; then
+      return 1
+    fi
+  fi
+
+  # Keep prefix bin on PATH (conda puts many runtime DLLs there).
+  local root
+  for root in "${roots[@]}"; do
+    root="$(eon_win_to_unix_path "$root")"
+    if [ -d "${root}/Library/bin" ]; then
+      export PATH="${root}/Library/bin:${PATH}"
+    fi
+    if [ -d "${root}/bin" ]; then
+      export PATH="${root}/bin:${PATH}"
+    fi
+  done
+
+  export FLANG_RT_DIR="${dll_dir:-$lib_dir}"
   return 0
 }
