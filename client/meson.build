@@ -1254,20 +1254,32 @@ eclib = library(
 #   $prefix/include/eon/potentials/LAMMPS/LAMMPSPot.h
 # Consumer: -I$prefix/include  and  #include "eon/Potential.h"
 # (same form as #include "xtb/xtb.h" with -I$prefix/include).
+_py_list_hdrs = '''
+import os, sys
+root = sys.argv[1]
+skip_top = {"thirdparty", "unit_tests", "python"}
+out = []
+for dirpath, dirnames, filenames in os.walk(root):
+    rel = os.path.relpath(dirpath, root)
+    parts = [] if rel == "." else rel.replace("\\\\", "/").split("/")
+    if parts and parts[0] in skip_top:
+        dirnames.clear()
+        continue
+    if "Asap" in dirnames and parts[:2] == ["potentials", "EMT"]:
+        dirnames.remove("Asap")
+    for fn in filenames:
+        if not (fn.endswith(".h") or fn.endswith(".hpp")):
+            continue
+        if fn == "version.h.in":
+            continue
+        p = fn if rel == "." else os.path.join(rel, fn)
+        out.append(p.replace("\\\\", "/"))
+sys.stdout.write("\\n".join(sorted(out)))
+'''
 _public_hdr_list = run_command(
-    'bash',
+    find_program('python3'),
     '-c',
-    '''
-set -e
-cd "$0"
-find . -type f \\( -name "*.h" -o -name "*.hpp" \\) \
-  ! -path "./thirdparty/*" \
-  ! -path "./unit_tests/*" \
-  ! -path "./python/*" \
-  ! -path "./potentials/EMT/Asap/*" \
-  ! -name "version.h.in" \
-  | sed "s|^./||" | sort
-''',
+    _py_list_hdrs,
     meson.current_source_dir(),
     check: true,
 ).stdout().strip().split('\n')
