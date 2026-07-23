@@ -486,8 +486,8 @@ class AKMCState(state.State):
         if n_rows > len(self.procs):
             logger.warning(
                 "State %s processtable has %d rows but only %d distinct ids "
-                "(duplicates collapsed; last row per id kept). Next id will "
-                "be max(id)+1, not len(procs).",
+                "(duplicates collapsed; last row per id kept). New ids are "
+                "content-addressed (xxh64), not len(procs).",
                 self.number,
                 n_rows,
                 len(self.procs),
