@@ -19,7 +19,10 @@
 
 namespace eonc {
 
-// Lanczos method to find the lowest curvature mode
+// Lanczos method to find the lowest curvature mode.
+// Default Krylov space = all free atoms ([Lanczos] phva_atoms = All).
+// Optional mobile list (or phva_atoms) is the PHVA active set: free/fixed is
+// the optimizer mask and is not redefined.
 class Lanczos : public LowestEigenmode {
 
 public:
@@ -27,6 +30,10 @@ public:
           std::shared_ptr<Potential> pot);
   ~Lanczos() = default;
   void compute(std::shared_ptr<Matter> matter, AtomMatrix initialDirection);
+  /// Same as compute(matter, dir) but with an explicit mobile atom list
+  /// (intersected with free flags). Eigenvector rows outside the list are 0.
+  void compute(std::shared_ptr<Matter> matter, AtomMatrix initialDirection,
+               const VectorXi &mobileAtoms);
   double getEigenvalue();
   AtomMatrix getEigenvector();
 

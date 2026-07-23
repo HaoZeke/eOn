@@ -412,10 +412,14 @@ public:
   } metatomic_options;
 
   // [Lanczos] //
+  // phva_atoms: PHVA mobile/active set for the Krylov space (Li & Jensen).
+  // Not free/fixed — that is the optimizer mask on Matter. "All" = every free
+  // atom (historical default). Same polarity as [Hessian] phva_atoms.
   struct lanczos_options_t {
     double tolerance{0.01};
     long max_iterations{20};
     bool quit_early{true};
+    std::string phva_atoms{"All"};
   } lanczos_options;
 
   // [Davidson] min-mode (alternative to dimer rotation / Lanczos)
@@ -425,6 +429,8 @@ public:
     /// Heuristic | (H v)_i / v_i | preconditioner (not true diag(H); off by
     /// default).
     bool diagonal_preconditioner{false};
+    /// PHVA mobile/active set for the Ritz space; "All" = all free atoms.
+    std::string phva_atoms{"All"};
   } davidson_options;
 
   // [Prefactor] //
@@ -442,10 +448,11 @@ public:
   } prefactor_options;
 
   // [Hessian] //
-  // atom_list: mobile/displaced atoms for FD (hybrid/PHVA-class active set),
+  // phva_atoms: mobile/displaced atoms for FD (hybrid/PHVA-class active set),
   // or "All" = every non-fixed atom. Intersected with free flags in HessianJob.
+  // free/fixed stays the optimizer mask and is not rewritten.
   struct hessian_options_t {
-    std::string atom_list{"All"};
+    std::string phva_atoms{"All"};
     double zero_freq_value{1e-6};
     // FD scheme: "one_sided" (default, ~3M force evals) or "central" (~6M).
     // Step size is Main.finite_difference (dx).

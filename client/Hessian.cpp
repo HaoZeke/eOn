@@ -21,7 +21,7 @@
 
 namespace {
 
-// atom_list entries are *mobile / displaced* atoms for FD (hybrid/PHVA-class
+// phva_atoms entries are *mobile / displaced* atoms for FD (hybrid/PHVA-class
 // active set). Intersect with non-fixed atoms in HessianJob.
 
 bool isCentralScheme(const std::string &scheme) {

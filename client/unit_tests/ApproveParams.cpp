@@ -395,7 +395,7 @@ std::ostream &operator<<(std::ostream &os, const Parameters &params) {
      << std::endl;
 
   os << "\n[Hessian]" << std::endl;
-  os << "hessianAtomList: " << params.hessian_options.atom_list << std::endl;
+  os << "hessianPhvaAtoms: " << params.hessian_options.phva_atoms << std::endl;
   os << "hessianZeroFreqValue: " << params.hessian_options.zero_freq_value
      << std::endl;
 

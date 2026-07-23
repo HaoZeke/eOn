@@ -84,7 +84,7 @@ TEST_CASE("Hessian getFreqs rejects out-of-range atom indices", "[hessian]") {
   REQUIRE(freqs.size() == 0);
 }
 
-TEST_CASE("Hessian mobile atom_list yields 3*n_mobile square matrix",
+TEST_CASE("Hessian mobile phva_atoms yields 3*n_mobile square matrix",
           "[hessian]") {
   Parameters params;
   params.potential_options.potential = PotType::LJ;

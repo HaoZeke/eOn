@@ -75,6 +75,8 @@ try:
         ImprovedDimer,
         Lanczos,
         Davidson,
+        resolve_mobile_atoms,
+        free_atom_indices,
         built_with_gprd,
         # Saddle
         MinModeSaddleSearch,
@@ -215,6 +217,8 @@ __all__ = [
     "ImprovedDimer",
     "Lanczos",
     "Davidson",
+    "resolve_mobile_atoms",
+    "free_atom_indices",
     "built_with_gprd",
     "MinModeSaddleSearch",
     "SaddleStatus",

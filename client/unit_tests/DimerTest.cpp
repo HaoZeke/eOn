@@ -21,9 +21,11 @@
 #include "eon/Lanczos.h"
 #include "eon/Matter.h"
 #include "eon/MinModeSaddleSearch.h"
+#include "eon/MobileAtoms.h"
 #include "eon/Parameters.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace tests {
 
@@ -526,3 +528,134 @@ TEST_CASE("LOR translateHUnitOrthoP3 matches H*P3 for linear H",
 }
 
 } /* namespace tests */
+
+// --- PHVA mobile Krylov (free/fixed != active) ---
+
+TEST_CASE_METHOD(DimerFixture,
+                 "resolveMobileAtoms All matches free atoms",
+                 "[mobile][eigenmode]") {
+  VectorXi free = eonc::freeAtomIndices(matter.get());
+  VectorXi all = eonc::resolveMobileAtoms(matter.get(), "All");
+  VectorXi allLower = eonc::resolveMobileAtoms(matter.get(), "all");
+  REQUIRE(all.size() == free.size());
+  REQUIRE(allLower.size() == free.size());
+  for (Eigen::Index i = 0; i < free.size(); ++i) {
+    REQUIRE(all(i) == free(i));
+    REQUIRE(allLower(i) == free(i));
+  }
+  REQUIRE(static_cast<long>(all.size()) == matter->numberOfFreeAtoms());
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "resolveMobileAtoms intersects free and drops fixed",
+                 "[mobile][eigenmode]") {
+  // Fix atom 0; active list asks for 0 and 1 -> only 1 survives.
+  matter->setFixed(0, 1);
+  VectorXi cands(2);
+  cands << 0, 1;
+  VectorXi mobile = eonc::resolveMobileAtoms(matter.get(), cands);
+  REQUIRE(mobile.size() == 1);
+  REQUIRE(mobile(0) == 1);
+  VectorXi fromStr = eonc::resolveMobileAtoms(matter.get(), "0,1,1,99");
+  REQUIRE(fromStr.size() == 1);
+  REQUIRE(fromStr(0) == 1);
+  // restore for later tests in same fixture instance - fixture is per-test
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "Lanczos active subset bounds Krylov dim and zeros env mode",
+                 "[lanczos][mobile][eigenmode]") {
+  // Keep free mask = all atoms; restrict Krylov to first 3 atoms only.
+  VectorXi mobile(3);
+  mobile << 0, 1, 2;
+  REQUIRE(matter->numberOfFreeAtoms() == matter->numberOfAtoms());
+  REQUIRE(matter->numberOfFreeAtoms() > 3);
+
+  params.lanczos_options.max_iterations = 30;
+  params.lanczos_options.tolerance = 1e-4;
+  Lanczos lanczos(matter, params, pot);
+  AtomMatrix dir = AtomMatrix::Zero(matter->numberOfAtoms(), 3);
+  dir(0, 0) = 1.0;
+  dir(1, 0) = -0.5;
+  dir(2, 1) = 0.3;
+  dir.normalize();
+  lanczos.compute(matter, dir, mobile);
+
+  REQUIRE(std::isfinite(lanczos.getEigenvalue()));
+  AtomMatrix ev = lanczos.getEigenvector();
+  REQUIRE(ev.rows() == matter->numberOfAtoms());
+  // Environment atoms outside the active set must carry zero mode amplitude.
+  for (long i = 3; i < matter->numberOfAtoms(); ++i) {
+    REQUIRE(ev.row(i).norm() == Catch::Approx(0.0).margin(1e-14));
+  }
+  // Active block has some weight.
+  double actNorm = 0.0;
+  for (int a = 0; a < 3; ++a) {
+    actNorm += ev.row(a).squaredNorm();
+  }
+  REQUIRE(actNorm > 1e-12);
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "Davidson active subset matches Lanczos free-default sign",
+                 "[davidson][mobile][eigenmode]") {
+  // Default path (phva_atoms All) still finds negative curvature on fixture.
+  params.lanczos_options.phva_atoms = "All";
+  params.davidson_options.phva_atoms = "All";
+  params.lanczos_options.max_iterations = 30;
+  params.davidson_options.max_iterations = 30;
+
+  Lanczos lanczos(matter, params, pot);
+  lanczos.compute(matter, mode);
+  Davidson davidson(matter, params, pot);
+  davidson.compute(matter, mode);
+
+  REQUIRE(lanczos.getEigenvalue() < 0.0);
+  REQUIRE(davidson.getEigenvalue() < 0.0);
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "Lanczos phva_atoms param restricts without changing free mask",
+                 "[lanczos][mobile][eigenmode]") {
+  const long nFreeBefore = matter->numberOfFreeAtoms();
+  params.lanczos_options.phva_atoms = "0,1,2";
+  params.lanczos_options.max_iterations = 30;
+  Lanczos lanczos(matter, params, pot);
+  AtomMatrix dir = AtomMatrix::Zero(matter->numberOfAtoms(), 3);
+  dir(0, 0) = 1.0;
+  lanczos.compute(matter, dir);
+  REQUIRE(matter->numberOfFreeAtoms() == nFreeBefore);
+  AtomMatrix ev = lanczos.getEigenvector();
+  for (long i = 3; i < matter->numberOfAtoms(); ++i) {
+    REQUIRE(ev.row(i).norm() == Catch::Approx(0.0).margin(1e-14));
+  }
+}
+
+TEST_CASE_METHOD(DimerFixture,
+                 "Lanczos All equals explicit free list",
+                 "[lanczos][mobile][eigenmode]") {
+  params.lanczos_options.max_iterations = 25;
+  params.lanczos_options.tolerance = 1e-3;
+  VectorXi free = eonc::freeAtomIndices(matter.get());
+
+  Lanczos a(matter, params, pot);
+  a.compute(matter, mode);
+  Lanczos b(matter, params, pot);
+  b.compute(matter, mode, free);
+
+  REQUIRE(a.getEigenvalue() == Catch::Approx(b.getEigenvalue()).margin(1e-6));
+  AtomMatrix eva = a.getEigenvector();
+  AtomMatrix evb = b.getEigenvector();
+  // Modes may flip sign.
+  // Flattened dot (sign-invariant)
+  double dot = 0.0, na = 0.0, nb = 0.0;
+  for (long i = 0; i < eva.rows(); ++i) {
+    for (int c = 0; c < 3; ++c) {
+      dot += eva(i, c) * evb(i, c);
+      na += eva(i, c) * eva(i, c);
+      nb += evb(i, c) * evb(i, c);
+    }
+  }
+  REQUIRE(std::fabs(dot) / (std::sqrt(na * nb) + 1e-30) ==
+          Catch::Approx(1.0).margin(1e-5));
+}

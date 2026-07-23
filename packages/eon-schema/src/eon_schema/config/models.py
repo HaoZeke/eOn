@@ -1986,9 +1986,12 @@ class BGSDConfig(BaseModel):
 
 class HessianConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
-    atom_list: Union[str, list[int]] = Field(
+    phva_atoms: Union[str, list[int]] = Field(
         default="All",
-        description="The atoms that will be displaced in the calculation of the Hessian: a comma delimited list of atom indices, e.g. 0,1,2. Default is 'All'.",
+        description=(
+            "PHVA mobile/active atoms displaced in the Hessian FD (not free/fixed): "
+            "comma-delimited indices, e.g. 0,1,2, or 'All' for every free atom."
+        ),
     )
     zero_freq_value: float = Field(
         default=1e-6, description="The value assigned to zero frequencies."

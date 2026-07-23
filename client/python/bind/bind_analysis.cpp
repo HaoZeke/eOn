@@ -26,7 +26,8 @@ void bind_analysis(nb::module_ &m) {
   using eonc::Parameters;
 
   nb::class_<Hessian>(m, "Hessian",
-                      "Finite-difference Hessian / frequencies on free atoms")
+                      "Finite-difference Hessian / frequencies on a PHVA "
+                      "mobile atom set (pass indices; free/fixed is separate)")
       .def(
           "__init__",
           [](Hessian *self, const Parameters &params, Matter &matter) {
