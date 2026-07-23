@@ -527,8 +527,6 @@ TEST_CASE("LOR translateHUnitOrthoP3 matches H*P3 for linear H",
   REQUIRE(err_wrong > 0.1); // documents that GS-on-HP is not H·P3
 }
 
-} /* namespace tests */
-
 // --- PHVA mobile Krylov (free/fixed != active) ---
 
 TEST_CASE_METHOD(DimerFixture, "resolveMobileAtoms All matches free atoms",
@@ -658,3 +656,5 @@ TEST_CASE_METHOD(DimerFixture, "Lanczos All equals explicit free list",
   REQUIRE(std::fabs(dot) / (std::sqrt(na * nb) + 1e-30) ==
           Catch::Approx(1.0).margin(1e-5));
 }
+
+} /* namespace tests */
