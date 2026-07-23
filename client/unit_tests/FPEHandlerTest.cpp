@@ -72,3 +72,50 @@ TEST_CASE("safe_normalized returns zero for null vector under FPE traps",
   eonc::disableFPE();
   feclearexcept(FE_ALL_EXCEPT);
 }
+
+// Models the LAMMPS worker contract: client main arms traps, the forked pot
+// worker must demote them before any external force eval (PairEAM::compute
+// can raise FE_DIVBYZERO). Without demotion the child re-stormed under the
+// old continue handler.
+TEST_CASE("disableFPE demotes traps after enableFPE (worker path)",
+          "[fpe][lammps]") {
+#if defined(_WIN32)
+  SKIP("Windows SEH path uses _controlfp_s; covered by enable/disable pair");
+#elif defined(__unix__)
+  eonc::enableFPE();
+#if defined(FE_DIVBYZERO)
+  REQUIRE((fegetexcept() & FE_DIVBYZERO) != 0);
+#endif
+  eonc::disableFPE();
+#if defined(FE_DIVBYZERO)
+  REQUIRE((fegetexcept() & FE_DIVBYZERO) == 0);
+  REQUIRE((fegetexcept() & FE_INVALID) == 0);
+  REQUIRE((fegetexcept() & FE_OVERFLOW) == 0);
+#endif
+  // Soft IEEE: no SIGFPE, result is Inf.
+  volatile double r = 1.0 / 0.0;
+  REQUIRE(std::isinf(r));
+  feclearexcept(FE_ALL_EXCEPT);
+#else
+  SKIP("fegetexcept only on glibc/unix");
+#endif
+}
+
+TEST_CASE("FPEHandler::eat_fpe demotes traps for external pot scopes",
+          "[fpe][lammps]") {
+#if defined(_WIN32) || !defined(__unix__)
+  SKIP("eat_fpe / feholdexcept path exercised on unix");
+#else
+  eonc::enableFPE();
+  {
+    eonc::FPEHandler fpeh;
+    fpeh.eat_fpe();
+    // Non-stop environment: div-by-zero must not trap.
+    volatile double r = 1.0 / 0.0;
+    REQUIRE(std::isinf(r));
+    fpeh.restore_fpe();
+  }
+  eonc::disableFPE();
+  feclearexcept(FE_ALL_EXCEPT);
+#endif
+}
