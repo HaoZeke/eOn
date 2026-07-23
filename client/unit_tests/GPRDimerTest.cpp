@@ -20,13 +20,13 @@
 #include <algorithm>
 
 #include "AtomicGPDimer.h"
+#include "GPRDimerTest.h"
 #include "GPRHelpers.h"
 #include "HelperFunctions.h"
 #include "Job.h"
 #include "Matter.h"
 #include "MinModeSaddleSearch.h"
 #include "Parameters.h"
-#include "GPRDimerTest.h"
 
 namespace tests {
 

@@ -22,8 +22,8 @@
 #include "GPRHelpers.h"
 #include "HelperFunctions.h"
 #include "Matter.h"
-#include "Parameters.h"
 #include "ObsTest.h"
+#include "Parameters.h"
 
 namespace tests {
 
