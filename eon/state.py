@@ -65,7 +65,7 @@ class State:
 
     def add_process(self, result):
         if 'stdout.dat' in result:
-            id = self.get_num_procs()
+            id = self.get_next_process_id()
             open(self.proc_stdout_path(id), 'w').writelines(result['stdout.dat'].getvalue())
 
     def get_energy(self):
@@ -117,9 +117,26 @@ class State:
         return self.info.get("MetaData", "previous state", -1)
 
     def get_num_procs(self):
-        """ Loads the process table if it is not already loaded and returns the length of it """
+        """Number of distinct process ids currently in the table (not next id).
+
+        Distinct from :meth:`get_next_process_id`: after duplicate id rows
+        collapse on load, ``len(procs)`` freezes while new registrations must
+        still receive a free id (``max(ids)+1``).
+        """
         self.load_process_table()
         return len(self.procs)
+
+    def get_next_process_id(self):
+        """Monotonic free process id for a new registration.
+
+        Reloads the table from disk so external rewrites of ``processtable``
+        are visible. Returns ``0`` for an empty table, otherwise
+        ``max(id)+1``. Never reuses an id already present in ``self.procs``.
+        """
+        self.load_process_table(force=True)
+        if not self.procs:
+            return 0
+        return max(self.procs.keys()) + 1
 
     def get_process_table(self):
         self.load_process_table()

@@ -55,8 +55,8 @@ class PRState(state.State):
         # Update the search result table.
         #self.append_search_result(result, "good-%d" % self.get_num_procs())
 
-        # The id of this process is the number of processes.
-        id = self.get_num_procs()
+        # Free process id (max existing id + 1); not len(procs).
+        id = self.get_next_process_id()
 
         # Keep track of the number of searches, Ns.
         #self.inc_proc_repeat_count(id)
@@ -75,21 +75,34 @@ class PRState(state.State):
         # This was a unique process, so return the id.
         return id
 
-    def load_process_table(self):
-        """ Load the process table.  If the process table is not loaded, load it.  If it is
-            loaded, do nothing. """
-        if self.procs is None:
-            f = open(self.proctable_path)
-            lines = f.readlines()
-            f.close()
-            self.procs = {}
-            for l in lines[1:]:
-                l = l.strip().split()
-                self.procs[int(l[self.ID])] = {
-                                          "product":           int  (l[self.PRODUCT]),
-                                          "product_energy":    float(l[self.PRODUCT_ENERGY]),
-                                          "time":              float(l[self.TIME]),
-                                         }
+    def load_process_table(self, force=False):
+        """Load the process table from disk (see AKMCState.load_process_table)."""
+        if self.procs is not None and not force:
+            return
+        f = open(self.proctable_path)
+        lines = f.readlines()
+        f.close()
+        self.procs = {}
+        n_rows = 0
+        for l in lines[1:]:
+            parts = l.strip().split()
+            if not parts:
+                continue
+            n_rows += 1
+            pid = int(parts[self.ID])
+            self.procs[pid] = {
+                "product": int(parts[self.PRODUCT]),
+                "product_energy": float(parts[self.PRODUCT_ENERGY]),
+                "time": float(parts[self.TIME]),
+            }
+        if n_rows > len(self.procs):
+            logger.warning(
+                "State %s processtable has %d rows but only %d distinct ids "
+                "(duplicates collapsed; last row per id kept).",
+                self.number,
+                n_rows,
+                len(self.procs),
+            )
 
     def save_process_table(self):
         """ If the processtable is present in memory, writes it to disk. """
@@ -105,15 +118,21 @@ class PRState(state.State):
     def append_process_table(self, id, product, product_energy, time):
         """ Append to the process table.  Append a single line to the process table file.  If we
             have loaded the process table, also append it to the process table in memory. """
+        self.load_process_table()
+        if id in self.procs:
+            raise RuntimeError(
+                "refusing to clobber process id %d in state %s (already registered); "
+                "use get_next_process_id() for a free id"
+                % (id, self.number)
+            )
         f = open(self.proctable_path, 'a')
         f.write(self.processtable_line % (id, product, product_energy, time))
         f.close()
-        if self.procs != None:
-            self.procs[id] = {
-                              "product":           product,
-                              "product_energy":    product_energy,
-                              "time":              time
-                             }
+        self.procs[id] = {
+            "product": product,
+            "product_energy": product_energy,
+            "time": time,
+        }
 
     def get_time(self):
         return self.info.get("MetaData", "accumulated_time", 0.0)

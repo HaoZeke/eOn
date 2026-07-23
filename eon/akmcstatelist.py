@@ -137,7 +137,7 @@ class AKMCStateList(statelist.StateList):
                         return
 
             # The process is not in the list and must be added as a new process.
-            reverse_process_id = product.get_num_procs()
+            reverse_process_id = product.get_next_process_id()
 
         else:
             # This must be a new state.
