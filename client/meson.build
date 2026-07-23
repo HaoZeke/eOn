@@ -1273,8 +1273,10 @@ for dirpath, dirnames, filenames in os.walk(root):
         if fn == "version.h.in":
             continue
         p = fn if rel == "." else os.path.join(rel, fn)
-        out.append(p.replace("\\\\", "/"))
-sys.stdout.write("\\n".join(sorted(out)))
+        out.append(p.replace(chr(92), "/"))
+# Use chr(10) so Meson string escaping cannot turn the separator into a
+# literal backslash-n (which made install_headers see one giant filename).
+sys.stdout.write(chr(10).join(sorted(out)))
 '''
 _public_hdr_list = run_command(
     find_program('python3'),
