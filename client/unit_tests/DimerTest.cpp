@@ -531,8 +531,7 @@ TEST_CASE("LOR translateHUnitOrthoP3 matches H*P3 for linear H",
 
 // --- PHVA mobile Krylov (free/fixed != active) ---
 
-TEST_CASE_METHOD(DimerFixture,
-                 "resolveMobileAtoms All matches free atoms",
+TEST_CASE_METHOD(DimerFixture, "resolveMobileAtoms All matches free atoms",
                  "[mobile][eigenmode]") {
   VectorXi free = eonc::freeAtomIndices(matter.get());
   VectorXi all = eonc::resolveMobileAtoms(matter.get(), "All");
@@ -614,9 +613,10 @@ TEST_CASE_METHOD(DimerFixture,
   REQUIRE(davidson.getEigenvalue() < 0.0);
 }
 
-TEST_CASE_METHOD(DimerFixture,
-                 "Lanczos phva_atoms param restricts without changing free mask",
-                 "[lanczos][mobile][eigenmode]") {
+TEST_CASE_METHOD(
+    DimerFixture,
+    "Lanczos phva_atoms param restricts without changing free mask",
+    "[lanczos][mobile][eigenmode]") {
   const long nFreeBefore = matter->numberOfFreeAtoms();
   params.lanczos_options.phva_atoms = "0,1,2";
   params.lanczos_options.max_iterations = 30;
@@ -631,8 +631,7 @@ TEST_CASE_METHOD(DimerFixture,
   }
 }
 
-TEST_CASE_METHOD(DimerFixture,
-                 "Lanczos All equals explicit free list",
+TEST_CASE_METHOD(DimerFixture, "Lanczos All equals explicit free list",
                  "[lanczos][mobile][eigenmode]") {
   params.lanczos_options.max_iterations = 25;
   params.lanczos_options.tolerance = 1e-3;

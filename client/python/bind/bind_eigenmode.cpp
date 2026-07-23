@@ -349,11 +349,11 @@ void bind_eigenmode(nb::module_ &m) {
   m.def(
       "resolve_mobile_atoms",
       [](eonc::Matter &matter, const std::string &atom_list) {
-        return vectori_to_numpy(
-            eonc::resolveMobileAtoms(&matter, atom_list));
+        return vectori_to_numpy(eonc::resolveMobileAtoms(&matter, atom_list));
       },
       nb::arg("matter"), nb::arg("phva_atoms") = "All",
-      "PHVA mobile indices from phva_atoms (All = free). free/fixed unchanged.");
+      "PHVA mobile indices from phva_atoms (All = free). free/fixed "
+      "unchanged.");
   m.def(
       "resolve_mobile_atoms",
       [](eonc::Matter &matter, const NpI64 &candidates) {

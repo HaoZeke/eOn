@@ -541,7 +541,9 @@ void bind_parameters(nb::module_ &m) {
       // --- Lanczos / Davidson (PHVA mobile set for Krylov; default All) ---
       .def_prop_rw(
           "lanczos_phva_atoms",
-          [](const eonc::Parameters &s) { return s.lanczos_options.phva_atoms; },
+          [](const eonc::Parameters &s) {
+            return s.lanczos_options.phva_atoms;
+          },
           [](eonc::Parameters &s, const std::string &v) {
             s.lanczos_options.phva_atoms = v;
           },
@@ -560,7 +562,9 @@ void bind_parameters(nb::module_ &m) {
       // --- Hessian ---
       .def_prop_rw(
           "hessian_phva_atoms",
-          [](const eonc::Parameters &s) { return s.hessian_options.phva_atoms; },
+          [](const eonc::Parameters &s) {
+            return s.hessian_options.phva_atoms;
+          },
           [](eonc::Parameters &s, const std::string &v) {
             s.hessian_options.phva_atoms = v;
           },
