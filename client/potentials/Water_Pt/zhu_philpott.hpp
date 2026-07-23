@@ -17,7 +17,7 @@ Potential for water and Platinum
 @date 2007
 University of Iceland
 */
-#include "potentials/Water/spce_ccl.hpp"
+#include "eon/potentials/Water/spce_ccl.hpp"
 #include "zhu_philpott_parameters.hpp"
 
 namespace forcefields {

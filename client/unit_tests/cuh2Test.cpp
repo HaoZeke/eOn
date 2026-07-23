@@ -20,8 +20,8 @@
 #include <algorithm>
 
 #include "CuH2Test.h"
-#include "Matter.h"
-#include "Parameters.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
 
 namespace tests {
 

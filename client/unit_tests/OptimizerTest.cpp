@@ -10,16 +10,16 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Optimizer.h"
-#include "ConjugateGradients.h"
-#include "FIRE.h"
-#include "LBFGS.h"
-#include "ObjectiveFunction.h"
-#include "Parameters.h"
-#include "Quickmin.h"
-#include "SteepestDescent.h"
+#include "eon/Optimizer.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/ConjugateGradients.h"
+#include "eon/FIRE.h"
+#include "eon/LBFGS.h"
+#include "eon/ObjectiveFunction.h"
+#include "eon/Parameters.h"
+#include "eon/Quickmin.h"
+#include "eon/SteepestDescent.h"
 
 namespace tests {
 

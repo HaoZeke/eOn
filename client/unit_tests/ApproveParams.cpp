@@ -10,8 +10,8 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "ApprovalTests.hpp"
-#include "Parameters.h"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Parameters.h"
 #include <iomanip>
 #include <iostream>
 #include <string>

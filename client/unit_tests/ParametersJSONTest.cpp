@@ -10,10 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ParametersJSON.h"
-#include "Parameters.h"
+#include "eon/ParametersJSON.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Parameters.h"
 
 #include <filesystem>
 #include <fstream>

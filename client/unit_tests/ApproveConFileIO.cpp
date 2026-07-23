@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ConFileIO.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "Parameters.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/ConFileIO.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
 
 #include <chrono>
 #include <cmath>

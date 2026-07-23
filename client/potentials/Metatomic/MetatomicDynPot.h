@@ -8,7 +8,7 @@
 */
 #pragma once
 
-#include "Potential.h"
+#include "eon/Potential.h"
 #include "metatomic_c_abi.h"
 
 namespace eonc {

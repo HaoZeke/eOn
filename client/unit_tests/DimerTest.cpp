@@ -10,18 +10,18 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Dimer.h"
-#include "Davidson.h"
-#include "DimerRotationDispatch.h"
-#include "EigenmodeStrategy.h"
-#include "ImprovedDimer.h"
-#include "LORRotation.h"
-#include "Lanczos.h"
-#include "Matter.h"
-#include "MinModeSaddleSearch.h"
-#include "Parameters.h"
+#include "eon/Dimer.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Davidson.h"
+#include "eon/DimerRotationDispatch.h"
+#include "eon/EigenmodeStrategy.h"
+#include "eon/ImprovedDimer.h"
+#include "eon/LORRotation.h"
+#include "eon/Lanczos.h"
+#include "eon/Matter.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/Parameters.h"
 
 #include <algorithm>
 

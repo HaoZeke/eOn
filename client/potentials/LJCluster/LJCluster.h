@@ -14,7 +14,7 @@
 #include <cmath>
 #include <iostream>
 // #include "system_unit.h" // unit converters
-#include "Potential.h"
+#include "eon/Potential.h"
 
 /** Lennard Jones potential.*/
 class LJCluster : public Potential {

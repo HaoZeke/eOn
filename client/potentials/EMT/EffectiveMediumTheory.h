@@ -21,8 +21,8 @@
 #include "Asap/SuperCell.h"
 #include "Asap/Vec.h"
 
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 /** EMT potential. Inspect the EMT_parms.h to see what the EMT potential is
  * hardcoded to describe.*/

@@ -12,7 +12,7 @@
 #pragma once
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
-#include "Potential.h"
+#include "eon/Potential.h"
 
 #include <pybind11/eigen.h>
 #include <pybind11/embed.h>

@@ -10,9 +10,9 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "PotRegistry.h"
-#include "Potential.h"
+#include "eon/PotRegistry.h"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Potential.h"
 #include <fstream>
 #include <memory>
 

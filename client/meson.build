@@ -1,8 +1,11 @@
-# Logical include root: client/. All sources use #include "Potential.h",
-# #include "potentials/LAMMPS/LAMMPSPot.h", etc. — no relative "../" paths.
-# Installed under $prefix/include/eonclient/ (FHS: includedir/<package>/)
-# so consumers use -I$prefix/include/eonclient and the same include form.
-_incdirs += [include_directories('.')]
+# Package-prefixed includes (xtb / Eigen style):
+#   #include "eon/Potential.h"
+#   #include "eon/fpe_handler.h"
+#   #include "eon/potentials/LAMMPS/LAMMPSPot.h"
+# In-tree: -I$src/include with include/eon -> ../client
+# Install (FHS): $prefix/include/eon/...  consumer uses -I$prefix/include
+# Sibling short includes inside the package (e.g. Matter.h -> "Potential.h")
+# still work: the including file's directory is searched first.
 _incdirs += [include_directories('thirdparty')]
 _runtime_rpath = []
 
@@ -1245,9 +1248,12 @@ eclib = library(
     install: true,
 )
 
-# Public C++ headers (FHS): $prefix/include/eonclient/... same tree as
-# client/ (Potential.h, fpe_handler.h, potentials/..., helpers/...).
-# meson install_headers subdir is relative to includedir ($prefix/include).
+# Public C++ headers (FHS + package prefix):
+#   $prefix/include/eon/Potential.h
+#   $prefix/include/eon/fpe_handler.h
+#   $prefix/include/eon/potentials/LAMMPS/LAMMPSPot.h
+# Consumer: -I$prefix/include  and  #include "eon/Potential.h"
+# (same form as #include "xtb/xtb.h" with -I$prefix/include).
 _public_hdr_list = run_command(
     'bash',
     '-c',
@@ -1271,9 +1277,9 @@ foreach _h : _public_hdr_list
     endif
     _h_dir = fs.parent(_h)
     if _h_dir == '' or _h_dir == '.'
-        install_headers(_h, subdir: 'eonclient')
+        install_headers(_h, subdir: 'eon')
     else
-        install_headers(_h, subdir: join_paths('eonclient', _h_dir))
+        install_headers(_h, subdir: join_paths('eon', _h_dir))
     endif
 endforeach
 

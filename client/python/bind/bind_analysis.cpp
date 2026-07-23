@@ -1,11 +1,11 @@
 /*
 ** Hessian + Prefactor — first-class vibrational analysis surface.
 */
-#include "Hessian.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "Prefactor.h"
 #include "eigen_numpy.hpp"
+#include "eon/Hessian.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Prefactor.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/optional.h>

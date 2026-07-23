@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "Potential.h"
-#include "potentials/FortranPotLoader.h"
+#include "eon/Potential.h"
+#include "eon/potentials/FortranPotLoader.h"
 
 /// Fe-He interatomic potential (Fortran implementation, loaded at runtime).
 class FeHe final : public Potential {

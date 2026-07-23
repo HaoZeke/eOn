@@ -1,7 +1,7 @@
 #include "ASE_NWCHEM.h"
-#include "EnvHelpers.hpp"
-#include "PyGuard.h"
-#include "fpe_handler.h"
+#include "eon/EnvHelpers.hpp"
+#include "eon/PyGuard.h"
+#include "eon/fpe_handler.h"
 #include <string>
 
 // TODO(rg): Clean this up.

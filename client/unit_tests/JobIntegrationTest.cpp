@@ -15,16 +15,16 @@
 /// INI, running the job, and verifying outputs match SVN reference
 /// values.
 
-#include "Job.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "PotRegistry.h"
-#include "Potential.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Job.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/PotRegistry.h"
+#include "eon/Potential.h"
 #ifdef WITH_ARTN
-#include "ARTnSaddleSearch.h"
-#include "libs/ARTn/ARTnResource.h"
+#include "eon/ARTnSaddleSearch.h"
+#include "eon/libs/ARTn/ARTnResource.h"
 #endif
 
 #include <array>

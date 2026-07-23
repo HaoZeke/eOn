@@ -14,7 +14,7 @@
 /// These tests verify the dlopen-based loader interface works correctly
 /// regardless of whether LAMMPS is actually installed.
 
-#include "potentials/LAMMPS/LammpsLoader.h"
+#include "eon/potentials/LAMMPS/LammpsLoader.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
 

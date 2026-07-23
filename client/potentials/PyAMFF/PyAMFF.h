@@ -11,7 +11,7 @@
 */
 #pragma once
 
-#include "Potential.h"
+#include "eon/Potential.h"
 
 // extern "C" void calc_eon(long *nAtoms, const double [], const double [],
 // const int [], double *F, double *U); extern "C" {

@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "Matter.h"
-#include "Potential.h"
+#include "eon/Matter.h"
+#include "eon/Potential.h"
 
 class AMS_IO : public Potential {
 

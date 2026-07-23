@@ -10,12 +10,12 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ConFileIO.h"
-#include "Matter.h"
-#include "NEBSplineExtrema.h"
-#include "Parameters.h"
+#include "eon/ConFileIO.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Matter.h"
+#include "eon/NEBSplineExtrema.h"
+#include "eon/Parameters.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>

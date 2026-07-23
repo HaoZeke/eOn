@@ -9,7 +9,7 @@
 #include "metatomic_c_abi.h"
 
 #include "MetatomicPotential.h"
-#include "Parameters.h"
+#include "eon/Parameters.h"
 
 #include <cstdio>
 #include <exception>

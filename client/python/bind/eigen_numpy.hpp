@@ -6,7 +6,7 @@
  * alive via rv_policy::reference_internal). Use *copy* helpers when the
  * Eigen temporary must outlive the Python buffer.
  */
-#include "Eigen.h"
+#include "eon/Eigen.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>

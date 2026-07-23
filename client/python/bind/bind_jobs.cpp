@@ -9,10 +9,10 @@
 **   5. write_potcall_summary()
 **   6. append_results_timing(...)
 */
-#include "HelperFunctions.h"
-#include "Job.h"
-#include "Parameters.h"
-#include "PotRegistry.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Job.h"
+#include "eon/Parameters.h"
+#include "eon/PotRegistry.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>

@@ -17,7 +17,7 @@
 /// rather than requiring it at compile time. This allows a single eOn binary
 /// to optionally use LAMMPS potentials if the library is installed.
 
-#include "DynLib.h"
+#include "eon/DynLib.h"
 
 #include <stdexcept>
 #include <string>

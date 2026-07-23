@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Matter.h"
-#include "Parameters.h"
+#include "eon/Matter.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Parameters.h"
 #include <memory>
 
 using namespace Catch::Matchers;

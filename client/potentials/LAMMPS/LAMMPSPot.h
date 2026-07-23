@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 class LAMMPSPot : public Potential {
 

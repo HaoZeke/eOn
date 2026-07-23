@@ -13,7 +13,7 @@
 
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
-#include "SurrogatePotential.h"
+#include "eon/SurrogatePotential.h"
 
 #include <pybind11/eigen.h>
 #include <pybind11/embed.h>

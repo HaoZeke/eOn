@@ -23,7 +23,7 @@
 /// Call add_config_paths() once at startup (before any potential constructor)
 /// to inject config-file paths into the singleton.
 
-#include "DynLib.h"
+#include "eon/DynLib.h"
 
 #include <mutex>
 #include <stdexcept>

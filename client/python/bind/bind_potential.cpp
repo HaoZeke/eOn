@@ -1,10 +1,10 @@
-#include "BaseStructures.h"
-#include "Eigen.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "Potential.h"
 #include "bind_helpers.hpp"
+#include "eon/BaseStructures.h"
+#include "eon/Eigen.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 #include <algorithm>
 #include <cstring>
 #include <nanobind/ndarray.h>

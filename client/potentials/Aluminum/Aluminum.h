@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "Potential.h"
-#include "potentials/FortranPotLoader.h"
+#include "eon/Potential.h"
+#include "eon/potentials/FortranPotLoader.h"
 
 /// Aluminum EAM potential (Fortran implementation, loaded at runtime).
 class Aluminum final : public Potential {

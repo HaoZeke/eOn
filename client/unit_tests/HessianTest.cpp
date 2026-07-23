@@ -10,12 +10,12 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Hessian.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "SafeMath.h"
+#include "eon/Hessian.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/SafeMath.h"
 
 #include <cstdio>
 #include <fstream>

@@ -10,11 +10,11 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Dynamics.h"
-#include "Matter.h"
-#include "Parameters.h"
+#include "eon/Dynamics.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
 
 namespace tests {
 

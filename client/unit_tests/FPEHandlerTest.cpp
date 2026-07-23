@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Eigen.h"
-#include "SafeMath.h"
 #include "catch2/catch_amalgamated.hpp"
-#include "fpe_handler.h"
+#include "eon/Eigen.h"
+#include "eon/SafeMath.h"
+#include "eon/fpe_handler.h"
 
 #include <cfenv>
 #include <cmath>

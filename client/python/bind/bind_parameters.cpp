@@ -1,4 +1,4 @@
-#include "Parameters.h"
+#include "eon/Parameters.h"
 
 #include <magic_enum/magic_enum.hpp>
 #include <nanobind/nanobind.h>

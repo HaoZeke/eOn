@@ -17,7 +17,7 @@ Wrapper for Eon
 University of Iceland
 */
 
-#include "Potential.h"
+#include "eon/Potential.h"
 #include "spce_ccl.hpp"
 #include "tip4p_ccl.hpp"
 

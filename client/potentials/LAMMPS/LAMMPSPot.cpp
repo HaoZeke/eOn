@@ -11,7 +11,7 @@
 */
 #include "LAMMPSPot.h"
 #include "LammpsLoader.h"
-#include "fpe_handler.h"
+#include "eon/fpe_handler.h"
 
 #include <cstring>
 #include <filesystem>

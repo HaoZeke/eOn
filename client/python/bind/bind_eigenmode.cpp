@@ -4,16 +4,16 @@
 ** Default method is "improved". accelerant="gp" routes to AtomicGPDimer
 *(WITH_GPRD).
 */
-#include "Davidson.h"
-#include "Dimer.h"
-#include "EigenmodeStrategy.h"
-#include "ImprovedDimer.h"
-#include "Lanczos.h"
-#include "LowestEigenmode.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "Potential.h"
 #include "eigen_numpy.hpp"
+#include "eon/Davidson.h"
+#include "eon/Dimer.h"
+#include "eon/EigenmodeStrategy.h"
+#include "eon/ImprovedDimer.h"
+#include "eon/Lanczos.h"
+#include "eon/LowestEigenmode.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>

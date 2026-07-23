@@ -14,7 +14,7 @@
 #include "AtomicGPDimer.h"
 #include "GPRHelpers.h"
 #include "HelperFunctions.h"
-#include "fpe_handler.h"
+#include "eon/fpe_handler.h"
 #include <cassert>
 #include <cmath>
 #include <cstring>

@@ -7,7 +7,7 @@
 */
 #pragma once
 
-#include "DynLib.h"
+#include "eon/DynLib.h"
 #include "metatomic_c_abi.h"
 
 #include <stdexcept>
