@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ConjugateGradients.h"
-#include "SafeMath.h"
+#include "eon/ConjugateGradients.h"
+#include "eon/SafeMath.h"
 
 #include <cmath>
 

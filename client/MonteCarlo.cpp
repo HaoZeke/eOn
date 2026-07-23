@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "MonteCarlo.h"
+#include "eon/MonteCarlo.h"
 
 #include <cmath>
 #include <iostream>

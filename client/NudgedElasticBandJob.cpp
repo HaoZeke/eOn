@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "NudgedElasticBandJob.h"
-#include "ConjugateGradients.h"
-#include "EonLogger.h"
-#include "NEBInitialPaths.hpp"
-#include "NEBSplineExtrema.h"
-#include "Potential.h"
+#include "eon/NudgedElasticBandJob.h"
+#include "eon/ConjugateGradients.h"
+#include "eon/EonLogger.h"
+#include "eon/NEBInitialPaths.hpp"
+#include "eon/NEBSplineExtrema.h"
+#include "eon/Potential.h"
 
 #include <filesystem>
 #include <format>

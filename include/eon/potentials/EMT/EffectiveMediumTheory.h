@@ -14,12 +14,12 @@
 // serves as an interface between emt potentials provided by CamposASE and
 // dynamics provided by eOn
 
-#include "Asap/Atoms.h"
-#include "Asap/EMT.h"
-#include "Asap/EMTDefaultParameterProvider.h"
-#include "Asap/EMTRasmussenParameterProvider.h"
-#include "Asap/SuperCell.h"
-#include "Asap/Vec.h"
+#include "eon/potentials/EMT/Asap/Atoms.h"
+#include "eon/potentials/EMT/Asap/EMT.h"
+#include "eon/potentials/EMT/Asap/EMTDefaultParameterProvider.h"
+#include "eon/potentials/EMT/Asap/EMTRasmussenParameterProvider.h"
+#include "eon/potentials/EMT/Asap/SuperCell.h"
+#include "eon/potentials/EMT/Asap/Vec.h"
 
 #include "eon/Parameters.h"
 #include "eon/Potential.h"

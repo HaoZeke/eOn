@@ -12,17 +12,17 @@
 // An implementation of Johannes Kaestner and Paul Sherwood's improved dimer.
 // An attempt to keep to the variable names in their 2008 paper has been made.
 
-#include "ImprovedDimer.h"
-#include "DimerRotationDispatch.h"
-#include "HelperFunctions.h"
-#include "LowestEigenmode.h"
-#include "SafeMath.h"
-#include "eonExceptions.hpp"
+#include "eon/ImprovedDimer.h"
+#include "eon/DimerRotationDispatch.h"
+#include "eon/HelperFunctions.h"
+#include "eon/LowestEigenmode.h"
+#include "eon/SafeMath.h"
+#include "eon/eonExceptions.hpp"
 
 #include <cmath>
 #include <thread>
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 using namespace eonc::helpers;
 
 const char ImprovedDimer::OPT_SD[] = "sd";

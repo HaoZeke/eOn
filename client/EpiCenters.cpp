@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
 
 #include <cassert>
 #include <climits>

@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "HessianJob.h"
-#include "EonLogger.h"
-#include "Hessian.h"
-#include "Matter.h"
-#include "Potential.h"
+#include "eon/HessianJob.h"
+#include "eon/EonLogger.h"
+#include "eon/Hessian.h"
+#include "eon/Matter.h"
+#include "eon/Potential.h"
 
 #include <format>
 #include <fstream>

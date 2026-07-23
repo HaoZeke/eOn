@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "FeHe.h"
+#include "eon/potentials/FeHe/FeHe.h"
 #include <cassert>
 #include <vector>
 

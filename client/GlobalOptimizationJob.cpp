@@ -10,15 +10,15 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "GlobalOptimizationJob.h"
-#include "EonLogger.h"
-#include "GlobalOptimization.h"
+#include "eon/GlobalOptimizationJob.h"
+#include "eon/EonLogger.h"
+#include "eon/GlobalOptimization.h"
 
 #include <format>
 #include <memory>
-// #include "MinimizationJob.h"
-#include "Dynamics.h"
-#include "HelperFunctions.h"
+// #include "eon/MinimizationJob.h"
+#include "eon/Dynamics.h"
+#include "eon/HelperFunctions.h"
 
 #include <algorithm>
 #include <cmath>

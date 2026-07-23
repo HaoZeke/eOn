@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "FortranPotLoader.h"
+#include "eon/potentials/FortranPotLoader.h"
 
 #include <cstdlib>
 #include <filesystem>

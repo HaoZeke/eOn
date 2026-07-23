@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "RandomNumbers.h"
+#include "eon/RandomNumbers.h"
 
 #include <cmath>
 

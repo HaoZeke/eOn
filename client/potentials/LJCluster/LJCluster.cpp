@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "LJCluster.h"
+#include "eon/potentials/LJCluster/LJCluster.h"
 
 // LJCluster::LJCluster(double u0Recieved, double cuttOffRRecieved, double
 // psiRecieved){

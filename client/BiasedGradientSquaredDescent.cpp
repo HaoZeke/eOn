@@ -9,13 +9,13 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "BiasedGradientSquaredDescent.h"
-#include "EigenmodeStrategy.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "ObjectiveFunction.h"
-#include "Optimizer.h"
-#include "SaddleSearchMethod.h"
+#include "eon/BiasedGradientSquaredDescent.h"
+#include "eon/EigenmodeStrategy.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/ObjectiveFunction.h"
+#include "eon/Optimizer.h"
+#include "eon/SaddleSearchMethod.h"
 
 #include <cassert>
 #include <cmath>

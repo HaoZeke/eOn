@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "MetatomicPotential.h"
+#include "eon/potentials/Metatomic/MetatomicPotential.h"
 #include "eon/Parameters.h"
 #include "eon/fpe_handler.h"
 #include "vesin.h"

@@ -9,14 +9,14 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Matter.h"
-#include "BaseStructures.h"
-#include "BondBoost.h"
-#include "GeometryAnalysis.h"
-#include "HelperFunctions.h"
-#include "SurrogatePotential.h"
+#include "eon/Matter.h"
+#include "eon/BaseStructures.h"
+#include "eon/BondBoost.h"
+#include "eon/GeometryAnalysis.h"
+#include "eon/HelperFunctions.h"
+#include "eon/SurrogatePotential.h"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <memory>
 #include <stdexcept>
 

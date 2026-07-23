@@ -13,12 +13,12 @@
 // Hessian-vector products (same H*v as Lanczos). Replaces dimer rotation
 // constrained minimization when min_mode_method = davidson.
 
-#include "Davidson.h"
-#include "HelperFunctions.h"
-#include "Potential.h"
-#include "SafeMath.h"
+#include "eon/Davidson.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Potential.h"
+#include "eon/SafeMath.h"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 
 #include <cmath>
 #include <vector>

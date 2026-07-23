@@ -9,18 +9,18 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ProcessSearchJob.h"
+#include "eon/ProcessSearchJob.h"
 #ifdef WITH_ARTN
-#include "ARTnSaddleSearch.h"
+#include "eon/ARTnSaddleSearch.h"
 #endif
-#include "BasinHoppingSaddleSearch.h"
-#include "BiasedGradientSquaredDescent.h"
-#include "DynamicsSaddleSearch.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "MinModeSaddleSearch.h"
-#include "Optimizer.h"
-#include "Prefactor.h"
+#include "eon/BasinHoppingSaddleSearch.h"
+#include "eon/BiasedGradientSquaredDescent.h"
+#include "eon/DynamicsSaddleSearch.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/Optimizer.h"
+#include "eon/Prefactor.h"
 #include <thread>
 
 #include <format>
@@ -29,7 +29,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 
 std::vector<std::string> ProcessSearchJob::run() {
   std::string reactantFilename("pos.con");

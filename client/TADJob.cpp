@@ -9,9 +9,9 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "TADJob.h"
-#include "Dynamics.h"
-#include "ForceCallTimer.h"
+#include "eon/TADJob.h"
+#include "eon/Dynamics.h"
+#include "eon/ForceCallTimer.h"
 
 #include <cmath>
 

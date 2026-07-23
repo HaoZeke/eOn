@@ -10,19 +10,19 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <cmath>
 #include <format>
 #include <fstream>
 #include <stdexcept>
 #include <string>
 
-#include "BasinHoppingJob.h"
-#include "Dynamics.h"
-#include "HelperFunctions.h"
-#include "ObjectiveFunction.h"
-#include "Optimizer.h"
-#include "Potential.h"
+#include "eon/BasinHoppingJob.h"
+#include "eon/Dynamics.h"
+#include "eon/HelperFunctions.h"
+#include "eon/ObjectiveFunction.h"
+#include "eon/Optimizer.h"
+#include "eon/Potential.h"
 
 using namespace eonc::helpers;
 

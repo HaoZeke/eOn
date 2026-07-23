@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Hessian.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "SafeMath.h"
+#include "eon/Hessian.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/SafeMath.h"
 
 #include <cmath>
 #include <fstream>

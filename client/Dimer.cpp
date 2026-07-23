@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Dimer.h"
-#include "DimerRotationDispatch.h"
-#include "HelperFunctions.h"
-#include "SafeMath.h"
+#include "eon/Dimer.h"
+#include "eon/DimerRotationDispatch.h"
+#include "eon/HelperFunctions.h"
+#include "eon/SafeMath.h"
 
 #include <cassert>
 #include <cmath>

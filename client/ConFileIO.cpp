@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ConFileIO.h"
-#include "Eigen.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "SafeMath.h"
+#include "eon/ConFileIO.h"
+#include "eon/Eigen.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/SafeMath.h"
 
 #include <atomic>
 #include <cmath>

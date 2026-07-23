@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Dynamics.h"
-#include "EonLogger.h"
+#include "eon/Dynamics.h"
+#include "eon/EonLogger.h"
 
 #include <cmath>
 

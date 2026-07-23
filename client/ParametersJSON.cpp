@@ -9,9 +9,9 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ParametersJSON.h"
-#include "Parameters.h"
-#include "ParametersINI.h"
+#include "eon/ParametersJSON.h"
+#include "eon/Parameters.h"
+#include "eon/ParametersINI.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <nlohmann/json.hpp>

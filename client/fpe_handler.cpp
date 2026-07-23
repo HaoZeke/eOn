@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "fpe_handler.h"
+#include "eon/fpe_handler.h"
 
 #include <cfenv>
 #include <csignal>

@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ASE.h"
+#include "eon/potentials/ASE/ASE.h"
 #include "eon/PyGuard.h"
 #include "eon/fpe_handler.h"
 #include <cstdlib> // for exit()

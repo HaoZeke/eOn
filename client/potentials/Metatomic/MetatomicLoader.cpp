@@ -3,7 +3,7 @@
 **
 ** SPDX-License-Identifier: BSD-3-Clause
 */
-#include "MetatomicLoader.h"
+#include "eon/potentials/Metatomic/MetatomicLoader.h"
 
 #include "eon/potentials/FortranPotLoader.h"
 

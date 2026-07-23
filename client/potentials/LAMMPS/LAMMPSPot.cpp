@@ -9,9 +9,9 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "LAMMPSPot.h"
-#include "LammpsLoader.h"
+#include "eon/potentials/LAMMPS/LAMMPSPot.h"
 #include "eon/fpe_handler.h"
+#include "eon/potentials/LAMMPS/LammpsLoader.h"
 
 #include <cstring>
 #include <filesystem>

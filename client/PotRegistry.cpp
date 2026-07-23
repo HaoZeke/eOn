@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "PotRegistry.h"
+#include "eon/PotRegistry.h"
 #include <fstream>
 #include <iomanip>
 #include <sstream>

@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "LammpsLoader.h"
+#include "eon/potentials/LAMMPS/LammpsLoader.h"
 
 #include <iostream>
 

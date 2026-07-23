@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Quickmin.h"
-#include "HelperFunctions.h"
+#include "eon/Quickmin.h"
+#include "eon/HelperFunctions.h"
 
 int Quickmin::step(double a_maxMove) {
   Eigen::VectorXd force = -m_objf->getGradient();

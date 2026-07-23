@@ -1,4 +1,4 @@
-#include "ASE_NWCHEM.h"
+#include "eon/potentials/ASE_NWCHEM/ASE_NWCHEM.h"
 #include "eon/EnvHelpers.hpp"
 #include "eon/PyGuard.h"
 #include "eon/fpe_handler.h"

@@ -11,9 +11,9 @@
 */
 // An interface to the GPDimer library
 
-#include "AtomicGPDimer.h"
-#include "GPRHelpers.h"
-#include "HelperFunctions.h"
+#include "eon/AtomicGPDimer.h"
+#include "eon/GPRHelpers.h"
+#include "eon/HelperFunctions.h"
 #include "eon/fpe_handler.h"
 #include <cassert>
 #include <cmath>

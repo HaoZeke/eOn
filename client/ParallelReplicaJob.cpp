@@ -9,13 +9,13 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ParallelReplicaJob.h"
-#include "BaseStructures.h"
-#include "BondBoost.h"
-#include "Dynamics.h"
-#include "ForceCallTimer.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
+#include "eon/ParallelReplicaJob.h"
+#include "eon/BaseStructures.h"
+#include "eon/BondBoost.h"
+#include "eon/Dynamics.h"
+#include "eon/ForceCallTimer.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
 #include <stdexcept>
 
 #include <cmath>

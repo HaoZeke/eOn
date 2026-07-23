@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ParametersINI.h"
-#include "BaseStructures.h"
-#include "ConFileIO.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "Parameters.h"
+#include "eon/ParametersINI.h"
+#include "eon/BaseStructures.h"
+#include "eon/ConFileIO.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Parameters.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <INIReader.h>
@@ -26,7 +26,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 
 namespace {
 std::string toLowerCase(std::string s) {

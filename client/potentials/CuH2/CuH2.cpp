@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "CuH2.h"
+#include "eon/potentials/CuH2/CuH2.h"
 #include <set>
 
 void CuH2::cleanMemory(void) { return; }

@@ -1,11 +1,7 @@
-# Package-prefixed includes (xtb / Eigen style):
-#   #include "eon/Potential.h"
-#   #include "eon/fpe_handler.h"
-#   #include "eon/potentials/LAMMPS/LAMMPSPot.h"
-# In-tree: -I$src/include with include/eon -> ../client
-# Install (FHS): $prefix/include/eon/...  consumer uses -I$prefix/include
-# Sibling short includes inside the package (e.g. Matter.h -> "Potential.h")
-# still work: the including file's directory is searched first.
+# Public headers: $src/include/eon/ (numpy/fmt style package tree).
+# Sources: client/*.cpp. Both in-tree and installed form:
+#   -I$prefix/include   #include "eon/Potential.h"
+# thirdparty/ stays beside sources for catch2 etc.
 _incdirs += [include_directories('thirdparty')]
 _runtime_rpath = []
 
@@ -552,7 +548,7 @@ eonclib_sources = [
     'HelperFunctions.cpp',
     'RandomNumbers.cpp',
     'StringHelpers.cc',
-    'MatrixHelpers.hpp',  # Template
+    # MatrixHelpers.hpp is header-only under include/eon/ (via -I include).
     'Dimer.cpp',
     'Dynamics.cpp',
     'GlobalOptimizationJob.cpp',
@@ -1248,54 +1244,12 @@ eclib = library(
     install: true,
 )
 
-# Public C++ headers (FHS + package prefix):
-#   $prefix/include/eon/Potential.h
-#   $prefix/include/eon/fpe_handler.h
-#   $prefix/include/eon/potentials/LAMMPS/LAMMPSPot.h
-# Consumer: -I$prefix/include  and  #include "eon/Potential.h"
-# (same form as #include "xtb/xtb.h" with -I$prefix/include).
-_py_list_hdrs = '''
-import os, sys
-root = sys.argv[1]
-skip_top = {"thirdparty", "unit_tests", "python"}
-out = []
-for dirpath, dirnames, filenames in os.walk(root):
-    rel = os.path.relpath(dirpath, root)
-    parts = [] if rel == "." else rel.replace("\\\\", "/").split("/")
-    if parts and parts[0] in skip_top:
-        dirnames.clear()
-        continue
-    if "Asap" in dirnames and parts[:2] == ["potentials", "EMT"]:
-        dirnames.remove("Asap")
-    for fn in filenames:
-        if not (fn.endswith(".h") or fn.endswith(".hpp")):
-            continue
-        if fn == "version.h.in":
-            continue
-        p = fn if rel == "." else os.path.join(rel, fn)
-        out.append(p.replace(chr(92), "/"))
-# Use chr(10) so Meson string escaping cannot turn the separator into a
-# literal backslash-n (which made install_headers see one giant filename).
-sys.stdout.write(chr(10).join(sorted(out)))
-'''
-_public_hdr_list = run_command(
-    find_program('python3'),
-    '-c',
-    _py_list_hdrs,
-    meson.current_source_dir(),
-    check: true,
-).stdout().strip().split('\n')
-foreach _h : _public_hdr_list
-    if _h == ''
-        continue
-    endif
-    _h_dir = fs.parent(_h)
-    if _h_dir == '' or _h_dir == '.'
-        install_headers(_h, subdir: 'eon')
-    else
-        install_headers(_h, subdir: join_paths('eon', _h_dir))
-    endif
-endforeach
+# Install the real package include tree (no configure-time header discovery).
+# $prefix/include/eon/...  ←  $src/include/eon/...
+install_subdir(
+    join_paths(meson.project_source_root(), 'include', 'eon'),
+    install_dir: get_option('includedir'),
+)
 
 _linkto += eclib
 

@@ -1,9 +1,9 @@
 /*
 ** Apply defaults originating from schema/eon_params.capnp (via codegen).
 */
-#include "ParametersSSOT.h"
-#include "BaseStructures.h"
-#include "generated/ParametersSSOTDefaults.h"
+#include "eon/ParametersSSOT.h"
+#include "eon/BaseStructures.h"
+#include "eon/generated/ParametersSSOTDefaults.h"
 
 #include <string>
 #include <unordered_set>

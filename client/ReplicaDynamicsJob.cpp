@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ReplicaDynamicsJob.h"
-#include "BaseStructures.h"
-#include "Dynamics.h"
-#include "ForceCallTimer.h"
-#include "HelperFunctions.h"
+#include "eon/ReplicaDynamicsJob.h"
+#include "eon/BaseStructures.h"
+#include "eon/Dynamics.h"
+#include "eon/ForceCallTimer.h"
+#include "eon/HelperFunctions.h"
 #include <stdexcept>
 
 #include <format>

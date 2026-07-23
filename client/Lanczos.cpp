@@ -14,12 +14,12 @@
 // Comparison of methods for finding saddle points without knowledge of the
 // final states, J. Chem. Phys. 121, 9776-9792 (2004).
 
-#include "Lanczos.h"
-#include "HelperFunctions.h"
-#include "Potential.h"
-#include "SafeMath.h"
+#include "eon/Lanczos.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Potential.h"
+#include "eon/SafeMath.h"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 
 #include <cmath>
 Lanczos::Lanczos(std::shared_ptr<Matter> matter, const Parameters &params,

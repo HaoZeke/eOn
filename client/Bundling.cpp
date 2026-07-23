@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Bundling.h"
+#include "eon/Bundling.h"
 
 #include <cctype>
 #include <cstdio>

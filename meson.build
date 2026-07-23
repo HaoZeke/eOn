@@ -21,7 +21,7 @@ _fargs = []  # Fortran arguments
 _deps = []  # Dependencies
 _linkto = []  # All the sub-libraries
 _linkargs = []  # Linker arguments
-# Project root (subprojects/...) + package prefix include/eon -> client
+# Project root (subprojects/...) + package include tree include/eon/
 _incdirs = [include_directories('.'), include_directories('include')]
 
 # These are actually from the client, but the py interpreter is determined here

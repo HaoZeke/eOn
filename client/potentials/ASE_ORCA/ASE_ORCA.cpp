@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ASE_ORCA.h"
+#include "eon/potentials/ASE_ORCA/ASE_ORCA.h"
 #include "eon/EnvHelpers.hpp"
 #include "eon/PyGuard.h"
 #include "eon/fpe_handler.h"

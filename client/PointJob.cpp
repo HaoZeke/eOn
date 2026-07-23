@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "PointJob.h"
-#include "Matter.h"
+#include "eon/PointJob.h"
+#include "eon/Matter.h"
 #include <format>
 #include <fstream>
 #include <stdexcept>
