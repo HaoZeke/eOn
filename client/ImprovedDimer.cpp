@@ -145,7 +145,7 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
     rotationRemove(AtomMatrix::Map(x0_r.data(), x0->numberOfAtoms(), 3), x1);
     x1_r = x1->getPositionsV();
     tau = x1_r - x0_r;
-    tau.normalize();
+    eonc::safemath::safe_normalize_inplace(tau);
     x1_r = x0_r + tau * delta;
   }
 

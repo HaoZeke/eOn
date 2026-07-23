@@ -11,6 +11,7 @@
 */
 #include "LAMMPSPot.h"
 #include "LammpsLoader.h"
+#include "fpe_handler.h"
 
 #include <cstring>
 #include <filesystem>
@@ -126,6 +127,14 @@ void LAMMPSPot::ensureWorker() {
     close(resPipe[0]);
     reqFd = reqPipe[0];
     resFd = resPipe[1];
+    // Client main arms feenableexcept unconditionally. The worker inherits
+    // that mask; LAMMPS EAM (PairEAM::compute) performs IEEE divisions that
+    // can raise FE_DIVBYZERO on near-coincident pairs during saddle / product
+    // minimisations. Under trapping that SIGFPEs, and the continue handler
+    // without MXCSR masking re-storms forever in the child (GB of identical
+    // "FPE (continuing)" lines). External pot code expects soft IEEE defaults;
+    // demote trapping for the whole worker process before any LAMMPS call.
+    eonc::disableFPE();
     runWorkerLoop(); // never returns
   }
 
@@ -241,6 +250,12 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
 
 void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
                            double *F, double *U, const double *box) {
+  // Same contract as ASE / Metatomic: external pot libraries are not written
+  // for FE traps. Cover in-process (EONMPI / Windows) and any path that still
+  // has trapping armed when forceLocal runs.
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
+
   auto &lmp = eonc::LammpsLoader::instance();
 
   bool newLammps = false;
