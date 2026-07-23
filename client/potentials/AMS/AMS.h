@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Matter.h"
-#include "../../Potential.h"
+#include "Matter.h"
+#include "Potential.h"
 
 #include <absl/strings/numbers.h>
 #include <absl/strings/str_cat.h>

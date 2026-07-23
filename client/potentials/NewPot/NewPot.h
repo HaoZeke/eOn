@@ -11,7 +11,7 @@
 */
 #pragma once
 
-#include "../../Potential.h"
+#include "Potential.h"
 
 /** Template to use if user want to provide potential. */
 class NewPot : public Potential {

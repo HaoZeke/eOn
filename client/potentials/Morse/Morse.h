@@ -17,7 +17,7 @@
    Claude C. Berthet
       @date Unknown, revision: 2010, University of Iceland
       */
-#include "../../Potential.h"
+#include "Potential.h"
 #include <cmath>
 
 /// Morse potential, default parameters are for Pt.

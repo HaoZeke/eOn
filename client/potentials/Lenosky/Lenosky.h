@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Potential.h"
-#include "../FortranPotLoader.h"
+#include "Potential.h"
+#include "potentials/FortranPotLoader.h"
 
 /// Lenosky potential for Si (Fortran implementation, loaded at runtime).
 class Lenosky final : public Potential {

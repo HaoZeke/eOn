@@ -1,4 +1,4 @@
-#include "../MatrixHelpers.hpp"
+#include "MatrixHelpers.hpp"
 #include "Matter.h"
 #include "catch2/catch_amalgamated.hpp"
 #include <cmath>

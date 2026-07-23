@@ -11,7 +11,7 @@
 */
 #pragma once
 
-#include "../../Potential.h"
+#include "Potential.h"
 #include <map>
 #include <memory>
 #include <vector>

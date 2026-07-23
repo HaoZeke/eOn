@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "../../Parameters.h"
-#include "../../Potential.h"
+#include "Parameters.h"
+#include "Potential.h"
 
 class LAMMPSPot : public Potential {
 

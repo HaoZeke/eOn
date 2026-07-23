@@ -5,7 +5,7 @@
 */
 #include "MetatomicLoader.h"
 
-#include "../FortranPotLoader.h"
+#include "potentials/FortranPotLoader.h"
 
 #include <iostream>
 #include <vector>

@@ -11,7 +11,7 @@
 */
 #pragma once
 
-#include "../../Potential.h"
+#include "Potential.h"
 #include <pybind11/pybind11.h>
 
 namespace py = pybind11;

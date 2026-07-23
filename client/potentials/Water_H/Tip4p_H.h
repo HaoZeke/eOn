@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Potential.h"
-#include "../Water/Water.hpp"
+#include "Potential.h"
+#include "potentials/Water/Water.hpp"
 
 /** External function implemented in Fortran. Calculate interactions between
 atoms using the potH-H2O force field.

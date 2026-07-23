@@ -14,7 +14,7 @@
 #include <vector>
 
 #ifndef QSC_STANDALONE
-#include "../../Potential.h"
+#include "Potential.h"
 #endif
 
 /// Quantum Sutton-Chen (QSC) potential -- EAM-type with:

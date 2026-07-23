@@ -13,8 +13,8 @@
 
 #include <cmath>
 #include <iostream>
-// #include "../../system_unit.h" // unit converters
-#include "../../Potential.h"
+// #include "system_unit.h" // unit converters
+#include "Potential.h"
 
 /** Lennard Jones potential.*/
 class LJCluster : public Potential {

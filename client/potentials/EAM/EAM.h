@@ -16,7 +16,7 @@
 #include <vector>
 
 #ifndef EAM_STANDALONE
-#include "../../Potential.h"
+#include "Potential.h"
 #endif
 
 /// EAM (Embedded Atom Method) potential with cell list neighbor finding.

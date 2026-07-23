@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Potential.h"
-#include "../FortranPotLoader.h"
+#include "Potential.h"
+#include "potentials/FortranPotLoader.h"
 
 /// Stillinger-Weber potential for Si (Fortran implementation, loaded at
 /// runtime).

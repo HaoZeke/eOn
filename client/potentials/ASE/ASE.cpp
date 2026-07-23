@@ -11,8 +11,8 @@
 */
 
 #include "ASE.h"
-#include "../../PyGuard.h"
-#include "../../fpe_handler.h"
+#include "PyGuard.h"
+#include "fpe_handler.h"
 #include <cstdlib> // for exit()
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h> // for py::array_t

@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Potential.h"
-#include "../../subprojects/gpr_optim/gpr/ml/GaussianProcessRegression.h"
+#include "Potential.h"
+#include "subprojects/gpr_optim/gpr/ml/GaussianProcessRegression.h"
 
 /** Template to use if user want to provide potential. */
 class GPRPotential : public Potential {

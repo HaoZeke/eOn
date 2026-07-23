@@ -1,5 +1,5 @@
-#include "../Eigen.h"
-#include "../MatrixHelpers.hpp"
+#include "Eigen.h"
+#include "MatrixHelpers.hpp"
 #include "catch2/catch_amalgamated.hpp"
 
 using namespace Catch::Matchers;

@@ -1,3 +1,8 @@
+# Logical include root: client/. All sources use #include "Potential.h",
+# #include "potentials/LAMMPS/LAMMPSPot.h", etc. — no relative "../" paths.
+# Installed under $prefix/include/eonc/ with the same layout so consumers
+# use -I$prefix/include/eonc (or pkg-config) and the same include form.
+_incdirs += [include_directories('.')]
 _incdirs += [include_directories('thirdparty')]
 _runtime_rpath = []
 
@@ -1239,6 +1244,39 @@ eclib = library(
     install_rpath: ':'.join(_runtime_rpath),
     install: true,
 )
+
+# Public C++ headers: same logical layout as the client include root
+# (Potential.h, fpe_handler.h, potentials/..., helpers/...). Consumers add
+# -I$prefix/include/eonc (same form as in-tree -Iclient).
+_public_hdr_list = run_command(
+    'bash',
+    '-c',
+    '''
+set -e
+cd "$0"
+find . -type f \\( -name "*.h" -o -name "*.hpp" \\) \
+  ! -path "./thirdparty/*" \
+  ! -path "./unit_tests/*" \
+  ! -path "./python/*" \
+  ! -path "./potentials/EMT/Asap/*" \
+  ! -name "version.h.in" \
+  | sed "s|^./||" | sort
+''',
+    meson.current_source_dir(),
+    check: true,
+).stdout().strip().split('\n')
+foreach _h : _public_hdr_list
+    if _h == ''
+        continue
+    endif
+    # preserve potentials/LAMMPS/foo.h under includedir/eonc/
+    _h_dir = fs.parent(_h)
+    if _h_dir == '' or _h_dir == '.'
+        install_headers(_h, subdir: 'eonc')
+    else
+        install_headers(_h, subdir: join_paths('eonc', _h_dir))
+    endif
+endforeach
 
 _linkto += eclib
 

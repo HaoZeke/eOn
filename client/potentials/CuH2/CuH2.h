@@ -11,7 +11,7 @@
 */
 #pragma once
 
-#include "../../Potential.h"
+#include "Potential.h"
 
 // natms(2), ndim, U(1), R(ndim), F(ndim), box(3)
 extern "C" void c_force_eam(int *natms, int ndim, double *box, double *R,

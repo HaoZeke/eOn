@@ -17,7 +17,7 @@ Wrapper for Eon
 University of Iceland
 */
 
-#include "../../Potential.h"
+#include "Potential.h"
 #include "zhu_philpott.hpp"
 
 class Tip4p_Pt : public Potential, private forcefields::ZhuPhilpott<> {

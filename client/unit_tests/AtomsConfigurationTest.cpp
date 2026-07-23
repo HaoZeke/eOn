@@ -19,10 +19,10 @@
 
 #include <algorithm>
 
-#include "../GPRHelpers.h"
-#include "../HelperFunctions.h"
-#include "../Matter.h"
-#include "../Parameters.h"
+#include "GPRHelpers.h"
+#include "HelperFunctions.h"
+#include "Matter.h"
+#include "Parameters.h"
 #include "AtomsConfigurationTest.h"
 
 namespace tests {

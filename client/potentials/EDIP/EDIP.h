@@ -11,8 +11,8 @@
 */
 #pragma once
 
-#include "../../Potential.h"
-#include "../FortranPotLoader.h"
+#include "Potential.h"
+#include "potentials/FortranPotLoader.h"
 
 /// EDIP potential for Si (Fortran implementation, loaded at runtime).
 class EDIP final : public Potential {

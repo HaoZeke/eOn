@@ -10,10 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 #pragma once
-#include "../SurrogatePotential.h"
+#include "SurrogatePotential.h"
 
 #ifdef WITH_CATLEARN
-#include "../potentials/CatLearnPot/CatLearnPot.h"
+#include "potentials/CatLearnPot/CatLearnPot.h"
 #endif
 
 namespace helpers::create {

@@ -24,7 +24,7 @@
 /// performance bottleneck in multi-threaded contexts. Consider process-level
 /// parallelism if true concurrent IRA operations are required.
 
-#include "../../DynLib.h"
+#include "DynLib.h"
 #include <mutex>
 #include <stdexcept>
 #include <string>
