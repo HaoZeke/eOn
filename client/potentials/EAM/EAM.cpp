@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "eon/potentials/EAM/EAM.h"
-#include "eon/Parameters.h"
+#include "eon/potentials/EAM/Parameters.h"
 
 #include <algorithm>
 #include <array>

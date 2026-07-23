@@ -18,7 +18,7 @@
 /// for O(N) force evaluation.
 
 #include "eon/potentials/QSC/QSC.h"
-#include "eon/Parameters.h"
+#include "eon/potentials/QSC/Parameters.h"
 
 #include <cassert>
 #include <cmath>
