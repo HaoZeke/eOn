@@ -65,8 +65,9 @@ class State:
 
     def add_process(self, result):
         if 'stdout.dat' in result:
-            id = self.get_next_process_id()
-            open(self.proc_stdout_path(id), 'w').writelines(result['stdout.dat'].getvalue())
+            raw = result['stdout.dat'].getvalue()
+            id = self.allocate_process_id(b"stdout", raw)
+            open(self.proc_stdout_path(id), 'w').writelines(raw)
 
     def get_energy(self):
         return self.info.get("MetaData", "reactant energy", None)
@@ -117,26 +118,26 @@ class State:
         return self.info.get("MetaData", "previous state", -1)
 
     def get_num_procs(self):
-        """Number of distinct process ids currently in the table (not next id).
+        """Number of distinct process ids currently in the table.
 
-        Distinct from :meth:`get_next_process_id`: after duplicate id rows
-        collapse on load, ``len(procs)`` freezes while new registrations must
-        still receive a free id (``max(ids)+1``).
+        This is a count, not an allocator. New registrations must use
+        :meth:`allocate_process_id` (content-addressed xxh64), never
+        ``len(self.procs)`` or ``max(id)+1``.
         """
         self.load_process_table()
         return len(self.procs)
 
-    def get_next_process_id(self):
-        """Monotonic free process id for a new registration.
+    def allocate_process_id(self, *parts):
+        """Content-addressed free process id (xxh64 over *parts*).
 
-        Reloads the table from disk so external rewrites of ``processtable``
-        are visible. Returns ``0`` for an empty table, otherwise
-        ``max(id)+1``. Never reuses an id already present in ``self.procs``.
+        Reloads the process table from disk so external rewrites are visible,
+        then returns an id derived from the payload that is not already in
+        ``self.procs``. Identity does not depend on table length or max id.
         """
+        from eon.process_id import allocate_unique_process_id
+
         self.load_process_table(force=True)
-        if not self.procs:
-            return 0
-        return max(self.procs.keys()) + 1
+        return allocate_unique_process_id(self.procs, *parts)
 
     def get_process_table(self):
         self.load_process_table()

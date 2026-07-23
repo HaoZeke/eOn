@@ -1,5 +1,5 @@
 Process registration no longer freezes the process-id counter when the
-``processtable`` contains duplicate ids. New processes use
-``max(id)+1`` (``get_next_process_id``) instead of ``len(procs)``, so
-procdata files are not overwritten and silent kinetic collapse is
-avoided. Duplicate appends raise; load reloads from disk for allocation.
+``processtable`` contains duplicate ids. New process ids are
+content-addressed with xxHash (``allocate_process_id`` / xxh64 over the
+saddle payload and barrier), not ``len(procs)`` or ``max(id)+1``, so
+procdata files are not overwritten. Duplicate appends raise.

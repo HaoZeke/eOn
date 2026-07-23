@@ -137,8 +137,13 @@ class AKMCState(state.State):
         logger.info("Found new barrier %f for state %i (type: %s)", barrier, self.number, result['type'])
 
 
-        # Update the search result table.
-        id = self.get_next_process_id()
+        # Content-addressed id from saddle geometry + barrier (not table length).
+        saddle_bytes = result["saddle.con"].getvalue()
+        id = self.allocate_process_id(
+            b"akmc-forward",
+            saddle_bytes,
+            ("barrier=%.8f" % barrier).encode("ascii"),
+        )
         self.append_search_result(result, "good-%d" % id, superbasin)
 
         if 'simulation_time' in resultdata:
@@ -188,7 +193,7 @@ class AKMCState(state.State):
                                   repeats =           0)
 
         # If equilibrium rate, change the forward rate as well (persist so a
-        # later get_next_process_id force-reload cannot drop the clamp).
+        # later allocate_process_id force-reload cannot drop the clamp).
         if eq_rate_flag:
             self.procs[id]['rate'] = forward_eq_rate
             self.save_process_table()
@@ -452,7 +457,7 @@ class AKMCState(state.State):
         rewrites of ``processtable`` cannot leave a stale id counter.
 
         Duplicate id columns collapse to the last row (dict key); a warning
-        is logged. New ids must use :meth:`get_next_process_id`, not
+        is logged. New ids must use :meth:`allocate_process_id` (xxh64), not
         :meth:`get_num_procs`.
         """
         if self.procs is not None and not force:
@@ -521,7 +526,7 @@ class AKMCState(state.State):
         if id in self.procs:
             raise RuntimeError(
                 "refusing to clobber process id %d in state %s (already registered); "
-                "use get_next_process_id() for a free id"
+                "use allocate_process_id() for a content-addressed free id"
                 % (id, self.number)
             )
         f = open(self.proctable_path, 'a')

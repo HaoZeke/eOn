@@ -55,15 +55,16 @@ class PRState(state.State):
         # Update the search result table.
         #self.append_search_result(result, "good-%d" % self.get_num_procs())
 
-        # Free process id (max existing id + 1); not len(procs).
-        id = self.get_next_process_id()
+        # Content-addressed id from product geometry (not table length).
+        product_bytes = result['product.con'].getvalue()
+        id = self.allocate_process_id(b"pr-product", product_bytes)
 
         # Keep track of the number of searches, Ns.
         #self.inc_proc_repeat_count(id)
 
         # Move the relevant files into the procdata directory.
         open(self.proc_reactant_path(id), 'w').writelines(result['reactant.con'].getvalue())
-        open(self.proc_product_path(id), 'w').writelines(result['product.con'].getvalue())
+        open(self.proc_product_path(id), 'w').writelines(product_bytes)
         open(self.proc_results_path(id), 'w').writelines(result['results.dat'].getvalue())
 
         # Append this barrier to the process table (in memory and on disk).
@@ -122,7 +123,7 @@ class PRState(state.State):
         if id in self.procs:
             raise RuntimeError(
                 "refusing to clobber process id %d in state %s (already registered); "
-                "use get_next_process_id() for a free id"
+                "use allocate_process_id() for a content-addressed free id"
                 % (id, self.number)
             )
         f = open(self.proctable_path, 'a')

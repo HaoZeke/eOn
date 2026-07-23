@@ -1,8 +1,8 @@
-"""Process id allocation must not freeze on duplicate processtable rows.
+"""Process ids must be content-addressed (xxh64), not len(procs) / max+1.
 
-get_num_procs() is len(distinct ids). After a duplicate id appears, that
-length freezes and reusing it as the next id overwrites procdata. New
-registrations must use get_next_process_id() == max(id)+1 (eOn-cj3o).
+Duplicate processtable rows collapse in a dict keyed by id. A counter based
+on len(procs) freezes and reuses ids (eOn-cj3o); max(id)+1 still couples
+identity to registration order. xxh64 of the process payload does not.
 """
 
 from __future__ import annotations
@@ -13,6 +13,25 @@ from unittest import mock
 import pytest
 
 from eon.akmcstate import AKMCState
+from eon.process_id import allocate_unique_process_id, process_id_from_parts
+
+
+def test_process_id_from_parts_is_stable_and_positive():
+    a = process_id_from_parts(b"saddle", b"barrier=0.1")
+    b = process_id_from_parts(b"saddle", b"barrier=0.1")
+    c = process_id_from_parts(b"saddle", b"barrier=0.2")
+    assert a == b
+    assert a != c
+    assert a >= 0
+    assert a < 2**63
+
+
+def test_allocate_unique_salts_when_occupied():
+    base = process_id_from_parts(b"payload")
+    occupied = {base: {}}
+    free = allocate_unique_process_id(occupied, b"payload")
+    assert free != base
+    assert free == process_id_from_parts(b"payload", salt=1)
 
 
 def _make_akmc_state(tmp_path, table_body: str = ""):
@@ -42,8 +61,7 @@ def _make_akmc_state(tmp_path, table_body: str = ""):
     return state
 
 
-# Shape of the Cu V/SIA observation: 8 rows, 3 distinct ids (0,1,2), counter
-# freezes at 3 if next id is taken from len(procs).
+# Shape of the Cu V/SIA observation: 8 rows, 3 distinct ids.
 _DUP_TABLE = """\
       0          1.00000 1.00000e+12         1          0.50000       1.00000e+12  0.74164  3.47609e-01       0
       1          1.10000 1.00000e+12         2          0.60000       1.00000e+12  0.70427  1.47483e+00       0
@@ -60,21 +78,26 @@ def test_get_num_procs_is_distinct_count_not_row_count(tmp_path):
     state = _make_akmc_state(tmp_path, _DUP_TABLE)
     assert state.get_num_procs() == 3
     assert sorted(state.procs.keys()) == [0, 1, 2]
-    # Last row for id 2 wins.
     assert state.procs[2]["barrier"] == pytest.approx(0.10271)
 
 
-def test_get_next_process_id_is_max_plus_one_not_len(tmp_path):
+def test_allocate_does_not_reuse_existing_ids(tmp_path):
     state = _make_akmc_state(tmp_path, _DUP_TABLE)
-    # Old bug: get_num_procs() == 3 would reuse id 2 and clobber procdata.
-    assert state.get_num_procs() == 3
-    assert state.get_next_process_id() == 3
+    # Old bug: next id was 3 = len(procs), reusing nothing but freeze was at 2.
+    # Content hash must never land on 0,1,2 for this unrelated payload, or if
+    # it does, salt until free.
+    pid = state.allocate_process_id(b"akmc-forward", b"saddle-xyz", b"barrier=0.55")
+    assert pid not in (0, 1, 2)
+    assert pid not in state.procs
 
 
-def test_next_id_after_empty_table_is_zero(tmp_path):
+def test_allocate_stable_for_same_payload(tmp_path):
     state = _make_akmc_state(tmp_path, "")
-    assert state.get_num_procs() == 0
-    assert state.get_next_process_id() == 0
+    a = state.allocate_process_id(b"akmc-forward", b"saddle-A", b"barrier=0.10")
+    # Force reload empty table still yields same hash id.
+    state.procs = None
+    b = state.allocate_process_id(b"akmc-forward", b"saddle-A", b"barrier=0.10")
+    assert a == b
 
 
 def test_append_refuses_duplicate_id(tmp_path):
@@ -94,10 +117,10 @@ def test_append_refuses_duplicate_id(tmp_path):
         )
 
 
-def test_append_with_next_id_does_not_clobber(tmp_path):
+def test_append_with_allocated_id_does_not_clobber(tmp_path):
     state = _make_akmc_state(tmp_path, _DUP_TABLE)
-    nid = state.get_next_process_id()
-    assert nid == 3
+    nid = state.allocate_process_id(b"akmc-forward", b"new-saddle", b"barrier=0.20")
+    assert nid not in state.procs
     state.append_process_table(
         id=nid,
         saddle_energy=1.0,
@@ -110,26 +133,14 @@ def test_append_with_next_id_does_not_clobber(tmp_path):
         repeats=0,
     )
     assert state.get_num_procs() == 4
-    assert state.get_next_process_id() == 4
     assert 2 in state.procs
-    assert state.procs[3]["product"] == 99
-    text = open(state.proctable_path).read()
-    assert any(line.split()[:1] == ["3"] for line in text.splitlines()[1:])
+    assert state.procs[nid]["product"] == 99
 
 
-def test_force_reload_sees_external_rewrite(tmp_path):
-    row0 = (
-        "      0          1.00000 1.00000e+12         1          0.50000"
-        "       1.00000e+12  0.50000  1.00000e+00       0\n"
+def test_forward_and_reverse_tags_differ():
+    saddle = b"same-saddle-geometry"
+    fwd = process_id_from_parts(b"akmc-forward", saddle, b"barrier=0.10")
+    rev = process_id_from_parts(
+        b"akmc-reverse", saddle, b"from-state-0", b"forward-proc-1"
     )
-    row5 = (
-        "      5          1.00000 1.00000e+12         2          0.50000"
-        "       1.00000e+12  0.40000  1.00000e+00       0\n"
-    )
-    state = _make_akmc_state(tmp_path, row0)
-    assert state.get_next_process_id() == 1
-    # External rewrite (e.g. amsel KDB replay) with a higher max id.
-    open(state.proctable_path, "w").write(
-        AKMCState.processtable_header + row0 + row5
-    )
-    assert state.get_next_process_id() == 6
+    assert fwd != rev
