@@ -1244,13 +1244,6 @@ eclib = library(
     install: true,
 )
 
-# Install the real package include tree (no configure-time header discovery).
-# $prefix/include/eon/...  ←  $src/include/eon/...
-install_subdir(
-    join_paths(meson.project_source_root(), 'include', 'eon'),
-    install_dir: get_option('includedir'),
-)
-
 _linkto += eclib
 
 # RGPOT-metatomic engine (slow path); fat pot already in potentials above.
