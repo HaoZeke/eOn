@@ -5,10 +5,11 @@ based on ``len(procs)`` freezes when duplicate ids collapse the dict; a
 counter based on ``max(id)+1`` still couples identity to registration
 order and external table rewrites.
 
-Instead, derive the id from a stable hash of the process payload (saddle
-geometry bytes, barrier tag, direction). The same physical process maps
-to the same id; distinct payloads map to distinct ids without consulting
-table length. Rare hash collisions are resolved by salting.
+Instead, seed the id from a stable xxh64 of the process payload (saddle
+geometry bytes, barrier tag, direction). Geometric uniqueness remains
+``find_repeat``; the hash only assigns free keys that do not depend on
+table length. Rare collisions (or an already-occupied pure-content hash)
+are resolved by salting until free.
 """
 
 from __future__ import annotations

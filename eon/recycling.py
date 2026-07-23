@@ -303,12 +303,14 @@ class Recycling:
         # start with the first process, find the total number of processes,
         # and determine what is and isn't in the hole
         else:
-            self.process_number = 0
-            # Load the process table to determine the number
-            # of processes to recycle.
+            self.process_number = 0  # index into proc_ids, not a process id
+            # Load the process table to determine processes to recycle.
             # Can't use the rate-table because that skips some processes.
+            # Process ids may be sparse (content-addressed xxh64); walk the
+            # key list, never range(num_procs) as file ids.
             self.ref_state.load_process_table()
-            self.num_procs = len(self.ref_state.procs)
+            self.proc_ids = sorted(self.ref_state.procs.keys())
+            self.num_procs = len(self.proc_ids)
 
             # Load the reference and current reactants.
             self.curr_reactant = self.current_state.get_reactant()
@@ -351,10 +353,17 @@ class Recycling:
         # Make a fresh copy of the "saddle" we're going to send,
         # based on the current reactant.
         saddle = self.curr_reactant.copy()
-        # Determine what happens in the reference state saddle
-        # for the current process number.
-        process_saddle = self.ref_state.get_process_saddle(self.process_number)
-        process_mode = self.ref_state.get_process_mode(self.process_number)
+        # process_number indexes self.proc_ids (actual process table keys).
+        if not hasattr(self, "proc_ids") or self.proc_ids is None:
+            self.ref_state.load_process_table()
+            self.proc_ids = sorted(self.ref_state.procs.keys())
+            self.num_procs = len(self.proc_ids)
+        if self.process_number >= len(self.proc_ids):
+            self.write_recycling_metadata()
+            return None, None
+        proc_id = self.proc_ids[self.process_number]
+        process_saddle = self.ref_state.get_process_saddle(proc_id)
+        process_mode = self.ref_state.get_process_mode(proc_id)
 
         # Now, for all the things that did *not* move getting to this state,
         # suggest this particular process's position to them.
@@ -406,6 +415,12 @@ class Recycling:
         self.moved = eval(lines[3].split('=')[1].strip())
         self.unmoved = eval(lines[4].split('=')[1].strip())
         self.process_atoms = eval(lines[5].split('=')[1].strip())
+        # Rebuild dense index -> process id map from the live table (ids may
+        # be sparse content hashes; metadata only stores the ordinal).
+        self.ref_state.load_process_table()
+        self.proc_ids = sorted(self.ref_state.procs.keys())
+        if self.num_procs != len(self.proc_ids):
+            self.num_procs = len(self.proc_ids)
 
     def write_recycling_metadata(self):
         """ Write the recycling metadata file located in the current state's directory. """

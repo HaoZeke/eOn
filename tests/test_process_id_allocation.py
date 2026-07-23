@@ -144,3 +144,68 @@ def test_forward_and_reverse_tags_differ():
         b"akmc-reverse", saddle, b"from-state-0", b"forward-proc-1"
     )
     assert fwd != rev
+
+
+def test_recycling_indexes_sparse_proc_ids(tmp_path):
+    """Recycling must map ordinal process_number -> real process table keys."""
+    from eon.recycling import Recycling
+
+    # Minimal fake state with sparse content-like keys
+    class FakeState:
+        def __init__(self, number, procs):
+            self.number = number
+            self.path = str(tmp_path / f"s{number}")
+            os.makedirs(self.path, exist_ok=True)
+            self.procs = procs
+            self._loaded = True
+
+        def load_process_table(self):
+            return
+
+        def get_reactant(self):
+            import numpy as np
+
+            class _R:
+                def __init__(self):
+                    self.r = np.zeros((3, 3))
+                    self.box = np.eye(3) * 10.0
+
+                def __len__(self):
+                    return 3
+
+                def copy(self):
+                    o = _R()
+                    o.r = self.r.copy()
+                    return o
+
+            return _R()
+
+        def get_process_saddle(self, pid):
+            import numpy as np
+            from types import SimpleNamespace
+            assert pid in self.procs, f"recycling used ordinal as id: {pid}"
+            r = np.zeros((3, 3))
+            return SimpleNamespace(r=r)
+
+        def get_process_mode(self, pid):
+            import numpy as np
+            assert pid in self.procs
+            return np.zeros((3, 3))
+
+    sparse = {10**12 + 7: {}, 99: {}, 5: {}}
+    ref = FakeState(0, sparse)
+    cur = FakeState(1, {})
+    states = mock.Mock()
+    config = mock.Mock()
+    config.comp_eps_r = 0.2
+    config.recycling_active_region = 5.0
+    config.saddle_method = "min_mode"
+
+    with mock.patch("eon.recycling.atoms.get_process_atoms", return_value=[0, 1, 2]):
+        with mock.patch("eon.recycling.atoms.per_atom_norm", return_value=[0.0, 0.0, 0.0]):
+            rec = Recycling(states, ref, cur, move_distance=0.1, config=config, save=False)
+    assert rec.num_procs == 3
+    assert rec.proc_ids == sorted(sparse.keys())
+    # make_suggestion must call get_process_saddle with real keys
+    rec.make_suggestion()
+    assert rec.process_number == 1
