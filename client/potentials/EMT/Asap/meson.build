@@ -1,14 +1,9 @@
 # Headers live under include/eon/potentials/EMT/Asap/; short includes
 # (Atoms.h, EMT.h, ...) need that directory on the include path.
+# Path must be relative to this meson file (Meson rejects absolute
+# include_directories into the source tree).
 _asap_hdr_inc = include_directories(
-    join_paths(
-        meson.project_source_root(),
-        'include',
-        'eon',
-        'potentials',
-        'EMT',
-        'Asap',
-    ),
+    '../../../../include/eon/potentials/EMT/Asap',
 )
 asap = library(
     'asap',

@@ -3,7 +3,7 @@ aseorca = library(
     'aseorca',
     [
         'ASE_ORCA.cpp',
-        meson.project_source_root() / 'client' / 'EnvHelpers.cc',
+        '../../EnvHelpers.cc',
     ],
     dependencies: _deps,
     cpp_args: _args,
