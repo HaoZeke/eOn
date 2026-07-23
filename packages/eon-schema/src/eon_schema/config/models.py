@@ -1882,6 +1882,13 @@ class LanczosConfig(BaseModel):
         default=True,
         description="If the relative change between the previous lowest eigenvalue and the curvature along the initial direction is less than the tolerance, terminate.",
     )
+    phva_atoms: Union[str, list[int]] = Field(
+        default="All",
+        description=(
+            "PHVA mobile/active atoms for the Lanczos Krylov space (not free/fixed): "
+            "comma-delimited indices or 'All' for every free atom."
+        ),
+    )
 
 
 class DavidsonConfig(BaseModel):
@@ -1898,6 +1905,13 @@ class DavidsonConfig(BaseModel):
     diagonal_preconditioner: bool = Field(
         default=False,
         description="Use a cheap | (H v)_i / v_i | heuristic preconditioner (not the true Hessian diagonal).",
+    )
+    phva_atoms: Union[str, list[int]] = Field(
+        default="All",
+        description=(
+            "PHVA mobile/active atoms for the Davidson Ritz space (not free/fixed): "
+            "comma-delimited indices or 'All' for every free atom."
+        ),
     )
 
 

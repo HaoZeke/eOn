@@ -118,7 +118,7 @@ class PRState(state.State):
     def append_process_table(self, id, product, product_energy, time):
         """ Append to the process table.  Append a single line to the process table file.  If we
             have loaded the process table, also append it to the process table in memory. """
-        self.load_process_table()
+        self.load_process_table(force=True)
         if id in self.procs:
             raise RuntimeError(
                 "refusing to clobber process id %d in state %s (already registered); "

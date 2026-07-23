@@ -146,7 +146,7 @@ class AKMCStateList(statelist.StateList):
             reverse_process_id = 0
 
         # The product state does not know the reverse process yet.
-        # Reverse id has been determined above. (0 if it is a new state, else the last element in the proc table + 1)
+        # Reverse id: 0 for a new state, else get_next_process_id() (max(id)+1).
         shutil.copy(reactant.proc_saddle_path(process_id), product.proc_saddle_path(reverse_process_id))
         shutil.copy(reactant.proc_reactant_path(process_id), product.proc_product_path(reverse_process_id))
         shutil.copy(reactant.proc_product_path(process_id), product.proc_reactant_path(reverse_process_id))

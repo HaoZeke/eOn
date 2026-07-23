@@ -588,8 +588,10 @@ int load_ini(INIReader &ini, Parameters &params) {
       "Lanczos", "max_iterations", params.lanczos_options.max_iterations);
   params.lanczos_options.quit_early = ini.GetBoolean(
       "Lanczos", "quit_early", params.lanczos_options.quit_early);
-  params.lanczos_options.phva_atoms = toLowerCase(
-      ini.Get("Lanczos", "phva_atoms", params.lanczos_options.phva_atoms));
+  if (ini.HasValue("Lanczos", "phva_atoms")) {
+    params.lanczos_options.phva_atoms =
+        toLowerCase(ini.Get("Lanczos", "phva_atoms", "All"));
+  }
 
   // [Davidson] //
   params.davidson_options.tolerance =
@@ -599,8 +601,10 @@ int load_ini(INIReader &ini, Parameters &params) {
   params.davidson_options.diagonal_preconditioner =
       ini.GetBoolean("Davidson", "diagonal_preconditioner",
                      params.davidson_options.diagonal_preconditioner);
-  params.davidson_options.phva_atoms = toLowerCase(
-      ini.Get("Davidson", "phva_atoms", params.davidson_options.phva_atoms));
+  if (ini.HasValue("Davidson", "phva_atoms")) {
+    params.davidson_options.phva_atoms =
+        toLowerCase(ini.Get("Davidson", "phva_atoms", "All"));
+  }
 
   // [ARTn] //
   params.artn_options.push_step_size =
@@ -783,9 +787,14 @@ int load_ini(INIReader &ini, Parameters &params) {
       "Prefactor", "filter_fraction", params.prefactor_options.filter_fraction);
 
   // [Hessian] //
-
-  params.hessian_options.phva_atoms = toLowerCase(
-      ini.Get("Hessian", "phva_atoms", params.hessian_options.phva_atoms));
+  // Prefer phva_atoms; accept legacy atom_list when phva_atoms is absent.
+  if (ini.HasValue("Hessian", "phva_atoms")) {
+    params.hessian_options.phva_atoms =
+        toLowerCase(ini.Get("Hessian", "phva_atoms", "All"));
+  } else if (ini.HasValue("Hessian", "atom_list")) {
+    params.hessian_options.phva_atoms =
+        toLowerCase(ini.Get("Hessian", "atom_list", "All"));
+  }
   params.hessian_options.zero_freq_value = ini.GetReal(
       "Hessian", "zero_freq_value", params.hessian_options.zero_freq_value);
   params.hessian_options.fd_scheme = toLowerCase(

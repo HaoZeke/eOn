@@ -187,10 +187,11 @@ class AKMCState(state.State):
                                   # rate =              forward_rate,
                                   repeats =           0)
 
-        # If equilibrium rate, change the forward rate as well
+        # If equilibrium rate, change the forward rate as well (persist so a
+        # later get_next_process_id force-reload cannot drop the clamp).
         if eq_rate_flag:
             self.procs[id]['rate'] = forward_eq_rate
-            # reverse_procs[id]['rate'] = reverse_eq_rate
+            self.save_process_table()
 
         # If this is a random search type, add this proc to the random proc dict.
         if result['type'] == "random" or result['type'] == "dynamics":
@@ -516,7 +517,7 @@ class AKMCState(state.State):
                              product_prefactor, barrier, rate, repeats):
         """ Append to the process table.  Append a single line to the process table file.  If we
             have loaded the process table, also append it to the process table in memory. """
-        self.load_process_table()
+        self.load_process_table(force=True)
         if id in self.procs:
             raise RuntimeError(
                 "refusing to clobber process id %d in state %s (already registered); "
