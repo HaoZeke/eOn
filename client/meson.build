@@ -1348,6 +1348,7 @@ if get_option('with_tests')
         ['test_approve_confileio', 'ApproveConFileIO.cpp', 'neb_morse'],
         ['test_minimization', 'MinimizationTest.cpp', 'neb_morse'],
         ['test_optimizer', 'OptimizerTest.cpp', ''],
+        ['test_fpe_handler', 'FPEHandlerTest.cpp', ''],
         ['test_dynamics', 'DynamicsTest.cpp', 'neb_morse'],
         ['test_jobs', 'JobIntegrationTest.cpp', 'neb_morse'],
         ['test_hessian', 'HessianTest.cpp', 'neb_morse'],
