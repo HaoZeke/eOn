@@ -453,7 +453,7 @@ class AKMCState(state.State):
         """Load the process table from disk.
 
         If already loaded and *force* is false, do nothing. When *force* is
-        true (used by :meth:`get_next_process_id`), re-read so external
+        true (used by :meth:`allocate_process_id`), re-read so external
         rewrites of ``processtable`` cannot leave a stale id counter.
 
         Duplicate id columns collapse to the last row (dict key); a warning
