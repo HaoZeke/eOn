@@ -132,7 +132,7 @@ void Dimer::compute(std::shared_ptr<Matter> matter,
 
   statsTorque = torque;
   statsCurvature = curvature;
-  direction.normalize();
+  eonc::safemath::safe_normalize_inplace(direction);
   statsAngle = eonc::safemath::safe_acos(matDot(direction, initialDirection));
   statsAngle *= (180.0 / eonc::helpers::pi);
   statsRotations = rotations;
@@ -160,7 +160,7 @@ double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
     rotationRemove(matterCenter, matterDimer);
     posDimer = matterDimer->getPositions();
     direction = posDimer - posCenter;
-    direction.normalize();
+    eonc::safemath::safe_normalize_inplace(direction);
     posDimer = posCenter + direction * params.main_options.finiteDifference;
   }
 

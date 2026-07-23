@@ -17,6 +17,7 @@
 #include "HelperFunctions.h"
 #include "ObjectiveFunction.h"
 #include "SaddleSearchJob.h"
+#include "SafeMath.h"
 #include "eonExceptions.hpp"
 
 #include <cmath>
@@ -70,7 +71,9 @@ public:
     eigenvector = eonc::eigenmodeGetEigenvector(*minModeMethod);
     double eigenvalue = eonc::eigenmodeGetEigenvalue(*minModeMethod);
 
-    AtomMatrix proj = matDot(force, eigenvector) * eigenvector.normalized();
+    AtomMatrix proj =
+        matDot(force, eigenvector) *
+        eonc::safemath::safe_normalized(eigenvector);
 
     if (eigenvalue > 0.0) {
       if (params.saddle_search_options.perp_force_ratio > 0.0) {
