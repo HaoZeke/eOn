@@ -57,8 +57,7 @@ static LONG WINAPI windowsFPEHandler(EXCEPTION_POINTERS *info) {
   case EXCEPTION_FLT_INVALID_OPERATION:
     if (!reported_inv) {
       reported_inv = true;
-      fprintf(stderr,
-              "FPE (continuing, masking further): invalid operation\n");
+      fprintf(stderr, "FPE (continuing, masking further): invalid operation\n");
     }
     break;
   case EXCEPTION_FLT_OVERFLOW:
@@ -158,8 +157,8 @@ static void fpe_signal_handler(int sig, siginfo_t *sip, void *scp) {
     char hex[] = "FPE rip=0x0000000000000000\n";
     for (int i = 0; i < 16; ++i) {
       unsigned nibble = static_cast<unsigned>((rip >> (4 * (15 - i))) & 0xFu);
-      hex[10 + i] = static_cast<char>(nibble < 10 ? '0' + nibble
-                                                  : 'a' + (nibble - 10));
+      hex[10 + i] =
+          static_cast<char>(nibble < 10 ? '0' + nibble : 'a' + (nibble - 10));
     }
     write(STDERR_FILENO, hex, sizeof(hex) - 1);
 #endif

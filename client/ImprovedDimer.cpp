@@ -222,8 +222,7 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
 
     // Rotational force, F_R
     F_R = -2.0 * (g1 - g0) + 2.0 * ((g1 - g0).dot(tau)) * tau;
-    statsTorque =
-        eonc::safemath::safe_div(F_R.norm(), delta * 2.0, 0.0);
+    statsTorque = eonc::safemath::safe_div(F_R.norm(), delta * 2.0, 0.0);
 
     // Determine step direction theta via selected optimizer
     if (params.dimer_options.opt_method == OPT_SD) {
@@ -390,8 +389,7 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
            g0 * (1.0 - std::cos(phi_min) -
                  std::sin(phi_min) * std::tan(phi_prime * 0.5));
 
-      statsTorque =
-          eonc::safemath::safe_div(F_R.norm(), 2.0 * delta, 0.0);
+      statsTorque = eonc::safemath::safe_div(F_R.norm(), 2.0 * delta, 0.0);
       statsRotations += 1;
       QUILL_LOG_INFO(
           log,

@@ -11,8 +11,8 @@
 */
 #include "Eigen.h"
 #include "SafeMath.h"
-#include "fpe_handler.h"
 #include "catch2/catch_amalgamated.hpp"
+#include "fpe_handler.h"
 
 #include <cfenv>
 #include <cmath>
