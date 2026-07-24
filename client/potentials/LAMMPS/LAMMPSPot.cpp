@@ -281,14 +281,20 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // rather than crashing. The min-mode search then spins on non-finite
   // gradients until the akmc pass times out (0 processes). Reject the
   // evaluation so the search discards that displacement and continues.
-  if (!std::isfinite(*U)) {
-    throw std::runtime_error(
-        "LAMMPSPot: non-finite energy from worker (eon-7416)");
+  // Reject the geometry, not the process. Nothing between this call and
+  // main catches a throw here, so the client terminates: a search that was
+  // making progress is lost, and every other search sharing the pass goes
+  // with it. A large finite energy with zeroed forces reads to the
+  // optimiser as an impassable wall, so it backs out of the step and the
+  // search abandons this configuration and carries on.
+  bool nonfinite = !std::isfinite(*U);
+  for (long i = 0; i < 3 * N && !nonfinite; ++i) {
+    nonfinite = !std::isfinite(F[i]);
   }
-  for (long i = 0; i < 3 * N; ++i) {
-    if (!std::isfinite(F[i])) {
-      throw std::runtime_error(
-          "LAMMPSPot: non-finite force from worker (eon-7416)");
+  if (nonfinite) {
+    *U = 1.0e6;
+    for (long i = 0; i < 3 * N; ++i) {
+      F[i] = 0.0;
     }
   }
 #endif
