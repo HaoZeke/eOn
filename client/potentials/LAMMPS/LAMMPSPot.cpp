@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "eon/potentials/LAMMPS/LAMMPSPot.h"
+#include "eon/EonLogger.h"
 #include "eon/fpe_handler.h"
 #include "eon/potentials/LAMMPS/LammpsLoader.h"
 
@@ -282,6 +283,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // Drive the dedicated worker process so this image's LAMMPS runs in its own
   // process (own MPI_COMM_WORLD).  Per-image NEB threads thus evaluate forces
   // as truly concurrent processes with no shared-communicator contention.
+  std::lock_guard<std::mutex> workerLock(workerMutex);
   if (workerRespawnsLeft <= 0) {
     rejectGeometry(U, F, N);
     return;
@@ -296,6 +298,8 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     // pipe closed, so the first send after it fails. Respawning happens on
     // the next evaluation; reject this one rather than end the client.
     --workerRespawnsLeft;
+    EONC_LOG_WARNING("[LAMMPSPot] send to worker failed; {} respawns left "
+                     "(eon-7416)", workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
@@ -318,6 +322,8 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
         kill(workerPid, SIGKILL);
       }
       --workerRespawnsLeft;
+      EONC_LOG_WARNING("[LAMMPSPot] worker force eval timed out; {} respawns left "
+                       "(eon-7416)", workerRespawnsLeft);
       stopWorker();
       rejectGeometry(U, F, N);
       return;
@@ -328,12 +334,16 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
     --workerRespawnsLeft;
+    EONC_LOG_WARNING("[LAMMPSPot] worker died during force eval; {} respawns left "
+                     "(eon-7416)", workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
   }
   if (status != 0) {
     --workerRespawnsLeft;
+    EONC_LOG_WARNING("[LAMMPSPot] worker reported an evaluation error; {} respawns left "
+                     "(eon-7416)", workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
@@ -361,6 +371,8 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     nonfinite = !std::isfinite(F[i]);
   }
   if (nonfinite) {
+    EONC_LOG_WARNING("[LAMMPSPot] non-finite force or energy; rejecting "
+                     "geometry (eon-7416)");
     rejectGeometry(U, F, N);
   }
 #endif

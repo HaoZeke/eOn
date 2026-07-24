@@ -16,6 +16,8 @@
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 
+#include <mutex>
+
 class LAMMPSPot : public Potential {
 
 public:
@@ -57,6 +59,15 @@ private:
   // finite so a worker that cannot be revived still ends the search instead
   // of looping.
   int workerRespawnsLeft{3};
+  // Serialises the request/response exchange with the worker. eOn minimises
+  // the two endpoints of a saddle concurrently, and when both share this
+  // instance the two threads interleave writes and reads on the same pipe.
+  // The protocol is a bare byte stream with no framing, so an interleaved
+  // exchange is read as corrupt: the worker reports an evaluation error, the
+  // next send finds a closed pipe, and the worker dies, all within the first
+  // three force calls of the minimisation. Uncontended when instances really
+  // are per-image.
+  std::mutex workerMutex;
   int workerPid{-1};
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)
