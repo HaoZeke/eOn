@@ -253,7 +253,12 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       !writeExact(reqFd, atomicNrs, sizeof(int) * static_cast<size_t>(N)) ||
       !writeExact(reqFd, box, sizeof(double) * 9) ||
       !writeExact(reqFd, R, sizeof(double) * static_cast<size_t>(3 * N))) {
-    throw std::runtime_error("LAMMPSPot: failed to send request to worker");
+    // A worker stopped by an earlier rejected geometry leaves the request
+    // pipe closed, so the first send after it fails. Respawning happens on
+    // the next evaluation; reject this one rather than end the client.
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
 
   // eon-7416: a worker stuck on a pathological geometry (LAMMPS spinning, or
