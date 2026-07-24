@@ -13,10 +13,10 @@
 #include "eon/potentials/ASE/ASE.h"
 #include "eon/PyGuard.h"
 #include "eon/fpe_handler.h"
-#include <cstdlib> // for exit()
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h> // for py::array_t
 #include <pybind11/pybind11.h>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>
