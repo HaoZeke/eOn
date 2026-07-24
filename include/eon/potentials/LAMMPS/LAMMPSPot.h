@@ -48,6 +48,12 @@ private:
   // dedicated worker process that owns its LAMMPS instance, so every image runs
   // in its own process with its own MPI_COMM_WORLD and true parallelism.
   // Not available on Windows (no fork/pipe).
+  // Set once a worker times out, dies, or reports an error. Respawning a
+  // worker mid-search deadlocks: the client blocks with no worker attached
+  // and the search never ends. Once the pipe is broken the potential is
+  // unusable for this job, so every later evaluation is reported as an
+  // impassable wall and the search terminates on its own.
+  bool workerFailed{false};
   int workerPid{-1};
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)

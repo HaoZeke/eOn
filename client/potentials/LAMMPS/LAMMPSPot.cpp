@@ -226,8 +226,24 @@ void LAMMPSPot::stopWorker() {
     resFd = -1;
   }
   if (workerPid > 0) {
+    // A wedged worker never acts on the sentinel or the closed pipe, and an
+    // unconditional wait then blocks the client forever at no CPU cost -- the
+    // hang this teardown exists to avoid. Give the child a brief chance to
+    // exit on its own, then insist.
     int st = 0;
-    waitpid(workerPid, &st, 0);
+    bool reaped = false;
+    for (int i = 0; i < 100; ++i) { // up to ~1 s
+      pid_t r = waitpid(workerPid, &st, WNOHANG);
+      if (r == workerPid || r < 0) {
+        reaped = true;
+        break;
+      }
+      usleep(10000);
+    }
+    if (!reaped) {
+      kill(workerPid, SIGKILL);
+      waitpid(workerPid, &st, 0);
+    }
     workerPid = -1;
   }
   workerSpawned = false;
@@ -247,6 +263,10 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // Drive the dedicated worker process so this image's LAMMPS runs in its own
   // process (own MPI_COMM_WORLD).  Per-image NEB threads thus evaluate forces
   // as truly concurrent processes with no shared-communicator contention.
+  if (workerFailed) {
+    rejectGeometry(U, F, N);
+    return;
+  }
   ensureWorker();
 
   if (!writeExact(reqFd, &N, sizeof(N)) ||
@@ -256,6 +276,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     // A worker stopped by an earlier rejected geometry leaves the request
     // pipe closed, so the first send after it fails. Respawning happens on
     // the next evaluation; reject this one rather than end the client.
+    workerFailed = true;
     stopWorker();
     rejectGeometry(U, F, N);
     return;
@@ -277,6 +298,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       if (workerPid > 0) {
         kill(workerPid, SIGKILL);
       }
+      workerFailed = true;
       stopWorker();
       rejectGeometry(U, F, N);
       return;
@@ -286,11 +308,13 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
+    workerFailed = true;
     stopWorker();
     rejectGeometry(U, F, N);
     return;
   }
   if (status != 0) {
+    workerFailed = true;
     stopWorker();
     rejectGeometry(U, F, N);
     return;
