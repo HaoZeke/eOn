@@ -14,188 +14,132 @@
 /// @brief Quantum Sutton-Chen potential implementation.
 ///
 /// EAM-type potential with density = (a/r)^m, pair = (a/r)^n,
-/// embedding = c * epsilon * sqrt(rho). Uses Verlet neighbor list
-/// for O(N) force evaluation.
+/// embedding = c * epsilon * sqrt(rho). Neighbor pairs via vesin.
 
 #include "eon/potentials/QSC/QSC.h"
+#include "eon/VesinNeighbors.h"
 #include "eon/potentials/QSC/Parameters.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-
-void QSC::initialize(long N) {
-  N_ = N;
-  rho_.assign(N, 0.0);
-  sqrtrho_.assign(N, 0.0);
-  nlist_.assign(N, 0);
-  oldR_.assign(3 * N, 0.0);
-  // Flattened N*N arrays
-  distances_.resize(N * N);
-  vlist_.assign(N * N, 0);
-  V_.assign(N * N, 0.0);
-  phi_.assign(N * N, 0.0);
-  init_ = true;
-}
-
-void QSC::new_vlist(long N, const double *R, const double *box) {
-  double rv = cutoff_ + verlet_skin_;
-
-  for (long i = 0; i < N; i++) {
-    nlist_[i] = 0;
-    for (long j = i + 1; j < N; j++) {
-      calc_distance(box, R, i, R, j, &distances_[i * N + j]);
-      if (distances_[i * N + j].r <= rv) {
-        vlist_[i * N + nlist_[i]] = static_cast<int>(j);
-        nlist_[i]++;
-      }
-    }
-  }
-
-  for (long i = 0; i < 3 * N; i++) {
-    oldR_[i] = R[i];
-  }
-  vlist_updates++;
-}
-
-void QSC::update_distances(long N, const double *R, const double *box) {
-  for (long i = 0; i < N; i++) {
-    for (int k = 0; k < nlist_[i]; k++) {
-      int j = vlist_[i * N + k];
-      calc_distance(box, R, i, R, j, &distances_[i * N + j]);
-    }
-  }
-}
-
-bool QSC::verlet_needs_update(long N, const double *R,
-                              const double *box) const {
-  distance diff;
-  double dist_max1 = 0.0;
-  double dist_max2 = 0.0;
-
-  for (long i = 0; i < N; i++) {
-    calc_distance(box, oldR_.data(), i, R, i, &diff);
-    if (diff.r > dist_max1) {
-      dist_max2 = dist_max1;
-      dist_max1 = diff.r;
-    } else if (diff.r > dist_max2) {
-      dist_max2 = diff.r;
-    }
-    if (dist_max1 + dist_max2 > verlet_skin_) {
-      return true;
-    }
-  }
-  return false;
-}
+#include <vector>
 
 void QSC::energy(long N, const double *R, const int *atomicNrs, double *U,
                  const double *box) {
   *U = 0.0;
-  for (long i = 0; i < N; i++) {
-    rho_[i] = 0.0;
+  rho_.assign(static_cast<std::size_t>(N), 0.0);
+  sqrtrho_.assign(static_cast<std::size_t>(N), 0.0);
+  if (N < 2 || cutoff_ <= 0.0) {
+    return;
   }
 
-  int prev_i_Z = -1, prev_j_Z = -1;
+  eonc::VesinNeighbors nl;
+  eonc::VesinNeighbors::Options opt;
+  opt.cutoff = cutoff_;
+  opt.full = false;
+  opt.return_distances = true;
+  opt.return_vectors = false;
+  nl.compute(R, static_cast<std::size_t>(N), box, opt);
+
+  // Half list: accumulate pair V and both density contributions per pair.
+  std::vector<double> pair_term(static_cast<std::size_t>(N), 0.0);
+
+  for (std::size_t p = 0; p < nl.size(); ++p) {
+    const long i = static_cast<long>(nl.i(p));
+    const long j = static_cast<long>(nl.j(p));
+    if (i == j) {
+      continue;
+    }
+    const double r_ij = nl.distance(p);
+    if (r_ij <= 0.0 || r_ij > cutoff_) {
+      continue;
+    }
+
+    const auto p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+    const auto p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
+    const auto p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
+
+    const double phi_ij = pair_potential(r_ij, p_jj.a, p_jj.m);
+    const double phi_ji = pair_potential(r_ij, p_ii.a, p_ii.m);
+    rho_[static_cast<std::size_t>(i)] += phi_ij;
+    rho_[static_cast<std::size_t>(j)] += phi_ji;
+
+    const double V = p_ij.epsilon * pair_potential(r_ij, p_ij.a, p_ij.n);
+    // Historical half-list assignment put V on the i side only.
+    pair_term[static_cast<std::size_t>(i)] += V;
+  }
+
   for (long i = 0; i < N; i++) {
-    double pair_term = 0.0;
-    qsc_parameters p_ii{};
-
-    if (prev_i_Z != atomicNrs[i]) {
-      p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
-    }
-    prev_i_Z = atomicNrs[i];
-
-    for (int k = 0; k < nlist_[i]; k++) {
-      qsc_parameters p_ij{}, p_jj{};
-      int j = vlist_[i * N + k];
-      double r_ij = distances_[i * N + j].r;
-      if (r_ij > cutoff_)
-        continue;
-
-      if (prev_j_Z != atomicNrs[j]) {
-        p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
-        p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
-      }
-      prev_j_Z = atomicNrs[j];
-
-      // Density contributions
-      phi_[i * N + j] = pair_potential(r_ij, p_jj.a, p_jj.m);
-      rho_[i] += phi_[i * N + j];
-      phi_[j * N + i] = pair_potential(r_ij, p_ii.a, p_ii.m);
-      rho_[j] += phi_[j * N + i];
-
-      // Repulsive pair term
-      V_[i * N + j] = p_ij.epsilon * pair_potential(r_ij, p_ij.a, p_ij.n);
-      pair_term += V_[i * N + j];
-    }
-    sqrtrho_[i] = std::sqrt(rho_[i]);
-    double embedding = p_ii.c * p_ii.epsilon * sqrtrho_[i];
-    *U += pair_term - embedding;
+    const auto p_ii_e = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+    sqrtrho_[static_cast<std::size_t>(i)] =
+        std::sqrt(rho_[static_cast<std::size_t>(i)]);
+    const double embedding =
+        p_ii_e.c * p_ii_e.epsilon * sqrtrho_[static_cast<std::size_t>(i)];
+    *U += pair_term[static_cast<std::size_t>(i)] - embedding;
   }
 }
 
 void QSC::force(long N, const double *R, const int *atomicNrs, double *F,
                 double *U, double *variance, const double *box) {
   variance = nullptr;
-  if (!init_) {
-    initialize(N);
-    new_vlist(N, R, box);
-  } else if (N != N_) {
-    initialize(N);
-    new_vlist(N, R, box);
-  } else if (verlet_needs_update(N, R, box)) {
-    new_vlist(N, R, box);
-  } else {
-    update_distances(N, R, box);
-  }
-
   energy(N, R, atomicNrs, U, box);
 
   for (long i = 0; i < 3 * N; i++) {
     F[i] = 0.0;
   }
+  if (N < 2 || cutoff_ <= 0.0) {
+    return;
+  }
 
-  int prev_i_Z = -1, prev_j_Z = -1;
-  for (long i = 0; i < N; i++) {
-    qsc_parameters p_ii{};
-    if (prev_i_Z != atomicNrs[i]) {
-      p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+  eonc::VesinNeighbors nl;
+  eonc::VesinNeighbors::Options opt;
+  opt.cutoff = cutoff_;
+  opt.full = false;
+  opt.return_distances = true;
+  opt.return_vectors = true;
+  nl.compute(R, static_cast<std::size_t>(N), box, opt);
+
+  for (std::size_t p = 0; p < nl.size(); ++p) {
+    const long i = static_cast<long>(nl.i(p));
+    const long j = static_cast<long>(nl.j(p));
+    if (i == j) {
+      continue;
     }
-    prev_i_Z = atomicNrs[i];
-
-    for (int k = 0; k < nlist_[i]; k++) {
-      qsc_parameters p_ij{}, p_jj{};
-      int j = vlist_[i * N + k];
-      double r_ij = distances_[i * N + j].r;
-      if (r_ij > cutoff_)
-        continue;
-
-      if (prev_j_Z != atomicNrs[j]) {
-        p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
-        p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
-      }
-      prev_j_Z = atomicNrs[j];
-
-      double Fij = p_ij.n * V_[i * N + j];
-      Fij -= p_ii.epsilon * p_ii.c * p_jj.m * 0.5 * (1.0 / sqrtrho_[i]) *
-             phi_[i * N + j];
-      Fij -= p_jj.epsilon * p_jj.c * p_ii.m * 0.5 * (1.0 / sqrtrho_[j]) *
-             phi_[j * N + i];
-      Fij /= r_ij;
-
-      const auto &dist = distances_[i * N + j];
-      double fscale = Fij / r_ij;
-      double fx = fscale * dist.d[0];
-      double fy = fscale * dist.d[1];
-      double fz = fscale * dist.d[2];
-
-      F[3 * i] += fx;
-      F[3 * i + 1] += fy;
-      F[3 * i + 2] += fz;
-      F[3 * j] -= fx;
-      F[3 * j + 1] -= fy;
-      F[3 * j + 2] -= fz;
+    const double r_ij = nl.distance(p);
+    if (r_ij <= 0.0 || r_ij > cutoff_) {
+      continue;
     }
+
+    const auto p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+    const auto p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
+    const auto p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
+
+    const double phi_ij = pair_potential(r_ij, p_jj.a, p_jj.m);
+    const double phi_ji = pair_potential(r_ij, p_ii.a, p_ii.m);
+    const double V = p_ij.epsilon * pair_potential(r_ij, p_ij.a, p_ij.n);
+
+    // Force magnitude (same form as previous Verlet-based path).
+    double Fij = p_ij.n * V;
+    Fij -= p_ii.epsilon * p_ii.c * p_jj.m * 0.5 *
+           (1.0 / sqrtrho_[static_cast<std::size_t>(i)]) * phi_ij;
+    Fij -= p_jj.epsilon * p_jj.c * p_ii.m * 0.5 *
+           (1.0 / sqrtrho_[static_cast<std::size_t>(j)]) * phi_ji;
+    Fij /= r_ij;
+
+    // Historical distance used d = r_i - r_j; vesin vector is r_j - r_i.
+    const double *v = nl.vector(p);
+    const double fscale = Fij / r_ij;
+    const double fx = fscale * (-v[0]);
+    const double fy = fscale * (-v[1]);
+    const double fz = fscale * (-v[2]);
+
+    F[3 * i] += fx;
+    F[3 * i + 1] += fy;
+    F[3 * i + 2] += fz;
+    F[3 * j] -= fx;
+    F[3 * j + 1] -= fy;
+    F[3 * j + 2] -= fz;
   }
 }
 
@@ -219,26 +163,9 @@ double QSC::pair_potential(double r, double a, double n) {
   return std::pow(x, n);
 }
 
-void QSC::calc_distance(const double *box, const double *R1, int i,
-                        const double *R2, int j, distance *d) const {
-  double dx = R1[3 * i] - R2[3 * j];
-  double dy = R1[3 * i + 1] - R2[3 * j + 1];
-  double dz = R1[3 * i + 2] - R2[3 * j + 2];
-
-  // Orthogonal PBC
-  dx -= box[0] * std::floor(dx / box[0] + 0.5);
-  dy -= box[4] * std::floor(dy / box[4] + 0.5);
-  dz -= box[8] * std::floor(dz / box[8] + 0.5);
-
-  d->r = std::sqrt(dx * dx + dy * dy + dz * dz);
-  d->d[0] = dx;
-  d->d[1] = dy;
-  d->d[2] = dz;
-}
-
 void QSC::set_verlet_skin(double dr) {
   assert(dr > 0.0);
-  verlet_skin_ = dr;
+  (void)dr; // vesin rebuilds every force; skin unused
 }
 
 void QSC::set_cutoff(double c) {
@@ -286,7 +213,6 @@ QSC::qsc_parameters QSC::get_qsc_parameters(int element_a,
   if (ia == ib)
     return qsc_params_[ia];
 
-  // Mixing rules
   return qsc_parameters{
       0,
       0.5 * (qsc_params_[ia].n + qsc_params_[ib].n),

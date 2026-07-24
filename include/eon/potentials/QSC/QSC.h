@@ -21,32 +21,35 @@
 ///   F_i(rho_i) = c * sqrt(rho_i)
 ///   rho_i = sum_(j!=i) (a/r_ij)^m
 ///   V(r_ij) = (a/r_ij)^n
+///
+/// Neighbor pairs come from vesin (``eonc::VesinNeighbors``), not a pot-local
+/// Verlet list.
 class QSC
 #ifndef QSC_STANDALONE
     : public Potential
 #endif
 {
 public:
-  explicit QSC(const Parameters &params)
-      : Potential(PotType::QSC, params) {
+  explicit QSC(const Parameters &params) : Potential(PotType::QSC, params) {
     int i = 0;
     while (qsc_default_params[i].Z != -1) {
       qsc_params_.push_back(qsc_default_params[i]);
       i++;
     }
   }
-  QSC()
-      : QSC(Parameters{}) {}
+  QSC() : QSC(Parameters{}) {}
   ~QSC() override = default;
 
   void force(long N, const double *R, const int *atomicNrs, double *F,
              double *U, double *variance, const double *box) override;
+  /// Kept for API compatibility; vesin rebuilds every force call.
   void set_verlet_skin(double dr);
   void set_cutoff(double c);
   [[nodiscard]] double get_cutoff() const;
   void set_qsc_parameter(int Z, double n, double m, double epsilon, double c,
                          double a);
 
+  /// Historical counter (always 0 with vesin path; no separate list rebuild).
   long vlist_updates{0};
 
 private:
@@ -59,35 +62,13 @@ private:
     double a;
   };
 
-  struct distance {
-    double d[3];
-    double r;
-  };
-
-  bool init_{false};
-  long N_{0};
   double cutoff_{8.0};
-  double verlet_skin_{0.5};
 
-  // Flattened N*N 2D arrays (row-major)
-  std::vector<distance> distances_; // [N*N]
-  std::vector<int> vlist_;          // [N*N] neighbor indices
-  std::vector<int> nlist_;          // [N] neighbor counts
-  std::vector<double> oldR_;        // [3*N]
-  std::vector<double> rho_;         // [N]
-  std::vector<double> sqrtrho_;     // [N]
-  std::vector<double> V_;           // [N*N]
-  std::vector<double> phi_;         // [N*N]
+  std::vector<double> rho_;     // [N]
+  std::vector<double> sqrtrho_; // [N]
 
-  void initialize(long N);
   void energy(long N, const double *R, const int *atomicNrs, double *U,
               const double *box);
-  void new_vlist(long N, const double *R, const double *box);
-  void update_distances(long N, const double *R, const double *box);
-  [[nodiscard]] bool verlet_needs_update(long N, const double *R,
-                                         const double *box) const;
-  void calc_distance(const double *box, const double *R1, int i,
-                     const double *R2, int j, distance *d) const;
 
   static const qsc_parameters qsc_default_params[];
   std::vector<qsc_parameters> qsc_params_;

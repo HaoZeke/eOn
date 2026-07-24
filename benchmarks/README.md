@@ -1,7 +1,25 @@
 # eOn ASV benchmarks
 
-Python ASV suite that times the `eonclient` binary (saddle search, point
-energy, …). See `bench_eonclient.py` and `data/`.
+Python ASV suite that times the **`eonclient` binary** (saddle search, point
+energy, minimization, NEB, …). See `bench_eonclient.py` and `data/`.
+
+This is the **institutional** performance surface for client changes (including
+vesin-backed classical pot neighbor lists): PR matrix vs `main`, continuous
+history on `asv-results`, dashboard at eondocs.org/bench.
+
+## Which benches hit vesin-backed pots
+
+After the unified VesinNeighbors work (LJ / Morse / LJCluster / QSC force pairs):
+
+| Class | Fixture | Potential |
+|-------|---------|-----------|
+| `TimePointMorsePt` | `data/point_morse_pt` | `morse_pt` (force NL) |
+| `TimeSaddleSearchMorseDimer` | `data/one_pt_saddle_search` | `morse_pt` |
+| `TimeNEBMorsePt` | `data/neb_morse_pt` | `morse_pt` |
+| `TimeMinimizationLJCluster` | `data/min_lj_cluster` | `ljcluster` |
+
+Python server geometry (`eon.geometry.neighbor_list`) is covered by unit tests
+(`tests/test_geometry_vesin.py`), not ASV: ASV here is client binary wall time.
 
 ## Local
 

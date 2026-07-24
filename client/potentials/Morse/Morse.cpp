@@ -11,13 +11,14 @@
 */
 
 #include "eon/potentials/Morse/Morse.h"
+#include "eon/VesinNeighbors.h"
 #include <cassert>
 #include <cmath>
 
 /** @file
       @brief Morse potential for platinum
       @author Anonymous (possibly A. Pedersen or G. Henkelman), revision: Jean
-   Claude C. Berthet
+      Claude C. Berthet
       @date Unknown, revision: 2010, University of Iceland
       */
 
@@ -39,12 +40,18 @@ void Morse::force(long N, const double *R, const int * /*atomicNrs*/, double *F,
   for (long k = 0; k < 3 * N; k++) {
     F[k] = 0.0;
   }
+  if (N < 2 || cutoff_ <= 0.0) {
+    return;
+  }
 
-  // Orthorhombic MIC (box diagonal). Precompute inverses and hot constants.
-  const double invBox0 = 1.0 / box[0];
-  const double invBox4 = 1.0 / box[4];
-  const double invBox8 = 1.0 / box[8];
-  const double cutoff2 = cutoff_ * cutoff_;
+  eonc::VesinNeighbors nl;
+  eonc::VesinNeighbors::Options opt;
+  opt.cutoff = cutoff_;
+  opt.full = false;
+  opt.return_distances = true;
+  opt.return_vectors = true;
+  nl.compute(R, static_cast<std::size_t>(N), box, opt);
+
   const double a = a_;
   const double re = re_;
   const double De = De_;
@@ -52,49 +59,38 @@ void Morse::force(long N, const double *R, const int * /*atomicNrs*/, double *F,
   const double eCut = energyCutoff_;
   double energyAcc = 0.0;
 
-  for (long i = 0; i < N; i++) {
-    const double xi = R[3 * i];
-    const double yi = R[3 * i + 1];
-    const double zi = R[3 * i + 2];
-    double *Fi = F + 3 * i;
-
-    for (long j = i + 1; j < N; j++) {
-      double dx = xi - R[3 * j];
-      double dy = yi - R[3 * j + 1];
-      double dz = zi - R[3 * j + 2];
-
-      // Minimum image: floor(x+0.5) avoids fmod; branchless on modern CPUs.
-      dx -= box[0] * std::floor(dx * invBox0 + 0.5);
-      dy -= box[4] * std::floor(dy * invBox4 + 0.5);
-      dz -= box[8] * std::floor(dz * invBox8 + 0.5);
-
-      const double r2 = dx * dx + dy * dy + dz * dz;
-      if (r2 >= cutoff2) {
-        continue;
-      }
-
-      const double r = std::sqrt(r2);
-      // Inline morse() to keep the pair loop in one TU for inlining / LTO.
-      const double d = 1.0 - std::exp(-a * (r - re));
-      const double energy = De * d * d - De;
-      const double fmag = twoDeA * d * (d - 1.0);
-
-      energyAcc += energy - eCut;
-
-      // Pair force magnitude along MIC vector (keep /r for bit-stability vs
-      // main)
-      const double fscale = fmag / r;
-      const double fx = fscale * dx;
-      const double fy = fscale * dy;
-      const double fz = fscale * dz;
-
-      Fi[0] += fx;
-      Fi[1] += fy;
-      Fi[2] += fz;
-      F[3 * j] -= fx;
-      F[3 * j + 1] -= fy;
-      F[3 * j + 2] -= fz;
+  for (std::size_t p = 0; p < nl.size(); ++p) {
+    const long i = static_cast<long>(nl.i(p));
+    const long j = static_cast<long>(nl.j(p));
+    if (i == j) {
+      continue;
     }
+    const double r = nl.distance(p);
+    if (r <= 0.0) {
+      continue;
+    }
+    // vesin: r_j - r_i; Morse force used r_i - r_j
+    const double *v = nl.vector(p);
+    const double dx = -v[0];
+    const double dy = -v[1];
+    const double dz = -v[2];
+
+    const double d = 1.0 - std::exp(-a * (r - re));
+    const double energy = De * d * d - De;
+    const double fmag = twoDeA * d * (d - 1.0);
+    energyAcc += energy - eCut;
+
+    const double fscale = fmag / r;
+    const double fx = fscale * dx;
+    const double fy = fscale * dy;
+    const double fz = fscale * dz;
+
+    F[3 * i] += fx;
+    F[3 * i + 1] += fy;
+    F[3 * i + 2] += fz;
+    F[3 * j] -= fx;
+    F[3 * j + 1] -= fy;
+    F[3 * j + 2] -= fz;
   }
   *U = energyAcc;
 }
