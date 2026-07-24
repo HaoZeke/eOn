@@ -16,6 +16,8 @@
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 
+#include <mutex>
+
 class LAMMPSPot : public Potential {
 
 public:
@@ -48,6 +50,24 @@ private:
   // dedicated worker process that owns its LAMMPS instance, so every image runs
   // in its own process with its own MPI_COMM_WORLD and true parallelism.
   // Not available on Windows (no fork/pipe).
+  // Respawns allowed after a worker times out, dies, or reports an error.
+  // A single transient failure must not poison the job: every later
+  // evaluation would return the impassable wall, no minimisation could ever
+  // meet its force criterion, and the search would be discarded as a minimum
+  // that failed to converge. Respawning is safe now that the teardown is
+  // bounded rather than waiting on a wedged child forever. The budget is
+  // finite so a worker that cannot be revived still ends the search instead
+  // of looping.
+  int workerRespawnsLeft{3};
+  // Serialises the request/response exchange with the worker. eOn minimises
+  // the two endpoints of a saddle concurrently, and when both share this
+  // instance the two threads interleave writes and reads on the same pipe.
+  // The protocol is a bare byte stream with no framing, so an interleaved
+  // exchange is read as corrupt: the worker reports an evaluation error, the
+  // next send finds a closed pipe, and the worker dies, all within the first
+  // three force calls of the minimisation. Uncontended when instances really
+  // are per-image.
+  std::mutex workerMutex;
   int workerPid{-1};
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)

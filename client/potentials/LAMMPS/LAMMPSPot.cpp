@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "eon/potentials/LAMMPS/LAMMPSPot.h"
+#include "eon/EonLogger.h"
 #include "eon/fpe_handler.h"
 #include "eon/potentials/LAMMPS/LammpsLoader.h"
 
@@ -74,6 +75,36 @@ void LAMMPSPot::cleanMemory() {
 // Process-per-image worker plumbing (POSIX only)
 // ---------------------------------------------------------------------------
 namespace {
+// Report a geometry the worker could not evaluate as an impassable wall.
+//
+// Every failure path here used to throw, and nothing between the potential
+// call and main catches it, so the client terminated. That loses the whole
+// job, including searches that had already converged: a copper V/SIA search
+// reached a saddle at 0.082 eV with a force of 0.027 eV/A and a curvature of
+// -0.47, then died on the next evaluation before the result was written.
+//
+// A large finite energy with zeroed forces reads to the optimiser as a wall,
+// so it backs out of the step and the search abandons this configuration and
+// carries on. Callers stop the worker first; ensureWorker respawns it on the
+// next evaluation.
+void rejectGeometry(double *U, double *F, long N) {
+  *U = 1.0e6;
+  // Zero forces would be read as convergence: an optimiser judges a point
+  // converged on force magnitude alone, so a rejected geometry with no force
+  // is accepted as a minimum and the wall energy is recorded as that
+  // minimum's energy. It then reaches the barrier as E_saddle - 1e6, which
+  // eOn reports as a negative barrier and discards -- a real 0.062 eV copper
+  // saddle was lost exactly this way. Return a force far above any
+  // convergence threshold so the point can never be mistaken for a
+  // stationary one, alternating its sign so the frame gains no net force.
+  for (long i = 0; i < 3 * N; ++i) {
+    F[i] = 0.0;
+  }
+  for (long i = 0; i < N; ++i) {
+    F[3 * i] = (i % 2 == 0) ? 1.0 : -1.0;
+  }
+}
+
 // Blocking read/write of exactly n bytes over a pipe.  Returns false on EOF or
 // error, so a dead peer is detected rather than silently producing garbage.
 bool readExact(int fd, void *buf, size_t n) {
@@ -142,6 +173,14 @@ void LAMMPSPot::ensureWorker() {
   }
 
   // Parent: keep reqPipe write end and resPipe read end.
+  //
+  // Writing to a worker that has already exited raises SIGPIPE, whose default
+  // action kills the client outright -- before writeExact can return the
+  // error the caller is written to handle. A search that had converged on a
+  // saddle at 0.062 eV died this way with signal 13 as its endpoints were
+  // about to be minimised. Ignoring it turns the same condition into an
+  // EPIPE return, which reaches the geometry-rejection path and respawns.
+  std::signal(SIGPIPE, SIG_IGN);
   close(reqPipe[0]);
   close(resPipe[1]);
   reqFd = reqPipe[1];
@@ -207,8 +246,24 @@ void LAMMPSPot::stopWorker() {
     resFd = -1;
   }
   if (workerPid > 0) {
+    // A wedged worker never acts on the sentinel or the closed pipe, and an
+    // unconditional wait then blocks the client forever at no CPU cost -- the
+    // hang this teardown exists to avoid. Give the child a brief chance to
+    // exit on its own, then insist.
     int st = 0;
-    waitpid(workerPid, &st, 0);
+    bool reaped = false;
+    for (int i = 0; i < 100; ++i) { // up to ~1 s
+      pid_t r = waitpid(workerPid, &st, WNOHANG);
+      if (r == workerPid || r < 0) {
+        reaped = true;
+        break;
+      }
+      usleep(10000);
+    }
+    if (!reaped) {
+      kill(workerPid, SIGKILL);
+      waitpid(workerPid, &st, 0);
+    }
     workerPid = -1;
   }
   workerSpawned = false;
@@ -228,13 +283,27 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // Drive the dedicated worker process so this image's LAMMPS runs in its own
   // process (own MPI_COMM_WORLD).  Per-image NEB threads thus evaluate forces
   // as truly concurrent processes with no shared-communicator contention.
+  std::lock_guard<std::mutex> workerLock(workerMutex);
+  if (workerRespawnsLeft <= 0) {
+    rejectGeometry(U, F, N);
+    return;
+  }
   ensureWorker();
 
   if (!writeExact(reqFd, &N, sizeof(N)) ||
       !writeExact(reqFd, atomicNrs, sizeof(int) * static_cast<size_t>(N)) ||
       !writeExact(reqFd, box, sizeof(double) * 9) ||
       !writeExact(reqFd, R, sizeof(double) * static_cast<size_t>(3 * N))) {
-    throw std::runtime_error("LAMMPSPot: failed to send request to worker");
+    // A worker stopped by an earlier rejected geometry leaves the request
+    // pipe closed, so the first send after it fails. Respawning happens on
+    // the next evaluation; reject this one rather than end the client.
+    --workerRespawnsLeft;
+    EONC_LOG_WARNING("[LAMMPSPot] send to worker failed; {} respawns left "
+                     "(eon-7416)",
+                     workerRespawnsLeft);
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
 
   // eon-7416: a worker stuck on a pathological geometry (LAMMPS spinning, or
@@ -253,21 +322,38 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       if (workerPid > 0) {
         kill(workerPid, SIGKILL);
       }
+      --workerRespawnsLeft;
+      EONC_LOG_WARNING(
+          "[LAMMPSPot] worker force eval timed out; {} respawns left "
+          "(eon-7416)",
+          workerRespawnsLeft);
       stopWorker();
-      throw std::runtime_error(
-          "LAMMPSPot: worker force eval timed out; killed (eon-7416)");
+      rejectGeometry(U, F, N);
+      return;
     }
   }
   int status = 0;
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
-    throw std::runtime_error(
-        "LAMMPSPot: worker process died during force eval");
+    --workerRespawnsLeft;
+    EONC_LOG_WARNING(
+        "[LAMMPSPot] worker died during force eval; {} respawns left "
+        "(eon-7416)",
+        workerRespawnsLeft);
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
   if (status != 0) {
-    throw std::runtime_error(
-        "LAMMPSPot: worker reported a force evaluation error");
+    --workerRespawnsLeft;
+    EONC_LOG_WARNING(
+        "[LAMMPSPot] worker reported an evaluation error; {} respawns left "
+        "(eon-7416)",
+        workerRespawnsLeft);
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
   // A saddle search that never terminates silently truncates the event
   // table: the KMC residence time is 1/sum_j k_j over the discovered
@@ -281,15 +367,20 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // rather than crashing. The min-mode search then spins on non-finite
   // gradients until the akmc pass times out (0 processes). Reject the
   // evaluation so the search discards that displacement and continues.
-  if (!std::isfinite(*U)) {
-    throw std::runtime_error(
-        "LAMMPSPot: non-finite energy from worker (eon-7416)");
+  // Reject the geometry, not the process. Nothing between this call and
+  // main catches a throw here, so the client terminates: a search that was
+  // making progress is lost, and every other search sharing the pass goes
+  // with it. A large finite energy with zeroed forces reads to the
+  // optimiser as an impassable wall, so it backs out of the step and the
+  // search abandons this configuration and carries on.
+  bool nonfinite = !std::isfinite(*U);
+  for (long i = 0; i < 3 * N && !nonfinite; ++i) {
+    nonfinite = !std::isfinite(F[i]);
   }
-  for (long i = 0; i < 3 * N; ++i) {
-    if (!std::isfinite(F[i])) {
-      throw std::runtime_error(
-          "LAMMPSPot: non-finite force from worker (eon-7416)");
-    }
+  if (nonfinite) {
+    EONC_LOG_WARNING("[LAMMPSPot] non-finite force or energy; rejecting "
+                     "geometry (eon-7416)");
+    rejectGeometry(U, F, N);
   }
 #endif
 }
