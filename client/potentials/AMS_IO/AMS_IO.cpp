@@ -110,7 +110,7 @@ void AMS_IO::passToSystem(long N, const double *R, const int *atomicNrs,
     fprintf(out, "     Model %s\n", model);
   }
   if (strlen(xc) > 0) {
-    fprintf(out, "xc %s\n");
+    fprintf(out, "xc %s\n", xc);
     fprintf(out, "     hybrid %s\n",
             xc); // basis set not specified (default = DZ)
     fprintf(out, "end\n");
