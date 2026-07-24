@@ -39,4 +39,3 @@ __all__ = [
     "dict_to_results_dat",
     "job_result_scalars_from_results_dat",
 ]
-
