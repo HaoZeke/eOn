@@ -29,6 +29,7 @@
 #include "eon/StructureComparisonJob.h"
 #include "eon/TADJob.h"
 #include "eon/TestJob.h"
+#include "eon/OHTSTJob.h"
 
 #ifdef WITH_GP_SURROGATE
 #include "eon/GPSurrogateJob.h"
@@ -112,6 +113,9 @@ std::unique_ptr<Job> makeJob(std::unique_ptr<Parameters> params) {
     break;
   }
 #endif
+  case OH_TST: {
+    return (std::make_unique<OHTSTJob>(std::move(params)));
+  }
   default:
     throw std::runtime_error("No known job could be constructed");
     break;

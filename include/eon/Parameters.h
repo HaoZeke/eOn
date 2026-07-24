@@ -705,6 +705,48 @@ public:
     bool estimate_neb_eigenvalues{false};
     std::string neb_mmf{"dimer"};
   } debug_options;
+
+  // [OH_TST] //
+  // Optimized hyperplanar TST (Johannesson-Jonsson, JCP 115, 9644
+  // (2001)): reversible-work progression of a hyperplanar dividing
+  // surface with constrained thermostatted sampling.
+  struct oh_tst_options_t {
+    std::string reactant_filename{"pos.con"};
+    std::string product_filename{"product.con"};
+    double time_step{1.0};       // fs, constrained sampling dynamics
+    long equil_steps{200};       // per-plane equilibration steps
+    long sample_steps{800};      // per-plane averaging steps
+    long max_planes{200};        // plane-progression iterations
+    double plane_mass{50.0};     // m_s, inertia of the s coordinate
+    double alpha_rot{50.0};      // rotational inertia of the normal
+    double plane_time_step{0.1}; // Verlet step for (s, n) updates
+    double ds_max{0.1};          // A, clamp on per-iteration plane moves
+    double dtheta_max{0.05};     // rad, clamp on per-iteration rotations
+    double force_tol{0.005};     // eV/A convergence on plane force
+    double s_init{0.05};         // starting fraction along the guideline
+    long reactant_md_steps{20000}; // unconstrained reactant trajectory
+    double max_delta_a{10.0};      // eV, divergence guard on the work
+    // Thermostat for the plane-constrained and reactant sampling:
+    // "andersen" (default) or "gle" (colored noise, Ceriotti-Bussi-
+    // Parrinello; drift matrix from gle_a_file, gle4md text layout,
+    // units of inverse internal time; a 1x1 [gamma] file degenerates
+    // to white-noise Langevin).
+    std::string thermostat{"andersen"};
+    std::string gle_a_file{""};
+    // Comma-separated .con files of the OTHER symmetry-equivalent
+    // product minima (Eqs 13-17): sampling is confined to the
+    // subregion of the primary product by half-line distances with
+    // mirror velocity reflection at the boundaries.
+    std::string symmetry_products{""};
+    // PMF-scan mode: hold the dividing plane normal fixed along the
+    // guideline and step s uniformly reactant->product instead of
+    // adaptively hunting the free-energy maximum. Robust where the
+    // adaptive progression pins at s=0 (a shallow doorway or a
+    // barrierless capture funnel whose A(s) has no interior maximum).
+    bool pmf_scan{false};
+    long scan_planes{40}; // uniform planes across the guideline
+  } oh_tst_options;
+
 };
 
 } // namespace eonc

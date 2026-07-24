@@ -511,6 +511,8 @@ eonclib_sources = [
     'ReplicaExchangeJob.cpp',
     'BondBoost.cpp',
     'Job.cpp',
+    'OHTSTJob.cpp',
+    'GleThermostat.cpp',
     'GlobalOptimization.cpp',
     'LowestEigenmode.cpp',
     'MinModeSaddleSearch.cpp',
