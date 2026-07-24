@@ -65,7 +65,8 @@ ASE::ASE(const Parameters &a_params)
             e.what());
     fprintf(stderr, "%s should exist and have no errors on the Python side.\n",
             py_file.c_str());
-    exit(1);
+    throw std::runtime_error(std::string("ASE calculator import failed: ") +
+                             e.what());
   }
   return;
 }
@@ -95,10 +96,12 @@ void ASE::force(long nAtoms, const double *R, const int *atomicNrs, double *F,
 
   } catch (py::error_already_set &e) {
     fprintf(stderr, "ASE calculator: Python error: %s\n", e.what());
-    exit(1);
+    throw std::runtime_error(std::string("ASE calculator Python error: ") +
+                             e.what());
   } catch (const std::exception &e) {
     fprintf(stderr, "ASE calculator: C++ exception: %s\n", e.what());
-    exit(1);
+    throw std::runtime_error(std::string("ASE calculator C++ exception: ") +
+                             e.what());
   }
 
   counter++;
