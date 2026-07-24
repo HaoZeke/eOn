@@ -122,8 +122,9 @@ def append_timing(
 ) -> None:
     """Step: append ``time_seconds`` / ``user_time`` / ``system_time``.
 
-    Pass *t0* from :func:`steady_clock_now` before the work, or *elapsed*
-    wall seconds directly.
+    Lines use the results.dat ``<value> <key>`` contract (same as job writers
+    and ``parse_results``). Pass *t0* from :func:`steady_clock_now` before the
+    work, or *elapsed* wall seconds directly.
     """
     if elapsed is None:
         if t0 is None:

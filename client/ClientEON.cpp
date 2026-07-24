@@ -475,12 +475,14 @@ int main(int argc, char **argv) {
       QUILL_LOG_INFO(logger, "  User time: {:.3f} seconds", utime);
       QUILL_LOG_INFO(logger, "  System time: {:.3f} seconds", stime);
 
+      // results.dat contract is "<value> <key>" (same as all job writers and
+      // eon.fileio.parse_results / eon_schema.jobs adapters).
       std::ofstream result_file("results.dat", std::ios::app);
       if (result_file.is_open()) {
-        result_file << "time_seconds " << elapsed.count() << "\n";
+        result_file << elapsed.count() << " time_seconds\n";
 #ifndef _WIN32
-        result_file << "user_time " << utime << "\n";
-        result_file << "system_time " << stime << "\n";
+        result_file << utime << " user_time\n";
+        result_file << stime << " system_time\n";
 #endif
       } else {
         QUILL_LOG_ERROR(logger, "Failed to write timing to results.dat");
