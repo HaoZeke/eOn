@@ -74,6 +74,25 @@ void LAMMPSPot::cleanMemory() {
 // Process-per-image worker plumbing (POSIX only)
 // ---------------------------------------------------------------------------
 namespace {
+// Report a geometry the worker could not evaluate as an impassable wall.
+//
+// Every failure path here used to throw, and nothing between the potential
+// call and main catches it, so the client terminated. That loses the whole
+// job, including searches that had already converged: a copper V/SIA search
+// reached a saddle at 0.082 eV with a force of 0.027 eV/A and a curvature of
+// -0.47, then died on the next evaluation before the result was written.
+//
+// A large finite energy with zeroed forces reads to the optimiser as a wall,
+// so it backs out of the step and the search abandons this configuration and
+// carries on. Callers stop the worker first; ensureWorker respawns it on the
+// next evaluation.
+void rejectGeometry(double *U, double *F, long N) {
+  *U = 1.0e6;
+  for (long i = 0; i < 3 * N; ++i) {
+    F[i] = 0.0;
+  }
+}
+
 // Blocking read/write of exactly n bytes over a pipe.  Returns false on EOF or
 // error, so a dead peer is detected rather than silently producing garbage.
 bool readExact(int fd, void *buf, size_t n) {
@@ -254,20 +273,22 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
         kill(workerPid, SIGKILL);
       }
       stopWorker();
-      throw std::runtime_error(
-          "LAMMPSPot: worker force eval timed out; killed (eon-7416)");
+      rejectGeometry(U, F, N);
+      return;
     }
   }
   int status = 0;
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
-    throw std::runtime_error(
-        "LAMMPSPot: worker process died during force eval");
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
   if (status != 0) {
-    throw std::runtime_error(
-        "LAMMPSPot: worker reported a force evaluation error");
+    stopWorker();
+    rejectGeometry(U, F, N);
+    return;
   }
   // A saddle search that never terminates silently truncates the event
   // table: the KMC residence time is 1/sum_j k_j over the discovered
@@ -292,10 +313,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     nonfinite = !std::isfinite(F[i]);
   }
   if (nonfinite) {
-    *U = 1.0e6;
-    for (long i = 0; i < 3 * N; ++i) {
-      F[i] = 0.0;
-    }
+    rejectGeometry(U, F, N);
   }
 #endif
 }
