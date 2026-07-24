@@ -528,8 +528,10 @@ class ServerMinModeExplorer(MinModeExplorer):
             if not job:
                 displacement, mode, disp_type = self.generate_displacement()
                 reactant = self.state.get_reactant()
-                process_search = ProcessSearch(reactant, displacement, mode,
-                                               disp_type, self.search_id, self.state.number)
+                process_search = ProcessSearch(
+                    reactant, displacement, mode, disp_type, self.search_id,
+                    self.state.number, config=self.config,
+                )
                 self.process_searches[self.search_id] = process_search
                 self.wuid_to_search_id[self.wuid] = self.search_id
                 job, job_type = process_search.get_job(self.state.number)
@@ -561,7 +563,11 @@ class ServerMinModeExplorer(MinModeExplorer):
 
 
 class ProcessSearch:
-    def __init__ (self, reactant, displacement, mode, disp_type, search_id, state_number):
+    def __init__(self, reactant, displacement, mode, disp_type, search_id,
+                 state_number, config: ConfigClass = None):
+        if config is None:
+            raise TypeError("ProcessSearch requires a ConfigClass instance")
+        self.config = config
         self.reactant = reactant
         self.displacement = displacement
         self.mode = mode

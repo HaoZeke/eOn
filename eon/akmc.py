@@ -468,7 +468,7 @@ def main(config: ConfigClass = None):
             get_akmc_metadata(config)
         current_state = states.get_state(start_state_num)
         if config.sb_on:
-            sb_scheme = get_superbasin_scheme(states)
+            sb_scheme = get_superbasin_scheme(states, config)
             sb = sb_scheme.get_containing_superbasin(current_state)
         else:
             sb = None

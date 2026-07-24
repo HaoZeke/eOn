@@ -43,8 +43,8 @@ class Superbasin:
         # Off by default; requires the amsel Python package when enabled.
         # [amsel] stanza (config.amsel_*); sb_amsel_* kept as back-compat aliases
         _amsel_on = bool(
-            getattr(config, "amsel_discover_decide", False)
-            or getattr(config, "sb_amsel_discover_decide", False)
+            getattr(self.config, "amsel_discover_decide", False)
+            or getattr(self.config, "sb_amsel_discover_decide", False)
         )
         if _amsel_on:
             from eon.amsel_superbasin_gate import (
@@ -55,20 +55,20 @@ class Superbasin:
                 self,
                 entry_state,
                 e_min_init=float(
-                    getattr(config, "amsel_e_min_init",
-                            getattr(config, "sb_amsel_e_min_init", 0.5))
+                    getattr(self.config, "amsel_e_min_init",
+                            getattr(self.config, "sb_amsel_e_min_init", 0.5))
                 ),
                 e_min_step=float(
-                    getattr(config, "amsel_e_min_step",
-                            getattr(config, "sb_amsel_e_min_step", 0.05))
+                    getattr(self.config, "amsel_e_min_step",
+                            getattr(self.config, "sb_amsel_e_min_step", 0.05))
                 ),
                 e_min_floor=float(
-                    getattr(config, "amsel_e_min_floor",
-                            getattr(config, "sb_amsel_e_min_floor", 0.05))
+                    getattr(self.config, "amsel_e_min_floor",
+                            getattr(self.config, "sb_amsel_e_min_floor", 0.05))
                 ),
                 cv_threshold=float(
-                    getattr(config, "amsel_cv_threshold",
-                            getattr(config, "sb_amsel_cv_threshold", 10.0))
+                    getattr(self.config, "amsel_cv_threshold",
+                            getattr(self.config, "sb_amsel_cv_threshold", 10.0))
                 ),
             )
             status = apply_gate_to_superbasin(self, entry_state, decision)
