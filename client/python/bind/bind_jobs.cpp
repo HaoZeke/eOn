@@ -90,15 +90,16 @@ void bind_jobs(nb::module_ &m) {
         if (!out.is_open())
           throw std::runtime_error("append_results_timing: cannot open " +
                                    path);
-        out << "time_seconds " << elapsed_seconds << "\n";
+        // results.dat contract: "<value> <key>" (parse_results / eon_schema.jobs)
+        out << elapsed_seconds << " time_seconds\n";
 #ifndef _WIN32
-        out << "user_time " << user_time << "\n";
-        out << "system_time " << system_time << "\n";
+        out << user_time << " user_time\n";
+        out << system_time << " system_time\n";
 #endif
       },
       nb::arg("path") = "results.dat", nb::arg("elapsed_seconds"),
       nb::arg("user_time") = 0.0, nb::arg("system_time") = 0.0,
-      "Append ClientEON timing footer to results.dat.");
+      "Append ClientEON timing footer to results.dat (value-key lines).");
 
   m.def(
       "steady_clock_now",
