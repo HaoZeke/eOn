@@ -274,7 +274,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // Drive the dedicated worker process so this image's LAMMPS runs in its own
   // process (own MPI_COMM_WORLD).  Per-image NEB threads thus evaluate forces
   // as truly concurrent processes with no shared-communicator contention.
-  if (workerFailed) {
+  if (workerRespawnsLeft <= 0) {
     rejectGeometry(U, F, N);
     return;
   }
@@ -287,7 +287,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     // A worker stopped by an earlier rejected geometry leaves the request
     // pipe closed, so the first send after it fails. Respawning happens on
     // the next evaluation; reject this one rather than end the client.
-    workerFailed = true;
+    --workerRespawnsLeft;
     stopWorker();
     rejectGeometry(U, F, N);
     return;
@@ -309,7 +309,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       if (workerPid > 0) {
         kill(workerPid, SIGKILL);
       }
-      workerFailed = true;
+      --workerRespawnsLeft;
       stopWorker();
       rejectGeometry(U, F, N);
       return;
@@ -319,13 +319,13 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
-    workerFailed = true;
+    --workerRespawnsLeft;
     stopWorker();
     rejectGeometry(U, F, N);
     return;
   }
   if (status != 0) {
-    workerFailed = true;
+    --workerRespawnsLeft;
     stopWorker();
     rejectGeometry(U, F, N);
     return;

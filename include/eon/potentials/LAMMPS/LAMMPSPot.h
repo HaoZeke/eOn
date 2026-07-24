@@ -48,12 +48,15 @@ private:
   // dedicated worker process that owns its LAMMPS instance, so every image runs
   // in its own process with its own MPI_COMM_WORLD and true parallelism.
   // Not available on Windows (no fork/pipe).
-  // Set once a worker times out, dies, or reports an error. Respawning a
-  // worker mid-search deadlocks: the client blocks with no worker attached
-  // and the search never ends. Once the pipe is broken the potential is
-  // unusable for this job, so every later evaluation is reported as an
-  // impassable wall and the search terminates on its own.
-  bool workerFailed{false};
+  // Respawns allowed after a worker times out, dies, or reports an error.
+  // A single transient failure must not poison the job: every later
+  // evaluation would return the impassable wall, no minimisation could ever
+  // meet its force criterion, and the search would be discarded as a minimum
+  // that failed to converge. Respawning is safe now that the teardown is
+  // bounded rather than waiting on a wedged child forever. The budget is
+  // finite so a worker that cannot be revived still ends the search instead
+  // of looping.
+  int workerRespawnsLeft{3};
   int workerPid{-1};
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)
