@@ -382,7 +382,42 @@ endif
 dl_dep = cppc.find_library('dl', required: false)
 _deps += dl_dep
 
-eoncbase_sources = ['fpe_handler.cpp', 'PotRegistry.cpp', 'potentials/FortranPotLoader.cpp']
+# vesin: single neighbor-list backend for classical pots + Metatomic.
+# Prefer pkg-config / system; else vendored thirdparty/vesin single TU.
+vesin_dep = dependency('vesin', required: false)
+if not vesin_dep.found()
+    vesin_dep = dependency('vesin', method: 'cmake', required: false)
+endif
+if not vesin_dep.found()
+    vesin_dep = cppc.find_library('vesin', required: false)
+endif
+if not vesin_dep.found() and is_windows
+    vesin_dep = cppc.find_library('libvesin', required: false)
+endif
+if not vesin_dep.found()
+    vesin_int = library(
+        'vesin_internal',
+        ['thirdparty/vesin/vesin-single-build.cpp'],
+        install: true,
+    )
+    vesin_dep = declare_dependency(
+        link_with: vesin_int,
+        include_directories: include_directories('thirdparty/vesin'),
+    )
+    message('vesin: using vendored thirdparty/vesin')
+else
+    # Ensure #include "vesin.h" works when only a library was found.
+    _incdirs += [include_directories('thirdparty/vesin')]
+    message('vesin: using system / pkg-config')
+endif
+_deps += [vesin_dep]
+
+eoncbase_sources = [
+    'fpe_handler.cpp',
+    'PotRegistry.cpp',
+    'potentials/FortranPotLoader.cpp',
+    'VesinNeighbors.cpp',
+]
 
 eoncbase = library(
     'eoncbase',
@@ -948,39 +983,16 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
             dependencies: [_mts_core_found, _mts_torch_found, _mta_torch_found],
             compile_args: mts_inc_args,
         )
-        _vesin_candidates = is_windows ? ['vesin', 'libvesin'] : ['vesin']
-        vesin_dep = disabler()
-        foreach _n : _vesin_candidates
-            if not vesin_dep.found()
-                vesin_dep = cppc.find_library(_n, dirs: [_vesin_lib], required: false)
-            endif
-        endforeach
-        if vesin_dep.found()
-            vesin_dep = declare_dependency(
-                dependencies: [vesin_dep],
-                compile_args: ['-I' + _vesin_inc],
-            )
-        endif
+        # vesin: single copy already on _deps via eoncbase (do not re-find pip vesin)
     else
         message(
-            'Looking for existing installations of metatensor, metatensor-torch, metatomic-torch and vesin',
+            'Looking for existing installations of metatensor, metatensor-torch, metatomic-torch',
         )
         message(
             'If this is flaky, pass pip_metatomic=True with the torch version and let pip handle everything',
         )
-        # Prefer pkg-config/cmake vesin before manual find_library / vendored tree.
-        # xref: https://github.com/metatensor/metatensor/issues/930
-        # On Windows (MSVC), static libraries are often prefixed with 'lib'
-        vesin_dep = dependency('vesin', required: false)
-        if not vesin_dep.found()
-            vesin_dep = dependency('vesin', method: 'cmake', required: false)
-        endif
-        if not vesin_dep.found()
-            vesin_dep = cppc.find_library('vesin', required: false)
-        endif
-        if not vesin_dep.found() and is_windows
-            vesin_dep = cppc.find_library('libvesin', required: false)
-        endif
+        # Vesin already resolved for eoncbase (single NL backend for all pots).
+        # Only metatensor / metatomic-torch are located here.
         mts_dep = dependency('metatensor_torch', required: false)
         if not mts_dep.found()
             mts_dep = dependency('metatensor-torch', required: false)
@@ -1011,20 +1023,10 @@ for name in ("metatensor", "metatensor_torch", "metatomic", "vesin"):
             ]
         endif
     endif
-    if not vesin_dep.found()
-        vesin_int = library(
-            'vesin_internal',
-            ['thirdparty/vesin/vesin-single-build.cpp'],
-            install: true,
-        )
-        vesin_dep = declare_dependency(
-            link_with: vesin_int,
-            include_directories: include_directories('thirdparty/vesin'),
-        )
-    endif
     # Fat Metatomic (potential = Metatomic) + deps for RGPOT engine .so.
-    mta_plugin_deps = _deps + [vesin_dep, mts_dep, torch_deps]
-    _deps += [vesin_dep, mts_dep, torch_deps]
+    # vesin already on _deps (eoncbase VesinNeighbors + classical pots).
+    mta_plugin_deps = _deps + [mts_dep, torch_deps]
+    _deps += [mts_dep, torch_deps]
     _args += ['-DWITH_METATOMIC']
     metatomic_pot = library(
         'metatomic_pot',

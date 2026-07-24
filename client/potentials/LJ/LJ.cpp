@@ -11,6 +11,7 @@
 */
 
 #include "eon/potentials/LJ/LJ.h"
+#include "eon/VesinNeighbors.h"
 #include <cmath>
 
 void LJ::setParameters(double u0In, double cutoffIn, double psiIn) {
@@ -30,54 +31,52 @@ void LJ::force(long N, const double *R, const int * /*atomicNrs*/, double *F,
   for (long i = 0; i < 3 * N; i++) {
     F[i] = 0.0;
   }
+  if (N < 2 || cuttOffR <= 0.0) {
+    return;
+  }
 
-  // Pre-compute reciprocals for PBC and cutoff
-  const double invBox0 = 1.0 / box[0];
-  const double invBox4 = 1.0 / box[4];
-  const double invBox8 = 1.0 / box[8];
-  const double cutoff2 = cuttOffR * cuttOffR;
+  eonc::VesinNeighbors nl;
+  eonc::VesinNeighbors::Options opt;
+  opt.cutoff = cuttOffR;
+  opt.full = false; // half list: one pair entry per unordered bond
+  opt.return_distances = true;
+  opt.return_vectors = true;
+  nl.compute(R, static_cast<std::size_t>(N), box, opt);
+
   const double psi2 = psi * psi;
-
-  for (long i = 0; i < N - 1; i++) {
-    const double xi = R[3 * i];
-    const double yi = R[3 * i + 1];
-    const double zi = R[3 * i + 2];
-
-    for (long j = i + 1; j < N; j++) {
-      double dx = xi - R[3 * j];
-      double dy = yi - R[3 * j + 1];
-      double dz = zi - R[3 * j + 2];
-
-      // Minimum image convention (hoisted reciprocals)
-      dx -= box[0] * std::floor(dx * invBox0 + 0.5);
-      dy -= box[4] * std::floor(dy * invBox4 + 0.5);
-      dz -= box[8] * std::floor(dz * invBox8 + 0.5);
-
-      double r2 = dx * dx + dy * dy + dz * dz;
-
-      // r^2 cutoff avoids sqrt for pairs outside cutoff
-      if (r2 < cutoff2) {
-        // Compute (sigma/r)^6 without pow(): sr2^3
-        double invR2 = 1.0 / r2;
-        double sr2 = psi2 * invR2;
-        double sr6 = sr2 * sr2 * sr2;
-        double e = 4.0 * u0 * sr6;
-
-        *U += e * (sr6 - 1.0) - cuttOffU;
-
-        // Force: -dU/dr * (1/r) * dr_vec = fscale * dr_vec
-        double fscale = 6.0 * e * invR2 * (2.0 * sr6 - 1.0);
-        double fx = fscale * dx;
-        double fy = fscale * dy;
-        double fz = fscale * dz;
-
-        F[3 * i] += fx;
-        F[3 * i + 1] += fy;
-        F[3 * i + 2] += fz;
-        F[3 * j] -= fx;
-        F[3 * j + 1] -= fy;
-        F[3 * j + 2] -= fz;
-      }
+  for (std::size_t p = 0; p < nl.size(); ++p) {
+    const long i = static_cast<long>(nl.i(p));
+    const long j = static_cast<long>(nl.j(p));
+    if (i == j) {
+      continue;
     }
+    const double r = nl.distance(p);
+    if (r <= 0.0) {
+      continue;
+    }
+    const double r2 = r * r;
+    const double invR2 = 1.0 / r2;
+    // vesin vector is r_j - r_i; LJ force uses r_i - r_j
+    const double *v = nl.vector(p);
+    const double dx = -v[0];
+    const double dy = -v[1];
+    const double dz = -v[2];
+
+    const double sr2 = psi2 * invR2;
+    const double sr6 = sr2 * sr2 * sr2;
+    const double e = 4.0 * u0 * sr6;
+    *U += e * (sr6 - 1.0) - cuttOffU;
+
+    const double fscale = 6.0 * e * invR2 * (2.0 * sr6 - 1.0);
+    const double fx = fscale * dx;
+    const double fy = fscale * dy;
+    const double fz = fscale * dz;
+
+    F[3 * i] += fx;
+    F[3 * i + 1] += fy;
+    F[3 * i + 2] += fz;
+    F[3 * j] -= fx;
+    F[3 * j + 1] -= fy;
+    F[3 * j + 2] -= fz;
   }
 }

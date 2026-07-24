@@ -11,16 +11,11 @@
 */
 
 #include "eon/potentials/LJCluster/LJCluster.h"
-
-// LJCluster::LJCluster(double u0Recieved, double cuttOffRRecieved, double
-// psiRecieved){
-//     this->setParameters(u0Recieved, cuttOffRRecieved, psiRecieved);
-//     return;
-// }
+#include "eon/VesinNeighbors.h"
+#include <cmath>
 
 void LJCluster::cleanMemory(void) { return; }
 
-// General Functions
 void LJCluster::setParameters(double u0Recieved, double cuttOffRRecieved,
                               double psiRecieved) {
   u0 = u0Recieved;
@@ -31,52 +26,60 @@ void LJCluster::setParameters(double u0Recieved, double cuttOffRRecieved,
   return;
 }
 
-// pointer to number of atoms, pointer to array of positions
-// pointer to array of forces, pointer to internal energy
-// adress to supercell size
-void LJCluster::force(long N, const double *R, const int *atomicNrs, double *F,
-                      double *U, double *variance, const double *box) {
+void LJCluster::force(long N, const double *R, const int * /*atomicNrs*/,
+                      double *F, double *U, double *variance,
+                      const double *box) {
   variance = nullptr;
-  double diffR = 0, diffRX, diffRY, diffRZ, dU, a, b;
   *U = 0;
   for (int i = 0; i < N; i++) {
     F[3 * i] = 0;
     F[3 * i + 1] = 0;
     F[3 * i + 2] = 0;
   }
-  // Initializing end
-
-  for (int i = 0; i < N - 1; i++) {
-    for (int j = i + 1; j < N; j++) {
-      diffRX = R[3 * i] - R[3 * j];
-      diffRY = R[3 * i + 1] - R[3 * j + 1];
-      diffRZ = R[3 * i + 2] - R[3 * j + 2];
-
-      // diffRX = diffRX-box[0]*floor(diffRX/box[0]+0.5); // floor = largest
-      // integer value less than argument diffRY =
-      // diffRY-box[4]*floor(diffRY/box[4]+0.5); diffRZ =
-      // diffRZ-box[8]*floor(diffRZ/box[8]+0.5);
-
-      diffR = sqrt(diffRX * diffRX + diffRY * diffRY + diffRZ * diffRZ);
-
-      // 4u0((psi/r0)^12-(psi/r0)^6)
-      a = pow(psi / diffR, 6);
-      b = 4 * u0 * a;
-
-      *U = *U + b * (a - 1);
-
-      dU = -6 * b / diffR * (2 * a - 1);
-      // F is the negative derivative
-      F[3 * i] = F[3 * i] - dU * diffRX / diffR;
-      F[3 * i + 1] = F[3 * i + 1] - dU * diffRY / diffR;
-      F[3 * i + 2] = F[3 * i + 2] - dU * diffRZ / diffR;
-
-      F[3 * j] = F[3 * j] + dU * diffRX / diffR;
-      F[3 * j + 1] = F[3 * j + 1] + dU * diffRY / diffR;
-      F[3 * j + 2] = F[3 * j + 2] + dU * diffRZ / diffR;
-    }
+  if (N < 2) {
+    return;
   }
-  return;
+
+  // Cluster: free boundary (no PBC). Large cutoff if cuttOffR unused historically.
+  eonc::VesinNeighbors nl;
+  eonc::VesinNeighbors::Options opt;
+  opt.cutoff = (cuttOffR > 0.0) ? cuttOffR : 1.0e6;
+  opt.full = false;
+  opt.return_distances = true;
+  opt.return_vectors = true;
+  opt.periodic = {{false, false, false}};
+  // Dummy orthorhombic box (ignored when non-periodic)
+  double free_box[9] = {1e6, 0, 0, 0, 1e6, 0, 0, 0, 1e6};
+  const double *box_use = (box != nullptr) ? box : free_box;
+  nl.compute(R, static_cast<std::size_t>(N), box_use, opt);
+
+  for (std::size_t p = 0; p < nl.size(); ++p) {
+    const int i = static_cast<int>(nl.i(p));
+    const int j = static_cast<int>(nl.j(p));
+    if (i == j) {
+      continue;
+    }
+    const double diffR = nl.distance(p);
+    if (diffR <= 0.0) {
+      continue;
+    }
+    const double *v = nl.vector(p); // r_j - r_i
+    const double diffRX = -v[0];
+    const double diffRY = -v[1];
+    const double diffRZ = -v[2];
+
+    const double a = pow(psi / diffR, 6);
+    const double b = 4 * u0 * a;
+    *U = *U + b * (a - 1) - cuttOffU;
+
+    const double dU = -6 * b / diffR * (2 * a - 1);
+    F[3 * i] = F[3 * i] - dU * diffRX / diffR;
+    F[3 * i + 1] = F[3 * i + 1] - dU * diffRY / diffR;
+    F[3 * i + 2] = F[3 * i + 2] - dU * diffRZ / diffR;
+    F[3 * j] = F[3 * j] + dU * diffRX / diffR;
+    F[3 * j + 1] = F[3 * j + 1] + dU * diffRY / diffR;
+    F[3 * j + 2] = F[3 * j + 2] + dU * diffRZ / diffR;
+  }
 }
 
 LJCluster::~LJCluster() { cleanMemory(); }
