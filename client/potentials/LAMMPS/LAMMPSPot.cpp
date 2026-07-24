@@ -13,6 +13,7 @@
 #include "eon/fpe_handler.h"
 #include "eon/potentials/LAMMPS/LammpsLoader.h"
 
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <format>
@@ -25,6 +26,8 @@
 #include <cstdlib>
 #include <vector>
 
+#include <poll.h>
+#include <csignal>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -234,6 +237,27 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     throw std::runtime_error("LAMMPSPot: failed to send request to worker");
   }
 
+  // eon-7416: a worker stuck on a pathological geometry (LAMMPS spinning, or
+  // a NaN it never returns) would make the blocking read below hang until the
+  // akmc pass times out. Bound the wait: if the worker is silent past a
+  // generous per-eval deadline, kill and reap it (a stuck worker never reaches
+  // EOF, so a plain waitpid would block too) and fail this evaluation so the
+  // search discards the geometry; ensureWorker respawns on the next call.
+  {
+    struct pollfd pfd;
+    pfd.fd = resFd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    int pr = poll(&pfd, 1, 90000); // 90 s: orders beyond a normal force eval
+    if (pr <= 0) {
+      if (workerPid > 0) {
+        kill(workerPid, SIGKILL);
+      }
+      stopWorker();
+      throw std::runtime_error(
+          "LAMMPSPot: worker force eval timed out; killed (eon-7416)");
+    }
+  }
   int status = 0;
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
@@ -244,6 +268,19 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   if (status != 0) {
     throw std::runtime_error(
         "LAMMPSPot: worker reported a force evaluation error");
+  }
+  // eon-7416: an over-aggressive saddle-search kick can drive atoms on top of
+  // each other; the EAM force overflows to NaN/Inf and LAMMPS returns it
+  // rather than crashing. The min-mode search then spins on non-finite
+  // gradients until the akmc pass times out (0 processes). Reject the
+  // evaluation so the search discards that displacement and continues.
+  if (!std::isfinite(*U)) {
+    throw std::runtime_error("LAMMPSPot: non-finite energy from worker (eon-7416)");
+  }
+  for (long i = 0; i < 3 * N; ++i) {
+    if (!std::isfinite(F[i])) {
+      throw std::runtime_error("LAMMPSPot: non-finite force from worker (eon-7416)");
+    }
   }
 #endif
 }
