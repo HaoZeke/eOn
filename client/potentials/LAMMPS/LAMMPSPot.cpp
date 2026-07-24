@@ -88,8 +88,19 @@ namespace {
 // next evaluation.
 void rejectGeometry(double *U, double *F, long N) {
   *U = 1.0e6;
+  // Zero forces would be read as convergence: an optimiser judges a point
+  // converged on force magnitude alone, so a rejected geometry with no force
+  // is accepted as a minimum and the wall energy is recorded as that
+  // minimum's energy. It then reaches the barrier as E_saddle - 1e6, which
+  // eOn reports as a negative barrier and discards -- a real 0.062 eV copper
+  // saddle was lost exactly this way. Return a force far above any
+  // convergence threshold so the point can never be mistaken for a
+  // stationary one, alternating its sign so the frame gains no net force.
   for (long i = 0; i < 3 * N; ++i) {
     F[i] = 0.0;
+  }
+  for (long i = 0; i < N; ++i) {
+    F[3 * i] = (i % 2 == 0) ? 1.0 : -1.0;
   }
 }
 
