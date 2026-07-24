@@ -143,7 +143,21 @@ class SB_Recycling:
             return None, None
         ref_state_index = [pair[1] for pair in self.sb_state_nums].index(self.current_state.number)
         ref_state = self.sb_states[ref_state_index][0]
-        recycler = Recycling(self.states, ref_state, self.current_state, self.move_distance, self.recycle_save, from_sb = True)
+        cfg = getattr(self.states, "config", None)
+        if cfg is None:
+            raise TypeError(
+                "SB_Recycling.make_suggestion requires states.config "
+                "(ConfigClass) for Recycling"
+            )
+        recycler = Recycling(
+            self.states,
+            ref_state,
+            self.current_state,
+            self.move_distance,
+            self.recycle_save,
+            from_sb=True,
+            config=cfg,
+        )
         sugg_saddle, sugg_mode = recycler.make_suggestion()
         # Write the data before we send the search recommendation, because akmc.py *may* be about to terminate.
         self.write_metadata()

@@ -298,59 +298,65 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
                            double *F, double *U, const double *box) {
   // Same contract as ASE / Metatomic: external pot libraries are not written
   // for FE traps. Cover in-process (EONMPI / Windows) and any path that still
-  // has trapping armed when forceLocal runs.
+  // has trapping armed when forceLocal runs. Always restore so FE traps do not
+  // stay demoted for the rest of the process after the first force call.
   eonc::FPEHandler fpeh;
   fpeh.eat_fpe();
+  try {
+    auto &lmp = eonc::LammpsLoader::instance();
 
-  auto &lmp = eonc::LammpsLoader::instance();
-
-  bool newLammps = false;
-  for (int i = 0; i < 9; i++) {
-    if (oldBox[i] != box[i])
-      newLammps = true;
-  }
-  if (numberOfAtoms != N)
-    newLammps = true;
-  if (newLammps) {
-    makeNewLAMMPS(N, R, atomicNrs, box);
-  }
-  if (!LAMMPSObj) {
-    throw std::runtime_error("Should have a LAMMPS instance by now");
-  }
-
-  lmp.scatter_atoms(LAMMPSObj, "x", 1, 3, const_cast<double *>(R));
-  lmp.command(LAMMPSObj, "run 1 pre no post no");
-
-  auto *pe =
-      static_cast<double *>(lmp.extract_variable(LAMMPSObj, "pe", nullptr));
-  *U = *pe;
-  free(pe);
-
-  auto *fx =
-      static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fx", "all"));
-  auto *fy =
-      static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fy", "all"));
-  auto *fz =
-      static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fz", "all"));
-
-  for (long i = 0; i < N; i++) {
-    F[3 * i + 0] = fx[i];
-    F[3 * i + 1] = fy[i];
-    F[3 * i + 2] = fz[i];
-  }
-
-  // Convert kCal/mol -> eV if LAMMPS is using real units
-  if (realunits) {
-    constexpr double kcalPerEv = 23.0609;
-    *U /= kcalPerEv;
-    for (long i = 0; i < 3 * N; i++) {
-      F[i] /= kcalPerEv;
+    bool newLammps = false;
+    for (int i = 0; i < 9; i++) {
+      if (oldBox[i] != box[i])
+        newLammps = true;
     }
-  }
+    if (numberOfAtoms != N)
+      newLammps = true;
+    if (newLammps) {
+      makeNewLAMMPS(N, R, atomicNrs, box);
+    }
+    if (!LAMMPSObj) {
+      throw std::runtime_error("Should have a LAMMPS instance by now");
+    }
 
-  free(fx);
-  free(fy);
-  free(fz);
+    lmp.scatter_atoms(LAMMPSObj, "x", 1, 3, const_cast<double *>(R));
+    lmp.command(LAMMPSObj, "run 1 pre no post no");
+
+    auto *pe =
+        static_cast<double *>(lmp.extract_variable(LAMMPSObj, "pe", nullptr));
+    *U = *pe;
+    free(pe);
+
+    auto *fx =
+        static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fx", "all"));
+    auto *fy =
+        static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fy", "all"));
+    auto *fz =
+        static_cast<double *>(lmp.extract_variable(LAMMPSObj, "fz", "all"));
+
+    for (long i = 0; i < N; i++) {
+      F[3 * i + 0] = fx[i];
+      F[3 * i + 1] = fy[i];
+      F[3 * i + 2] = fz[i];
+    }
+
+    // Convert kCal/mol -> eV if LAMMPS is using real units
+    if (realunits) {
+      constexpr double kcalPerEv = 23.0609;
+      *U /= kcalPerEv;
+      for (long i = 0; i < 3 * N; i++) {
+        F[i] /= kcalPerEv;
+      }
+    }
+
+    free(fx);
+    free(fy);
+    free(fz);
+  } catch (...) {
+    fpeh.restore_fpe();
+    throw;
+  }
+  fpeh.restore_fpe();
 }
 
 void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
