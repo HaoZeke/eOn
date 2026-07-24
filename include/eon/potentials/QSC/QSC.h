@@ -30,16 +30,14 @@ class QSC
 #endif
 {
 public:
-  explicit QSC(const Parameters &params)
-      : Potential(PotType::QSC, params) {
+  explicit QSC(const Parameters &params) : Potential(PotType::QSC, params) {
     int i = 0;
     while (qsc_default_params[i].Z != -1) {
       qsc_params_.push_back(qsc_default_params[i]);
       i++;
     }
   }
-  QSC()
-      : QSC(Parameters{}) {}
+  QSC() : QSC(Parameters{}) {}
   ~QSC() override = default;
 
   void force(long N, const double *R, const int *atomicNrs, double *F,

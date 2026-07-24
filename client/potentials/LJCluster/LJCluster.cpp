@@ -40,7 +40,8 @@ void LJCluster::force(long N, const double *R, const int * /*atomicNrs*/,
     return;
   }
 
-  // Cluster: free boundary (no PBC). Large cutoff if cuttOffR unused historically.
+  // Cluster: free boundary (no PBC). Large cutoff if cuttOffR unused
+  // historically.
   eonc::VesinNeighbors nl;
   eonc::VesinNeighbors::Options opt;
   opt.cutoff = (cuttOffR > 0.0) ? cuttOffR : 1.0e6;

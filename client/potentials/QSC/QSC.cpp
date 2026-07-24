@@ -17,8 +17,8 @@
 /// embedding = c * epsilon * sqrt(rho). Neighbor pairs via vesin.
 
 #include "eon/potentials/QSC/QSC.h"
-#include "eon/potentials/QSC/Parameters.h"
 #include "eon/VesinNeighbors.h"
+#include "eon/potentials/QSC/Parameters.h"
 
 #include <cassert>
 #include <cmath>

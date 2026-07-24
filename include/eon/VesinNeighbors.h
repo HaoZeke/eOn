@@ -49,12 +49,8 @@ public:
 
   [[nodiscard]] std::size_t size() const { return list_.length; }
 
-  [[nodiscard]] std::size_t i(std::size_t p) const {
-    return list_.pairs[p][0];
-  }
-  [[nodiscard]] std::size_t j(std::size_t p) const {
-    return list_.pairs[p][1];
-  }
+  [[nodiscard]] std::size_t i(std::size_t p) const { return list_.pairs[p][0]; }
+  [[nodiscard]] std::size_t j(std::size_t p) const { return list_.pairs[p][1]; }
 
   /// Distance |r_ij| (requires ``return_distances``).
   [[nodiscard]] double distance(std::size_t p) const {

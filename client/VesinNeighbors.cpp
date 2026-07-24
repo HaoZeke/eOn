@@ -12,7 +12,8 @@
 namespace eonc {
 
 VesinNeighbors::VesinNeighbors(VesinNeighbors &&other) noexcept
-    : list_(other.list_), owns_(other.owns_) {
+    : list_(other.list_),
+      owns_(other.owns_) {
   other.list_ = VesinNeighborList{};
   other.owns_ = false;
 }
@@ -69,9 +70,9 @@ void VesinNeighbors::compute(const double *R, std::size_t n, const double *box,
 
   VesinDevice cpu{VesinCPU, 0};
   const char *error_message = nullptr;
-  int status = vesin_neighbors(
-      reinterpret_cast<const double (*)[3]>(R), n, box33, periodic, cpu, vopt,
-      &list_, &error_message);
+  int status =
+      vesin_neighbors(reinterpret_cast<const double (*)[3]>(R), n, box33,
+                      periodic, cpu, vopt, &list_, &error_message);
   if (status != EXIT_SUCCESS) {
     std::string err = "vesin_neighbors failed";
     if (error_message != nullptr) {
