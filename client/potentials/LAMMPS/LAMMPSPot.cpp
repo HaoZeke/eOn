@@ -26,8 +26,8 @@
 #include <cstdlib>
 #include <vector>
 
-#include <poll.h>
 #include <csignal>
+#include <poll.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -282,11 +282,13 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   // gradients until the akmc pass times out (0 processes). Reject the
   // evaluation so the search discards that displacement and continues.
   if (!std::isfinite(*U)) {
-    throw std::runtime_error("LAMMPSPot: non-finite energy from worker (eon-7416)");
+    throw std::runtime_error(
+        "LAMMPSPot: non-finite energy from worker (eon-7416)");
   }
   for (long i = 0; i < 3 * N; ++i) {
     if (!std::isfinite(F[i])) {
-      throw std::runtime_error("LAMMPSPot: non-finite force from worker (eon-7416)");
+      throw std::runtime_error(
+          "LAMMPSPot: non-finite force from worker (eon-7416)");
     }
   }
 #endif

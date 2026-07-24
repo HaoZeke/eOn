@@ -10,16 +10,16 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include <algorithm>
-#include <memory>
 #include <cmath>
 #include <cstdio>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
-#include "eon/EonLogger.h"
-#include "eon/HelperFunctions.h"
-#include "eon/GleThermostat.h"
 #include "eon/ConFileIO.h"
+#include "eon/EonLogger.h"
+#include "eon/GleThermostat.h"
+#include "eon/HelperFunctions.h"
 #include "eon/OHTSTJob.h"
 
 namespace eonc {
@@ -280,20 +280,21 @@ double OHTSTJob::reactantQRatio(Matter &matter, const VectorXd &gammaR,
 std::vector<std::string> OHTSTJob::run(void) {
   auto reactant = std::make_shared<Matter>(pot, params);
   auto product = std::make_shared<Matter>(pot, params);
-  if (!eonc::io::io_ok(reactant->con2matter(params.oh_tst_options.reactant_filename))) {
+  if (!eonc::io::io_ok(
+          reactant->con2matter(params.oh_tst_options.reactant_filename))) {
     EONC_LOG_CRITICAL("OH-TST failed to load {}",
                       params.oh_tst_options.reactant_filename);
     throw std::runtime_error("oh_tst: failed to load reactant");
   }
-  if (!eonc::io::io_ok(product->con2matter(params.oh_tst_options.product_filename))) {
+  if (!eonc::io::io_ok(
+          product->con2matter(params.oh_tst_options.product_filename))) {
     EONC_LOG_CRITICAL("OH-TST failed to load {}",
                       params.oh_tst_options.product_filename);
     throw std::runtime_error("oh_tst: failed to load product");
   }
 
   const double temperature = params.main_options.temperature;
-  EONC_LOG_INFO("[oh_tst] thermostat = {}{}",
-                params.oh_tst_options.thermostat,
+  EONC_LOG_INFO("[oh_tst] thermostat = {}{}", params.oh_tst_options.thermostat,
                 params.oh_tst_options.thermostat == "gle"
                     ? std::string(" (drift: ") +
                           params.oh_tst_options.gle_a_file + ")"
@@ -456,8 +457,7 @@ std::vector<std::string> OHTSTJob::run(void) {
 
     if (plane == 0) {
       sideSign = (avg.fn < 0.0) ? -1 : 1;
-    } else if (!guidelineMoving &&
-               ((avg.fn < 0.0) ? -1 : 1) != sideSign) {
+    } else if (!guidelineMoving && ((avg.fn < 0.0) ? -1 : 1) != sideSign) {
       guidelineMoving = true;
       EONC_LOG_DEBUG("[oh_tst] plane {}: translational force changed "
                      "sign; guideline now follows <r> along the normal",
@@ -473,9 +473,8 @@ std::vector<std::string> OHTSTJob::run(void) {
     if (havePrev) {
       // Scan mode integrates the whole reactant->product path; the
       // adaptive run grooms to the reactant side of the ridge only.
-      const bool sameSide = scanMode ||
-                            ((fnPrev < 0.0 ? -1 : 1) == sideSign &&
-                             (avg.fn < 0.0 ? -1 : 1) == sideSign);
+      const bool sameSide = scanMode || ((fnPrev < 0.0 ? -1 : 1) == sideSign &&
+                                         (avg.fn < 0.0 ? -1 : 1) == sideSign);
       if (sameSide) {
         const VectorXd fParMean = 0.5 * (fnPrev * nPrev + avg.fn * n);
         aTrans += -fParMean.dot(avg.pos - posPrev);
@@ -578,9 +577,8 @@ std::vector<std::string> OHTSTJob::run(void) {
       ds = 0.0;
       vS = 0.0;
     }
-    const double sNew = guidelineMoving
-                            ? s + ds
-                            : std::clamp(s + ds, 0.0, guideLen);
+    const double sNew =
+        guidelineMoving ? s + ds : std::clamp(s + ds, 0.0, guideLen);
 
     // Damped rotation (Eqs 9-10 with the Appendix A driving): the
     // angular velocity keeps only its projection along the current

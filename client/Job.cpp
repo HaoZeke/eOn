@@ -18,6 +18,7 @@
 #include "eon/MinimizationJob.h"
 #include "eon/MonteCarloJob.h"
 #include "eon/NudgedElasticBandJob.h"
+#include "eon/OHTSTJob.h"
 #include "eon/ParallelReplicaJob.h"
 #include "eon/Parameters.h"
 #include "eon/PointJob.h"
@@ -29,7 +30,6 @@
 #include "eon/StructureComparisonJob.h"
 #include "eon/TADJob.h"
 #include "eon/TestJob.h"
-#include "eon/OHTSTJob.h"
 
 #ifdef WITH_GP_SURROGATE
 #include "eon/GPSurrogateJob.h"

@@ -1270,7 +1270,7 @@ int load_ini(INIReader &ini, Parameters &params) {
   params.monte_carlo_options.steps = static_cast<int>(
       ini.GetInteger("Monte Carlo", "steps", params.monte_carlo_options.steps));
 
-    // [OH_TST] //
+  // [OH_TST] //
 
   params.oh_tst_options.reactant_filename = ini.Get(
       "OH_TST", "reactant_filename", params.oh_tst_options.reactant_filename);
@@ -1278,8 +1278,8 @@ int load_ini(INIReader &ini, Parameters &params) {
       "OH_TST", "product_filename", params.oh_tst_options.product_filename);
   params.oh_tst_options.time_step =
       ini.GetReal("OH_TST", "time_step", params.oh_tst_options.time_step);
-  params.oh_tst_options.equil_steps =
-      ini.GetInteger("OH_TST", "equil_steps", params.oh_tst_options.equil_steps);
+  params.oh_tst_options.equil_steps = ini.GetInteger(
+      "OH_TST", "equil_steps", params.oh_tst_options.equil_steps);
   params.oh_tst_options.sample_steps = ini.GetInteger(
       "OH_TST", "sample_steps", params.oh_tst_options.sample_steps);
   params.oh_tst_options.max_planes =
@@ -1302,8 +1302,8 @@ int load_ini(INIReader &ini, Parameters &params) {
       "OH_TST", "reactant_md_steps", params.oh_tst_options.reactant_md_steps);
   params.oh_tst_options.symmetry_products = ini.Get(
       "OH_TST", "symmetry_products", params.oh_tst_options.symmetry_products);
-  params.oh_tst_options.max_delta_a = ini.GetReal(
-      "OH_TST", "max_delta_a", params.oh_tst_options.max_delta_a);
+  params.oh_tst_options.max_delta_a =
+      ini.GetReal("OH_TST", "max_delta_a", params.oh_tst_options.max_delta_a);
   params.oh_tst_options.thermostat = toLowerCase(
       ini.Get("OH_TST", "thermostat", params.oh_tst_options.thermostat));
   params.oh_tst_options.gle_a_file =
@@ -1312,7 +1312,6 @@ int load_ini(INIReader &ini, Parameters &params) {
       ini.GetBoolean("OH_TST", "pmf_scan", params.oh_tst_options.pmf_scan);
   params.oh_tst_options.scan_planes = ini.GetInteger(
       "OH_TST", "scan_planes", params.oh_tst_options.scan_planes);
-
 
   return error;
 }
@@ -1360,7 +1359,6 @@ void validate_and_link(Parameters &params) {
   params.process_search_options.minimization_offset =
       params.optimizer_options.max_move;
   params.neb_options.force_tolerance = params.optimizer_options.converged_force;
-
 }
 
 } // namespace eonc::config
