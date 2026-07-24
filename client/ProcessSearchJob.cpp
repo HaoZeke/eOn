@@ -247,13 +247,12 @@ int ProcessSearchJob::doProcessSearch() {
     // stopped just outside the state-identity tolerance or relaxed into a
     // different state entirely calls for opposite fixes, and the status
     // alone does not distinguish them.
-    const double tol =
-        params.structure_comparison_options.distance_difference;
+    const double tol = params.structure_comparison_options.distance_difference;
     auto countMoved = [&](const Matter &m) {
       long moved = 0;
       for (long i = 0; i < initial->numberOfAtoms(); ++i) {
-        if (initial->pbc(initial->getPositions().row(i) -
-                         m.getPositions().row(i))
+        if (initial
+                ->pbc(initial->getPositions().row(i) - m.getPositions().row(i))
                 .norm() > tol) {
           ++moved;
         }

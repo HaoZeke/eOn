@@ -299,7 +299,8 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     // the next evaluation; reject this one rather than end the client.
     --workerRespawnsLeft;
     EONC_LOG_WARNING("[LAMMPSPot] send to worker failed; {} respawns left "
-                     "(eon-7416)", workerRespawnsLeft);
+                     "(eon-7416)",
+                     workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
@@ -322,8 +323,10 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
         kill(workerPid, SIGKILL);
       }
       --workerRespawnsLeft;
-      EONC_LOG_WARNING("[LAMMPSPot] worker force eval timed out; {} respawns left "
-                       "(eon-7416)", workerRespawnsLeft);
+      EONC_LOG_WARNING(
+          "[LAMMPSPot] worker force eval timed out; {} respawns left "
+          "(eon-7416)",
+          workerRespawnsLeft);
       stopWorker();
       rejectGeometry(U, F, N);
       return;
@@ -334,16 +337,20 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
       !readExact(resFd, U, sizeof(double)) ||
       !readExact(resFd, F, sizeof(double) * static_cast<size_t>(3 * N))) {
     --workerRespawnsLeft;
-    EONC_LOG_WARNING("[LAMMPSPot] worker died during force eval; {} respawns left "
-                     "(eon-7416)", workerRespawnsLeft);
+    EONC_LOG_WARNING(
+        "[LAMMPSPot] worker died during force eval; {} respawns left "
+        "(eon-7416)",
+        workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
   }
   if (status != 0) {
     --workerRespawnsLeft;
-    EONC_LOG_WARNING("[LAMMPSPot] worker reported an evaluation error; {} respawns left "
-                     "(eon-7416)", workerRespawnsLeft);
+    EONC_LOG_WARNING(
+        "[LAMMPSPot] worker reported an evaluation error; {} respawns left "
+        "(eon-7416)",
+        workerRespawnsLeft);
     stopWorker();
     rejectGeometry(U, F, N);
     return;
