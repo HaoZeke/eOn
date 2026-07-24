@@ -438,32 +438,34 @@ class Local(Communicator):
 
     def check_job(self, job):
         p, jobpath = job[0], job[1]
-        # Close the stdout file handle if present so the file can be read
-        if len(job) > 2 and job[2] and not job[2].closed:
-            job[2].close()
+        # Close stdout/stderr file handles so the files can be read for diagnostics.
+        for handle in job[2:]:
+            if handle and not handle.closed:
+                handle.close()
         if p.returncode == 0:
             logger.info('Job finished: %s' % jobpath)
             return True
         else:
-            stdout, stderr = p.communicate()
             rc = p.returncode
-            # Read stdout.dat for additional diagnostics
-            stdout_log = ""
-            stdout_path = os.path.join(jobpath, "stdout.dat")
-            try:
-                with open(stdout_path) as f:
-                    stdout_log = f.read().strip()
-            except OSError:
-                pass
+            # stderr is a file (stderr.dat), not a pipe: never call
+            # communicate() for it. Read both logs from disk for the failure
+            # path so a dead/hung client cannot leave the parent blocked on a
+            # full undrained pipe either.
             errmsg = "job failed: %s (return code %s)" % (jobpath, rc)
-            if stderr:
-                errmsg += "\n  stderr: %s" % stderr.decode(errors='replace')
-            if stdout_log:
-                # Show last few lines of stdout for context
-                lines = stdout_log.splitlines()
-                tail = "\n  ".join(lines[-10:])
-                errmsg += "\n  stdout (last lines): %s" % tail
-            if not stderr and not stdout_log:
+            saw_output = False
+            for name in ("stderr.dat", "stdout.dat"):
+                path = os.path.join(jobpath, name)
+                try:
+                    with open(path) as f:
+                        text = f.read().strip()
+                except OSError:
+                    text = ""
+                if text:
+                    saw_output = True
+                    lines = text.splitlines()
+                    tail = "\n  ".join(lines[-10:])
+                    errmsg += "\n  %s (last lines): %s" % (name, tail)
+            if not saw_output:
                 errmsg += "\n  no output captured; client may have failed to start"
                 if os.name == 'nt' and (rc < 0 or rc > 0x80000000):
                     errmsg += " (Windows error code 0x%X may indicate a missing DLL)" % (rc & 0xFFFFFFFF)
@@ -477,9 +479,15 @@ class Local(Communicator):
         for jobpath in self.make_bundles(data, invariants):
             # move the job directory to the scratch directory
             # update jobpath to be in the scratch directory
-            fstdout = open(os.path.join(jobpath, "stdout.dat"),'w')
-            p = Popen(self.client, cwd=jobpath, stdout=fstdout, stderr=PIPE)
-            self.joblist.append((p, jobpath, fstdout))
+            # Redirect both streams to files. stderr=PIPE with an undrained
+            # pipe deadlocks once the client writes past one OS pipe buffer
+            # (~64 KiB on Linux): the child blocks in anon_pipe_write while
+            # the parent only polls p.poll() and never reads the pipe until
+            # after exit. FPE floods and long client diagnostics both hit this.
+            fstdout = open(os.path.join(jobpath, "stdout.dat"), 'w')
+            fstderr = open(os.path.join(jobpath, "stderr.dat"), 'w')
+            p = Popen(self.client, cwd=jobpath, stdout=fstdout, stderr=fstderr)
+            self.joblist.append((p, jobpath, fstdout, fstderr))
 
             while len(self.joblist) == self.ncpus:
                 for i in range(len(self.joblist)):

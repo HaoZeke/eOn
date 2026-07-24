@@ -10,9 +10,9 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "BondBoost.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
+#include "eon/BondBoost.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
 
 #include <algorithm>
 #include <cmath>

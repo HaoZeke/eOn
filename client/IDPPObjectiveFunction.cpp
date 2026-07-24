@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "IDPPObjectiveFunction.hpp"
+#include "eon/IDPPObjectiveFunction.hpp"
 
 #include <algorithm>
 #include <cmath>

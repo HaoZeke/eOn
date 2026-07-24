@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "NEBOcinebController.h"
-#include "EonLogger.h"
-#include "MinModeSaddleSearch.h"
-#include "NudgedElasticBand.h"
-#include "eonExceptions.hpp"
+#include "eon/NEBOcinebController.h"
+#include "eon/EonLogger.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/NudgedElasticBand.h"
+#include "eon/eonExceptions.hpp"
 #include <algorithm>
 #include <cmath>
 

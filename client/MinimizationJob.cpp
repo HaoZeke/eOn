@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "MinimizationJob.h"
-#include "BaseStructures.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "Optimizer.h"
+#include "eon/MinimizationJob.h"
+#include "eon/BaseStructures.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/Optimizer.h"
 
 #include <filesystem>
 #include <fstream>

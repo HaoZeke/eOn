@@ -1,11 +1,11 @@
 /*
 ** ASE ↔ Matter in nanobind: bulk buffer paths (no Python-list geometry builds).
 */
-#include "Matter.h"
-#include "Parameters.h"
-#include "Potential.h"
 #include "bind_helpers.hpp"
 #include "eigen_numpy.hpp"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>

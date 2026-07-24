@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "NewPot.h"
+#include "eon/potentials/NewPot/NewPot.h"
 
 void NewPot::cleanMemory(void) { return; }
 

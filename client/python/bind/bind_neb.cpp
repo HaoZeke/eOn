@@ -2,17 +2,17 @@
 ** NudgedElasticBand + path init helpers — first-class NEB surface for
 *pyeonclient.
 */
-#include "ConFileIO.h"
-#include "Matter.h"
-#include "NEBInitialPaths.hpp"
-#include "NEBSplineExtrema.h"
-#include "NudgedElasticBand.h"
-#include "Parameters.h"
-#include "PotRegistry.h"
-#include "Potential.h"
 #include "bind_helpers.hpp"
+#include "eon/ConFileIO.h"
+#include "eon/Matter.h"
+#include "eon/NEBInitialPaths.hpp"
+#include "eon/NEBSplineExtrema.h"
+#include "eon/NudgedElasticBand.h"
+#include "eon/Parameters.h"
+#include "eon/PotRegistry.h"
+#include "eon/Potential.h"
 #ifdef WITH_GP_SURROGATE
-#include "GPSurrogateJob.h"
+#include "eon/GPSurrogateJob.h"
 #endif
 #include "eigen_numpy.hpp"
 

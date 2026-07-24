@@ -2,22 +2,22 @@
 ** Class-first Matter sampling / long-timescale surface (import as pyec).
 ** Free run_* removed from public API; construct then run(inplace=False).
 */
-#include "Dynamics.h"
-#include "Matter.h"
-#include "MinModeSaddleSearch.h"
-#include "MonteCarlo.h"
-#include "ParallelReplicaJob.h"
-#include "Parameters.h"
-#include "Potential.h"
-#include "ReplicaExchangeJob.h"
-#include "SafeHyperJob.h"
-#include "TADJob.h"
 #include "bind_helpers.hpp"
 #include "eigen_numpy.hpp"
+#include "eon/Dynamics.h"
+#include "eon/Matter.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/MonteCarlo.h"
+#include "eon/ParallelReplicaJob.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
+#include "eon/ReplicaExchangeJob.h"
+#include "eon/SafeHyperJob.h"
+#include "eon/TADJob.h"
 
 #ifdef WITH_GP_SURROGATE
-#include "GPSurrogateJob.h"
-#include "NudgedElasticBand.h"
+#include "eon/GPSurrogateJob.h"
+#include "eon/NudgedElasticBand.h"
 #endif
 
 #include <nanobind/nanobind.h>

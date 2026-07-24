@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Tersoff.h"
+#include "eon/potentials/Tersoff/Tersoff.h"
 
 void Tersoff::force(long N, const double *R, const int * /*atomicNrs*/,
                     double *F, double *U, double *variance, const double *box) {

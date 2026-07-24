@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "PyAMFF.h"
+#include "eon/potentials/PyAMFF/PyAMFF.h"
 #include <iostream>
 #include <set>
 #include <vector>

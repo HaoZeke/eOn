@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "Morse.h"
+#include "eon/potentials/Morse/Morse.h"
 #include <cassert>
 #include <cmath>
 

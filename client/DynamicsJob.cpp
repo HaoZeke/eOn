@@ -12,12 +12,12 @@
 #include <stdexcept>
 #include <string>
 
-#include "Dynamics.h"
-#include "DynamicsJob.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/Dynamics.h"
+#include "eon/DynamicsJob.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 std::vector<std::string> DynamicsJob::run(void) {
   auto R = std::make_shared<Matter>(pot, params);

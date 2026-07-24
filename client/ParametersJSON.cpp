@@ -9,9 +9,9 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ParametersJSON.h"
-#include "Parameters.h"
-#include "ParametersINI.h"
+#include "eon/ParametersJSON.h"
+#include "eon/Parameters.h"
+#include "eon/ParametersINI.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <nlohmann/json.hpp>
@@ -160,9 +160,25 @@ json to_json(const Parameters &p) {
       {"min_value", p.prefactor_options.min_value},
   };
 
+  // [Lanczos]
+  j["Lanczos"] = {
+      {"tolerance", p.lanczos_options.tolerance},
+      {"max_iterations", p.lanczos_options.max_iterations},
+      {"quit_early", p.lanczos_options.quit_early},
+      {"phva_atoms", p.lanczos_options.phva_atoms},
+  };
+
+  // [Davidson]
+  j["Davidson"] = {
+      {"tolerance", p.davidson_options.tolerance},
+      {"max_iterations", p.davidson_options.max_iterations},
+      {"diagonal_preconditioner", p.davidson_options.diagonal_preconditioner},
+      {"phva_atoms", p.davidson_options.phva_atoms},
+  };
+
   // [Hessian]
   j["Hessian"] = {
-      {"atom_list", p.hessian_options.atom_list},
+      {"phva_atoms", p.hessian_options.phva_atoms},
       {"zero_freq_value", p.hessian_options.zero_freq_value},
       {"fd_scheme", p.hessian_options.fd_scheme},
       {"resume", p.hessian_options.resume},

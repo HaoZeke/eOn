@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "AMS.h"
+#include "eon/potentials/AMS/AMS.h"
 #include <format>
 #include <fstream>
 #include <iostream>

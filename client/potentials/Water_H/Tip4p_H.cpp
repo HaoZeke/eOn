@@ -11,7 +11,7 @@
 */
 
 // the add H must be the last atom
-#include "Tip4p_H.h"
+#include "eon/potentials/Water_H/Tip4p_H.h"
 
 void Tip4p_H::cleanMemory(void) { return; }
 

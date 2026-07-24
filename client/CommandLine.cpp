@@ -9,14 +9,14 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "CommandLine.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/CommandLine.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 #include "version.h"
 
 #ifdef WITH_SERVE_MODE
-#include "ServeMode.h"
+#include "eon/ServeMode.h"
 #endif
 
 #include <argum.h>

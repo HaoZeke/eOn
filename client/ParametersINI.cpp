@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ParametersINI.h"
-#include "BaseStructures.h"
-#include "ConFileIO.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "Parameters.h"
+#include "eon/ParametersINI.h"
+#include "eon/BaseStructures.h"
+#include "eon/ConFileIO.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Parameters.h"
 #include "magic_enum/magic_enum.hpp"
 
 #include <INIReader.h>
@@ -26,7 +26,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 
 namespace {
 std::string toLowerCase(std::string s) {
@@ -588,6 +588,10 @@ int load_ini(INIReader &ini, Parameters &params) {
       "Lanczos", "max_iterations", params.lanczos_options.max_iterations);
   params.lanczos_options.quit_early = ini.GetBoolean(
       "Lanczos", "quit_early", params.lanczos_options.quit_early);
+  if (ini.HasValue("Lanczos", "phva_atoms")) {
+    params.lanczos_options.phva_atoms =
+        toLowerCase(ini.Get("Lanczos", "phva_atoms", "All"));
+  }
 
   // [Davidson] //
   params.davidson_options.tolerance =
@@ -597,6 +601,10 @@ int load_ini(INIReader &ini, Parameters &params) {
   params.davidson_options.diagonal_preconditioner =
       ini.GetBoolean("Davidson", "diagonal_preconditioner",
                      params.davidson_options.diagonal_preconditioner);
+  if (ini.HasValue("Davidson", "phva_atoms")) {
+    params.davidson_options.phva_atoms =
+        toLowerCase(ini.Get("Davidson", "phva_atoms", "All"));
+  }
 
   // [ARTn] //
   params.artn_options.push_step_size =
@@ -779,9 +787,14 @@ int load_ini(INIReader &ini, Parameters &params) {
       "Prefactor", "filter_fraction", params.prefactor_options.filter_fraction);
 
   // [Hessian] //
-
-  params.hessian_options.atom_list = toLowerCase(
-      ini.Get("Hessian", "atom_list", params.hessian_options.atom_list));
+  // Prefer phva_atoms; accept legacy atom_list when phva_atoms is absent.
+  if (ini.HasValue("Hessian", "phva_atoms")) {
+    params.hessian_options.phva_atoms =
+        toLowerCase(ini.Get("Hessian", "phva_atoms", "All"));
+  } else if (ini.HasValue("Hessian", "atom_list")) {
+    params.hessian_options.phva_atoms =
+        toLowerCase(ini.Get("Hessian", "atom_list", "All"));
+  }
   params.hessian_options.zero_freq_value = ini.GetReal(
       "Hessian", "zero_freq_value", params.hessian_options.zero_freq_value);
   params.hessian_options.fd_scheme = toLowerCase(
@@ -1256,6 +1269,49 @@ int load_ini(INIReader &ini, Parameters &params) {
       "Monte Carlo", "step_size", params.monte_carlo_options.step_size);
   params.monte_carlo_options.steps = static_cast<int>(
       ini.GetInteger("Monte Carlo", "steps", params.monte_carlo_options.steps));
+
+  // [OH_TST] //
+
+  params.oh_tst_options.reactant_filename = ini.Get(
+      "OH_TST", "reactant_filename", params.oh_tst_options.reactant_filename);
+  params.oh_tst_options.product_filename = ini.Get(
+      "OH_TST", "product_filename", params.oh_tst_options.product_filename);
+  params.oh_tst_options.time_step =
+      ini.GetReal("OH_TST", "time_step", params.oh_tst_options.time_step);
+  params.oh_tst_options.equil_steps = ini.GetInteger(
+      "OH_TST", "equil_steps", params.oh_tst_options.equil_steps);
+  params.oh_tst_options.sample_steps = ini.GetInteger(
+      "OH_TST", "sample_steps", params.oh_tst_options.sample_steps);
+  params.oh_tst_options.max_planes =
+      ini.GetInteger("OH_TST", "max_planes", params.oh_tst_options.max_planes);
+  params.oh_tst_options.plane_mass =
+      ini.GetReal("OH_TST", "plane_mass", params.oh_tst_options.plane_mass);
+  params.oh_tst_options.alpha_rot =
+      ini.GetReal("OH_TST", "alpha_rot", params.oh_tst_options.alpha_rot);
+  params.oh_tst_options.plane_time_step = ini.GetReal(
+      "OH_TST", "plane_time_step", params.oh_tst_options.plane_time_step);
+  params.oh_tst_options.ds_max =
+      ini.GetReal("OH_TST", "ds_max", params.oh_tst_options.ds_max);
+  params.oh_tst_options.dtheta_max =
+      ini.GetReal("OH_TST", "dtheta_max", params.oh_tst_options.dtheta_max);
+  params.oh_tst_options.force_tol =
+      ini.GetReal("OH_TST", "force_tol", params.oh_tst_options.force_tol);
+  params.oh_tst_options.s_init =
+      ini.GetReal("OH_TST", "s_init", params.oh_tst_options.s_init);
+  params.oh_tst_options.reactant_md_steps = ini.GetInteger(
+      "OH_TST", "reactant_md_steps", params.oh_tst_options.reactant_md_steps);
+  params.oh_tst_options.symmetry_products = ini.Get(
+      "OH_TST", "symmetry_products", params.oh_tst_options.symmetry_products);
+  params.oh_tst_options.max_delta_a =
+      ini.GetReal("OH_TST", "max_delta_a", params.oh_tst_options.max_delta_a);
+  params.oh_tst_options.thermostat = toLowerCase(
+      ini.Get("OH_TST", "thermostat", params.oh_tst_options.thermostat));
+  params.oh_tst_options.gle_a_file =
+      ini.Get("OH_TST", "gle_a_file", params.oh_tst_options.gle_a_file);
+  params.oh_tst_options.pmf_scan =
+      ini.GetBoolean("OH_TST", "pmf_scan", params.oh_tst_options.pmf_scan);
+  params.oh_tst_options.scan_planes = ini.GetInteger(
+      "OH_TST", "scan_planes", params.oh_tst_options.scan_planes);
 
   return error;
 }

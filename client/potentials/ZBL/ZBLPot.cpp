@@ -1,4 +1,4 @@
-#include "ZBLPot.h"
+#include "eon/potentials/ZBL/ZBLPot.h"
 #include <algorithm>
 #include <cmath>
 #include <set>

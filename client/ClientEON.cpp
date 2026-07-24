@@ -11,19 +11,19 @@
 */
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <windows.h>
 #endif
 
-#include "BaseStructures.h"
-#include "Bundling.h"
-#include "CommandLine.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "Job.h"
-#include "Parameters.h"
-#include "PotRegistry.h"
-#include "Potential.h"
+#include "eon/BaseStructures.h"
+#include "eon/Bundling.h"
+#include "eon/CommandLine.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Job.h"
+#include "eon/Parameters.h"
+#include "eon/PotRegistry.h"
+#include "eon/Potential.h"
 #include "version.h"
 #include <fstream>
 
@@ -42,7 +42,7 @@
 #endif
 
 #if defined WITH_ASE_ORCA || EMBED_PYTHON || WITH_ASE_NWCHEM
-#include "PyGuard.h"
+#include "eon/PyGuard.h"
 #endif
 
 #ifdef EONMPIBGP
@@ -50,7 +50,7 @@
 #endif
 
 // Includes for FPE trapping
-#include "fpe_handler.h"
+#include "eon/fpe_handler.h"
 
 #ifdef _WIN32
 #include <float.h>

@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "HelperFunctions.h"
-#include "EonLogger.h"
-#include "GeometryAnalysis.h"
-#include "ObjectiveFunction.h"
-#include "Optimizer.h"
-#include "SafeMath.h"
+#include "eon/HelperFunctions.h"
+#include "eon/EonLogger.h"
+#include "eon/GeometryAnalysis.h"
+#include "eon/ObjectiveFunction.h"
+#include "eon/Optimizer.h"
+#include "eon/SafeMath.h"
 
 #include <cassert>
 #include <cmath>

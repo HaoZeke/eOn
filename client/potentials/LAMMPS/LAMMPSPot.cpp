@@ -9,9 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "LAMMPSPot.h"
-#include "LammpsLoader.h"
+#include "eon/potentials/LAMMPS/LAMMPSPot.h"
+#include "eon/fpe_handler.h"
+#include "eon/potentials/LAMMPS/LammpsLoader.h"
 
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <format>
@@ -24,6 +26,8 @@
 #include <cstdlib>
 #include <vector>
 
+#include <csignal>
+#include <poll.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
@@ -126,6 +130,14 @@ void LAMMPSPot::ensureWorker() {
     close(resPipe[0]);
     reqFd = reqPipe[0];
     resFd = resPipe[1];
+    // Client main arms feenableexcept unconditionally. The worker inherits
+    // that mask; LAMMPS EAM (PairEAM::compute) performs IEEE divisions that
+    // can raise FE_DIVBYZERO on near-coincident pairs during saddle / product
+    // minimisations. Under trapping that SIGFPEs, and the continue handler
+    // without MXCSR masking re-storms forever in the child (GB of identical
+    // "FPE (continuing)" lines). External pot code expects soft IEEE defaults;
+    // demote trapping for the whole worker process before any LAMMPS call.
+    eonc::disableFPE();
     runWorkerLoop(); // never returns
   }
 
@@ -225,6 +237,27 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     throw std::runtime_error("LAMMPSPot: failed to send request to worker");
   }
 
+  // eon-7416: a worker stuck on a pathological geometry (LAMMPS spinning, or
+  // a NaN it never returns) would make the blocking read below hang until the
+  // akmc pass times out. Bound the wait: if the worker is silent past a
+  // generous per-eval deadline, kill and reap it (a stuck worker never reaches
+  // EOF, so a plain waitpid would block too) and fail this evaluation so the
+  // search discards the geometry; ensureWorker respawns on the next call.
+  {
+    struct pollfd pfd;
+    pfd.fd = resFd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    int pr = poll(&pfd, 1, 90000); // 90 s: orders beyond a normal force eval
+    if (pr <= 0) {
+      if (workerPid > 0) {
+        kill(workerPid, SIGKILL);
+      }
+      stopWorker();
+      throw std::runtime_error(
+          "LAMMPSPot: worker force eval timed out; killed (eon-7416)");
+    }
+  }
   int status = 0;
   if (!readExact(resFd, &status, sizeof(status)) ||
       !readExact(resFd, U, sizeof(double)) ||
@@ -236,11 +269,39 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     throw std::runtime_error(
         "LAMMPSPot: worker reported a force evaluation error");
   }
+  // A saddle search that never terminates silently truncates the event
+  // table: the KMC residence time is 1/sum_j k_j over the discovered
+  // mechanisms, so a dropped search removes a term and biases the clock
+  // (Pedersen and Jónsson, Math. Comput. Simul. 80, 1487 (2010),
+  // doi:10.1016/j.matcom.2009.02.010, Fig. 1; Alexander and Schuh,
+  // Modelling Simul. Mater. Sci. Eng. 24, 065014 (2016),
+  // doi:10.1088/0965-0393/24/6/065014, on catalog completeness).
+  // An over-aggressive saddle-search kick can drive atoms on top of
+  // each other; the EAM force overflows to NaN/Inf and LAMMPS returns it
+  // rather than crashing. The min-mode search then spins on non-finite
+  // gradients until the akmc pass times out (0 processes). Reject the
+  // evaluation so the search discards that displacement and continues.
+  if (!std::isfinite(*U)) {
+    throw std::runtime_error(
+        "LAMMPSPot: non-finite energy from worker (eon-7416)");
+  }
+  for (long i = 0; i < 3 * N; ++i) {
+    if (!std::isfinite(F[i])) {
+      throw std::runtime_error(
+          "LAMMPSPot: non-finite force from worker (eon-7416)");
+    }
+  }
 #endif
 }
 
 void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
                            double *F, double *U, const double *box) {
+  // Same contract as ASE / Metatomic: external pot libraries are not written
+  // for FE traps. Cover in-process (EONMPI / Windows) and any path that still
+  // has trapping armed when forceLocal runs.
+  eonc::FPEHandler fpeh;
+  fpeh.eat_fpe();
+
   auto &lmp = eonc::LammpsLoader::instance();
 
   bool newLammps = false;

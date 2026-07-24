@@ -9,112 +9,112 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <csignal>
 #include <ctime>
 #include <limits>
 #include <utility>
 
-#include "HelperFunctions.h"
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 #ifdef WITH_CATLEARN
-#include "potentials/CatLearnPot/CatLearnPot.h"
+#include "eon/potentials/CatLearnPot/CatLearnPot.h"
 #endif
 
 #ifdef IMD_POT
-#include "potentials/IMD/IMD.h"
+#include "eon/potentials/IMD/IMD.h"
 #endif
 
 #ifdef WITH_GPRD
-#include "potentials/GPRPotential/GPRPotential.h"
+#include "eon/potentials/GPRPotential/GPRPotential.h"
 #endif
 
-#include "potentials/EAM/EAM.h"
-#include "potentials/EMT/EffectiveMediumTheory.h"
-#include "potentials/ExtPot/ExtPot.h"
-#include "potentials/LJ/LJ.h"
-#include "potentials/LJCluster/LJCluster.h"
-#include "potentials/Morse/Morse.h"
+#include "eon/potentials/EAM/EAM.h"
+#include "eon/potentials/EMT/EffectiveMediumTheory.h"
+#include "eon/potentials/ExtPot/ExtPot.h"
+#include "eon/potentials/LJ/LJ.h"
+#include "eon/potentials/LJCluster/LJCluster.h"
+#include "eon/potentials/Morse/Morse.h"
 #ifndef IS_WINDOWS
-#include "potentials/SocketNWChem/SocketNWChemPot.h"
+#include "eon/potentials/SocketNWChem/SocketNWChemPot.h"
 #ifdef WITH_RGPOT
-#include "potentials/Rgpot/RgpotPot.h"
+#include "eon/potentials/Rgpot/RgpotPot.h"
 #endif
 #endif
-#include "potentials/ZBL/ZBLPot.h"
+#include "eon/potentials/ZBL/ZBLPot.h"
 
 // Fortran potentials: always compiled, loaded at runtime via dlopen
-#include "potentials/Aluminum/Aluminum.h"
-#include "potentials/EDIP/EDIP.h"
-#include "potentials/FeHe/FeHe.h"
-#include "potentials/FortranPotLoader.h"
-#include "potentials/Lenosky/Lenosky.h"
-#include "potentials/SW/SW.h"
-#include "potentials/Tersoff/Tersoff.h"
+#include "eon/potentials/Aluminum/Aluminum.h"
+#include "eon/potentials/EDIP/EDIP.h"
+#include "eon/potentials/FeHe/FeHe.h"
+#include "eon/potentials/FortranPotLoader.h"
+#include "eon/potentials/Lenosky/Lenosky.h"
+#include "eon/potentials/SW/SW.h"
+#include "eon/potentials/Tersoff/Tersoff.h"
 
 #ifdef EMBED_PYTHON
 
 #ifdef PYAMFF_POT
-#include "potentials/PyAMFF/PyAMFF.h"
+#include "eon/potentials/PyAMFF/PyAMFF.h"
 #endif
 #ifdef WITH_ASE_POT
-#include "potentials/ASE/ASE.h"
+#include "eon/potentials/ASE/ASE.h"
 #endif
 
-#include "potentials/QSC/QSC.h"
+#include "eon/potentials/QSC/QSC.h"
 #endif
 
 #ifdef EONMPI
-#include "potentials/MPIPot/MPIPot.h"
+#include "eon/potentials/MPIPot/MPIPot.h"
 #endif
 
-#include "potentials/LAMMPS/LAMMPSPot.h"
+#include "eon/potentials/LAMMPS/LAMMPSPot.h"
 
 #ifdef NEW_POT
-#include "potentials/NewPot/NewPot.h"
+#include "eon/potentials/NewPot/NewPot.h"
 #endif
 
 // TODO: This should be guarded by WITH_FORTRAN as well
 #ifdef CUH2_POT
-#include "potentials/CuH2/CuH2.h"
+#include "eon/potentials/CuH2/CuH2.h"
 #endif
 
 #ifndef _WIN32
 #ifdef WITH_VASP
-#include "potentials/VASP/VASP.h"
+#include "eon/potentials/VASP/VASP.h"
 #endif
 #endif
 
 #ifdef WITH_AMS
-#include "potentials/AMS/AMS.h"
-#include "potentials/AMS_IO/AMS_IO.h"
+#include "eon/potentials/AMS/AMS.h"
+#include "eon/potentials/AMS_IO/AMS_IO.h"
 #endif
 
 #ifdef WITH_ASE_ORCA
-#include "potentials/ASE_ORCA/ASE_ORCA.h"
+#include "eon/potentials/ASE_ORCA/ASE_ORCA.h"
 #endif
 
 #ifdef WITH_ASE_NWCHEM
-#include "potentials/ASE_NWCHEM/ASE_NWCHEM.h"
+#include "eon/potentials/ASE_NWCHEM/ASE_NWCHEM.h"
 #endif
 
 #ifdef WITH_METATOMIC
-#include "potentials/Metatomic/MetatomicPotential.h"
+#include "eon/potentials/Metatomic/MetatomicPotential.h"
 #endif
 
 #ifdef WITH_WATER
-#include "potentials/Water/Water.hpp"
+#include "eon/potentials/Water/Water.hpp"
 #ifdef WITH_FORTRAN
-#include "potentials/Water_H/Tip4p_H.h"
+#include "eon/potentials/Water_H/Tip4p_H.h"
 #endif
-#include "potentials/Water_Pt/Tip4p_Pt.hpp"
+#include "eon/potentials/Water_Pt/Tip4p_Pt.hpp"
 #endif
 
 // Should respect Fortran availability
 
 #ifdef WITH_XTB
-#include "potentials/XTBPot/XTBPot.h"
+#include "eon/potentials/XTBPot/XTBPot.h"
 #endif
 
 #include <limits>

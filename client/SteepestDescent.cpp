@@ -12,8 +12,8 @@
 
 // Based on the SteepestDescent minimizer written in ASE.
 
-#include "SteepestDescent.h"
-#include "SafeMath.h"
+#include "eon/SteepestDescent.h"
+#include "eon/SafeMath.h"
 
 int SteepestDescent::step(double a_maxMove) {
   Eigen::VectorXd r = m_objf->getPositions();

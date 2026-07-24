@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "EpiCenters.h"
-#include "Matter.h"
-#include "Parameters.h"
+#include "eon/EpiCenters.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
 
 #include <algorithm>
 #include <memory>

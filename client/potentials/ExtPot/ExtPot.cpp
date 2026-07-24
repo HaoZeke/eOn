@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ExtPot.h"
+#include "eon/potentials/ExtPot/ExtPot.h"
 #include <iostream>
 #include <stdio.h>
 

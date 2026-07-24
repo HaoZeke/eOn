@@ -16,7 +16,7 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include "IMD.h"
+#include "eon/potentials/IMD/IMD.h"
 
 void IMD::cleanMemory(void) {
   std::error_code ec;

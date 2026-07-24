@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "StructureComparisonJob.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "Optimizer.h"
+#include "eon/StructureComparisonJob.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/Optimizer.h"
 #include <stdexcept>
 
 std::vector<std::string> StructureComparisonJob::run() {

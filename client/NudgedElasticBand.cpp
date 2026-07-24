@@ -9,21 +9,21 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "NudgedElasticBand.h"
-#include "BaseStructures.h"
-#include "EigenmodeStrategy.h"
-#include "IDPPObjectiveFunction.hpp"
-#include "NEBForceProjection.h"
-#include "NEBInitialPaths.hpp"
-#include "NEBOcinebController.h"
-#include "NEBProjection.h"
-#include "NEBSplineExtrema.h"
-#include "NEBSpringForce.h"
-#include "NEBTangent.h"
-#include "Optimizer.h"
+#include "eon/NudgedElasticBand.h"
+#include "eon/BaseStructures.h"
+#include "eon/EigenmodeStrategy.h"
+#include "eon/IDPPObjectiveFunction.hpp"
+#include "eon/NEBForceProjection.h"
+#include "eon/NEBInitialPaths.hpp"
+#include "eon/NEBOcinebController.h"
+#include "eon/NEBProjection.h"
+#include "eon/NEBSplineExtrema.h"
+#include "eon/NEBSpringForce.h"
+#include "eon/NEBTangent.h"
+#include "eon/Optimizer.h"
 #include "magic_enum/magic_enum.hpp"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <thread>
 using namespace eonc::helpers;
 namespace fs = std::filesystem;

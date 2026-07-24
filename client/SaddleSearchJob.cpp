@@ -9,14 +9,14 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "SaddleSearchJob.h"
+#include "eon/SaddleSearchJob.h"
 #ifdef WITH_ARTN
-#include "ARTnSaddleSearch.h"
+#include "eon/ARTnSaddleSearch.h"
 #endif
-#include "EonLogger.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "Potential.h"
+#include "eon/EonLogger.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Potential.h"
 
 #include <filesystem>
 #include <format>

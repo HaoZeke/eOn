@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "SafeHyperJob.h"
-#include "BondBoost.h"
-#include "Dynamics.h"
-#include "ForceCallTimer.h"
+#include "eon/SafeHyperJob.h"
+#include "eon/BondBoost.h"
+#include "eon/Dynamics.h"
+#include "eon/ForceCallTimer.h"
 
 #include <cmath>
 

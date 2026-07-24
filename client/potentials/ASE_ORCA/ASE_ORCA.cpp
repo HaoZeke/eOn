@@ -10,10 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ASE_ORCA.h"
-#include "../../EnvHelpers.hpp"
-#include "../../PyGuard.h"
-#include "../../fpe_handler.h"
+#include "eon/potentials/ASE_ORCA/ASE_ORCA.h"
+#include "eon/EnvHelpers.hpp"
+#include "eon/PyGuard.h"
+#include "eon/fpe_handler.h"
 
 // XXX: This always assumes that charge is 0, mult is 1
 // ASE default ----------------------------^ ---------^

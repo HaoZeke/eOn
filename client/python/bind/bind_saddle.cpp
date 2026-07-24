@@ -2,12 +2,12 @@
 ** MinModeSaddleSearch — first-class single-ended saddle search.
 ** Default non-mutating: run() works on a Matter copy unless inplace=True.
 */
-#include "Matter.h"
-#include "MinModeSaddleSearch.h"
-#include "Parameters.h"
-#include "Potential.h"
 #include "bind_helpers.hpp"
 #include "eigen_numpy.hpp"
+#include "eon/Matter.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/shared_ptr.h>

@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "FiniteDifferenceJob.h"
-#include "EonLogger.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
+#include "eon/FiniteDifferenceJob.h"
+#include "eon/EonLogger.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
 
 #include <format>
 #include <fstream>

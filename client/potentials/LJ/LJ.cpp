@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "LJ.h"
+#include "eon/potentials/LJ/LJ.h"
 #include <cmath>
 
 void LJ::setParameters(double u0In, double cutoffIn, double psiIn) {

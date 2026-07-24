@@ -12,13 +12,13 @@
 
 /// Ported from legacy unittests/utHelperFunctions.cpp to Catch2.
 
-#include "HelperFunctions.h"
-#include "Eigen.h"
-#include "Matter.h"
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/HelperFunctions.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Eigen.h"
+#include "eon/Matter.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 
 #include <cmath>
 #include <cstdio>

@@ -10,10 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "BondBoost.h"
-#include "Matter.h"
+#include "eon/BondBoost.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/Matter.h"
 
 namespace tests {
 

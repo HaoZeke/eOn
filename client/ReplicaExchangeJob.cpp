@@ -9,12 +9,12 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "ReplicaExchangeJob.h"
-#include "BaseStructures.h"
-#include "Dynamics.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "SafeMath.h"
+#include "eon/ReplicaExchangeJob.h"
+#include "eon/BaseStructures.h"
+#include "eon/Dynamics.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/SafeMath.h"
 
 #include <algorithm>
 #include <cmath>

@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Hessian.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "SafeMath.h"
+#include "eon/Hessian.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/SafeMath.h"
 
 #include <cmath>
 #include <fstream>
@@ -21,7 +21,7 @@
 
 namespace {
 
-// atom_list entries are *mobile / displaced* atoms for FD (hybrid/PHVA-class
+// phva_atoms entries are *mobile / displaced* atoms for FD (hybrid/PHVA-class
 // active set). Intersect with non-fixed atoms in HessianJob.
 
 bool isCentralScheme(const std::string &scheme) {

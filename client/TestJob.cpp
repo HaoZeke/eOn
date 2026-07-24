@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "TestJob.h"
-#include "Matter.h"
-#include "MinModeSaddleSearch.h"
-#include "Parameters.h"
-#include "Potential.h"
+#include "eon/TestJob.h"
+#include "eon/Matter.h"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/Parameters.h"
+#include "eon/Potential.h"
 #include <stdexcept>
 
 #include <cmath>

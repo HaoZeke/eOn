@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Dimer.h"
-#include "DimerRotationDispatch.h"
-#include "HelperFunctions.h"
-#include "SafeMath.h"
+#include "eon/Dimer.h"
+#include "eon/DimerRotationDispatch.h"
+#include "eon/HelperFunctions.h"
+#include "eon/SafeMath.h"
 
 #include <cassert>
 #include <cmath>
@@ -132,7 +132,7 @@ void Dimer::compute(std::shared_ptr<Matter> matter,
 
   statsTorque = torque;
   statsCurvature = curvature;
-  direction.normalize();
+  eonc::safemath::safe_normalize_inplace(direction);
   statsAngle = eonc::safemath::safe_acos(matDot(direction, initialDirection));
   statsAngle *= (180.0 / eonc::helpers::pi);
   statsRotations = rotations;
@@ -160,7 +160,7 @@ double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
     rotationRemove(matterCenter, matterDimer);
     posDimer = matterDimer->getPositions();
     direction = posDimer - posCenter;
-    direction.normalize();
+    eonc::safemath::safe_normalize_inplace(direction);
     posDimer = posCenter + direction * params.main_options.finiteDifference;
   }
 

@@ -9,11 +9,11 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Prefactor.h"
-#include "HelperFunctions.h"
-#include "Hessian.h"
+#include "eon/Prefactor.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Hessian.h"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <algorithm>
 #include <cmath>
 #include <format>

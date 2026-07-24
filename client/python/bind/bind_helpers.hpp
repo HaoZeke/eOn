@@ -7,9 +7,9 @@
  * Buffer access uses public Matter getters/setters; ASE/Python cache state
  * lives in the binding layer (AseCalcPotential), not on Matter.
  */
-#include "ConFileIO.h"
-#include "Eigen.h"
-#include "Matter.h"
+#include "eon/ConFileIO.h"
+#include "eon/Eigen.h"
+#include "eon/Matter.h"
 
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/vector.h>

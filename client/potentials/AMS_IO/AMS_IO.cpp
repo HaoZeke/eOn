@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "AMS_IO.h"
+#include "eon/potentials/AMS_IO/AMS_IO.h"
 #include <iostream>
 #include <string>
 #ifndef _WIN32

@@ -10,10 +10,10 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "NudgedElasticBand.h"
-#include "PotRegistry.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
+#include "eon/NudgedElasticBand.h"
+#include "eon/PotRegistry.h"
 #include <fstream>
 #include <thread>
 #include <vector>

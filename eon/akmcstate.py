@@ -137,11 +137,14 @@ class AKMCState(state.State):
         logger.info("Found new barrier %f for state %i (type: %s)", barrier, self.number, result['type'])
 
 
-        # Update the search result table.
-        self.append_search_result(result, "good-%d" % self.get_num_procs(), superbasin)
-
-        # The id of this process is the number of processes.
-        id = self.get_num_procs()
+        # Content-addressed id from saddle geometry + barrier (not table length).
+        saddle_bytes = result["saddle.con"].getvalue()
+        id = self.allocate_process_id(
+            b"akmc-forward",
+            saddle_bytes,
+            ("barrier=%.8f" % barrier).encode("ascii"),
+        )
+        self.append_search_result(result, "good-%d" % id, superbasin)
 
         if 'simulation_time' in resultdata:
             current_time = self.get_time()
@@ -189,10 +192,11 @@ class AKMCState(state.State):
                                   # rate =              forward_rate,
                                   repeats =           0)
 
-        # If equilibrium rate, change the forward rate as well
+        # If equilibrium rate, change the forward rate as well (persist so a
+        # later allocate_process_id force-reload cannot drop the clamp).
         if eq_rate_flag:
             self.procs[id]['rate'] = forward_eq_rate
-            # reverse_procs[id]['rate'] = reverse_eq_rate
+            self.save_process_table()
 
         # If this is a random search type, add this proc to the random proc dict.
         if result['type'] == "random" or result['type'] == "dynamics":
@@ -445,25 +449,49 @@ class AKMCState(state.State):
     def inc_repeats(self):
         self.info.set("MetaData", "repeats", self.get_repeats() + 1)
 
-    def load_process_table(self):
-        """ Load the process table.  If the process table is not loaded, load it.  If it is
-            loaded, do nothing. """
-        if self.procs != None:
+    def load_process_table(self, force=False):
+        """Load the process table from disk.
+
+        If already loaded and *force* is false, do nothing. When *force* is
+        true (used by :meth:`allocate_process_id`), re-read so external
+        rewrites of ``processtable`` cannot leave a stale id counter.
+
+        Duplicate id columns collapse to the last row (dict key); a warning
+        is logged. New ids must use :meth:`allocate_process_id` (xxh64), not
+        :meth:`get_num_procs`.
+        """
+        if self.procs is not None and not force:
             return
         f = open(self.proctable_path)
         lines = f.readlines()
         f.close()
         self.procs = {}
+        n_rows = 0
         for l in lines[1:]:
-            l = l.strip().split()
-            self.procs[int(l[self.ID])] = {"saddle_energy":     float(l[self.ENERGY]),
-                                           "prefactor":         float(l[self.PREFACTOR]),
-                                           "product":           int  (l[self.PRODUCT]),
-                                           "product_energy":    float(l[self.PRODUCT_ENERGY]),
-                                           "product_prefactor": float(l[self.PRODUCT_PREFACTOR]),
-                                           "barrier":           float(l[self.BARRIER]),
-                                           "rate":              float(l[self.RATE]),
-                                           "repeats":           int  (l[self.REPEATS])}
+            parts = l.strip().split()
+            if not parts:
+                continue
+            n_rows += 1
+            pid = int(parts[self.ID])
+            self.procs[pid] = {
+                "saddle_energy": float(parts[self.ENERGY]),
+                "prefactor": float(parts[self.PREFACTOR]),
+                "product": int(parts[self.PRODUCT]),
+                "product_energy": float(parts[self.PRODUCT_ENERGY]),
+                "product_prefactor": float(parts[self.PRODUCT_PREFACTOR]),
+                "barrier": float(parts[self.BARRIER]),
+                "rate": float(parts[self.RATE]),
+                "repeats": int(parts[self.REPEATS]),
+            }
+        if n_rows > len(self.procs):
+            logger.warning(
+                "State %s processtable has %d rows but only %d distinct ids "
+                "(duplicates collapsed; last row per id kept). New ids are "
+                "content-addressed (xxh64), not len(procs).",
+                self.number,
+                n_rows,
+                len(self.procs),
+            )
 
         try:
             kT = self.info.get('MetaData', 'kT')
@@ -494,19 +522,25 @@ class AKMCState(state.State):
                              product_prefactor, barrier, rate, repeats):
         """ Append to the process table.  Append a single line to the process table file.  If we
             have loaded the process table, also append it to the process table in memory. """
+        self.load_process_table(force=True)
+        if id in self.procs:
+            raise RuntimeError(
+                "refusing to clobber process id %d in state %s (already registered); "
+                "use allocate_process_id() for a content-addressed free id"
+                % (id, self.number)
+            )
         f = open(self.proctable_path, 'a')
         f.write(self.processtable_line % (id, saddle_energy, prefactor, product, product_energy,
                                           product_prefactor, barrier, rate, repeats))
         f.close()
-        if self.procs != None:
-            self.procs[id] = {"saddle_energy":    saddle_energy,
-                              "prefactor":        prefactor,
-                              "product":          product,
-                              "product_energy":   product_energy,
-                              "product_prefactor":product_prefactor,
-                              "barrier":          barrier,
-                              "rate":             rate,
-                              "repeats":          repeats}
+        self.procs[id] = {"saddle_energy":    saddle_energy,
+                          "prefactor":        prefactor,
+                          "product":          product,
+                          "product_energy":   product_energy,
+                          "product_prefactor":product_prefactor,
+                          "barrier":          barrier,
+                          "rate":             rate,
+                          "repeats":          repeats}
 
 
     def update_lowest_barrier(self, barrier):

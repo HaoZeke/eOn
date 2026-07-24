@@ -1053,7 +1053,9 @@ Hessian:
 
     options:
 
-        atom_list:
+        # PHVA mobile/active set (not free/fixed). Legacy INI key atom_list is
+        # still accepted by the C++ client when phva_atoms is absent.
+        phva_atoms:
             kind: string
             default: All
 
@@ -1091,6 +1093,10 @@ Lanczos:
             kind: boolean
             default: true
 
+        phva_atoms:
+            kind: string
+            default: All
+
 ################################################################################
 
 Davidson:
@@ -1108,6 +1114,10 @@ Davidson:
         diagonal_preconditioner:
             kind: boolean
             default: false
+
+        phva_atoms:
+            kind: string
+            default: All
 
 ################################################################################
 

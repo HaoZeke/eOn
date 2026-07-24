@@ -10,7 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "SW.h"
+#include "eon/potentials/SW/SW.h"
 
 void SW::force(long N, const double *R, const int * /*atomicNrs*/, double *F,
                double *U, double *variance, const double *box) {

@@ -9,15 +9,16 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "MinModeSaddleSearch.h"
-#include "ConjugateGradients.h"
-#include "EigenmodeStrategy.h"
-#include "EonLogger.h"
-#include "EpiCenters.h"
-#include "HelperFunctions.h"
-#include "ObjectiveFunction.h"
-#include "SaddleSearchJob.h"
-#include "eonExceptions.hpp"
+#include "eon/MinModeSaddleSearch.h"
+#include "eon/ConjugateGradients.h"
+#include "eon/EigenmodeStrategy.h"
+#include "eon/EonLogger.h"
+#include "eon/EpiCenters.h"
+#include "eon/HelperFunctions.h"
+#include "eon/ObjectiveFunction.h"
+#include "eon/SaddleSearchJob.h"
+#include "eon/SafeMath.h"
+#include "eon/eonExceptions.hpp"
 
 #include <cmath>
 #include <format>
@@ -70,7 +71,8 @@ public:
     eigenvector = eonc::eigenmodeGetEigenvector(*minModeMethod);
     double eigenvalue = eonc::eigenmodeGetEigenvalue(*minModeMethod);
 
-    AtomMatrix proj = matDot(force, eigenvector) * eigenvector.normalized();
+    AtomMatrix proj = matDot(force, eigenvector) *
+                      eonc::safemath::safe_normalized(eigenvector);
 
     if (eigenvalue > 0.0) {
       if (params.saddle_search_options.perp_force_ratio > 0.0) {

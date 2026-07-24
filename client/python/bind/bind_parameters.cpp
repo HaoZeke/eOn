@@ -1,4 +1,4 @@
-#include "Parameters.h"
+#include "eon/Parameters.h"
 
 #include <magic_enum/magic_enum.hpp>
 #include <nanobind/nanobind.h>
@@ -538,13 +538,38 @@ void bind_parameters(nb::module_ &m) {
           [](eonc::Parameters &s, bool v) {
             s.dimer_options.remove_rotation = v;
           })
+      // --- Lanczos / Davidson (PHVA mobile set for Krylov; default All) ---
+      .def_prop_rw(
+          "lanczos_phva_atoms",
+          [](const eonc::Parameters &s) {
+            return s.lanczos_options.phva_atoms;
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.lanczos_options.phva_atoms = v;
+          },
+          "PHVA mobile/active atoms for Lanczos Krylov space, or All = free "
+          "(not free/fixed)")
+      .def_prop_rw(
+          "davidson_phva_atoms",
+          [](const eonc::Parameters &s) {
+            return s.davidson_options.phva_atoms;
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.davidson_options.phva_atoms = v;
+          },
+          "PHVA mobile/active atoms for Davidson Ritz space, or All = free "
+          "(not free/fixed)")
       // --- Hessian ---
       .def_prop_rw(
-          "hessian_atom_list",
-          [](const eonc::Parameters &s) { return s.hessian_options.atom_list; },
+          "hessian_phva_atoms",
+          [](const eonc::Parameters &s) {
+            return s.hessian_options.phva_atoms;
+          },
           [](eonc::Parameters &s, const std::string &v) {
-            s.hessian_options.atom_list = v;
-          })
+            s.hessian_options.phva_atoms = v;
+          },
+          "PHVA mobile/active atoms for dense FD Hessian, or All = free "
+          "(not free/fixed)")
       .def_prop_rw(
           "hessian_zero_freq_value",
           [](const eonc::Parameters &s) {

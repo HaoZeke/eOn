@@ -9,10 +9,10 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "MonteCarloJob.h"
-#include "HelperFunctions.h"
-#include "Matter.h"
-#include "MonteCarlo.h"
+#include "eon/MonteCarloJob.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Matter.h"
+#include "eon/MonteCarlo.h"
 
 #include <filesystem>
 #include <format>

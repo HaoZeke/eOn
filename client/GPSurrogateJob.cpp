@@ -9,16 +9,16 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "GPSurrogateJob.h"
-#include "BaseStructures.h"
-#include "NEBSplineExtrema.h"
-#include "NudgedElasticBand.h"
-#include "NudgedElasticBandJob.h"
-#include "SurrogatePotential.h"
-#include "helpers/Create.hpp"
-#include "potentials/CatLearnPot/CatLearnPot.h"
+#include "eon/GPSurrogateJob.h"
+#include "eon/BaseStructures.h"
+#include "eon/NEBSplineExtrema.h"
+#include "eon/NudgedElasticBand.h"
+#include "eon/NudgedElasticBandJob.h"
+#include "eon/SurrogatePotential.h"
+#include "eon/helpers/Create.hpp"
+#include "eon/potentials/CatLearnPot/CatLearnPot.h"
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 #include <sstream>
 #include <stdexcept>
 

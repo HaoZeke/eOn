@@ -10,9 +10,9 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "ASE.h"
-#include "../../PyGuard.h"
-#include "../../fpe_handler.h"
+#include "eon/potentials/ASE/ASE.h"
+#include "eon/PyGuard.h"
+#include "eon/fpe_handler.h"
 #include <cstdlib> // for exit()
 #include <pybind11/embed.h>
 #include <pybind11/numpy.h> // for py::array_t

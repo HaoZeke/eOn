@@ -1,3 +1,7 @@
+# Public headers: $src/include/eon/ (numpy/fmt style package tree).
+# Sources: client/*.cpp. Both in-tree and installed form:
+#   -I$prefix/include   #include "eon/Potential.h"
+# thirdparty/ stays beside sources for catch2 etc.
 _incdirs += [include_directories('thirdparty')]
 _runtime_rpath = []
 
@@ -507,6 +511,8 @@ eonclib_sources = [
     'ReplicaExchangeJob.cpp',
     'BondBoost.cpp',
     'Job.cpp',
+    'OHTSTJob.cpp',
+    'GleThermostat.cpp',
     'GlobalOptimization.cpp',
     'LowestEigenmode.cpp',
     'MinModeSaddleSearch.cpp',
@@ -521,6 +527,7 @@ eonclib_sources = [
     'FiniteDifferenceJob.cpp',
     'Lanczos.cpp',
     'Davidson.cpp',
+    'MobileAtoms.cpp',
     'HessianJob.cpp',
     'ReplicaDynamicsJob.cpp',
     'TADJob.cpp',
@@ -544,7 +551,7 @@ eonclib_sources = [
     'HelperFunctions.cpp',
     'RandomNumbers.cpp',
     'StringHelpers.cc',
-    'MatrixHelpers.hpp',  # Template
+    # MatrixHelpers.hpp is header-only under include/eon/ (via -I include).
     'Dimer.cpp',
     'Dynamics.cpp',
     'GlobalOptimizationJob.cpp',
@@ -1348,6 +1355,7 @@ if get_option('with_tests')
         ['test_approve_confileio', 'ApproveConFileIO.cpp', 'neb_morse'],
         ['test_minimization', 'MinimizationTest.cpp', 'neb_morse'],
         ['test_optimizer', 'OptimizerTest.cpp', ''],
+        ['test_fpe_handler', 'FPEHandlerTest.cpp', ''],
         ['test_dynamics', 'DynamicsTest.cpp', 'neb_morse'],
         ['test_jobs', 'JobIntegrationTest.cpp', 'neb_morse'],
         ['test_hessian', 'HessianTest.cpp', 'neb_morse'],

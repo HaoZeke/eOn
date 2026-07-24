@@ -9,8 +9,8 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "FIRE.h"
-#include "HelperFunctions.h"
+#include "eon/FIRE.h"
+#include "eon/HelperFunctions.h"
 
 #include <algorithm>
 

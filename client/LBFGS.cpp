@@ -11,8 +11,8 @@
 */
 // Based on the LBFGS minimizer written in ASE.
 
-#include "LBFGS.h"
-#include "SafeMath.h"
+#include "eon/LBFGS.h"
+#include "eon/SafeMath.h"
 
 #include <cmath>
 

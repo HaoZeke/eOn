@@ -25,7 +25,7 @@
 #include <unistd.h>
 #endif
 
-#include "VASP.h"
+#include "eon/potentials/VASP/VASP.h"
 bool VASP::firstRun = true;
 long VASP::vaspRunCount = 0;
 pid_t VASP::vaspPID = 0;

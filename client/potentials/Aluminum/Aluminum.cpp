@@ -9,7 +9,7 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "Aluminum.h"
+#include "eon/potentials/Aluminum/Aluminum.h"
 #include <cassert>
 
 bool Aluminum::isThreadSafe() const noexcept { return false; }

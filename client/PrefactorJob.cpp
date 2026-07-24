@@ -9,13 +9,13 @@
 ** Repo:
 ** https://github.com/TheochemUI/eOn
 */
-#include "PrefactorJob.h"
-#include "EonLogger.h"
-#include "HelperFunctions.h"
-#include "Hessian.h"
-#include "Matter.h"
-#include "Potential.h"
-#include "Prefactor.h"
+#include "eon/PrefactorJob.h"
+#include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
+#include "eon/Hessian.h"
+#include "eon/Matter.h"
+#include "eon/Potential.h"
+#include "eon/Prefactor.h"
 
 #include <cmath>
 #include <format>

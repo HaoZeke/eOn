@@ -1,15 +1,15 @@
-#include "NEBInitialPaths.hpp"
-#include "BaseStructures.h"
-#include "IDPPObjectiveFunction.hpp"
-#include "Optimizer.h"
-#include "Parameters.h"
+#include "eon/NEBInitialPaths.hpp"
+#include "eon/BaseStructures.h"
+#include "eon/IDPPObjectiveFunction.hpp"
+#include "eon/Optimizer.h"
+#include "eon/Parameters.h"
 #include <filesystem>
 #include <fstream>
 #include <memory>
 #include <span>
 #include <vector>
 
-#include "EonLogger.h"
+#include "eon/EonLogger.h"
 namespace fs = std::filesystem;
 
 namespace eonc::helpers::neb_paths {
