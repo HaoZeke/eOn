@@ -172,6 +172,14 @@ void LAMMPSPot::ensureWorker() {
   }
 
   // Parent: keep reqPipe write end and resPipe read end.
+  //
+  // Writing to a worker that has already exited raises SIGPIPE, whose default
+  // action kills the client outright -- before writeExact can return the
+  // error the caller is written to handle. A search that had converged on a
+  // saddle at 0.062 eV died this way with signal 13 as its endpoints were
+  // about to be minimised. Ignoring it turns the same condition into an
+  // EPIPE return, which reaches the geometry-rejection path and respawns.
+  std::signal(SIGPIPE, SIG_IGN);
   close(reqPipe[0]);
   close(resPipe[1]);
   reqFd = reqPipe[1];
