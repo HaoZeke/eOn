@@ -95,18 +95,20 @@ void QSC::energy(long N, const double *R, const int *atomicNrs, double *U,
     rho_[i] = 0.0;
   }
 
-  int prev_i_Z = -1, prev_j_Z = -1;
+  // Cache parameters by Z; never re-zero the structs on every neighbor hit.
+  // p_ij depends on both species, so reset j-cache whenever i's Z changes.
+  int prev_i_Z = -1;
+  qsc_parameters p_ii{};
   for (long i = 0; i < N; i++) {
     double pair_term = 0.0;
-    qsc_parameters p_ii{};
-
     if (prev_i_Z != atomicNrs[i]) {
       p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+      prev_i_Z = atomicNrs[i];
     }
-    prev_i_Z = atomicNrs[i];
 
+    int prev_j_Z = -1;
+    qsc_parameters p_ij{}, p_jj{};
     for (int k = 0; k < nlist_[i]; k++) {
-      qsc_parameters p_ij{}, p_jj{};
       int j = vlist_[i * N + k];
       double r_ij = distances_[i * N + j].r;
       if (r_ij > cutoff_)
@@ -115,8 +117,8 @@ void QSC::energy(long N, const double *R, const int *atomicNrs, double *U,
       if (prev_j_Z != atomicNrs[j]) {
         p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
         p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
+        prev_j_Z = atomicNrs[j];
       }
-      prev_j_Z = atomicNrs[j];
 
       // Density contributions
       phi_[i * N + j] = pair_potential(r_ij, p_jj.a, p_jj.m);
@@ -155,16 +157,17 @@ void QSC::force(long N, const double *R, const int *atomicNrs, double *F,
     F[i] = 0.0;
   }
 
-  int prev_i_Z = -1, prev_j_Z = -1;
+  int prev_i_Z = -1;
+  qsc_parameters p_ii{};
   for (long i = 0; i < N; i++) {
-    qsc_parameters p_ii{};
     if (prev_i_Z != atomicNrs[i]) {
       p_ii = get_qsc_parameters(atomicNrs[i], atomicNrs[i]);
+      prev_i_Z = atomicNrs[i];
     }
-    prev_i_Z = atomicNrs[i];
 
+    int prev_j_Z = -1;
+    qsc_parameters p_ij{}, p_jj{};
     for (int k = 0; k < nlist_[i]; k++) {
-      qsc_parameters p_ij{}, p_jj{};
       int j = vlist_[i * N + k];
       double r_ij = distances_[i * N + j].r;
       if (r_ij > cutoff_)
@@ -173,8 +176,8 @@ void QSC::force(long N, const double *R, const int *atomicNrs, double *F,
       if (prev_j_Z != atomicNrs[j]) {
         p_ij = get_qsc_parameters(atomicNrs[i], atomicNrs[j]);
         p_jj = get_qsc_parameters(atomicNrs[j], atomicNrs[j]);
+        prev_j_Z = atomicNrs[j];
       }
-      prev_j_Z = atomicNrs[j];
 
       double Fij = p_ij.n * V_[i * N + j];
       Fij -= p_ii.epsilon * p_ii.c * p_jj.m * 0.5 * (1.0 / sqrtrho_[i]) *
