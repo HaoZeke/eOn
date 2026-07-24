@@ -269,7 +269,14 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     throw std::runtime_error(
         "LAMMPSPot: worker reported a force evaluation error");
   }
-  // eon-7416: an over-aggressive saddle-search kick can drive atoms on top of
+  // A saddle search that never terminates silently truncates the event
+  // table: the KMC residence time is 1/sum_j k_j over the discovered
+  // mechanisms, so a dropped search removes a term and biases the clock
+  // (Pedersen and Jónsson, Math. Comput. Simul. 80, 1487 (2010),
+  // doi:10.1016/j.matcom.2009.02.010, Fig. 1; Alexander and Schuh,
+  // Modelling Simul. Mater. Sci. Eng. 24, 065014 (2016),
+  // doi:10.1088/0965-0393/24/6/065014, on catalog completeness).
+  // An over-aggressive saddle-search kick can drive atoms on top of
   // each other; the EAM force overflows to NaN/Inf and LAMMPS returns it
   // rather than crashing. The min-mode search then spins on non-finite
   // gradients until the akmc pass times out (0 processes). Reject the

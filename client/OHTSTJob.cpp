@@ -24,7 +24,20 @@
 
 namespace eonc {
 
-// Johannesson-Jonsson OH-TST (JCP 115, 9644 (2001)). The dividing
+// Optimal-hyperplane TST. Johánnesson and Jónsson, "Optimization of
+// hyperplanar transition states", J. Chem. Phys. 115, 9644 (2001),
+// doi:10.1063/1.1415499. The colored-noise thermostat option follows
+// Ceriotti, Bussi and Parrinello, Phys. Rev. Lett. 102, 020601 (2009),
+// doi:10.1103/PhysRevLett.102.020601.
+//
+// This lifts the harmonic-TST rate of adaptive KMC (Henkelman and
+// Jónsson, J. Chem. Phys. 115, 9657 (2001), doi:10.1063/1.1415500;
+// Pedersen and Jónsson, Math. Comput. Simul. 80, 1487 (2010),
+// doi:10.1016/j.matcom.2009.02.010) to a free-energy barrier, which
+// matters where a barrier is not large against kT: harmonic TST is
+// quoted as reliable only for dE > ~5 kT.
+//
+// The dividing
 // surface is the hyperplane n.(x - Gamma(s)) = 0 in the 3N_free
 // configuration space, with Gamma(s) = R + s*u on the straight
 // reactant->product guideline u = (P - R)/|P - R|. Sign conventions
