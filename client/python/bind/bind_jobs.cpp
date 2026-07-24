@@ -90,7 +90,8 @@ void bind_jobs(nb::module_ &m) {
         if (!out.is_open())
           throw std::runtime_error("append_results_timing: cannot open " +
                                    path);
-        // results.dat contract: "<value> <key>" (parse_results / eon_schema.jobs)
+        // results.dat contract: "<value> <key>" (parse_results /
+        // eon_schema.jobs)
         out << elapsed_seconds << " time_seconds\n";
 #ifndef _WIN32
         out << user_time << " user_time\n";
