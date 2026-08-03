@@ -44,12 +44,12 @@
     "7258": "fix(asv): loop --set-commit-hash for existing env runs",
     "7259": "fix(asv): run history via scripts/asv_run_history.sh",
     "7263": "chore: towncrier fragment for #378; clang-format files prek -a rewrites",
-    "7267": "fix(ci): Windows MSVC activation on VS 18 runners",
-    "7268": "fix(ci): export only MSVC env from vcvars; verify pip_metatomic imports",
-    "7269": "fix(ci): Windows PATH order for torch DLLs and MSVC link",
-    "7270": "fix(ci): Windows path helper script (valid YAML)",
-    "7271": "fix(ci): torch DLL path before MSVC on Windows GHA",
-    "7272": "fix(ci): do not put MSVC bin first on PATH for torch"
+    "7266": "fix(ci): Windows MSVC activation on VS 18 runners",
+    "7267": "fix(ci): export only MSVC env from vcvars; verify pip_metatomic imports",
+    "7268": "fix(ci): Windows PATH order for torch DLLs and MSVC link",
+    "7269": "fix(ci): Windows path helper script (valid YAML)",
+    "7270": "fix(ci): torch DLL path before MSVC on Windows GHA",
+    "7271": "fix(ci): do not put MSVC bin first on PATH for torch"
   },
   "dcbade17ecc8386a4ee5804354b4994c8ba1d6d8": "update lammps webpage",
   "292bc143343709b10fb7ed150ae5bb493748b289": "gitig: Update",
