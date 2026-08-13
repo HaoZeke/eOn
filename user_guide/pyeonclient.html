@@ -2,7 +2,7 @@
 <html lang="en" data-accent-color="teal" data-content_root="../">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pyeonclient (Python client API) - eOn</title><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="External Potential" href="ext_pot.html" /><link rel="prev" title="User Guide" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pyeonclient (Python client API) - eOn</title><link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Neighbor lists (vesin)" href="neighbor_lists.html" /><link rel="prev" title="User Guide" href="index.html" />
       <link rel="canonical" href="https://eondocs.org/user_guide/pyeonclient.html" /><script>
     function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
     setColorMode(localStorage._theme||"auto");
@@ -86,6 +86,12 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l1 _expand"><a class="reference internal" href="../install/index.html#obtaining-sources">Obtaining sources</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../install/index.html#licenses">Licenses</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/systems/index.html">Real systems for documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/morse_pt_neb.html">Morse Pt NEB (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/lj_minimization.html">LJ cluster minimization (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/pt_saddle.html">Morse Pt saddle search (built-in potential)</a></li>
+</ul>
+</li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/akmc.html">AKMC Tutorial</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/parrep.html">Running a Parallel Replica Job</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/displacement_scripts.html">Targeted Displacement for Saddle Searches</a></li>
@@ -99,6 +105,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guide</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">pyeonclient (Python client API)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="neighbor_lists.html">Neighbor lists (vesin)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="ext_pot.html">External Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="lammps_pot.html">LAMMPS Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="ase_pot.html">ASE Interface</a></li>
@@ -132,7 +139,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l2 _expand"><a class="reference internal" href="kdb.html">Kinetic Database</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat &#183; RGPOT &#183; ASE)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="serve_mode.html">Serve Mode</a></li>
 </ul>
 </li>
@@ -167,6 +174,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.state.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
@@ -284,7 +292,10 @@ data-aria-dark="Switch to auto color mode">
 <li><a class="reference internal" href="#min-mode-dimer">Min-mode (Dimer)</a></li>
 <li><a class="reference internal" href="#single-ended-saddle-search">Single-ended saddle search</a></li>
 <li><a class="reference internal" href="#neb">NEB</a></li>
-<li><a class="reference internal" href="#hessian-and-prefactors">Hessian and prefactors</a></li>
+<li><a class="reference internal" href="#hessian-and-prefactors">Hessian and prefactors</a><ul>
+<li><a class="reference internal" href="#free-fixed-versus-phva-active-lanczos-davidson">Free/fixed versus PHVA active (Lanczos / Davidson)</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#job-factory-full-jobtype-surface">Job factory (full JobType surface)</a></li>
 <li><a class="reference internal" href="#ase-bridge">ASE bridge</a></li>
 <li><a class="reference internal" href="#related">Related</a></li>
@@ -668,8 +679,23 @@ prefactor / Parallel Replica.</p>
 </span><span data-line="6"><span class="n">pref1</span><span class="p">,</span> <span class="n">pref2</span> <span class="o">=</span> <span class="n">pyec</span><span class="o">.</span><span class="n">get_prefactors</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">min1</span><span class="p">,</span> <span class="n">saddle</span><span class="p">,</span> <span class="n">min2</span><span class="p">)</span>
 </span></pre></div>
 </div>
-<p>Parameters: <code class="docutils literal notranslate"><span class="pre">hessian_atom_list</span></code>, <code class="docutils literal notranslate"><span class="pre">hessian_zero_freq_value</span></code>, <code class="docutils literal notranslate"><span class="pre">prefactor_rate</span></code>
+<p>Parameters: <code class="docutils literal notranslate"><span class="pre">hessian_phva_atoms</span></code>, <code class="docutils literal notranslate"><span class="pre">hessian_zero_freq_value</span></code>, <code class="docutils literal notranslate"><span class="pre">prefactor_rate</span></code>
 (<code class="docutils literal notranslate"><span class="pre">htst</span></code> / <code class="docutils literal notranslate"><span class="pre">qqhtst</span></code>), <code class="docutils literal notranslate"><span class="pre">prefactor_filter_scheme</span></code>, <code class="docutils literal notranslate"><span class="pre">prefactor_within_radius</span></code>, …</p>
+<section id="free-fixed-versus-phva-active-lanczos-davidson">
+<h3>Free/fixed versus PHVA active (Lanczos / Davidson)<a class="headerlink" href="#free-fixed-versus-phva-active-lanczos-davidson" title="Link to this heading">¶</a></h3>
+<p><strong>free/fixed</strong> is the optimizer mask. <strong><code class="docutils literal notranslate"><span class="pre">phva_atoms</span></code></strong> (or <code class="docutils literal notranslate"><span class="pre">compute(...,</span> <span class="pre">atoms=)</span></code>)
+is the PHVA mobile set for dense Hessian and matrix-free min-mode. Default
+<code class="docutils literal notranslate"><span class="pre">All</span></code> keeps historical behavior (Krylov over all free atoms). An explicit list
+bounds the Krylov dimension to (3 N_\mathrm{active}) without rewriting free
+flags:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span data-line="1"><span class="n">mobile</span> <span class="o">=</span> <span class="n">pyec</span><span class="o">.</span><span class="n">resolve_mobile_atoms</span><span class="p">(</span><span class="n">matter</span><span class="p">,</span> <span class="s2">&quot;12,15,18&quot;</span><span class="p">)</span>  <span class="c1"># ∩ free</span>
+</span><span data-line="2"><span class="n">lanczos</span> <span class="o">=</span> <span class="n">pyec</span><span class="o">.</span><span class="n">Lanczos</span><span class="p">(</span><span class="n">matter</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">pot</span><span class="p">)</span>
+</span><span data-line="3"><span class="n">lanczos</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">matter</span><span class="p">,</span> <span class="n">direction</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">mobile</span><span class="p">)</span>
+</span><span data-line="4"><span class="c1"># or params.lanczos_phva_atoms = &quot;12,15,18&quot; then compute(matter, direction)</span>
+</span></pre></div>
+</div>
+<p>Same polarity for <code class="docutils literal notranslate"><span class="pre">params.davidson_phva_atoms</span></code> / <code class="docutils literal notranslate"><span class="pre">Davidson.compute(...,</span> <span class="pre">atoms=)</span></code>.</p>
+</section>
 </section>
 <section id="job-factory-full-jobtype-surface">
 <h2>Job factory (full JobType surface)<a class="headerlink" href="#job-factory-full-jobtype-surface" title="Link to this heading">¶</a></h2>
@@ -728,10 +754,10 @@ Not thread-safe across images (one calculator object).</p>
         <span>Previous</span><div class="title">User Guide</div></div>
     </a>
   </div><div class="navigation-next">
-    <a href="ext_pot.html">
+    <a href="neighbor_lists.html">
       <div class="page-info">
         <span>Next</span>
-        <div class="title">External Potential</div>
+        <div class="title">Neighbor lists (vesin)</div>
       </div>
       <i class="i-lucide chevron-right"></i>
     </a>
@@ -759,7 +785,7 @@ Not thread-safe across images (one calculator object).</p>
     </div>
   </div>
 </footer>
-      <script src="../_static/documentation_options.js?v=ac7e2bcc"></script>
+      <script src="../_static/documentation_options.js?v=dd1205ac"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../_static/clipboard.min.js?v=a7894cd8"></script>

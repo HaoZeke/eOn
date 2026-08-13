@@ -86,6 +86,12 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#obtaining-sources">Obtaining sources</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#licenses">Licenses</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/systems/index.html">Real systems for documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/morse_pt_neb.html">Morse Pt NEB (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/lj_minimization.html">LJ cluster minimization (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/pt_saddle.html">Morse Pt saddle search (built-in potential)</a></li>
+</ul>
+</li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/akmc.html">AKMC Tutorial</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/parrep.html">Running a Parallel Replica Job</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/displacement_scripts.html">Targeted Displacement for Saddle Searches</a></li>
@@ -99,6 +105,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../user_guide/index.html">User Guide</a><ul>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/pyeonclient.html">pyeonclient (Python client API)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/neighbor_lists.html">Neighbor lists (vesin)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ext_pot.html">External Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/lammps_pot.html">LAMMPS Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ase_pot.html">ASE Interface</a></li>
@@ -132,7 +139,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/kdb.html">Kinetic Database</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_metatomic.html">Metatomic backends (fat &#183; RGPOT &#183; ASE)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/serve_mode.html">Serve Mode</a></li>
 </ul>
 </li>
@@ -167,6 +174,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../apidocs/eon/eon.state.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
@@ -379,8 +387,8 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="43">        <span class="c1"># Off by default; requires the amsel Python package when enabled.</span>
 </span><span data-line="44">        <span class="c1"># [amsel] stanza (config.amsel_*); sb_amsel_* kept as back-compat aliases</span>
 </span><span data-line="45">        <span class="n">_amsel_on</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
-</span><span data-line="46">            <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_discover_decide&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-</span><span data-line="47">            <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_discover_decide&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span data-line="46">            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_discover_decide&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span data-line="47">            <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_discover_decide&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
 </span><span data-line="48">        <span class="p">)</span>
 </span><span data-line="49">        <span class="k">if</span> <span class="n">_amsel_on</span><span class="p">:</span>
 </span><span data-line="50">            <span class="kn">from</span><span class="w"> </span><span class="nn">eon.amsel_superbasin_gate</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -391,20 +399,20 @@ data-aria-dark="Switch to auto color mode">
 </span><span data-line="55">                <span class="bp">self</span><span class="p">,</span>
 </span><span data-line="56">                <span class="n">entry_state</span><span class="p">,</span>
 </span><span data-line="57">                <span class="n">e_min_init</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span>
-</span><span data-line="58">                    <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_init&quot;</span><span class="p">,</span>
-</span><span data-line="59">                            <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_init&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
+</span><span data-line="58">                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_init&quot;</span><span class="p">,</span>
+</span><span data-line="59">                            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_init&quot;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
 </span><span data-line="60">                <span class="p">),</span>
 </span><span data-line="61">                <span class="n">e_min_step</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span>
-</span><span data-line="62">                    <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_step&quot;</span><span class="p">,</span>
-</span><span data-line="63">                            <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_step&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">))</span>
+</span><span data-line="62">                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_step&quot;</span><span class="p">,</span>
+</span><span data-line="63">                            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_step&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">))</span>
 </span><span data-line="64">                <span class="p">),</span>
 </span><span data-line="65">                <span class="n">e_min_floor</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span>
-</span><span data-line="66">                    <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_floor&quot;</span><span class="p">,</span>
-</span><span data-line="67">                            <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_floor&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">))</span>
+</span><span data-line="66">                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_e_min_floor&quot;</span><span class="p">,</span>
+</span><span data-line="67">                            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_e_min_floor&quot;</span><span class="p">,</span> <span class="mf">0.05</span><span class="p">))</span>
 </span><span data-line="68">                <span class="p">),</span>
 </span><span data-line="69">                <span class="n">cv_threshold</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span>
-</span><span data-line="70">                    <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_cv_threshold&quot;</span><span class="p">,</span>
-</span><span data-line="71">                            <span class="nb">getattr</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_cv_threshold&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">))</span>
+</span><span data-line="70">                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;amsel_cv_threshold&quot;</span><span class="p">,</span>
+</span><span data-line="71">                            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="s2">&quot;sb_amsel_cv_threshold&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">))</span>
 </span><span data-line="72">                <span class="p">),</span>
 </span><span data-line="73">            <span class="p">)</span>
 </span><span data-line="74">            <span class="n">status</span> <span class="o">=</span> <span class="n">apply_gate_to_superbasin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">entry_state</span><span class="p">,</span> <span class="n">decision</span><span class="p">)</span>
@@ -634,7 +642,7 @@ data-aria-dark="Switch to auto color mode">
     </div>
   </div>
 </footer>
-      <script src="../../_static/documentation_options.js?v=ac7e2bcc"></script>
+      <script src="../../_static/documentation_options.js?v=dd1205ac"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

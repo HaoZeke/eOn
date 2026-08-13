@@ -86,6 +86,12 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#obtaining-sources">Obtaining sources</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#licenses">Licenses</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/systems/index.html">Real systems for documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/morse_pt_neb.html">Morse Pt NEB (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/lj_minimization.html">LJ cluster minimization (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/systems/pt_saddle.html">Morse Pt saddle search (built-in potential)</a></li>
+</ul>
+</li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/akmc.html">AKMC Tutorial</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/parrep.html">Running a Parallel Replica Job</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/displacement_scripts.html">Targeted Displacement for Saddle Searches</a></li>
@@ -99,6 +105,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../user_guide/index.html">User Guide</a><ul>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/pyeonclient.html">pyeonclient (Python client API)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/neighbor_lists.html">Neighbor lists (vesin)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ext_pot.html">External Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/lammps_pot.html">LAMMPS Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ase_pot.html">ASE Interface</a></li>
@@ -132,7 +139,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/kdb.html">Kinetic Database</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_metatomic.html">Metatomic backends (fat &#183; RGPOT &#183; ASE)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/serve_mode.html">Serve Mode</a></li>
 </ul>
 </li>
@@ -167,6 +174,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l3"><a class="reference internal" href="eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
@@ -297,6 +305,7 @@ data-aria-dark="Switch to auto color mode">
 <li><a class="reference internal" href="#eon.state.State.get_process_ids"><code class="docutils literal notranslate">get_process_ids()</span></code></a></li>
 <li><a class="reference internal" href="#eon.state.State.get_previous_state"><code class="docutils literal notranslate">get_previous_state()</span></code></a></li>
 <li><a class="reference internal" href="#eon.state.State.get_num_procs"><code class="docutils literal notranslate">get_num_procs()</span></code></a></li>
+<li><a class="reference internal" href="#eon.state.State.allocate_process_id"><code class="docutils literal notranslate">allocate_process_id()</span></code></a></li>
 <li><a class="reference internal" href="#eon.state.State.get_process_table"><code class="docutils literal notranslate">get_process_table()</span></code></a></li>
 <li><a class="reference internal" href="#eon.state.State.get_displacement_atom_list"><code class="docutils literal notranslate">get_displacement_atom_list()</span></code></a></li>
 </ul>
@@ -482,7 +491,23 @@ data-aria-dark="Switch to auto color mode">
 <dl class="py method">
 <dt class="sig sig-object py" id="eon.state.State.get_num_procs">
 <span class="sig-name descname"><span class="pre">get_num_procs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/eon/state.html#State.get_num_procs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.state.State.get_num_procs" title="Link to this definition">¶</a></dt>
-<dd><p>Loads the process table if it is not already loaded and returns the length of it</p>
+<dd><p>Number of distinct process ids currently in the table.</p>
+<p>This is a count, not an allocator. New registrations must use</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Meth<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">allocate_process_id</span></code> (content-addressed xxh64), never
+<code class="docutils literal notranslate"><span class="pre">len(self.procs)</span></code> or <code class="docutils literal notranslate"><span class="pre">max(id)+1</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eon.state.State.allocate_process_id">
+<span class="sig-name descname"><span class="pre">allocate_process_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">parts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/eon/state.html#State.allocate_process_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.state.State.allocate_process_id" title="Link to this definition">¶</a></dt>
+<dd><p>Content-addressed free process id (xxh64 over <em>parts</em>).</p>
+<p>Reloads the process table from disk so external rewrites are visible,
+then returns an id derived from the payload that is not already in
+<code class="docutils literal notranslate"><span class="pre">self.procs</span></code>. Identity does not depend on table length or max id.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -550,7 +575,7 @@ A string of atom indices for displacement.</p>
     </div>
   </div>
 </footer>
-      <script src="../../_static/documentation_options.js?v=ac7e2bcc"></script>
+      <script src="../../_static/documentation_options.js?v=dd1205ac"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>

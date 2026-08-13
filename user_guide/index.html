@@ -86,6 +86,12 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l1 _expand"><a class="reference internal" href="../install/index.html#obtaining-sources">Obtaining sources</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../install/index.html#licenses">Licenses</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/systems/index.html">Real systems for documentation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/morse_pt_neb.html">Morse Pt NEB (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/lj_minimization.html">LJ cluster minimization (built-in potential)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/systems/pt_saddle.html">Morse Pt saddle search (built-in potential)</a></li>
+</ul>
+</li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/akmc.html">AKMC Tutorial</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/parrep.html">Running a Parallel Replica Job</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../tutorials/displacement_scripts.html">Targeted Displacement for Saddle Searches</a></li>
@@ -99,6 +105,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">User Guide</a><ul>
 <li class="toctree-l2 _expand"><a class="reference internal" href="pyeonclient.html">pyeonclient (Python client API)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="neighbor_lists.html">Neighbor lists (vesin)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="ext_pot.html">External Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="lammps_pot.html">LAMMPS Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="ase_pot.html">ASE Interface</a></li>
@@ -132,7 +139,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l2 _expand"><a class="reference internal" href="kdb.html">Kinetic Database</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat &#183; RGPOT &#183; ASE)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="serve_mode.html">Serve Mode</a></li>
 </ul>
 </li>
@@ -167,6 +174,7 @@ data-aria-dark="Switch to auto color mode">
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../apidocs/eon/eon.state.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
@@ -279,6 +287,7 @@ data-aria-dark="Switch to auto color mode">
 <li><a class="reference internal" href="#python-client-pyeonclient">Python client (pyeonclient)</a></li>
 <li><a class="reference internal" href="#configuration-file-config-ini">Configuration file (<code class="docutils literal notranslate">ini</span></code>)</a></li>
 <li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#geometry-and-neighbor-lists">Geometry and neighbor lists</a></li>
 <li><a class="reference internal" href="#potentials">Potentials</a></li>
 <li><a class="reference internal" href="#configuration-sections">Configuration Sections</a><ul>
 </ul>
@@ -386,6 +395,7 @@ package <code class="docutils literal notranslate"><span class="pre">pyeonclient
 <p class="caption" role="heading"><span class="caption-text">Python API</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="pyeonclient.html">pyeonclient (Python client API)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="neighbor_lists.html">Neighbor lists (vesin)</a></li>
 </ul>
 </div>
 <p>See also the <a class="reference internal" href="#../apidocs/pyeonclient.md"><span class="xref myst">API reference</span></a> and the
@@ -426,6 +436,11 @@ mpi.</p>
 <p>Methods run in parallel are broken up by the eon server into tasks which
 are run by client program. The server then compiles the information sent back
 by the clients in a way that can be used by the sampling or dynamics methods.</p>
+</section>
+<section id="geometry-and-neighbor-lists">
+<h2>Geometry and neighbor lists<a class="headerlink" href="#geometry-and-neighbor-lists" title="Link to this heading">¶</a></h2>
+<p>Pair finding owned by eOn uses <strong>vesin</strong>. Architecture and <strong>ASV</strong> measurement
+surface: <a class="reference internal" href="neighbor_lists.html"><span class="std std-doc">Neighbor lists (vesin)</span></a>.</p>
 </section>
 <section id="potentials">
 <h2>Potentials<a class="headerlink" href="#potentials" title="Link to this heading">¶</a></h2>
@@ -505,7 +520,7 @@ described in the subsequent sections.</p>
 <li class="toctree-l1"><a class="reference internal" href="kdb.html">Kinetic Database</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat · RGPOT · ASE)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="serve_mode.html">Serve Mode</a></li>
 </ul>
 </div>
@@ -556,7 +571,7 @@ described in the subsequent sections.</p>
     </div>
   </div>
 </footer>
-      <script src="../_static/documentation_options.js?v=ac7e2bcc"></script>
+      <script src="../_static/documentation_options.js?v=dd1205ac"></script>
       <script src="../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
