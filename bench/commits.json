@@ -49,7 +49,12 @@
     "7268": "fix(ci): Windows PATH order for torch DLLs and MSVC link",
     "7269": "fix(ci): Windows path helper script (valid YAML)",
     "7270": "fix(ci): torch DLL path before MSVC on Windows GHA",
-    "7271": "fix(ci): do not put MSVC bin first on PATH for torch"
+    "7271": "fix(ci): do not put MSVC bin first on PATH for torch",
+    "7413": "Merge pull request #391 from HaoZeke/feat/pyeonclient-testpypi",
+    "7416": "fix(metatomic): load PET-MAD on metatensor-torch 0.10.3",
+    "7417": "Merge pull request #392 from HaoZeke/fix/metatomic-to-mts-buffer-names",
+    "7418": "chore(version): v3.1.0",
+    "7421": "docs: rewrite ASV and pot guides without AI-isms"
   },
   "dcbade17ecc8386a4ee5804354b4994c8ba1d6d8": "update lammps webpage",
   "292bc143343709b10fb7ed150ae5bb493748b289": "gitig: Update",
@@ -100,5 +105,10 @@
   "a2673a5b070d8cdf4e0b2342f236d10f06397ff1": "fix(ci): Windows PATH order for torch DLLs and MSVC link",
   "e8f2fd08c38c9a6ca4a103561623ea85846e953a": "fix(ci): Windows path helper script (valid YAML)",
   "f220a79c8b20bc00cf5af03c753dfdc1c26881ca": "fix(ci): torch DLL path before MSVC on Windows GHA",
-  "17c3a80210b06b2800e4210ea61e57045357585b": "fix(ci): do not put MSVC bin first on PATH for torch"
+  "17c3a80210b06b2800e4210ea61e57045357585b": "fix(ci): do not put MSVC bin first on PATH for torch",
+  "b0c59e73eb5d13a85f9c27b061b6efdeb06a7fc3": "Merge pull request #391 from HaoZeke/feat/pyeonclient-testpypi",
+  "c09c567cba38a0b6043a5dc598fcd163e1c7b3ee": "fix(metatomic): load PET-MAD on metatensor-torch 0.10.3",
+  "98cb0a49a885c0d39c0b45b5edf569498964ce49": "Merge pull request #392 from HaoZeke/fix/metatomic-to-mts-buffer-names",
+  "99b1a019a2bcaa60223a20e4a57d59321955ba54": "chore(version): v3.1.0",
+  "85d106a3323b134882501021ad6cfec8e7a44517": "docs: rewrite ASV and pot guides without AI-isms"
 }
