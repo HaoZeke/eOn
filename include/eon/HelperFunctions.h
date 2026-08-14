@@ -51,8 +51,8 @@ using eonc::geometry::sortedR;
 using eonc::geometry::translationRemove;
 
 AtomMatrix makeOrthogonal(
-    const AtomMatrix v1,
-    const AtomMatrix v2); // return orthogonal component of v1 from v2
+    const AtomMatrix &v1,
+    const AtomMatrix &v2); // return orthogonal component of v1 from v2
 bool relaxMatter(Matter &matter, const Parameters &params, bool quiet = false,
                  bool writeMovie = false, bool checkpoint = false,
                  std::string prefixMovie = std::string(),

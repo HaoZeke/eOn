@@ -37,8 +37,8 @@ using std::string;
 
 // Vector functions.
 // Make v1 orthogonal to v2
-AtomMatrix eonc::helpers::makeOrthogonal(const AtomMatrix v1,
-                                         const AtomMatrix v2) {
+AtomMatrix eonc::helpers::makeOrthogonal(const AtomMatrix &v1,
+                                         const AtomMatrix &v2) {
   return v1 - matDot(v1, v2) * eonc::safemath::safe_normalized(v2);
 }
 
