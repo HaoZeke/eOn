@@ -15,7 +15,7 @@ from eon.geometry.neighbors import (
     neighbor_list,
     neighbor_list_vectors,
 )
-from eon.geometry.pbc import pbc, per_atom_norm, per_atom_norm_gen
+from eon.geometry.pbc import pbc, per_atom_norm, per_atom_norm_gen, per_atom_norm_rows
 from eon.geometry.process import get_process_atoms
 
 __all__ = [
@@ -24,6 +24,7 @@ __all__ = [
     "pbc",
     "per_atom_norm",
     "per_atom_norm_gen",
+    "per_atom_norm_rows",
     "neighbor_csr",
     "neighbor_list",
     "neighbor_list_vectors",

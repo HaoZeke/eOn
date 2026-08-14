@@ -28,10 +28,18 @@ from eon.geometry import (  # noqa: F401
     pbc,
     per_atom_norm,
     per_atom_norm_gen,
+    per_atom_norm_rows,
 )
 from eon.geometry.neighbors import unique_sorted
 
-# --- structure comparison / CNA (unchanged algorithms) ---
+# --- structure comparison / CNA ---
+
+# Rows of the (moved atom, every atom) distance block: first block, then cap.
+# Doubling keeps the total rows at one per moved atom either way, so the only
+# cost of starting at one is a handful of extra numpy calls.
+_MISMATCH_STEP = 1
+_MISMATCH_CHUNK = 256
+
 
 def identical(atoms1, atoms2, epsilon_r):
     """True if two structures match when same-element atoms are interchangeable.
@@ -56,26 +64,32 @@ def identical(atoms1, atoms2, epsilon_r):
     box = atoms1.box
     ibox = numpy.linalg.inv(box)
 
-    mismatch = []
+    names1 = numpy.asarray(atoms1.names)
+    names2 = numpy.asarray(atoms2.names)
     pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
-    for i in range(len(pan)):
-        if pan[i] > epsilon_r:
-            mismatch.append(i)
-        elif atoms1.names[i] != atoms2.names[i]:
-            return False
+    moved = pan > epsilon_r
+    mismatch = numpy.flatnonzero(moved)
+    settled = ~moved
+    if numpy.any(settled & (names1 != names2)):
+        return False
 
-    for i in mismatch:
-        pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
-        minpan = 1e300
-        minj = 0
-        for j in range(len(pan)):
-            if i == j:
-                continue
-            if pan[j] < minpan:
-                minpan = pan[j]
-                minj = j
-        if not (minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]):
+    # A moved atom has to sit on top of some other atom of its own element:
+    # the nearest atom of atoms1 to it, itself excluded. Blocks start small and
+    # grow, so a structure that fails on its first moved atom pays for a few
+    # rows while one that passes still gets the whole sweep vectorized.
+    lo = 0
+    step = _MISMATCH_STEP
+    while lo < mismatch.size:
+        block = mismatch[lo:lo + step]
+        pan = per_atom_norm_rows(atoms1.r, atoms2.r[block], box, ibox)
+        row = numpy.arange(block.size)
+        pan[row, block] = numpy.inf
+        minj = numpy.argmin(pan, axis=1)
+        if not numpy.all((pan[row, minj] < epsilon_r)
+                         & (names1[minj] == names2[block])):
             return False
+        lo += step
+        step = min(2 * step, _MISMATCH_CHUNK)
     return True
 
 
@@ -123,8 +137,8 @@ def points_energies_match(file_a, energy_a, files_b, energies_b, eps_e, eps_r,
 def rot_match(a, b, eps_r):
     if not (a.free.all() and b.free.all()):
         logger.warning("Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly")
-    acm = sum(a.r)/len(a)
-    bcm = sum(b.r)/len(b)
+    acm = a.r.sum(axis=0)/len(a)
+    bcm = b.r.sum(axis=0)/len(b)
 
     # SVD algorithm ("Least-Squares Fitting of Two 3-D Point Sets" by Arun, Huang, and Blostein)
     ta_r = a.r - acm
@@ -136,7 +150,7 @@ def rot_match(a, b, eps_r):
         V[2] *= -1
         R = numpy.dot(U, V)
     ta_r = numpy.dot(ta_r, R)
-    dist = max(numpy.linalg.norm(ta_r - tb_r, axis=1))
+    dist = numpy.linalg.norm(ta_r - tb_r, axis=1).max()
     return dist < eps_r
 
     ''' Quaternion algorithm
@@ -482,6 +496,61 @@ def not_TCP_or_BCC(p, cutoff, brute=False):
 
 import sys
 sys.setrecursionlimit(10000)
+
+
+class _MappingSearch:
+    """State the mapping search reads on every recursion.
+
+    The two full MIC distance tables are the point: the search asks for the
+    distance between the same atom pairs at every depth, and recomputing them
+    per candidate is what the depth-first walk spent its time on. ``da[i, j]``
+    is the distance from atom i to atom j of configuration a, oriented the way
+    the search reads it.
+    """
+
+    def __init__(self, a, b, eps_r):
+        self.eps_r = eps_r
+        self.na = len(a)
+        self.nb = len(b)
+        self.da = per_atom_norm_rows(a.r, a.r, a.box).T
+        self.db = per_atom_norm_rows(b.r, b.r, b.box).T
+        self.names_a = numpy.asarray(a.names)
+        self.names_b = numpy.asarray(b.names)
+
+
+def _extend_mapping(search, mappings):
+    """Map the next unmapped atom of a, depth first, or return None."""
+    unmappedA = 0
+    while unmappedA < search.na and unmappedA in mappings:
+        unmappedA += 1
+    mapped_b = numpy.fromiter(mappings.values(), dtype=numpy.int64,
+                              count=len(mappings))
+    taken = numpy.zeros(search.nb, dtype=bool)
+    taken[mapped_b] = True
+    candidates = numpy.flatnonzero(~taken)
+    if mapped_b.size and candidates.size:
+        # Same element, and the same distances to every already mapped atom.
+        mapped_a = numpy.fromiter(mappings.keys(), dtype=numpy.int64,
+                                  count=len(mappings))
+        candidates = candidates[
+            search.names_b[candidates] == search.names_a[unmappedA]]
+        spread = numpy.abs(search.db[numpy.ix_(candidates, mapped_b)]
+                           - search.da[unmappedA, mapped_a])
+        candidates = candidates[(spread <= search.eps_r).all(axis=1)]
+    for bAtom in candidates:
+        newMappings = mappings.copy()
+        newMappings[unmappedA] = int(bAtom)
+        # If this is now a complete mapping from a to b, return it.
+        if len(newMappings) == search.na:
+            return newMappings
+        newMappings = _extend_mapping(search, newMappings)
+        # Pass any successful mapping up the recursion chain.
+        if newMappings is not None:
+            return newMappings
+    # There were no mappings.
+    return None
+
+
 def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
     """ A recursive depth-first search for a complete set of mappings from atoms
         in configuration a to atoms in configuration b. Do not use the mappings
@@ -517,58 +586,21 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
             return None
         # Create a mapping from the atom chosen from a to each of the atoms with
         # the least common coordination number in b, and recurse.
+        search = _MappingSearch(a, b, eps_r)
         for i in range(len(bCoordinations)):
             if bCoordinations[i] == bLeastCommonCoordination:
                 # Make sure the element types are the same.
                 if a.names[aAtom] != b.names[i]:
                     continue
-                mappings = get_mappings(a, b, eps_r, neighbor_cutoff, {aAtom:i})
+                mappings = _extend_mapping(search, {aAtom: i})
                 # If the result is not none, then we found a successful mapping.
                 if mappings is not None:
                     return mappings
         # There were no mappings.
         return None
 
-    # This is a recursed invocation of this function.
-    else:
-        # Find an atom from a that has not yet been mapped.
-        unmappedA = 0
-        while unmappedA < len(a):
-            if unmappedA not in list(mappings.keys()):
-                break
-            unmappedA += 1
-        # Calculate the distances from unmappedA to all mapped a atoms.
-        distances = {}
-        for i in list(mappings.keys()):
-            distances[i] = numpy.linalg.norm(pbc(a.r[unmappedA] - a.r[i], a.box))
-        # Loop over each unmapped b atom. Compare the distances between it and
-        # the mapped b atoms to the corresponding distances between unmappedA
-        # and the mapped atoms. If everything is similar, create a new mapping
-        # and recurse.
-        for bAtom in range(len(b)):
-            if bAtom not in list(mappings.values()):
-                for aAtom in distances:
-                    # Break if type check fails.
-                    if b.names[bAtom] != a.names[unmappedA]:
-                        break
-                    # Break if distance check fails
-                    bDist = numpy.linalg.norm(pbc(b.r[bAtom] - b.r[mappings[aAtom]], b.box))
-                    if abs(distances[aAtom] - bDist) > eps_r:
-                        break
-                else:
-                    # All distances were good, so create a new mapping.
-                    newMappings = mappings.copy()
-                    newMappings[unmappedA] = bAtom
-                    # If this is now a complete mapping from a to b, return it.
-                    if len(newMappings) == len(a):
-                        return newMappings
-                    # Otherwise, recurse.
-                    newMappings = get_mappings(a, b, eps_r, neighbor_cutoff, newMappings)
-                    # Pass any successful mapping up the recursion chain.
-                    if newMappings is not None:
-                        return newMappings
-        # There were no mappings.
-        return None
+    # A caller supplied a partial mapping to grow.
+    return _extend_mapping(_MappingSearch(a, b, eps_r), dict(mappings))
 
 def get_rotation_matrix(axis, theta):
     axis = axis / numpy.linalg.norm(axis)
