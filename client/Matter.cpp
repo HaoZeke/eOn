@@ -560,15 +560,17 @@ double Matter::maxForce() const {
   // Ensures that the forces are up to date
   computePotential();
 
-  // I think this can be done in one line with the rowwise method
-  double maxForce = 0.0;
+  // Rank on the squared norms and take one square root at the end. Eigen's
+  // norm() is sqrt(squaredNorm()) and sqrt is monotone, so the winner and the
+  // value returned are the same.
+  double maxSquared = 0.0;
   for (int i = 0; i < nAtoms; i++) {
     if (getFixed(i)) {
       continue;
     }
-    maxForce = std::max(forces.row(i).norm(), maxForce);
+    maxSquared = std::max(forces.row(i).squaredNorm(), maxSquared);
   }
-  return maxForce;
+  return std::sqrt(maxSquared);
 }
 
 VectorXi Matter::getAtomicNrs() const { return this->atomicNrs; }

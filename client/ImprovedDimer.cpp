@@ -196,7 +196,11 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
     }
     g0 = -x0->getForcesV();
     g1 = -x1->getForcesV();
-  } else if (params.main_options.parallel && canParallel) {
+  } else if (params.main_options.parallel && canParallel &&
+             x0->needsForceUpdate() && x1->needsForceUpdate()) {
+    // Only worth a thread when both replicas actually need evaluating. x1 is
+    // usually already current from the high-energy-wall check above, which
+    // leaves the thread doing a cached read.
     // std::thread instead of std::jthread (Apple Clang libc++). Guard so an
     // exception from the foreground call still joins t0 before rethrow.
     std::thread t0([&] { g0 = -x0->getForcesV(); });
