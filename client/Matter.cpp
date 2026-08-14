@@ -309,7 +309,9 @@ void Matter::setPositionsV(const VectorXd &pos) {
 
 void Matter::setPositionsFree(const AtomMatrix &pos) {
   getFree(); // ensure freeIndices is up to date
-  if (allAtomsFree) {
+  // The row check keeps a short argument out of the bulk path, where Eigen
+  // would resize the position storage and leave it out of step with nAtoms.
+  if (allAtomsFree && pos.rows() == nAtoms) {
     positions = pos;
   } else {
     for (size_t j = 0; j < freeIndices.size(); j++) {
