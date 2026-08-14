@@ -400,13 +400,17 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute() {
 
     iteration++;
 
+    // Refresh the band first. convergenceForce() runs updateForces(), which
+    // hands every moved image to the potential in one batch (or one thread
+    // fan-out). Reading a single image energy ahead of it evaluates that image
+    // on its own and leaves the rest to a batch one image short.
+    double iterForce = convergenceForce();
     double dE = path[maxEnergyImage]->getPotentialEnergy() -
                 path[0]->getPotentialEnergy();
     double stepSize = eonc::helpers::maxAtomMotionV(
         path[0]->pbcV(objf->getPositions() - pos));
     QUILL_LOG_DEBUG(log, "{:>10} {:>12.4e} {:>14.4e} {:>11} {:>12.4}",
-                    iteration, stepSize, convergenceForce(), maxEnergyImage,
-                    dE);
+                    iteration, stepSize, iterForce, maxEnergyImage, dE);
 
     if (pot->getType() == PotType::CatLearn) {
       if (objf->isUncertain()) {
@@ -441,26 +445,34 @@ double NudgedElasticBand::convergenceForce() {
   long iStart = ciOnly ? climbingImage : 1;
   long iEnd = ciOnly ? climbingImage : numImages;
 
-  for (long i = iStart; i <= iEnd; i++) {
-    if (params.optimizer_options.convergence_metric == "norm") {
+  // Select the metric once rather than comparing the string per image (and,
+  // for max_atom, per image per atom).
+  const std::string &metric = params.optimizer_options.convergence_metric;
+  if (metric == "norm") {
+    for (long i = iStart; i <= iEnd; i++) {
       fmax = std::max(fmax, projectedForce[i]->norm());
-    } else if (params.optimizer_options.convergence_metric == "max_atom") {
-      for (int j = 0; j < path[0]->numberOfAtoms(); j++) {
+    }
+  } else if (metric == "max_atom") {
+    const long nAtoms = path[0]->numberOfAtoms();
+    for (long i = iStart; i <= iEnd; i++) {
+      for (long j = 0; j < nAtoms; j++) {
         if (path[0]->getFixed(j))
           continue;
         fmax = std::max(fmax, projectedForce[i]->row(j).norm());
       }
-    } else if (params.optimizer_options.convergence_metric == "max_component") {
-      fmax = std::max(fmax, projectedForce[i]->maxCoeff());
-    } else {
-      log = eonc::log::traceback();
-      QUILL_LOG_CRITICAL(
-          log, "[Nudged Elastic Band] unknown opt_convergence_metric: {}",
-          params.optimizer_options.convergence_metric);
-      throw std::invalid_argument(
-          std::format("[Nudged Elastic Band] unknown convergence_metric: {}",
-                      params.optimizer_options.convergence_metric));
     }
+  } else if (metric == "max_component") {
+    for (long i = iStart; i <= iEnd; i++) {
+      fmax = std::max(fmax, projectedForce[i]->maxCoeff());
+    }
+  } else {
+    log = eonc::log::traceback();
+    QUILL_LOG_CRITICAL(log,
+                       "[Nudged Elastic Band] unknown opt_convergence_metric: "
+                       "{}",
+                       metric);
+    throw std::invalid_argument(std::format(
+        "[Nudged Elastic Band] unknown convergence_metric: {}", metric));
   }
   return fmax;
 }

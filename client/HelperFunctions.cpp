@@ -375,16 +375,27 @@ bool eonc::helpers::relaxMatter(Matter &matter, const Parameters &params,
                     matter.getPotentialEnergy());
   }
 
+  // The step size only reaches the debug line, the movie metadata and the .dat
+  // rows. Measuring it costs a copy of the positions plus a full PBC round
+  // trip per iteration, so skip it when nothing downstream reads it.
+  const bool trackStepSize = !quiet || writeMovie || outFrames;
+
   while (!objf->isConverged() &&
          iteration < params.optimizer_options.max_iterations) {
 
-    AtomMatrix pos = matter.getPositions();
+    AtomMatrix pos;
+    if (trackStepSize) {
+      pos = matter.getPositions();
+    }
 
     optim->step(params.optimizer_options.max_move);
     iteration++;
 
     double stepSize =
-        eonc::geometry::maxAtomMotion(matter.pbc(matter.getPositions() - pos));
+        trackStepSize
+            ? eonc::geometry::maxAtomMotion(matter.pbc(matter.getPositions() -
+                                                       pos))
+            : 0.0;
 
     if (!quiet) {
       QUILL_LOG_DEBUG(m_log, "{} {:10}  {:14.5e}  {:18.5e}  {:13.5f}",
