@@ -11,6 +11,7 @@ from eon.geometry.neighbors import (
     brute_neighbor_list,
     coordination_numbers,
     least_coordinated,
+    neighbor_csr,
     neighbor_list,
     neighbor_list_vectors,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "pbc",
     "per_atom_norm",
     "per_atom_norm_gen",
+    "neighbor_csr",
     "neighbor_list",
     "neighbor_list_vectors",
     "brute_neighbor_list",

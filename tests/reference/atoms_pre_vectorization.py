@@ -62,3 +62,153 @@ def brute_neighbor_list_scalar(p, cutoff):
                 if dist < cutoff:
                     nl[a].append(b)
     return nl
+
+
+def cna_scalar(n, nl):
+    """Historical cna body (8de45a36b), taking a prebuilt neighbor list."""
+    can_values = numpy.zeros(n)
+    nr_FCC = numpy.zeros(n)
+    nr_HCP = numpy.zeros(n)
+
+    for a2 in range(n):
+        nl_a2 = nl[a2]
+        for n2 in range(len(nl_a2)):
+            a1 = nl_a2[n2]
+            if a1 < a2:
+                common = []
+                nl_a1 = nl[a1]
+                for n1 in range(len(nl_a1)):
+                    a3 = nl_a1[n1]
+                    for m2 in range(len(nl_a2)):
+                        if a3 == nl_a2[m2]:
+                            common.append(a3)
+                if len(common) == 4:
+                    bonds_nr = 0
+                    bonds_sum = 0
+                    for j2 in range(1, 4):
+                        nl_j2 = nl[common[j2]]
+                        for j1 in range(j2):
+                            for k in range(len(nl_j2)):
+                                if common[j1] == nl_j2[k]:
+                                    bonds_nr += 1
+                                    bonds_sum += j1 + j2
+
+                    if bonds_nr == 2:
+                        if bonds_sum == 6:
+                            nr_FCC[a1] += 1
+                            nr_FCC[a2] += 1
+                        else:
+                            nr_HCP[a1] += 1
+                            nr_HCP[a2] += 1
+
+    for i in range(n):
+        if len(nl[i]) == 12:
+            if nr_FCC[i] == 12:
+                can_values[i] = 2
+            elif (nr_FCC[i] == 6) and (nr_HCP[i] == 6):
+                can_values[i] = 1
+    return can_values
+
+
+def cnat_scalar(n, nl):
+    """Historical cnat body (8de45a36b), taking a prebuilt neighbor list."""
+    can_values = numpy.zeros(n)
+    nr_5 = numpy.zeros(n)
+    nr_6 = numpy.zeros(n)
+
+    for a2 in range(n):
+        nl_a2 = nl[a2]
+        for n2 in range(len(nl_a2)):
+            a1 = nl_a2[n2]
+            if a1 < a2:
+                common = []
+                nl_a1 = nl[a1]
+                for n1 in range(len(nl_a1)):
+                    a3 = nl_a1[n1]
+                    for m2 in range(len(nl_a2)):
+                        if a3 == nl_a2[m2]:
+                            common.append(a3)
+                if len(common) in [5, 6]:
+                    bonds_nr = 0
+                    bonds_sum = 0
+                    for j2 in range(1, len(common)):
+                        nl_j2 = nl[common[j2]]
+                        for j1 in range(j2):
+                            for k in range(len(nl_j2)):
+                                if common[j1] == nl_j2[k]:
+                                    bonds_nr += 1
+                                    bonds_sum += j1 + j2
+
+                    if bonds_nr == 5 and len(common) == 5:
+                        nr_5[a1] += 1
+                        nr_5[a2] += 1
+                    elif bonds_nr == 6 and len(common) == 6:
+                        nr_6[a1] += 1
+                        nr_6[a2] += 1
+
+    for i in range(n):
+        if nr_5[i] == 12:
+            if len(nl[i]) == 12:
+                can_values[i] = 1
+            if (len(nl[i]) == 14) and (nr_6[i] == 2):
+                can_values[i] = 2
+            if (len(nl[i]) == 15) and (nr_6[i] == 3):
+                can_values[i] = 3
+            if (len(nl[i]) == 16) and (nr_6[i] == 4):
+                can_values[i] = 4
+        if nr_5[i] == 0:
+            if nr_6[i] == 8 and len(nl[i]) == 14:
+                can_values[i] = 5
+    return can_values
+
+
+def cnar_scalar(n, nl):
+    """Historical cnar body (8de45a36b), taking a prebuilt neighbor list."""
+    cna = {}
+    for i in range(n):
+        cna[i] = {}
+
+    def codeString(j, k, l):
+        return "%d,%d,%d" % (j, k, l)
+
+    for a2 in range(n):
+        nl_a2 = nl[a2]
+        for n2 in range(len(nl_a2)):
+            a1 = nl_a2[n2]
+            if a1 < a2:
+                common = []
+                nl_a1 = nl[a1]
+                for n1 in range(len(nl_a1)):
+                    a3 = nl_a1[n1]
+                    for m2 in range(len(nl_a2)):
+                        if a3 == nl_a2[m2]:
+                            common.append(a3)
+                bonds_nr = 0
+                bonds_sum = 0
+                for j2 in range(1, len(common)):
+                    nl_j2 = nl[common[j2]]
+                    for j1 in range(j2):
+                        for k in range(len(nl_j2)):
+                            if common[j1] == nl_j2[k]:
+                                bonds_nr += 1
+                                bonds_sum += j1 + j2
+                code = codeString(len(common), bonds_nr, bonds_sum)
+                if code not in cna[a1]:
+                    cna[a1][code] = 0
+                cna[a1][code] += 1
+                if code not in cna[a2]:
+                    cna[a2][code] = 0
+                cna[a2][code] += 1
+
+    return cna
+
+
+def pair_lists_scalar(n, i, j):
+    """Historical _pair_lists (8de45a36b): per-atom sets, then sorted."""
+    nl_sets = [set() for _ in range(n)]
+    for a, b in zip(i.tolist(), j.tolist()):
+        ai, bi = int(a), int(b)
+        if ai == bi:
+            continue
+        nl_sets[ai].add(bi)
+    return [sorted(s) for s in nl_sets]

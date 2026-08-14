@@ -22,12 +22,14 @@ from eon.geometry import (  # noqa: F401
     get_process_atoms,
     least_coordinated,
     length_angle_to_box,
+    neighbor_csr,
     neighbor_list,
     neighbor_list_vectors,
     pbc,
     per_atom_norm,
     per_atom_norm_gen,
 )
+from eon.geometry.neighbors import unique_sorted
 
 # --- structure comparison / CNA (unchanged algorithms) ---
 
@@ -251,200 +253,231 @@ def rotm(axis, theta):
         ])/(mag*mag)
 
 
+# --- common neighbor analysis -------------------------------------------
+#
+# All three CNA flavours share one sweep: take every neighbor pair (a1, a2)
+# with a1 < a2, intersect the two adjacency rows for the common neighbors in
+# ascending order, then count the bonds among those common neighbors. The
+# sweep runs over all pairs at once on the CSR adjacency, so nothing here
+# scales with a Python loop over neighbors of neighbors.
+
+_PAIR_CHUNK_ELEMENTS = 4_000_000
+
+
+class _Adjacency:
+    """Neighbor adjacency in the two shapes the CNA sweep reads.
+
+    ``padded`` is an (N, max degree) block of neighbor indices, ascending
+    within a row and ``-1`` past the degree, which turns "the neighbors of
+    these M atoms" into one gather. ``keys`` is the ascending flat key set
+    ``atom * N + neighbor``, which turns "is b a neighbor of a" into one
+    binary search.
+    """
+
+    def __init__(self, n, indptr, indices):
+        self.n = n
+        self.indices = indices
+        self.degree = numpy.diff(indptr)
+        dmax = int(self.degree.max()) if n else 0
+        self.padded = numpy.full((n, dmax), -1, dtype=numpy.int64)
+        if dmax:
+            self.padded[numpy.arange(dmax)[None, :] < self.degree[:, None]] = indices
+        rows = numpy.repeat(numpy.arange(n, dtype=numpy.int64), self.degree)
+        keys = rows * numpy.int64(n) + indices
+        if keys.size > 1 and not numpy.all(numpy.diff(keys) > 0):
+            keys = unique_sorted(keys)
+        self.keys = keys
+
+    def pairs(self):
+        """Neighbor pairs ``(a1, a2)`` with ``a1 < a2`` and ``a1`` in ``nl[a2]``."""
+        a2 = numpy.repeat(numpy.arange(self.n, dtype=numpy.int64), self.degree)
+        keep = self.indices < a2
+        return self.indices[keep], a2[keep]
+
+    def has_edge(self, a, b):
+        """True where ``b[k]`` is a neighbor of ``a[k]`` (``b < 0`` is never)."""
+        if self.keys.size == 0 or a.size == 0:
+            return numpy.zeros(numpy.broadcast_shapes(a.shape, b.shape), dtype=bool)
+        want = a * numpy.int64(self.n) + b
+        pos = numpy.searchsorted(self.keys, want)
+        numpy.clip(pos, 0, self.keys.size - 1, out=pos)
+        return (self.keys[pos] == want) & (b >= 0)
+
+
+def _common_neighbors(adj, a1, a2):
+    """Common neighbors of every pair, as ``(counts, starts, values)``.
+
+    ``values[starts[k]:starts[k] + counts[k]]`` are the atoms neighboring both
+    ``a1[k]`` and ``a2[k]``, ascending, which is the order the serial code
+    built ``common`` in and the order its ``bonds_sum`` signature reads. Each
+    candidate is a neighbor of ``a1`` tested for membership in ``nl[a2]``,
+    exactly the serial test, done for a block of pairs at a time.
+    """
+    m = a1.shape[0]
+    empty = numpy.zeros(0, dtype=numpy.int64)
+    if m == 0 or adj.padded.shape[1] == 0:
+        return numpy.zeros(m, dtype=numpy.int64), numpy.zeros(m, dtype=numpy.int64), empty
+    step = max(1, _PAIR_CHUNK_ELEMENTS // adj.padded.shape[1])
+    counts = numpy.empty(m, dtype=numpy.int64)
+    values = []
+    for lo in range(0, m, step):
+        hi = min(lo + step, m)
+        cand = adj.padded[a1[lo:hi]]
+        hit = adj.has_edge(a2[lo:hi, None], cand)
+        counts[lo:hi] = hit.sum(axis=1)
+        values.append(cand[hit])
+    common = values[0] if len(values) == 1 else numpy.concatenate(values)
+    starts = numpy.zeros(m, dtype=numpy.int64)
+    numpy.cumsum(counts[:-1], out=starts[1:])
+    return counts, starts, common
+
+
+def _common_block(counts, starts, common, size):
+    """Pairs holding exactly *size* common neighbors, and their (m, size) block."""
+    sel = numpy.flatnonzero(counts == size)
+    if sel.size == 0:
+        return sel, numpy.zeros((0, size), dtype=numpy.int64)
+    return sel, common[starts[sel][:, None] + numpy.arange(size, dtype=numpy.int64)]
+
+
+def _bond_counts(adj, block):
+    """Bonds among each row of common neighbors: ``(bonds_nr, bonds_sum)``.
+
+    ``bonds_sum`` adds ``j1 + j2`` per bonded index pair; among four common
+    neighbors it separates two disjoint bonds (sum 6) from two that share an
+    atom, which is the 421/422 split.
+    """
+    m, size = block.shape
+    bonds_nr = numpy.zeros(m, dtype=numpy.int64)
+    bonds_sum = numpy.zeros(m, dtype=numpy.int64)
+    for j2 in range(1, size):
+        for j1 in range(j2):
+            bonded = adj.has_edge(block[:, j2], block[:, j1])
+            bonds_nr += bonded
+            bonds_sum += bonded * (j1 + j2)
+    return bonds_nr, bonds_sum
+
+
+def _per_atom_count(n, a1, a2, mask):
+    """How often each atom sits in a selected pair."""
+    return numpy.bincount(numpy.concatenate((a1[mask], a2[mask])), minlength=n)
+
+
 def cna(p, cutoff, brute=False):
     """ Returns a list of cna numbers for all atoms in p
         Inspired by the CNA code provided by Asap (wiki.fysik.dtu.dk/asap)"""
-    can_values = numpy.zeros(len(p))
-    nr_FCC = numpy.zeros(len(p))
-    nr_HCP = numpy.zeros(len(p))
-    nl = neighbor_list(p, cutoff, brute)
-
-    # loops over all the atoms
-    for a2 in range(len(p)):
-        nl_a2 = nl[a2]
-        # loops over the atoms neighboring a2
-        for n2 in range(len(nl_a2)):
-            a1 = nl_a2[n2];
-            if a1 < a2:
-                common = []
-                nl_a1 = nl[a1]
-                # loops over the atoms neighboring a1
-                for n1 in range(len(nl_a1)):
-                    a3 = nl_a1[n1]
-                    # checks if atom a_3 is a common neighbor to a1 and a2
-                    for m2 in range(len(nl_a2)):
-                        if a3 == nl_a2[m2]:
-                            common.append(a3)
-                # determines the connectivity of common neighbors
-                if len(common) == 4:
-                    bonds_nr = 0
-                    bonds_sum = 0
-                    for j2 in range(1,4):
-                        nl_j2 = nl[common[j2]]
-                        for j1 in range(j2):
-                            for n in range(len(nl_j2)):
-                                if common[j1] == nl_j2[n]:
-                                    bonds_nr += 1
-                                    bonds_sum += j1 + j2
-
-                    if bonds_nr == 2:
-                        if bonds_sum == 6:
-                            nr_FCC[a1] += 1
-                            nr_FCC[a2] += 1
-                        else:
-                            nr_HCP[a1] += 1
-                            nr_HCP[a2] += 1
+    n = len(p)
+    can_values = numpy.zeros(n)
+    if n == 0:
+        return can_values
+    adj = _Adjacency(n, *neighbor_csr(p, cutoff, brute))
+    a1, a2 = adj.pairs()
+    counts, starts, common = _common_neighbors(adj, a1, a2)
+    sel, block = _common_block(counts, starts, common, 4)
+    nr_FCC = numpy.zeros(n, dtype=numpy.int64)
+    nr_HCP = numpy.zeros(n, dtype=numpy.int64)
+    if sel.size:
+        bonds_nr, bonds_sum = _bond_counts(adj, block)
+        two = bonds_nr == 2
+        s1, s2 = a1[sel], a2[sel]
+        nr_FCC = _per_atom_count(n, s1, s2, two & (bonds_sum == 6))
+        nr_HCP = _per_atom_count(n, s1, s2, two & (bonds_sum != 6))
 
     # 2: fcc (421), 1: hcp (422), 0: other
-    for i in range(len(p)):
-        if len(nl[i]) == 12:
-            if nr_FCC[i] == 12:
-                can_values[i] = 2
-            elif (nr_FCC[i] == 6) and (nr_HCP[i] == 6):
-                can_values[i] = 1
+    twelve = adj.degree == 12
+    can_values[twelve & (nr_FCC == 12)] = 2
+    can_values[twelve & (nr_FCC == 6) & (nr_HCP == 6)] = 1
     return can_values
 
 def not_HCP_or_FCC(p, cutoff, brute=False):
     """ Returns a list of indices for the atoms with cna = 0 """
-    not_cna = []
-    cna_numbers = cna(p, cutoff, brute)
-    for i in range(len(cna_numbers)):
-        if cna_numbers[i] == 0:
-            not_cna.append(i)
-    return not_cna
+    return numpy.flatnonzero(cna(p, cutoff, brute) == 0).tolist()
 
 
 # ### TShacked start
 def cnat(p, cutoff, brute=False):
     """ Returns a list of cna numbers for all atoms in p
         Inspired by the CNA code provided by Asap (wiki.fysik.dtu.dk/asap)"""
-    can_values = numpy.zeros(len(p))
-    nr_5 = numpy.zeros(len(p))
-    nr_6 = numpy.zeros(len(p))
-    nl = neighbor_list(p, cutoff, brute)
-
-    # loops over all the atoms
-    for a2 in range(len(p)):
-        nl_a2 = nl[a2]
-        # loops over the atoms neighboring a2
-        for n2 in range(len(nl_a2)):
-            a1 = nl_a2[n2];
-            if a1 < a2:
-                common = []
-                nl_a1 = nl[a1]
-                # loops over the atoms neighboring a1
-                for n1 in range(len(nl_a1)):
-                    a3 = nl_a1[n1]
-                    # checks if atom a_3 is a common neighbor to a1 and a2
-                    for m2 in range(len(nl_a2)):
-                        if a3 == nl_a2[m2]:
-                            common.append(a3)
-                # determines the connectivity of common neighbors
-                #print a2, n2, len(common)
-                if len(common) in [5,6]:
-                    bonds_nr = 0
-                    bonds_sum = 0
-                    for j2 in range(1,len(common)):
-                        nl_j2 = nl[common[j2]]
-                        for j1 in range(j2):
-                            for n in range(len(nl_j2)):
-                                if common[j1] == nl_j2[n]:
-                                    bonds_nr += 1
-                                    bonds_sum += j1 + j2
-
-                    if bonds_nr == 5 and len(common) == 5:
-                        nr_5[a1] += 1
-                        nr_5[a2] += 1
-                    elif bonds_nr == 6 and len(common) == 6:
-                        nr_6[a1] += 1
-                        nr_6[a2] += 1
+    n = len(p)
+    can_values = numpy.zeros(n)
+    if n == 0:
+        return can_values
+    adj = _Adjacency(n, *neighbor_csr(p, cutoff, brute))
+    a1, a2 = adj.pairs()
+    counts, starts, common = _common_neighbors(adj, a1, a2)
+    nr = {5: numpy.zeros(n, dtype=numpy.int64), 6: numpy.zeros(n, dtype=numpy.int64)}
+    for size in (5, 6):
+        sel, block = _common_block(counts, starts, common, size)
+        if not sel.size:
+            continue
+        bonds_nr, _ = _bond_counts(adj, block)
+        nr[size] = _per_atom_count(n, a1[sel], a2[sel], bonds_nr == size)
+    nr_5, nr_6 = nr[5], nr[6]
 
     # 1: CN12, 2: CN14, 3: CN15, 4: CN16, 5: BCC, 0: other
-    for i in range(len(p)):
-        if nr_5[i] == 12:
-            if len(nl[i]) == 12:
-                can_values[i] = 1
-            if (len(nl[i]) == 14) and (nr_6[i] == 2):
-                can_values[i] = 2
-            if (len(nl[i]) == 15) and (nr_6[i] == 3):
-                can_values[i] = 3
-            if (len(nl[i]) == 16) and (nr_6[i] == 4):
-                can_values[i] = 4
-        if nr_5[i] == 0:
-            if nr_6[i] == 8 and len(nl[i]) == 14:
-                can_values[i] = 5
+    deg = adj.degree
+    twelve = nr_5 == 12
+    can_values[twelve & (deg == 12)] = 1
+    can_values[twelve & (deg == 14) & (nr_6 == 2)] = 2
+    can_values[twelve & (deg == 15) & (nr_6 == 3)] = 3
+    can_values[twelve & (deg == 16) & (nr_6 == 4)] = 4
+    can_values[(nr_5 == 0) & (nr_6 == 8) & (deg == 14)] = 5
     return can_values
 
 def cnar(p, cutoff, brute=False):
     """ Returns a list of cna numbers for all atoms in p
         Inspired by the CNA code provided by Asap (wiki.fysik.dtu.dk/asap)"""
-    # not compatible with older python versions
-    #cna = {i:{} for i in range(len(p))}
+    n = len(p)
+    cna = {i: {} for i in range(n)}
+    if n == 0:
+        return cna
+    adj = _Adjacency(n, *neighbor_csr(p, cutoff, brute))
+    a1, a2 = adj.pairs()
+    if a1.size == 0:
+        return cna
+    counts, starts, common = _common_neighbors(adj, a1, a2)
 
-    # make a dict of dicts for each atom.
-    cna = {}
-    for i in range(len(p)):
-        cna[i] = {}
+    # One (atom, code) row per pair endpoint; a code is the triple
+    # (common count, bond count, bond sum) the serial version rendered as
+    # "%d,%d,%d".
+    atoms_of = []
+    codes_of = []
+    for size in unique_sorted(counts):
+        sel, block = _common_block(counts, starts, common, int(size))
+        bonds_nr, bonds_sum = _bond_counts(adj, block)
+        atoms_of.append(numpy.concatenate((a1[sel], a2[sel])))
+        code = numpy.stack((numpy.full(sel.size, int(size), dtype=numpy.int64),
+                            bonds_nr, bonds_sum), axis=1)
+        codes_of.append(numpy.concatenate((code, code)))
+    atom = numpy.concatenate(atoms_of)
+    code = numpy.concatenate(codes_of)
 
-    nl = neighbor_list(p, cutoff, brute)
-
-    def codeString(j,k,l):
-        return "%d,%d,%d" % (j,k,l)
-
-    # loops over all the atoms
-    for a2 in range(len(p)):
-        nl_a2 = nl[a2]
-        # loops over the atoms neighboring a2
-        for n2 in range(len(nl_a2)):
-            a1 = nl_a2[n2];
-            if a1 < a2: # prevent double counting?
-                common = []
-                nl_a1 = nl[a1]
-                # loops over the atoms neighboring a1
-                for n1 in range(len(nl_a1)):
-                    a3 = nl_a1[n1]
-                    # checks if atom a_3 is a common neighbor to a1 and a2
-                    for m2 in range(len(nl_a2)):
-                        if a3 == nl_a2[m2]:
-                            common.append(a3)
-                # determines the connectivity of common neighbors
-                bonds_nr = 0
-                bonds_sum = 0
-                for j2 in range(1,len(common)):
-                    nl_j2 = nl[common[j2]]
-                    for j1 in range(j2):
-                        for n in range(len(nl_j2)):
-                            if common[j1] == nl_j2[n]:
-                                bonds_nr += 1
-                                bonds_sum += j1 + j2
-                code = codeString(len(common), bonds_nr, bonds_sum)
-                if not code in cna[a1]:
-                    cna[a1][code] = 0
-                cna[a1][code] += 1
-                if not code in cna[a2]:
-                    cna[a2][code] = 0
-                cna[a2][code] += 1
-
+    # Fold (atom, code) into one key so the counting is a single unique pass;
+    # only the distinct combinations reach Python.
+    span = code.max(axis=0) + 1
+    flat = ((atom * span[0] + code[:, 0]) * span[1] + code[:, 1]) * span[2] + code[:, 2]
+    flat = numpy.sort(flat)
+    breaks = numpy.ones(flat.size + 1, dtype=bool)
+    numpy.not_equal(flat[1:], flat[:-1], out=breaks[1:-1])
+    edges = numpy.flatnonzero(breaks)
+    uniq = flat[edges[:-1]]
+    hits = numpy.diff(edges)
+    rest, bonds_sum = numpy.divmod(uniq, span[2])
+    rest, bonds_nr = numpy.divmod(rest, span[1])
+    atom_u, size_u = numpy.divmod(rest, span[0])
+    for k in range(uniq.size):
+        cna[int(atom_u[k])]["%d,%d,%d" % (size_u[k], bonds_nr[k], bonds_sum[k])] = int(hits[k])
     return cna
 
 
 def not_TCP(p, cutoff, brute=False):
     """ Returns a list of indices for the atoms with cna = 0 """
-    not_cna = []
     cna_numbers = cnat(p, cutoff, brute)
-    for i in range(len(cna_numbers)):
-        if cna_numbers[i] == 0 or cna_numbers[i] == 5:
-            not_cna.append(i)
-    return not_cna
+    return numpy.flatnonzero((cna_numbers == 0) | (cna_numbers == 5)).tolist()
 
 def not_TCP_or_BCC(p, cutoff, brute=False):
     """ Returns a list of indices for the atoms with cna = 0 """
-    not_cna = []
-    cna_numbers = cnat(p, cutoff, brute)
-    for i in range(len(cna_numbers)):
-        if cna_numbers[i] == 0:
-            not_cna.append(i)
-    return not_cna
+    return numpy.flatnonzero(cnat(p, cutoff, brute) == 0).tolist()
 
 
 import sys
