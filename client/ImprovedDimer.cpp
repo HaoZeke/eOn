@@ -139,6 +139,11 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
 
   // Use x1's potential for the trial rotation image (consistent with per-image)
   auto x1p = std::make_shared<Matter>(x1->getPotential(), params);
+  // The trial image only ever differs from x1 in its positions, which the
+  // rotation loop overwrites before every evaluation. Everything the copy
+  // carries across (atomic numbers, cell, fixed set, masses) is constant for
+  // the whole loop, so it is established once here.
+  *x1p = *x1;
 
   // Melander, Laasonen, Jonsson, JCTC 11(3), 1055-1062, 2015
   if (params.dimer_options.remove_rotation) {
@@ -218,10 +223,17 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
   gradients.push_back(g0);
   gradients.push_back(g1);
 
+  VectorXd dg;
+
   do { // Rotation loop: converge phi or hit max rotations
 
+    // Gradient difference across the dimer: four expressions below read it,
+    // tau does not move between them.
+    dg = g1 - g0;
+    const double dgDotTau = dg.dot(tau);
+
     // Rotational force, F_R
-    F_R = -2.0 * (g1 - g0) + 2.0 * ((g1 - g0).dot(tau)) * tau;
+    F_R = -2.0 * dg + 2.0 * dgDotTau * tau;
     statsTorque = eonc::safemath::safe_div(F_R.norm(), delta * 2.0, 0.0);
 
     // Determine step direction theta via selected optimizer
@@ -299,7 +311,7 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
     }
 
     // Curvature along tau
-    C_tau = eonc::safemath::safe_div((g1 - g0).dot(tau), delta, 0.0);
+    C_tau = eonc::safemath::safe_div(dgDotTau, delta, 0.0);
 
     // Track best negative curvature for mode restoration
     if (C_tau < bestNegativeCurvature) {
@@ -313,7 +325,7 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
 
     // Estimate optimum rotation angle
     double d_C_tau_d_phi =
-        2.0 * eonc::safemath::safe_div((g1 - g0).dot(theta), delta, 0.0);
+        2.0 * eonc::safemath::safe_div(dg.dot(theta), delta, 0.0);
     phi_prime = -0.5 * eonc::safemath::safe_atan_ratio(
                            d_C_tau_d_phi, 2.0 * std::abs(C_tau), 0.0);
     statsAngle = phi_prime * (180.0 / eonc::helpers::pi);
@@ -329,7 +341,6 @@ void ImprovedDimer::compute(std::shared_ptr<Matter> matter,
       tau_prime = eonc::safemath::safe_normalized(tau_prime);
       x1_rp = x0_r + tau_prime * delta;
 
-      *x1p = *x1;
       x1p->setPositionsV(x1_rp);
       g1_prime = -x1p->getForcesV();
 

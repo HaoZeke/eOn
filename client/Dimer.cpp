@@ -148,7 +148,7 @@ double Dimer::getEigenvalue() { return eigenvalue; }
 AtomMatrix Dimer::getEigenvector() { return direction; }
 
 double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
-  AtomMatrix posCenter = matterCenter->getPositions();
+  const AtomMatrix &posCenter = matterCenter->getPositions();
 
   // Displace to get dimer configuration A
   AtomMatrix posDimer =
@@ -166,7 +166,7 @@ double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
 
   // Obtain forces for dimer and center
   matterDimer->setPositions(posDimer);
-  AtomMatrix forceA, forceCenter;
+  AtomMatrix forceA, forceB;
   if (pot->supportsBatchEvaluation()) {
     // Only batch systems that actually need recomputation.
     bool centerDirty = matterCenter->needsForceUpdate();
@@ -206,13 +206,11 @@ double Dimer::calcRotationalForceReturnCurvature(AtomMatrix &rotationalForce) {
       matterCenter->getForces(); // through computePotential
     }
     // else: both cached, nothing to do
-    forceCenter = matterCenter->getForces();
-    forceA = matterDimer->getForces();
-  } else {
-    forceA = matterDimer->getForces();
-    forceCenter = matterCenter->getForces();
   }
-  AtomMatrix forceB = 2.0 * forceCenter - forceA;
+  // getForces() hands back a reference into each Matter, so forceA is the only
+  // copy taken; makeOrthogonal below writes it in place.
+  forceA = matterDimer->getForces();
+  forceB = 2.0 * matterCenter->getForces() - forceA;
 
   double projA = matDot(direction, forceA);
   double projB = matDot(direction, forceB);
