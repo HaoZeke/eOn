@@ -306,11 +306,11 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     }
 
     Eigen::Matrix3d A3 = Eigen::Matrix3d::Zero();
-    const VectorXd basis[3] = {N, Theta, P3};
-    const VectorXd Hbasis[3] = {HN, HTheta, HP3};
+    const VectorXd *basis[3] = {&N, &Theta, &P3};
+    const VectorXd *Hbasis[3] = {&HN, &HTheta, &HP3};
     for (int i = 0; i < 3; ++i) {
       for (int j = i; j < 3; ++j) {
-        A3(i, j) = basis[i].dot(Hbasis[j]);
+        A3(i, j) = basis[i]->dot(*Hbasis[j]);
         A3(j, i) = A3(i, j);
       }
     }
@@ -324,11 +324,6 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     a = c3(0);
     b = c3(1);
     const double c = c3(2);
-
-    // Save pre-update for stall revert without FD
-    const VectorXd Nprev = N;
-    const VectorXd HNprev = HN;
-    const double CNprev = CN;
 
     VectorXd Nnew = a * N + b * Theta + c * P3;
     VectorXd Pnew = b * Theta + c * P3;
@@ -368,10 +363,6 @@ void LORRotation::compute(std::shared_ptr<Matter> matter,
     if (appendHistory(CN)) {
       trackBest(CN, N, HN);
     }
-    (void)Nprev;
-    (void)HNprev;
-    (void)CNprev;
-
     F = HN - CN * N;
     applyMask(F);
     Fnorm = F.norm();
