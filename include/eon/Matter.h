@@ -277,7 +277,7 @@ public:
     return io::matter2xyz(*this, filename, append);
   }
 
-  AtomMatrix getFree() const;
+  const AtomMatrix &getFree() const;
   VectorXd getFreeV() const;
   Eigen::Matrix<double, Eigen::Dynamic, 1> getMasses() const;
 
@@ -359,6 +359,7 @@ private:
   mutable AtomMatrix freeMask; // cached Nx3 mask (1.0 for free, 0.0 for fixed)
   mutable AtomMatrix maskedForces;      // cached forces with fixed atoms zeroed
   mutable std::vector<int> freeIndices; // cached indices of free atoms
+  mutable bool allAtomsFree{true};      // freeIndices covers every atom
   mutable bool recomputeFreeMask{true};
   mutable bool recomputeMaskedForces{true};
   Matrix3d cell;

@@ -26,8 +26,17 @@ const Matter &Matter::operator=(const Matter &matter) {
   if (this == &matter) {
     return *this;
   }
-  nAtoms = matter.nAtoms;
-  resize(nAtoms);
+  // resize() reallocates and zeroes every array. When the sizes already agree,
+  // the assignments below overwrite each of them, so the only array resize()
+  // still owes is biasForces: the copy starts without a bias potential and
+  // therefore without bias forces.
+  const long int newSize = matter.nAtoms;
+  if (nAtoms != newSize || biasForces.rows() != newSize) {
+    resize(newSize);
+  } else {
+    biasForces.setZero();
+  }
+  nAtoms = newSize;
 
   positions = matter.positions;
   forces = matter.forces;
@@ -100,6 +109,7 @@ Matter &Matter::operator=(Matter &&other) noexcept {
   freeMask = std::move(other.freeMask);
   maskedForces = std::move(other.maskedForces);
   freeIndices = std::move(other.freeIndices);
+  allAtomsFree = other.allAtomsFree;
   recomputeFreeMask = other.recomputeFreeMask;
   recomputeMaskedForces = other.recomputeMaskedForces;
   cell = std::move(other.cell);
@@ -243,6 +253,9 @@ VectorXd Matter::getPositionsV() const {
 
 AtomMatrix Matter::getPositionsFree() const {
   getFree(); // ensure freeIndices is up to date
+  if (allAtomsFree) {
+    return positions;
+  }
   AtomMatrix ret(static_cast<long>(freeIndices.size()), 3);
   for (size_t j = 0; j < freeIndices.size(); j++) {
     ret.row(static_cast<long>(j)) = positions.row(freeIndices[j]);
@@ -266,7 +279,17 @@ bool Matter::relax(bool quiet, bool writeMovie, bool checkpoint,
 }
 
 VectorXd Matter::getPositionsFreeV() const {
-  return VectorXd::Map(getPositionsFree().data(), 3 * numberOfFreeAtoms());
+  getFree(); // ensure freeIndices is up to date
+  if (allAtomsFree) {
+    return VectorXd::Map(positions.data(), 3 * nAtoms);
+  }
+  const auto nFree = static_cast<long>(freeIndices.size());
+  VectorXd ret(3 * nFree);
+  for (long j = 0; j < nFree; j++) {
+    ret.segment<3>(3 * j) =
+        positions.row(freeIndices[static_cast<size_t>(j)]).transpose();
+  }
+  return ret;
 }
 
 // update Matter with the new positions of the free atoms given in array 'pos'
@@ -286,8 +309,12 @@ void Matter::setPositionsV(const VectorXd &pos) {
 
 void Matter::setPositionsFree(const AtomMatrix &pos) {
   getFree(); // ensure freeIndices is up to date
-  for (size_t j = 0; j < freeIndices.size(); j++) {
-    positions.row(freeIndices[j]) = pos.row(static_cast<long>(j));
+  if (allAtomsFree) {
+    positions = pos;
+  } else {
+    for (size_t j = 0; j < freeIndices.size(); j++) {
+      positions.row(freeIndices[j]) = pos.row(static_cast<long>(j));
+    }
   }
   // Optimizers write free-atom coords only (TIP4P/SPCE and any PBC pot).
   // Match setPositions: wrap the full configuration when PBC is on (#171).
@@ -321,10 +348,16 @@ void Matter::setBiasForces(const AtomMatrix &bf) {
 // may race on the mutable maskedForces/recomputeMaskedForces members.
 const AtomMatrix &Matter::getForces() const {
   computePotential();
+  getFree(); // refreshes freeMask / freeIndices / allAtomsFree
+  if (allAtomsFree) {
+    // Nothing to zero: the mask is all ones, so the product would copy
+    // `forces` onto itself element for element.
+    return forces;
+  }
   if (recomputeMaskedForces) {
     // Use the cached freeMask (Nx3, 1.0 for free / 0.0 for fixed) to zero
     // fixed-atom forces in a single vectorized Eigen operation.
-    maskedForces = forces.array() * getFree().array();
+    maskedForces = forces.array() * freeMask.array();
     recomputeMaskedForces = false;
   }
   return maskedForces;
@@ -340,8 +373,10 @@ VectorXd Matter::getForcesV() const {
 }
 
 AtomMatrix Matter::getForcesFree() const {
-  AtomMatrix allForces = getForces();
-  getFree(); // ensure freeIndices is up to date (mutable cache)
+  const AtomMatrix &allForces = getForces();
+  if (allAtomsFree) {
+    return allForces;
+  }
   AtomMatrix ret(static_cast<long>(freeIndices.size()), 3);
   for (size_t j = 0; j < freeIndices.size(); j++) {
     ret.row(static_cast<long>(j)) = allForces.row(freeIndices[j]);
@@ -350,8 +385,17 @@ AtomMatrix Matter::getForcesFree() const {
 }
 
 VectorXd Matter::getForcesFreeV() const {
-  AtomMatrix freeForces = getForcesFree();
-  return VectorXd::Map(freeForces.data(), 3 * numberOfFreeAtoms());
+  const AtomMatrix &allForces = getForces();
+  if (allAtomsFree) {
+    return VectorXd::Map(allForces.data(), 3 * nAtoms);
+  }
+  const auto nFree = static_cast<long>(freeIndices.size());
+  VectorXd ret(3 * nFree);
+  for (long j = 0; j < nFree; j++) {
+    ret.segment<3>(3 * j) =
+        allForces.row(freeIndices[static_cast<size_t>(j)]).transpose();
+  }
+  return ret;
 }
 
 // return distance between the atoms with index1 and index2
@@ -538,7 +582,7 @@ void Matter::setAtomicNrs(const VectorXi &atmnrs) {
   }
 }
 
-AtomMatrix Matter::getFree() const {
+const AtomMatrix &Matter::getFree() const {
   if (recomputeFreeMask) {
     freeMask.resize(nAtoms, 3);
     freeIndices.clear();
@@ -551,6 +595,7 @@ AtomMatrix Matter::getFree() const {
       if (!isFixed(i))
         freeIndices.push_back(static_cast<int>(i));
     }
+    allAtomsFree = (static_cast<long>(freeIndices.size()) == nAtoms);
     recomputeFreeMask = false;
   }
   return freeMask;
@@ -570,6 +615,9 @@ void Matter::setVelocities(const AtomMatrix &v) {
 
 void Matter::setForces(const AtomMatrix &f) {
   forces = f.array() * getFree().array();
+  // getForces() serves maskedForces from a cache keyed on this flag; writing
+  // the force storage directly has to raise it or the stale mask is returned.
+  recomputeMaskedForces = true;
 }
 
 AtomMatrix Matter::getAccelerations() {
