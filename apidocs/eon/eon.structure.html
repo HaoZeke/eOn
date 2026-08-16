@@ -2,7 +2,7 @@
 <html lang="en" data-accent-color="teal" data-content_root="../../">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>eon.structure - eOn</title><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="eon.akmcstate" href="eon.akmcstate.html" /><link rel="prev" title="eon.locking" href="eon.locking.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"><title>eon.structure - eOn</title><link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="eon.escaperate" href="eon.escaperate.html" /><link rel="prev" title="eon.communicator_inprocess" href="eon.communicator_inprocess.html" />
       <link rel="canonical" href="https://eondocs.org/apidocs/eon/eon.structure.html" /><script>
     function setColorMode(t){let e=document.documentElement;e.setAttribute("data-color-mode",t);let a=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches,s=t;"auto"===t&&(s=a?"dark":"light"),"light"===s?(e.classList.remove("dark"),e.classList.add("light")):(e.classList.remove("light"),e.classList.add("dark"))}
     setColorMode(localStorage._theme||"auto");
@@ -81,7 +81,7 @@ data-aria-dark="Switch to auto color mode">
       <div class="sy-scrollbar p-6">
         <div class="globaltoc" data-expand-depth="2"><p class="caption" role="heading" aria-level="3"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1 _expand"><a class="reference internal" href="../../team.html">eOn Team</a></li>
+<li class="toctree-l1 _expand"><a class="reference internal" href="../../team.html">eOn team</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html">Installation</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#obtaining-sources">Obtaining sources</a></li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../install/index.html#licenses">Licenses</a></li>
@@ -94,59 +94,60 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/akmc.html">AKMC Tutorial</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/parrep.html">Running a Parallel Replica Job</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/displacement_scripts.html">Targeted Displacement for Saddle Searches</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/displacement_scripts.html">Targeted displacement for saddle searches</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/dict_config.html">Dictionary-Style Configuration</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/visualization.html">Visualizing Optimization Trajectories</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/visualization.html">Visualizing optimization trajectories</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../tutorials/CECAM_LTS_MAP_2024/index.html">CECAM Workshop 2024</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../tutorials/CECAM_LTS_MAP_2024/troubleshooting.html">Virtualbox Troublshooting</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1 _expand"><a class="reference internal" href="../../user_guide/index.html">User Guide</a><ul>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/pyeonclient.html">pyeonclient (Python client API)</a></li>
+<li class="toctree-l1 _expand"><a class="reference internal" href="../../user_guide/index.html">User guide</a><ul>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/pyeonclient.html">pyeonclient</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/neighbor_lists.html">Neighbor lists (vesin)</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/aiida.html">AiiDA (<code class="docutils literal notranslate"><span class="pre">aiida-eon</span></code>)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ext_pot.html">External Potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/lammps_pot.html">LAMMPS Potential</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ase_pot.html">ASE Interface</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/metatomic_pot.html">Metatomic Interface</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/ase_pot.html">ASE interface</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/metatomic_pot.html">Metatomic interface</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/quip.html">QUIP with LAMMPS</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/mpi_potential.html">MPI Potential</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/mpi_potential.html">MPI potential</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/algorithm_selection.html">Choosing an algorithm</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/main.html">General Simulation Parameters</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/main.html">General simulation parameters</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/potential.html">Potential</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/structure_comparison.html">Structure Comparison</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/structure_comparison.html">Structure comparison</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/optimizer.html">Optimizer</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/minimization.html">Minimization</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/neb.html">Nudged Elastic Band</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/neb.html">Nudged elastic band</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/dimer.html">Dimer method</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/lanczos.html">Lanczos</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/artn.html">ARTn (Activation-Relaxation Technique nouveau)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/hessian.html">Hessian</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/prefactor.html">Prefactor</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/akmc.html">Adaptive Kinetic Monte Carlo</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/saddle_search.html">Saddle Search</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/basin_hopping.html">Basin Hopping</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/process_search.html">Process Search</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/akmc.html">Adaptive kinetic Monte Carlo</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/saddle_search.html">Saddle search</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/basin_hopping.html">Basin hopping</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/process_search.html">Process search</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/recycling.html">Recycling</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/coarse_graining.html">Coarse Graining</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/coarse_graining.html">Coarse graining</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/dynamics.html">Dynamics</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/parallel_replica.html">Parallel Replica</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/parallel_replica.html">Parallel replica</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/hyperdynamics.html">Hyperdynamics</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/communicator.html">Communicator</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/debug.html">Debug</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/paths.html">Paths</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/kdb.html">Kinetic Database</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/kdb.html">Kinetic database</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_integration.html">rgpot integration (three roles)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_pot.html">RgpotPot (direct in-process rgpot)</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/rgpot_metatomic.html">Metatomic backends (fat, RGPOT, ASE)</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/serve_mode.html">Serve Mode</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../user_guide/serve_mode.html">Serve mode</a></li>
 </ul>
 </li>
-<li class="toctree-l1 _expand"><a class="reference internal" href="../../devdocs/index.html">Development Documentation</a><ul>
+<li class="toctree-l1 _expand"><a class="reference internal" href="../../devdocs/index.html">Development documentation</a><ul>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/testing.html">Tests</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/benchmarks.html">Benchmarks</a></li>
-<li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/parallel-potentials.html">Parallel Force Evaluation</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/parallel-potentials.html">Parallel force evaluation</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/docbuild.html">Working with the documentation</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/svn.html">Subversion</a></li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../devdocs/svn-migration.html">Migrating from SVN</a></li>
@@ -159,55 +160,59 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="eon.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon</span></code></a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="eon.geometry.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="eon.geometry.cell.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.cell</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eon.geometry.pbc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.pbc</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eon.geometry.neighbors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.neighbors</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="eon.geometry.process.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.process</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="eon.mcamc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.mcamc</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="eon.mcamc.mcamc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.mcamc.mcamc</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="eon.mcamc.test.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.mcamc.test</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="eon.geometry.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry</span></code></a><ul>
-<li class="toctree-l4"><a class="reference internal" href="eon.geometry.process.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.process</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="eon.geometry.neighbors.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.neighbors</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="eon.geometry.pbc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.pbc</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="eon.geometry.cell.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.geometry.cell</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.state.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.communicator_inprocess.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.communicator_inprocess</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.akmcstate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmcstate</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.params_ssot.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.params_ssot</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.recycling.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.recycling</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.server.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.server</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.amsel_superbasin_gate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.amsel_superbasin_gate</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.mpiwait.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.mpiwait</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.parallelreplica.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.parallelreplica</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.process_id.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.process_id</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.prstatelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.prstatelist</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.atoms.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.atoms</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.superbasin.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasin</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.basinhopping.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.basinhopping</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.akmcstatelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmcstatelist</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.communicator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.communicator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.config</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.fileio.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.fileio</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.state.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.state</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.prstate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.prstate</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.askmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.askmc</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.config.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.config</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.locking.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.locking</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.statelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.statelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.basinhopping.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.basinhopping</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.explorer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.explorer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.communicator_inprocess.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.communicator_inprocess</span></code></a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.structure</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.akmcstate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmcstate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.escaperate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.escaperate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.akmcstatelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmcstatelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.recycling.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.recycling</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.pyeonclient_bridge.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.pyeonclient_bridge</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.superbasinscheme.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasinscheme</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.communicator.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.communicator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.movie.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.movie</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="eon.eon_kdb.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.eon_kdb</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.explorer.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.explorer</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.escaperate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.escaperate</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.fileio.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.fileio</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.amsel_superbasin_gate.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.amsel_superbasin_gate</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="eon.prstatelist.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.prstatelist</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.displace.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.displace</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.akmc.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmc</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.parallelreplica.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.parallelreplica</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.locking.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.locking</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.superbasin.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.superbasin</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="eon.server.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.server</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l1 _expand"><a class="reference internal" href="../../releases/index.html">Releases</a><ul>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/changelog.html">Changelog</a></li>
+<li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/v3.2.0/index.html">[v3.2.0] - 2026-08-16</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../releases/v3.2.0/release-notes.html">eOn 3.2.0</a></li>
+</ul>
+</li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/v2.16.0/index.html">[v2.16.0] - 2026-07-03</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../releases/v2.16.0/release-notes.html">Release notes</a></li>
 </ul>
@@ -254,7 +259,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/v2.9.0/index.html">[v2.9.0] - 2026-01-27</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../releases/v2.9.0/release-notes.html">Release notes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../releases/v2.9.0/publications.html">Related Publications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../releases/v2.9.0/publications.html">Related publications</a></li>
 </ul>
 </li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/v2.8.2/index.html">[v2.8.2] - 2025-12-01</a><ul>
@@ -268,7 +273,7 @@ data-aria-dark="Switch to auto color mode">
 </li>
 <li class="toctree-l2 _expand"><a class="reference internal" href="../../releases/v2.8.0/index.html">[v2.8.0] - 2025-09-04</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../releases/v2.8.0/release-notes.html">Release notes</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../../releases/v2.8.0/publications.html">Related Publications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../releases/v2.8.0/publications.html">Related publications</a></li>
 </ul>
 </li>
 </ul>
@@ -289,8 +294,14 @@ data-aria-dark="Switch to auto color mode">
 <li><a class="reference internal" href="#functions">Functions</a></li>
 <li><a class="reference internal" href="#data">Data</a></li>
 <li><a class="reference internal" href="#api">API</a><ul>
+<li><a class="reference internal" href="#eon.structure.coerce_free"><code class="docutils literal notranslate"><span class="pre">coerce_free()</span></code></a></li>
+<li><a class="reference internal" href="#eon.structure.as_atom_free"><code class="docutils literal notranslate"><span class="pre">as_atom_free()</span></code></a></li>
+<li><a class="reference internal" href="#eon.structure.structure_order"><code class="docutils literal notranslate"><span class="pre">structure_order()</span></code></a></li>
 <li><a class="reference internal" href="#eon.structure.Structure"><code class="docutils literal notranslate"><span class="pre">Structure</span></code></a><ul>
+<li><a class="reference internal" href="#eon.structure.Structure.free"><code class="docutils literal notranslate">free</span></code></a></li>
 <li><a class="reference internal" href="#eon.structure.Structure.copy"><code class="docutils literal notranslate">copy()</span></code></a></li>
+<li><a class="reference internal" href="#eon.structure.Structure.ids_or_sequential"><code class="docutils literal notranslate">ids_or_sequential()</span></code></a></li>
+<li><a class="reference internal" href="#eon.structure.Structure.atom_is_free"><code class="docutils literal notranslate">atom_is_free()</span></code></a></li>
 <li><a class="reference internal" href="#eon.structure.Structure.free_r"><code class="docutils literal notranslate">free_r()</span></code></a></li>
 <li><a class="reference internal" href="#eon.structure.Structure.free_mask"><code class="docutils literal notranslate">free_mask()</span></code></a></li>
 <li><a class="reference internal" href="#eon.structure.Structure.fixed_mask"><code class="docutils literal notranslate">fixed_mask()</span></code></a></li>
@@ -392,10 +403,19 @@ aselite-era mini-Atoms type without requiring ASE.</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-left">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#eon.structure.structure_to_ase" title="eon.structure.structure_to_ase"><code class="xref py py-obj docutils literal notranslate"><span class="pre">structure_to_ase</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#eon.structure.coerce_free" title="eon.structure.coerce_free"><code class="xref py py-obj docutils literal notranslate"><span class="pre">coerce_free</span></code></a></p></td>
+<td><p>Normalize a free-flag array to shape <code class="docutils literal notranslate"><span class="pre">(n,</span> <span class="pre">3)</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#eon.structure.as_atom_free" title="eon.structure.as_atom_free"><code class="xref py py-obj docutils literal notranslate"><span class="pre">as_atom_free</span></code></a></p></td>
+<td><p>Per-atom free flag: True if any Cartesian axis is free.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#eon.structure.structure_order" title="eon.structure.structure_order"><code class="xref py py-obj docutils literal notranslate"><span class="pre">structure_order</span></code></a></p></td>
+<td><p>Permutation taking file order to :class:<code class="docutils literal notranslate"><span class="pre">Structure</span></code> order.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#eon.structure.structure_to_ase" title="eon.structure.structure_to_ase"><code class="xref py py-obj docutils literal notranslate"><span class="pre">structure_to_ase</span></code></a></p></td>
 <td><p>Optional ASE export (requires ase + pyeonclient.ase_bridge).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#eon.structure.ase_to_structure" title="eon.structure.ase_to_structure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ase_to_structure</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#eon.structure.ase_to_structure" title="eon.structure.ase_to_structure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ase_to_structure</span></code></a></p></td>
 <td><p>Optional ASE import (requires ase + pyeonclient.ase_bridge).</p></td>
 </tr>
 </tbody>
@@ -416,31 +436,92 @@ aselite-era mini-Atoms type without requiring ASE.</p>
 </section>
 <section id="api">
 <h3>API<a class="headerlink" href="#api" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="eon.structure.coerce_free">
+<span class="sig-prename descclassname"><span class="pre">eon.structure.</span></span><span class="sig-name descname"><span class="pre">coerce_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#coerce_free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.coerce_free" title="Link to this definition">¶</a></dt>
+<dd><p>Normalize a free-flag array to shape <code class="docutils literal notranslate"><span class="pre">(n,</span> <span class="pre">3)</span></code>.</p>
+<p>A length-<code class="docutils literal notranslate"><span class="pre">n</span></code> vector is the whole-atom form and is broadcast onto every
+Cartesian axis. <code class="docutils literal notranslate"><span class="pre">1.0</span></code> is free, <code class="docutils literal notranslate"><span class="pre">0.0</span></code> is fixed.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eon.structure.as_atom_free">
+<span class="sig-prename descclassname"><span class="pre">eon.structure.</span></span><span class="sig-name descname"><span class="pre">as_atom_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">free</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#as_atom_free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.as_atom_free" title="Link to this definition">¶</a></dt>
+<dd><p>Per-atom free flag: True if any Cartesian axis is free.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="eon.structure.structure_order">
+<span class="sig-prename descclassname"><span class="pre">eon.structure.</span></span><span class="sig-name descname"><span class="pre">structure_order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atom_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#structure_order"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.structure_order" title="Link to this definition">¶</a></dt>
+<dd><p>Permutation taking file order to :class:<code class="docutils literal notranslate"><span class="pre">Structure</span></code> order.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Structure</span></code> orders its atoms by ascending <code class="docutils literal notranslate"><span class="pre">atom_id</span></code>; a <code class="docutils literal notranslate"><span class="pre">.con</span></code> file
+orders them by species block, because CON header lines 7 and 8 are a type
+count and per-type counts. Ascending ids therefore survive the grouping the
+writer applies and are what puts the atoms back where an index into</p>
+<dl class="myst field-list simple">
+<dt class="field-odd">Attr<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">Structure.r</span></code> finds the same atom it found before the write.</p>
+</dd>
+</dl>
+<p>Ids that repeat carry no permutation to invert (a writer that numbers each
+species from 1 produces those), so file order stands.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="eon.structure.Structure">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">eon.structure.</span></span><span class="sig-name descname"><span class="pre">Structure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_atoms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/eon/structure.html#Structure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure" title="Link to this definition">¶</a></dt>
 <dd><p>Mutable atomic configuration (numpy-backed).</p>
+<p>Atoms sit in ascending :attr:<code class="docutils literal notranslate"><span class="pre">atom_ids</span></code> order, which is the order a
+from-scratch <code class="docutils literal notranslate"><span class="pre">Structure</span></code> builds them in and the order every index-coupled
+sidecar (<code class="docutils literal notranslate"><span class="pre">mode.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">masses.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">direction.dat</span></code>, the Hessian,
+<code class="docutils literal notranslate"><span class="pre">Prefactor.movedAtoms</span></code>) is written in. <code class="docutils literal notranslate"><span class="pre">.con</span></code> files store atoms grouped
+by species, so :meth:<code class="docutils literal notranslate"><span class="pre">from_conframe</span></code> undoes the grouping through the ids
+rather than taking file order as given.</p>
 <p class="rubric" id="id1">Attributes</p>
 <p>r : (N, 3) float
 Cartesian positions.
-free : (N,) float
-1.0 if free to move, 0.0 if fixed (eOn convention).
+free : (N, 3) float
+Per-axis free flags (1.0 free, 0.0 fixed). A length-N assignment
+broadcasts onto all three axes. CON column 4 is this mask.
 box : (3, 3) float
 Cell matrix with lattice vectors as <strong>rows</strong> (ASE/vesin convention).
 names : list[str]
 Chemical symbols, length N.
 mass : (N,) float
-Atomic masses.</p>
+Atomic masses.
+atom_ids : (N,) uint64
+Per-atom identity, CON column 5. <code class="docutils literal notranslate"><span class="pre">1..N</span></code> for a Structure built from
+scratch; whatever the file carried for one read off disk.</p>
 <p class="rubric">Initialization</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="eon.structure.Structure.free">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">free</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">numpy.ndarray</span></span><a class="headerlink" href="#eon.structure.Structure.free" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="eon.structure.Structure.copy">
 <span class="sig-name descname"><span class="pre">copy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#eon.structure.Structure" title="eon.structure.Structure"><span class="pre">eon.structure.Structure</span></a></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.copy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.copy" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="eon.structure.Structure.ids_or_sequential">
+<span class="sig-name descname"><span class="pre">ids_or_sequential</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.ids_or_sequential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.ids_or_sequential" title="Link to this definition">¶</a></dt>
+<dd><p>Atom ids, or <code class="docutils literal notranslate"><span class="pre">1..N</span></code> when the id array is out of step with the geometry.</p>
+<p>Callers that grow <code class="docutils literal notranslate"><span class="pre">r</span></code> / <code class="docutils literal notranslate"><span class="pre">names</span></code> / <code class="docutils literal notranslate"><span class="pre">mass</span></code> field by field leave the
+ids behind; a short or long id array carries no identity to preserve,
+so the sequential numbering stands in.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="eon.structure.Structure.atom_is_free">
+<span class="sig-name descname"><span class="pre">atom_is_free</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.atom_is_free"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.atom_is_free" title="Link to this definition">¶</a></dt>
+<dd><p>True for atoms that have at least one free Cartesian axis.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="eon.structure.Structure.free_r">
 <span class="sig-name descname"><span class="pre">free_r</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.free_r"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.free_r" title="Link to this definition">¶</a></dt>
-<dd><p>Positions of free (unfixed) atoms only.</p>
+<dd><p>Positions of atoms that have at least one free axis.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -455,19 +536,28 @@ Atomic masses.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="eon.structure.Structure.append">
-<span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">free</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.append"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.append" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">append</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">free</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atom_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.append"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.append" title="Link to this definition">¶</a></dt>
+<dd><p>Add one atom at the end.</p>
+<p>An atom_id of None takes one past the largest in use, keeping the ids
+distinct and ascending so the appended atom stays last across a save
+and load cycle.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="eon.structure.Structure.from_conframe">
 <span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_conframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">readcon.ConFrame</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#eon.structure.Structure" title="eon.structure.Structure"><span class="pre">eon.structure.Structure</span></a></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.from_conframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.from_conframe" title="Link to this definition">¶</a></dt>
 <dd><p>Build a Structure from a readcon ConFrame (live API).</p>
+<p>The frame holds atoms grouped by species; :func:<code class="docutils literal notranslate"><span class="pre">structure_order</span></code> puts
+them back in <code class="docutils literal notranslate"><span class="pre">atom_id</span></code> order.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="eon.structure.Structure.to_conframe">
 <span class="sig-name descname"><span class="pre">to_conframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prebox_header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">postbox_header</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><span class="pre">Optional</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Sequence" title="(in Python v3.14)"><span class="pre">Sequence</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">readcon.ConFrame</span></span></span><a class="reference internal" href="../../_modules/eon/structure.html#Structure.to_conframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#eon.structure.Structure.to_conframe" title="Link to this definition">¶</a></dt>
 <dd><p>Convert to a readcon ConFrame for writing.</p>
+<p>Atoms go out in Structure order carrying their own ids. The writer
+groups them by species; the ids are what :meth:<code class="docutils literal notranslate"><span class="pre">from_conframe</span></code> reads
+the grouping back out of.</p>
 </dd></dl>
 
 </dd></dl>
@@ -500,16 +590,16 @@ Atomic masses.</p>
   </svg>
   <span>Back to top</span>
 </button><div class="navigation flex print:hidden"><div class="navigation-prev">
-    <a href="eon.locking.html">
+    <a href="eon.communicator_inprocess.html">
       <i class="i-lucide chevron-left"></i>
       <div class="page-info">
-        <span>Previous</span><div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.locking</span></code></div></div>
+        <span>Previous</span><div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.communicator_inprocess</span></code></div></div>
     </a>
   </div><div class="navigation-next">
-    <a href="eon.akmcstate.html">
+    <a href="eon.escaperate.html">
       <div class="page-info">
         <span>Next</span>
-        <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.akmcstate</span></code></div>
+        <div class="title"><code class="xref py py-mod docutils literal notranslate"><span class="pre">eon.escaperate</span></code></div>
       </div>
       <i class="i-lucide chevron-right"></i>
     </a>
@@ -537,7 +627,7 @@ Atomic masses.</p>
     </div>
   </div>
 </footer>
-      <script src="../../_static/documentation_options.js?v=dd1205ac"></script>
+      <script src="../../_static/documentation_options.js?v=4f6ddb47"></script>
       <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
       <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
