@@ -321,7 +321,7 @@ if get_option('with_job_result')
     job_result_capnp_dep = dependency('capnp', required: true)
     _deps += [job_result_capnp_dep]
     _args += ['-DWITH_JOB_RESULT']
-    _incdirs += include_directories(meson.project_source_root() / 'schema')
+    _incdirs += include_directories('../schema')
 endif
 
 eigen_dep = dependency('eigen3', required: false)
@@ -689,7 +689,7 @@ eonclib_sources = [
 ]
 
 if get_option('with_job_result')
-    eonclib_sources += [meson.project_source_root() / 'schema' / 'eon_job_result.capnp.c++']
+    eonclib_sources += ['../schema/eon_job_result.capnp.c++']
 endif
 
 if get_option('with_xtsci')
