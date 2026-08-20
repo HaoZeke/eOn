@@ -8,5 +8,5 @@ url = https://github.com/OmniPotentRPC/rgpot.git
 #
 # The native engine ABI stamp and canonical Cap'n Proto compatibility fields
 # are present in this immutable integration revision.
-revision = 473033de21a26dc25adb73df3b3640eed0dc0074
+revision = b19227f9197a4c927633f1225f1e7546794a6f1e
 depth = 1
