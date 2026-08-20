@@ -62,6 +62,31 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
     Geometry / ConFrame.
     """
     d = results_dat_to_dict(text)
+    engine_compatibility = None
+    required_engine_fields = (
+        "compatibility_schema",
+        "engine_id",
+        "compatibility_engine_protocol_family",
+        "compatibility_engine_protocol_major",
+        "compatibility_engine_protocol_minor",
+        "compatibility_engine_abi_major",
+        "compatibility_engine_abi_minor",
+        "compatibility_engine_layout_revision",
+        "engine_build_identity",
+    )
+    if all(key in d for key in required_engine_fields):
+        engine_compatibility = {
+            "schema": d["compatibility_schema"],
+            "engineId": d["engine_id"],
+            "protocolFamily": d["compatibility_engine_protocol_family"],
+            "protocolMajor": d["compatibility_engine_protocol_major"],
+            "protocolMinor": d["compatibility_engine_protocol_minor"],
+            "abiMajor": d["compatibility_engine_abi_major"],
+            "abiMinor": d["compatibility_engine_abi_minor"],
+            "layoutRevision": d["compatibility_engine_layout_revision"],
+            "buildIdentity": d["engine_build_identity"],
+        }
+
     out: Dict[str, Any] = {
         "status_code": d.get("termination_reason", 0),
         "status_text": d.get("termination_reason_text", ""),
@@ -118,6 +143,8 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
             },
         },
     }
+    if engine_compatibility is not None:
+        out["compatibility"]["engine_compatibility"] = engine_compatibility
     if "simulation_time" in d:
         out["simulation_time"] = d["simulation_time"]
         out["md_temperature"] = d.get("md_temperature", 0.0)

@@ -527,6 +527,15 @@ static int eonClientMain(int argc, char **argv) {
 #ifdef WITH_XTSCI
         if (parameters.optimizer_options.method == OptType::XTSCI) {
           const auto stamp = xts_abi_stamp();
+          result_file << "eon.objective compatibility_engine_protocol_family\n";
+          result_file << "1 compatibility_engine_protocol_major\n";
+          result_file << "0 compatibility_engine_protocol_minor\n";
+          result_file << std::format("{} compatibility_engine_abi_major\n",
+                                     stamp.abi_major);
+          result_file << std::format("{} compatibility_engine_abi_minor\n",
+                                     stamp.abi_minor);
+          result_file << std::format("{} compatibility_engine_layout_revision\n",
+                                     stamp.layout_revision);
           result_file << std::format("{} optimizer_xts_abi_major\n",
                                      stamp.abi_major);
           result_file << std::format("{} optimizer_xts_abi_minor\n",

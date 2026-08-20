@@ -42,9 +42,16 @@ def test_results_dat_adapter_exposes_optimizer_provenance():
 minimization job_type
 xtsci optimizer_backend
 eon.optimizer.v1 optimizer_provenance_schema
+eon.compatibility.v1 compatibility_schema
 eon engine_id
 2.11.1 engine_version
 abc123 engine_build_identity
+eon.objective compatibility_engine_protocol_family
+1 compatibility_engine_protocol_major
+0 compatibility_engine_protocol_minor
+1 compatibility_engine_abi_major
+0 compatibility_engine_abi_minor
+2 compatibility_engine_layout_revision
 1 optimizer_xts_abi_major
 0 optimizer_xts_abi_minor
 2 optimizer_xts_abi_layout
@@ -57,6 +64,17 @@ abc123 engine_build_identity
         "id": "eon",
         "version": "2.11.1",
         "build_identity": "abc123",
+    }
+    assert parsed["compatibility"]["engine_compatibility"] == {
+        "schema": "eon.compatibility.v1",
+        "engineId": "eon",
+        "protocolFamily": "eon.objective",
+        "protocolMajor": 1,
+        "protocolMinor": 0,
+        "abiMajor": 1,
+        "abiMinor": 0,
+        "layoutRevision": 2,
+        "buildIdentity": "abc123",
     }
 
 
