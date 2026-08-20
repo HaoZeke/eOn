@@ -8,7 +8,7 @@
 
 #ifndef CAPNP_VERSION
 #error "CAPNP_VERSION is not defined, is capnp/generated-header-support.h missing?"
-#elif CAPNP_VERSION != 1004000
+#elif CAPNP_VERSION != 1005000
 #error "Version mismatch between generated code and library headers.  You must use the same version of the Cap'n Proto compiler and library."
 #endif
 
@@ -116,7 +116,7 @@ struct EngineCompatibility {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(b09fcd6475d46bb9, 2, 4)
+    CAPNP_DECLARE_STRUCT_HEADER(b09fcd6475d46bb9, 2, 8)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -804,6 +804,20 @@ public:
   inline bool hasBuildIdentity() const;
   inline  ::capnp::Text::Reader getBuildIdentity() const;
 
+  inline  ::uint16_t getReadconSpecVersion() const;
+
+  inline bool hasReadconMinVersion() const;
+  inline  ::capnp::Text::Reader getReadconMinVersion() const;
+
+  inline bool hasEonSchemaMinVersion() const;
+  inline  ::capnp::Text::Reader getEonSchemaMinVersion() const;
+
+  inline bool hasRgpycrumbsMinVersion() const;
+  inline  ::capnp::Text::Reader getRgpycrumbsMinVersion() const;
+
+  inline bool hasChemparseplotMinVersion() const;
+  inline  ::capnp::Text::Reader getChemparseplotMinVersion() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -874,6 +888,37 @@ public:
   inline  ::capnp::Text::Builder initBuildIdentity(unsigned int size);
   inline void adoptBuildIdentity(::capnp::Orphan< ::capnp::Text>&& value);
   inline ::capnp::Orphan< ::capnp::Text> disownBuildIdentity();
+
+  inline  ::uint16_t getReadconSpecVersion();
+  inline void setReadconSpecVersion( ::uint16_t value);
+
+  inline bool hasReadconMinVersion();
+  inline  ::capnp::Text::Builder getReadconMinVersion();
+  inline void setReadconMinVersion( ::capnp::Text::Reader value);
+  inline  ::capnp::Text::Builder initReadconMinVersion(unsigned int size);
+  inline void adoptReadconMinVersion(::capnp::Orphan< ::capnp::Text>&& value);
+  inline ::capnp::Orphan< ::capnp::Text> disownReadconMinVersion();
+
+  inline bool hasEonSchemaMinVersion();
+  inline  ::capnp::Text::Builder getEonSchemaMinVersion();
+  inline void setEonSchemaMinVersion( ::capnp::Text::Reader value);
+  inline  ::capnp::Text::Builder initEonSchemaMinVersion(unsigned int size);
+  inline void adoptEonSchemaMinVersion(::capnp::Orphan< ::capnp::Text>&& value);
+  inline ::capnp::Orphan< ::capnp::Text> disownEonSchemaMinVersion();
+
+  inline bool hasRgpycrumbsMinVersion();
+  inline  ::capnp::Text::Builder getRgpycrumbsMinVersion();
+  inline void setRgpycrumbsMinVersion( ::capnp::Text::Reader value);
+  inline  ::capnp::Text::Builder initRgpycrumbsMinVersion(unsigned int size);
+  inline void adoptRgpycrumbsMinVersion(::capnp::Orphan< ::capnp::Text>&& value);
+  inline ::capnp::Orphan< ::capnp::Text> disownRgpycrumbsMinVersion();
+
+  inline bool hasChemparseplotMinVersion();
+  inline  ::capnp::Text::Builder getChemparseplotMinVersion();
+  inline void setChemparseplotMinVersion( ::capnp::Text::Reader value);
+  inline  ::capnp::Text::Builder initChemparseplotMinVersion(unsigned int size);
+  inline void adoptChemparseplotMinVersion(::capnp::Orphan< ::capnp::Text>&& value);
+  inline ::capnp::Orphan< ::capnp::Text> disownChemparseplotMinVersion();
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -2374,6 +2419,156 @@ inline void EngineCompatibility::Builder::adoptBuildIdentity(
 inline ::capnp::Orphan< ::capnp::Text> EngineCompatibility::Builder::disownBuildIdentity() {
   return ::capnp::_::PointerHelpers< ::capnp::Text>::disown(_builder.getPointerField(
       ::capnp::bounded<3>() * ::capnp::POINTERS));
+}
+
+inline  ::uint16_t EngineCompatibility::Reader::getReadconSpecVersion() const {
+  return _reader.getDataField< ::uint16_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+
+inline  ::uint16_t EngineCompatibility::Builder::getReadconSpecVersion() {
+  return _builder.getDataField< ::uint16_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS);
+}
+inline void EngineCompatibility::Builder::setReadconSpecVersion( ::uint16_t value) {
+  _builder.setDataField< ::uint16_t>(
+      ::capnp::bounded<6>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool EngineCompatibility::Reader::hasReadconMinVersion() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
+}
+inline bool EngineCompatibility::Builder::hasReadconMinVersion() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::Text::Reader EngineCompatibility::Reader::getReadconMinVersion() const {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_reader.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::getReadconMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+inline void EngineCompatibility::Builder::setReadconMinVersion( ::capnp::Text::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::set(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::initReadconMinVersion(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::init(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), size);
+}
+inline void EngineCompatibility::Builder::adoptReadconMinVersion(
+    ::capnp::Orphan< ::capnp::Text>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::adopt(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::Text> EngineCompatibility::Builder::disownReadconMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::disown(_builder.getPointerField(
+      ::capnp::bounded<4>() * ::capnp::POINTERS));
+}
+
+inline bool EngineCompatibility::Reader::hasEonSchemaMinVersion() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
+}
+inline bool EngineCompatibility::Builder::hasEonSchemaMinVersion() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::Text::Reader EngineCompatibility::Reader::getEonSchemaMinVersion() const {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_reader.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::getEonSchemaMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+inline void EngineCompatibility::Builder::setEonSchemaMinVersion( ::capnp::Text::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::set(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::initEonSchemaMinVersion(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::init(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS), size);
+}
+inline void EngineCompatibility::Builder::adoptEonSchemaMinVersion(
+    ::capnp::Orphan< ::capnp::Text>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::adopt(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::Text> EngineCompatibility::Builder::disownEonSchemaMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::disown(_builder.getPointerField(
+      ::capnp::bounded<5>() * ::capnp::POINTERS));
+}
+
+inline bool EngineCompatibility::Reader::hasRgpycrumbsMinVersion() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS).isNull();
+}
+inline bool EngineCompatibility::Builder::hasRgpycrumbsMinVersion() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::Text::Reader EngineCompatibility::Reader::getRgpycrumbsMinVersion() const {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_reader.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::getRgpycrumbsMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+inline void EngineCompatibility::Builder::setRgpycrumbsMinVersion( ::capnp::Text::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::set(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::initRgpycrumbsMinVersion(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::init(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS), size);
+}
+inline void EngineCompatibility::Builder::adoptRgpycrumbsMinVersion(
+    ::capnp::Orphan< ::capnp::Text>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::adopt(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::Text> EngineCompatibility::Builder::disownRgpycrumbsMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::disown(_builder.getPointerField(
+      ::capnp::bounded<6>() * ::capnp::POINTERS));
+}
+
+inline bool EngineCompatibility::Reader::hasChemparseplotMinVersion() const {
+  return !_reader.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS).isNull();
+}
+inline bool EngineCompatibility::Builder::hasChemparseplotMinVersion() {
+  return !_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS).isNull();
+}
+inline  ::capnp::Text::Reader EngineCompatibility::Reader::getChemparseplotMinVersion() const {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_reader.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS));
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::getChemparseplotMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::get(_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS));
+}
+inline void EngineCompatibility::Builder::setChemparseplotMinVersion( ::capnp::Text::Reader value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::set(_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS), value);
+}
+inline  ::capnp::Text::Builder EngineCompatibility::Builder::initChemparseplotMinVersion(unsigned int size) {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::init(_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS), size);
+}
+inline void EngineCompatibility::Builder::adoptChemparseplotMinVersion(
+    ::capnp::Orphan< ::capnp::Text>&& value) {
+  ::capnp::_::PointerHelpers< ::capnp::Text>::adopt(_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS), kj::mv(value));
+}
+inline ::capnp::Orphan< ::capnp::Text> EngineCompatibility::Builder::disownChemparseplotMinVersion() {
+  return ::capnp::_::PointerHelpers< ::capnp::Text>::disown(_builder.getPointerField(
+      ::capnp::bounded<7>() * ::capnp::POINTERS));
 }
 
 inline bool LandfoldArtifact::Reader::hasSchema() const {

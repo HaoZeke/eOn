@@ -39,3 +39,15 @@ Runtime control-plane types for kill-file-IPC (not parameter authoring):
 Python: `eon_schema.jobs` (path helper + `results.dat` adapters).
 
 `.con` / `results.dat` remain **durable adapters**, not the in-process primary API.
+
+The checked-in C++ bindings are generated with Cap’n Proto 1.5, matching the
+`capnproto` package pinned by `pixi.lock`. Regenerate them from the repository
+root with:
+
+```bash
+capnp compile -oc++ schema/eon_job_result.capnp
+```
+
+The generated files are `schema/eon_job_result.capnp.h` and
+`schema/eon_job_result.capnp.c++`; keep both files synchronized with the
+authoring schema and the Cap’n Proto library used for compilation.
