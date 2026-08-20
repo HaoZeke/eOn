@@ -21,6 +21,14 @@ def test_schema_file_in_monorepo():
     assert ".con" not in text or "not .con text" in text
 
 
+def test_packaged_schema_matches_monorepo_schema():
+    canonical = ROOT / "schema" / "eon_job_result.capnp"
+    packaged = ROOT / "packages" / "eon-schema" / "src" / "eon_schema" / "jobs" / "eon_job_result.capnp"
+    assert packaged.read_bytes().replace(b"\r\n", b"\n") == canonical.read_bytes().replace(
+        b"\r\n", b"\n"
+    )
+
+
 def test_adapters_importable_from_package():
     import sys
 
