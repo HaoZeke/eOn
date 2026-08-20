@@ -47,6 +47,14 @@ to the xtsci DLPack C ABI. It validates the xts ABI stamp at runtime and passes
 `max_move` through to the optimizer, so the legacy backend remains the default
 and existing step-size semantics remain explicit.
 
+An xtsci run appends an `eon.compatibility.v1` record to `results.dat`. The
+record includes the eOn objective protocol, xts ABI major and minor versions,
+the ABI layout revision, and the eOn build identity. The
+`eon_schema.jobs.job_result_scalars_from_results_dat` adapter exposes these
+fields as `compatibility.engine_compatibility`; consumers can reject a result
+before passing its objective to another optimizer when the stamp is missing or
+incompatible.
+
 Each of the optimizer methods have their own settings as well.
 
 ### LBFGS
