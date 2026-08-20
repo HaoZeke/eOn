@@ -16,6 +16,9 @@
 #include "eon/LBFGS.h"
 #include "eon/Quickmin.h"
 #include "eon/SteepestDescent.h"
+#ifdef WITH_XTSCI
+#include "eon/XtsciOptimizer.h"
+#endif
 
 namespace eonc::helpers::create {
 std::unique_ptr<Optimizer> mkOptim(std::shared_ptr<ObjectiveFunction> a_objf,
@@ -37,6 +40,11 @@ std::unique_ptr<Optimizer> mkOptim(std::shared_ptr<ObjectiveFunction> a_objf,
   case OptType::SD: {
     return std::make_unique<SteepestDescent>(a_objf, a_params);
   }
+#ifdef WITH_XTSCI
+  case OptType::XTSCI: {
+    return std::make_unique<XtsciOptimizer>(a_objf, a_params);
+  }
+#endif
   case OptType::None: {
     throw std::runtime_error("[Optimizer] Cannot create None");
   }

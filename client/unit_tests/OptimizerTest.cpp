@@ -20,6 +20,9 @@
 #include "eon/Parameters.h"
 #include "eon/Quickmin.h"
 #include "eon/SteepestDescent.h"
+#ifdef WITH_XTSCI
+#include "eon/XtsciOptimizer.h"
+#endif
 
 #include <stdexcept>
 #include <string>
@@ -225,5 +228,23 @@ TEST_CASE("SteepestDescent optimizer converges on quadratic",
   REQUIRE(final_pos.norm() < 0.01);
   CHECK(status == 1);
 }
+
+#ifdef WITH_XTSCI
+TEST_CASE("xtsci optimizer converges on quadratic", "[optimizer][xtsci]") {
+  auto params = makeOptParams();
+  params.optimizer_options.converged_force = 1e-3;
+  auto objf = std::make_shared<QuadraticObjectiveFunction>(params);
+  VectorXd start(2);
+  start << 5.0, 3.0;
+  objf->setPositions(start);
+
+  XtsciOptimizer opt(objf, params);
+  int status = opt.run(5000, params.optimizer_options.max_move);
+  auto final_pos = objf->getPositions();
+
+  REQUIRE(final_pos.norm() < 0.01);
+  CHECK(status == 1);
+}
+#endif
 
 } /* namespace tests */
