@@ -82,6 +82,12 @@ std::vector<double> flat_row_major(const AtomMatrix &m) {
 
 void apply_frame_metadata(readcon::ConFrameBuilder &builder,
                           const eonc::io::ConFrameMetadata *metadata) {
+  // eOn writes native Cartesian coordinates in Angstrom and energies in eV.
+  // These identifiers make generated frames self-describing to readcon
+  // consumers without changing the CON geometry sections.
+  builder.set_string_metadata("generator", "eon");
+  builder.set_string_metadata("length_unit", "angstrom");
+  builder.set_string_metadata("energy_unit", "eV");
   if (metadata == nullptr) {
     return;
   }

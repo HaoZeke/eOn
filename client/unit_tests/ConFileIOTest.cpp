@@ -660,6 +660,10 @@ TEST_CASE("NEB path writer embeds structured frame metadata",
   }
   REQUIRE(file_contents.find("\"neb_band\":12") != std::string::npos);
   REQUIRE(file_contents.find("\"neb_bead\":1") != std::string::npos);
+  REQUIRE(file_contents.find("\"generator\":\"eon\"") != std::string::npos);
+  REQUIRE(file_contents.find("\"length_unit\":\"angstrom\"") !=
+          std::string::npos);
+  REQUIRE(file_contents.find("\"energy_unit\":\"eV\"") != std::string::npos);
   REQUIRE(file_contents.find("\"reaction_coordinate\"") != std::string::npos);
   REQUIRE(file_contents.find("\"parallel_force\"") != std::string::npos);
 
