@@ -90,6 +90,11 @@ struct EngineCompatibility {
   abiMinor @6 :UInt16 = 0;
   layoutRevision @7 :UInt32 = 0;
   buildIdentity @8 :Text;
+  readconSpecVersion @9 :UInt16 = 0;
+  readconMinVersion @10 :Text;
+  eonSchemaMinVersion @11 :Text;
+  rgpycrumbsMinVersion @12 :Text;
+  chemparseplotMinVersion @13 :Text;
 }
 
 struct LandfoldArtifact {

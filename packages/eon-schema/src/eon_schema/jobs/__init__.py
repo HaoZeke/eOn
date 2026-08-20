@@ -89,6 +89,18 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
             "layoutRevision": d["compatibility_engine_layout_revision"],
             "buildIdentity": d["engine_build_identity"],
         }
+        for source, target in (
+            ("compatibility_readcon_spec_version", "readconSpecVersion"),
+            ("compatibility_readcon_min_version", "readconMinVersion"),
+            ("compatibility_eon_schema_min_version", "eonSchemaMinVersion"),
+            ("compatibility_rgpycrumbs_min_version", "rgpycrumbsMinVersion"),
+            (
+                "compatibility_chemparseplot_min_version",
+                "chemparseplotMinVersion",
+            ),
+        ):
+            if source in d:
+                engine_compatibility[target] = d[source]
 
     out: Dict[str, Any] = {
         "status_code": d.get("termination_reason", 0),

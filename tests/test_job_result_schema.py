@@ -16,6 +16,8 @@ def test_schema_file_in_monorepo():
     assert "struct LandfoldArtifact" in text
     assert "landfoldArtifacts @31 :List(LandfoldArtifact);" in text
     assert "compatibility @32 :EngineCompatibility;" in text
+    assert "readconSpecVersion @9" in text
+    assert "chemparseplotMinVersion @13" in text
     # Flat geometry, not con text blobs
     assert "positions @0" in text
     assert ".con" not in text or "not .con text" in text
@@ -121,6 +123,36 @@ abc123 engine_build_identity
         "version": "2.11.1",
         "build_identity": "abc123",
     }
+
+
+def test_results_dat_adapter_preserves_stack_floor_fields_in_engine_stamp():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "packages" / "eon-schema" / "src"))
+    from eon_schema.jobs import job_result_scalars_from_results_dat
+
+    parsed = job_result_scalars_from_results_dat(
+        """eon.compatibility.v1 compatibility_schema
+eon engine_id
+eon.objective compatibility_engine_protocol_family
+1 compatibility_engine_protocol_major
+0 compatibility_engine_protocol_minor
+1 compatibility_engine_abi_major
+0 compatibility_engine_abi_minor
+3 compatibility_engine_layout_revision
+build@sha engine_build_identity
+3 compatibility_readcon_spec_version
+0.14.7 compatibility_readcon_min_version
+0.2.0 compatibility_eon_schema_min_version
+1.10.4 compatibility_rgpycrumbs_min_version
+1.9.17 compatibility_chemparseplot_min_version
+"""
+    )
+    assert parsed["compatibility"]["engine_compatibility"]["readconSpecVersion"] == 3
+    assert (
+        parsed["compatibility"]["engine_compatibility"]["chemparseplotMinVersion"]
+        == "1.9.17"
+    )
 
 
 def test_results_dat_adapter_does_not_upgrade_unknown_compatibility_schema():
