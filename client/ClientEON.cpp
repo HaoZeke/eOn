@@ -171,7 +171,8 @@ void write_job_result_envelope(
   result.setPotentialType(result_text(fields, "potential_type"));
   result.setRandomSeed(result_number<int64_t>(fields, "random_seed", -1));
   result.setPotentialEnergy(
-      result_number<double>(fields, "potential_energy", 0.0));
+      result_number<double>(fields, "potential_energy",
+                            result_number<double>(fields, "Energy", 0.0)));
   result.setPotentialEnergySaddle(
       result_number<double>(fields, "potential_energy_saddle", 0.0));
   result.setPotentialEnergyReactant(
@@ -192,6 +193,16 @@ void write_job_result_envelope(
   result.setUserTimeSeconds(result_number<double>(fields, "user_time", 0.0));
   result.setSystemTimeSeconds(
       result_number<double>(fields, "system_time", 0.0));
+  auto force_calls = result.initForceCalls();
+  force_calls.setTotal(
+      result_number<uint64_t>(fields, "total_force_calls", 0));
+  force_calls.setMinimization(
+      result_number<uint64_t>(fields, "force_calls_minimization", 0));
+  force_calls.setSaddle(
+      result_number<uint64_t>(fields, "force_calls_saddle", 0));
+  force_calls.setPrefactors(
+      result_number<uint64_t>(fields, "force_calls_prefactors", 0));
+  force_calls.setNeb(result_number<uint64_t>(fields, "force_calls_neb", 0));
   result.setClientVersion(VERSION_STRING);
 
   auto optimizer = result.initOptimizer();
@@ -212,10 +223,8 @@ void write_job_result_envelope(
   compatibility.setLayoutRevision(optimizer_abi_layout);
   compatibility.setBuildIdentity(std::string(VERSION) + "+" + GIT_HASH);
 
-  constexpr std::array<std::string_view, 7> extra_keys = {
-      "iterations", "final_eigenvalue", "total_force_calls",
-      "force_calls_minimization", "force_calls_saddle",
-      "force_calls_prefactors", "force_calls_neb"};
+  constexpr std::array<std::string_view, 2> extra_keys = {"iterations",
+                                                           "final_eigenvalue"};
   auto extras = result.initExtras(extra_keys.size());
   for (size_t index = 0; index < extra_keys.size(); ++index) {
     const auto key = extra_keys[index];
