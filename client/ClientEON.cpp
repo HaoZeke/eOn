@@ -118,16 +118,18 @@ void write_job_result_envelope(
     int32_t status_code, std::string_view optimizer_backend,
     uint16_t optimizer_abi_major, uint16_t optimizer_abi_minor,
     uint16_t optimizer_abi_layout) {
+  const std::string job_type_string(job_type);
+  const std::string optimizer_backend_string(optimizer_backend);
   capnp::MallocMessageBuilder message;
   auto result = message.initRoot<eonc::job_ssot::JobResult>();
-  result.setJobType(job_type);
+  result.setJobType(job_type_string);
   result.setStatusCode(status_code);
   result.setStatusText(status_code == 0 ? "good" : "failed");
   result.setClientVersion(VERSION_STRING);
 
   auto optimizer = result.initOptimizer();
   optimizer.setSchema("eon.optimizer.v1");
-  optimizer.setBackend(optimizer_backend);
+  optimizer.setBackend(optimizer_backend_string);
   optimizer.setXtsAbiMajor(optimizer_abi_major);
   optimizer.setXtsAbiMinor(optimizer_abi_minor);
   optimizer.setXtsAbiLayout(optimizer_abi_layout);
