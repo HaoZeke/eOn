@@ -15,6 +15,7 @@ def test_schema_file_in_monorepo():
     assert "struct EngineCompatibility" in text
     assert "struct LandfoldArtifact" in text
     assert "landfoldArtifacts @31 :List(LandfoldArtifact);" in text
+    assert "compatibility @32 :EngineCompatibility;" in text
     # Flat geometry, not con text blobs
     assert "positions @0" in text
     assert ".con" not in text or "not .con text" in text

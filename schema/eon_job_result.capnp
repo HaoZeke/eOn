@@ -140,4 +140,5 @@ struct JobResult {
   clientVersion @29 :Text;
   optimizer @30 :OptimizerProvenance;
   landfoldArtifacts @31 :List(LandfoldArtifact);
+  compatibility @32 :EngineCompatibility;
 }
