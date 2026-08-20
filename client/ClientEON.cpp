@@ -212,26 +212,28 @@ void write_job_result_envelope(
   optimizer.setXtsAbiMinor(optimizer_abi_minor);
   optimizer.setXtsAbiLayout(optimizer_abi_layout);
 
-  auto compatibility = result.initCompatibility();
-  compatibility.setSchema("eon.compatibility.v1");
-  compatibility.setEngineId("eon");
-  compatibility.setProtocolFamily("eon.objective");
-  compatibility.setProtocolMajor(1);
-  compatibility.setProtocolMinor(0);
-  compatibility.setAbiMajor(optimizer_abi_major);
-  compatibility.setAbiMinor(optimizer_abi_minor);
-  compatibility.setLayoutRevision(optimizer_abi_layout);
-  compatibility.setBuildIdentity(std::string(VERSION) + "+" + GIT_HASH);
-  compatibility.setReadconSpecVersion(
-      result_number<uint16_t>(fields, "compatibility_readcon_spec_version", 0));
-  compatibility.setReadconMinVersion(
-      result_text(fields, "compatibility_readcon_min_version"));
-  compatibility.setEonSchemaMinVersion(
-      result_text(fields, "compatibility_eon_schema_min_version"));
-  compatibility.setRgpycrumbsMinVersion(
-      result_text(fields, "compatibility_rgpycrumbs_min_version"));
-  compatibility.setChemparseplotMinVersion(
-      result_text(fields, "compatibility_chemparseplot_min_version"));
+  if (optimizer_abi_major != 0 && optimizer_abi_layout != 0) {
+    auto compatibility = result.initCompatibility();
+    compatibility.setSchema("eon.compatibility.v1");
+    compatibility.setEngineId("eon");
+    compatibility.setProtocolFamily("eon.objective");
+    compatibility.setProtocolMajor(1);
+    compatibility.setProtocolMinor(0);
+    compatibility.setAbiMajor(optimizer_abi_major);
+    compatibility.setAbiMinor(optimizer_abi_minor);
+    compatibility.setLayoutRevision(optimizer_abi_layout);
+    compatibility.setBuildIdentity(std::string(VERSION) + "+" + GIT_HASH);
+    compatibility.setReadconSpecVersion(
+        result_number<uint16_t>(fields, "compatibility_readcon_spec_version", 0));
+    compatibility.setReadconMinVersion(
+        result_text(fields, "compatibility_readcon_min_version"));
+    compatibility.setEonSchemaMinVersion(
+        result_text(fields, "compatibility_eon_schema_min_version"));
+    compatibility.setRgpycrumbsMinVersion(
+        result_text(fields, "compatibility_rgpycrumbs_min_version"));
+    compatibility.setChemparseplotMinVersion(
+        result_text(fields, "compatibility_chemparseplot_min_version"));
+  }
 
   constexpr std::array<std::string_view, 2> extra_keys = {"iterations",
                                                            "final_eigenvalue"};
