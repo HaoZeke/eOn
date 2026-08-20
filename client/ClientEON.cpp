@@ -686,6 +686,7 @@ static int eonClientMain(int argc, char **argv) {
       } else {
         QUILL_LOG_ERROR(logger, "Failed to write timing to results.dat");
       }
+      result_file.close();
 
 #ifdef WITH_JOB_RESULT
       try {
