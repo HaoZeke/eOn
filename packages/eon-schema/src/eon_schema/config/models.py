@@ -1419,7 +1419,7 @@ class CoarseGrainingConfig(BaseModel):
 class OptimizerConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
-    opt_method: Literal["box", "cg", "qm", "lbfgs", "fire"] = Field(
+    opt_method: Literal["box", "cg", "qm", "lbfgs", "fire", "xtsci"] = Field(
         default="cg",
         description="The optimization method to use.",
     )
@@ -1430,6 +1430,7 @@ class OptimizerConfig(BaseModel):
       - ``qm``: Quickmin
       - ``lbfgs``: Limited Memory Broyden-Fletcher-Goldfarb-Shanno QuasiNewton optimizer
       - ``fire``: Fast inertial relaxation engine
+      - ``xtsci``: Opt-in xtsci-optimize Rust backend
     """
     convergence_metric: Literal["norm", "max_atom", "max_component"] = Field(
         default="norm",
@@ -1542,7 +1543,9 @@ class SDConfig(BaseModel):
 class RefineConfig(BaseModel):
     model_config = ConfigDict(use_attribute_docstrings=True)
 
-    refine_opt_method: Literal["none", "cg", "lbfgs", "fire", "box", "qm"] = Field(
+    refine_opt_method: Literal[
+        "none", "cg", "lbfgs", "fire", "box", "qm", "xtsci"
+    ] = Field(
         default="none",
         description="The optimization method to use for refinement.",
     )
@@ -1554,6 +1557,7 @@ class RefineConfig(BaseModel):
       - ``fire``: Fast inertial relaxation engine
       - ``box``: Optimizes the atom positions and box using quickmin
       - ``qm``: Quickmin
+      - ``xtsci``: Opt-in xtsci-optimize Rust backend
     """
     refine_threshold: float = Field(
         default=0.5, description="Threshold for refinement optimization."

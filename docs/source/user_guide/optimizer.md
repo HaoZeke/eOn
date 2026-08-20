@@ -30,6 +30,23 @@ standard optimizer software suite[^1] . Some prominent reasons are:
 .. autopydantic_model:: eon.schema.OptimizerConfig
 ```
 
+### xtsci-optimize backend
+
+The Rust `xtsci-optimize` backend is opt-in. Install its `xtsci-optimize.pc`
+package and configure eOn with `-Dwith_xtsci=true`. Select it explicitly:
+
+```{code-block} ini
+[Optimizer]
+opt_method = xtsci
+max_move = 0.2
+converged_force = 0.01
+```
+
+The adapter maps eOn's existing `ObjectiveFunction` energy and gradient calls
+to the xtsci DLPack C ABI. It validates the xts ABI stamp at runtime and passes
+`max_move` through to the optimizer, so the legacy backend remains the default
+and existing step-size semantics remain explicit.
+
 Each of the optimizer methods have their own settings as well.
 
 ### LBFGS

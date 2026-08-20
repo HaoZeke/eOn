@@ -129,7 +129,8 @@ void bind_enums(nb::module_ &m) {
       .value("CG", eonc::OptType::CG)
       .value("LBFGS", eonc::OptType::LBFGS)
       .value("FIRE", eonc::OptType::FIRE)
-      .value("SD", eonc::OptType::SD);
+      .value("SD", eonc::OptType::SD)
+      .value("XTSCI", eonc::OptType::XTSCI);
 
   nb::enum_<eonc::NEBInit>(m, "NEBInit")
       .value("LINEAR", eonc::NEBInit::LINEAR)
