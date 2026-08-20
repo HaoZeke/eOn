@@ -74,7 +74,10 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
         "compatibility_engine_layout_revision",
         "engine_build_identity",
     )
-    if all(key in d for key in required_engine_fields):
+    if (
+        d.get("compatibility_schema") == "eon.compatibility.v1"
+        and all(key in d for key in required_engine_fields)
+    ):
         engine_compatibility = {
             "schema": d["compatibility_schema"],
             "engineId": d["engine_id"],

@@ -104,3 +104,24 @@ abc123 engine_build_identity
         "version": "2.11.1",
         "build_identity": "abc123",
     }
+
+
+def test_results_dat_adapter_does_not_upgrade_unknown_compatibility_schema():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "packages" / "eon-schema" / "src"))
+    from eon_schema.jobs import job_result_scalars_from_results_dat
+
+    parsed = job_result_scalars_from_results_dat(
+        """eon.compatibility.v0 compatibility_schema
+eon engine_id
+eon.objective compatibility_engine_protocol_family
+1 compatibility_engine_protocol_major
+0 compatibility_engine_protocol_minor
+1 compatibility_engine_abi_major
+0 compatibility_engine_abi_minor
+2 compatibility_engine_layout_revision
+abc123 engine_build_identity
+"""
+    )
+    assert "engine_compatibility" not in parsed["compatibility"]
