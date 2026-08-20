@@ -72,6 +72,14 @@ struct ScalarExtra {
   value @1 :Float64;
 }
 
+struct OptimizerProvenance {
+  schema @0 :Text;
+  backend @1 :Text;
+  xtsAbiMajor @2 :UInt16 = 0;
+  xtsAbiMinor @3 :UInt16 = 0;
+  xtsAbiLayout @4 :UInt16 = 0;
+}
+
 struct JobResult {
   jobId @0 :Text;
   jobType @1 :Text;
@@ -111,4 +119,5 @@ struct JobResult {
   systemTimeSeconds @27 :Float64 = 0.0;
   extras @28 :List(ScalarExtra);
   clientVersion @29 :Text;
+  optimizer @30 :OptimizerProvenance;
 }

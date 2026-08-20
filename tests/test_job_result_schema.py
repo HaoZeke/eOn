@@ -25,3 +25,24 @@ def test_adapters_importable_from_package():
     assert job_result_capnp_path().is_file()
     d = results_dat_to_dict("0 termination_reason\ngood termination_reason_text\n")
     assert d["termination_reason"] == 0
+
+
+def test_results_dat_adapter_exposes_optimizer_provenance():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "packages" / "eon-schema" / "src"))
+    from eon_schema.jobs import job_result_scalars_from_results_dat
+
+    parsed = job_result_scalars_from_results_dat(
+        """0 termination_reason
+minimization job_type
+xtsci optimizer_backend
+eon.optimizer.v1 optimizer_provenance_schema
+1 optimizer_xts_abi_major
+0 optimizer_xts_abi_minor
+2 optimizer_xts_abi_layout
+"""
+    )
+    assert parsed["optimizer"]["backend"] == "xtsci"
+    assert parsed["optimizer"]["schema"] == "eon.optimizer.v1"
+    assert parsed["optimizer"]["xts_abi"] == {"major": 1, "minor": 0, "layout": 2}

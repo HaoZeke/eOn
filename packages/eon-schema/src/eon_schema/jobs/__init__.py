@@ -87,6 +87,15 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
         "wall_time_seconds": d.get("time_seconds", 0.0),
         "user_time_seconds": d.get("user_time", 0.0),
         "system_time_seconds": d.get("system_time", 0.0),
+        "optimizer": {
+            "backend": d.get("optimizer_backend", ""),
+            "schema": d.get("optimizer_provenance_schema", ""),
+            "xts_abi": {
+                "major": d.get("optimizer_xts_abi_major", 0),
+                "minor": d.get("optimizer_xts_abi_minor", 0),
+                "layout": d.get("optimizer_xts_abi_layout", 0),
+            },
+        },
     }
     if "simulation_time" in d:
         out["simulation_time"] = d["simulation_time"]

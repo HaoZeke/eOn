@@ -33,10 +33,13 @@
 #include <string_view>
 
 #include <cerrno>
+#include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <ranges>
 
 #ifdef EONMPI
 #include <Python.h>
@@ -56,6 +59,10 @@
 
 // Includes for FPE trapping
 #include "eon/fpe_handler.h"
+
+#ifdef WITH_XTSCI
+#include <xts.h>
+#endif
 
 #ifdef _WIN32
 #include <float.h>
@@ -501,6 +508,24 @@ static int eonClientMain(int argc, char **argv) {
 #ifndef _WIN32
         result_file << std::format("{:.12e} user_time\n", utime);
         result_file << std::format("{:.12e} system_time\n", stime);
+#endif
+        std::string optimizer_backend = std::string(magic_enum::enum_name(
+            parameters.optimizer_options.method));
+        std::ranges::transform(optimizer_backend, optimizer_backend.begin(),
+                               [](unsigned char c) { return std::tolower(c); });
+        result_file << std::format("{} optimizer_backend\n",
+                                   optimizer_backend);
+        result_file << "eon.optimizer.v1 optimizer_provenance_schema\n";
+#ifdef WITH_XTSCI
+        if (parameters.optimizer_options.method == OptType::XTSCI) {
+          const auto stamp = xts_abi_stamp();
+          result_file << std::format("{} optimizer_xts_abi_major\n",
+                                     stamp.abi_major);
+          result_file << std::format("{} optimizer_xts_abi_minor\n",
+                                     stamp.abi_minor);
+          result_file << std::format("{} optimizer_xts_abi_layout\n",
+                                     stamp.layout_revision);
+        }
 #endif
       } else {
         QUILL_LOG_ERROR(logger, "Failed to write timing to results.dat");
