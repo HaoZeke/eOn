@@ -10,6 +10,10 @@
 
 #include <xts.h>
 
+#if XTS_ABI_LAYOUT_REVISION < 2
+#error "xtsci-optimize ABI layout 2 or newer is required for max_move"
+#endif
+
 namespace {
 
 struct XtsObjectiveContext {
