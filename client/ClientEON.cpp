@@ -521,9 +521,7 @@ static int eonClientMain(int argc, char **argv) {
         result_file << "0.2.0 compatibility_eon_schema_min_version\n";
         result_file << "1.10.4 compatibility_rgpycrumbs_min_version\n";
         result_file << "1.9.17 compatibility_chemparseplot_min_version\n";
-        result_file << std::format(
-            "{} engine_id\n",
-            magic_enum::enum_name(parameters.potential_options.potential));
+        result_file << "eon engine_id\n";
         result_file << std::format("{} engine_version\n", VERSION);
         result_file << std::format("{} engine_build_identity\n", GIT_HASH);
 #ifdef WITH_XTSCI
