@@ -148,7 +148,7 @@ sphinxcontrib-bibtex = "*"
 sphinxcontrib-spelling = "*"
 autodoc-pydantic = "*"
 sphinx-autodoc2 = "*"
-rgpycrumbs = { version = ">=1.8.0,<2", extras = ["analysis"] }
+rgpycrumbs = { version = ">=1.8.0,<2" }
 chemparseplot = { version = ">=1.8.0,<2", extras = ["neb", "plot"] }
 adjustText = "*"
 
