@@ -29,6 +29,14 @@ def test_packaged_schema_matches_monorepo_schema():
     )
 
 
+def test_native_capnp_bindings_are_checked_in():
+    generated_header = ROOT / "schema" / "eon_job_result.capnp.h"
+    generated_source = ROOT / "schema" / "eon_job_result.capnp.c++"
+    assert generated_header.is_file()
+    assert generated_source.is_file()
+    assert "class JobResult" in generated_header.read_text(encoding="utf-8")
+
+
 def test_adapters_importable_from_package():
     import sys
 
