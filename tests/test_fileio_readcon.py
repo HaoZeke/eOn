@@ -96,17 +96,21 @@ def test_readcon_version_and_chemfiles_status():
 
 
 def test_readcon_release_surfaces_match():
-    """The wrap, Meson overlay, and coverage helper use one readcon floor."""
+    """All eOn packaging and build surfaces use one readcon floor."""
     root = Path(__file__).resolve().parents[1]
     wrap = (root / "subprojects" / "readcon-core.wrap").read_text(encoding="utf-8")
     overlay = (root / "subprojects" / "packagefiles" / "readcon-core" / "meson.build").read_text(
         encoding="utf-8"
     )
     coverage = (root / "scripts" / "run_coverage_python.sh").read_text(encoding="utf-8")
+    pyeonclient = (root / "pyproject-pyeonclient.toml").read_text(encoding="utf-8")
+    environment = (root / "environment.yml").read_text(encoding="utf-8")
 
     assert "revision = v0.14.7" in wrap
     assert "version: '0.14.7'" in overlay
     assert "readcon>=0.14.7" in coverage
+    assert "readcon>=0.14.7" in pyeonclient
+    assert "readcon>=0.14.7" in environment
 
 
 def test_readcon_core_not_chemfiles_for_server_io():
