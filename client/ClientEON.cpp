@@ -39,9 +39,13 @@
 #include <cstring>
 #include <ctime>
 #include <cstdint>
+#include <array>
 #include <filesystem>
 #include <ranges>
 #include <stdexcept>
+#include <type_traits>
+#include <unordered_map>
+#include <utility>
 
 #ifdef EONMPI
 #include <Python.h>
@@ -113,18 +117,81 @@ void print_memory_usage() {
 #endif
 
 #ifdef WITH_JOB_RESULT
+using ResultFields = std::unordered_map<std::string, std::string>;
+
+ResultFields read_result_fields(const std::filesystem::path &path) {
+  ResultFields fields;
+  std::ifstream input(path);
+  std::string value;
+  std::string key;
+  while (input >> value >> key) {
+    fields[key] = value;
+  }
+  return fields;
+}
+
+template <typename Number>
+Number result_number(const ResultFields &fields, std::string_view key,
+                     Number fallback) {
+  const auto found = fields.find(std::string(key));
+  if (found == fields.end()) {
+    return fallback;
+  }
+  try {
+    if constexpr (std::is_integral_v<Number>) {
+      return static_cast<Number>(std::stoll(found->second));
+    } else {
+      return static_cast<Number>(std::stod(found->second));
+    }
+  } catch (const std::exception &) {
+    return fallback;
+  }
+}
+
+std::string result_text(const ResultFields &fields, std::string_view key,
+                        std::string fallback = {}) {
+  const auto found = fields.find(std::string(key));
+  return found == fields.end() ? std::move(fallback) : found->second;
+}
+
 void write_job_result_envelope(
     const std::filesystem::path &path, std::string_view job_type,
     int32_t status_code, std::string_view optimizer_backend,
     uint16_t optimizer_abi_major, uint16_t optimizer_abi_minor,
-    uint16_t optimizer_abi_layout) {
+    uint16_t optimizer_abi_layout, const ResultFields &fields) {
   const std::string job_type_string(job_type);
   const std::string optimizer_backend_string(optimizer_backend);
   capnp::MallocMessageBuilder message;
   auto result = message.initRoot<eonc::job_ssot::JobResult>();
-  result.setJobType(job_type_string);
-  result.setStatusCode(status_code);
-  result.setStatusText(status_code == 0 ? "good" : "failed");
+  result.setJobType(result_text(fields, "job_type", job_type_string));
+  result.setStatusCode(result_number<int32_t>(fields, "termination_reason",
+                                               status_code));
+  result.setStatusText(result_text(fields, "termination_reason_text",
+                                    status_code == 0 ? "good" : "failed"));
+  result.setPotentialType(result_text(fields, "potential_type"));
+  result.setRandomSeed(result_number<int64_t>(fields, "random_seed", -1));
+  result.setPotentialEnergy(
+      result_number<double>(fields, "potential_energy", 0.0));
+  result.setPotentialEnergySaddle(
+      result_number<double>(fields, "potential_energy_saddle", 0.0));
+  result.setPotentialEnergyReactant(
+      result_number<double>(fields, "potential_energy_reactant", 0.0));
+  result.setPotentialEnergyProduct(
+      result_number<double>(fields, "potential_energy_product", 0.0));
+  result.setBarrierReactantToProduct(
+      result_number<double>(fields, "barrier_reactant_to_product", 0.0));
+  result.setBarrierProductToReactant(
+      result_number<double>(fields, "barrier_product_to_reactant", 0.0));
+  result.setPrefactorReactantToProduct(
+      result_number<double>(fields, "prefactor_reactant_to_product", 0.0));
+  result.setPrefactorProductToReactant(
+      result_number<double>(fields, "prefactor_product_to_reactant", 0.0));
+  result.setDisplacementSaddleDistance(
+      result_number<double>(fields, "displacement_saddle_distance", 0.0));
+  result.setWallTimeSeconds(result_number<double>(fields, "time_seconds", 0.0));
+  result.setUserTimeSeconds(result_number<double>(fields, "user_time", 0.0));
+  result.setSystemTimeSeconds(
+      result_number<double>(fields, "system_time", 0.0));
   result.setClientVersion(VERSION_STRING);
 
   auto optimizer = result.initOptimizer();
@@ -144,6 +211,17 @@ void write_job_result_envelope(
   compatibility.setAbiMinor(optimizer_abi_minor);
   compatibility.setLayoutRevision(optimizer_abi_layout);
   compatibility.setBuildIdentity(std::string(VERSION) + "+" + GIT_HASH);
+
+  constexpr std::array<std::string_view, 7> extra_keys = {
+      "iterations", "final_eigenvalue", "total_force_calls",
+      "force_calls_minimization", "force_calls_saddle",
+      "force_calls_prefactors", "force_calls_neb"};
+  auto extras = result.initExtras(extra_keys.size());
+  for (size_t index = 0; index < extra_keys.size(); ++index) {
+    const auto key = extra_keys[index];
+    extras[index].setKey(std::string(key));
+    extras[index].setValue(result_number<double>(fields, key, 0.0));
+  }
 
   kj::VectorOutputStream packed;
   capnp::writePackedMessage(packed, message);
@@ -611,6 +689,7 @@ static int eonClientMain(int argc, char **argv) {
 
 #ifdef WITH_JOB_RESULT
       try {
+        const auto result_fields = read_result_fields("results.dat");
         uint16_t optimizer_abi_major = 0;
         uint16_t optimizer_abi_minor = 0;
         uint16_t optimizer_abi_layout = 0;
@@ -626,7 +705,8 @@ static int eonClientMain(int argc, char **argv) {
             magic_enum::enum_name<JobType>(parameters.main_options.job));
         write_job_result_envelope(
             "eon_job_result.capnp", job_type, job_status, optimizer_backend,
-            optimizer_abi_major, optimizer_abi_minor, optimizer_abi_layout);
+            optimizer_abi_major, optimizer_abi_minor, optimizer_abi_layout,
+            result_fields);
         filenames.push_back("eon_job_result.capnp");
       } catch (const std::exception &error) {
         QUILL_LOG_ERROR(logger, "Failed to write JobResult envelope: {}",
