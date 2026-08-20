@@ -6,8 +6,7 @@ url = https://github.com/OmniPotentRPC/rgpot.git
 # TIP4P-H). v3.0.0 is the first release carrying them; the major is for the
 # packaging change (no libptlrpc.so, librgpot.so.3).
 #
-# The force-batch implementation is present in this immutable upstream merge.
-# Keeping the full revision makes packaged and source builds resolve the same
-# C++ interface instead of following a moving compatibility branch.
-revision = 7c2752343731818c7ac5b2d386e38c68304b5062
+# The native engine ABI stamp and canonical Cap'n Proto compatibility fields
+# are present in this immutable integration revision.
+revision = 473033de21a26dc25adb73df3b3640eed0dc0074
 depth = 1
