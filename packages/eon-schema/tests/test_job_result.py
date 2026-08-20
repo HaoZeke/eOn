@@ -15,6 +15,9 @@ def test_job_result_capnp_exists():
     assert "struct JobRequest" in text
     assert "positions" in text
     assert "statusCode" in text
+    assert "struct EngineCompatibility" in text
+    assert "struct LandfoldArtifact" in text
+    assert "landfoldArtifacts @31 :List(LandfoldArtifact);" in text
 
 
 def test_results_dat_roundtrip_scalars():

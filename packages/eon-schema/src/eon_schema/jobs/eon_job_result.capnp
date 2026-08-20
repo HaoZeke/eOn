@@ -80,6 +80,25 @@ struct OptimizerProvenance {
   xtsAbiLayout @4 :UInt16 = 0;
 }
 
+struct EngineCompatibility {
+  schema @0 :Text;
+  engineId @1 :Text;
+  protocolFamily @2 :Text;
+  protocolMajor @3 :UInt16 = 0;
+  protocolMinor @4 :UInt16 = 0;
+  abiMajor @5 :UInt16 = 0;
+  abiMinor @6 :UInt16 = 0;
+  layoutRevision @7 :UInt32 = 0;
+  buildIdentity @8 :Text;
+}
+
+struct LandfoldArtifact {
+  schema @0 :Text;
+  sourceRunId @1 :Text;
+  inputDigest @2 :Text;
+  engineCompatibility @3 :EngineCompatibility;
+}
+
 struct JobResult {
   jobId @0 :Text;
   jobType @1 :Text;
@@ -120,4 +139,5 @@ struct JobResult {
   extras @28 :List(ScalarExtra);
   clientVersion @29 :Text;
   optimizer @30 :OptimizerProvenance;
+  landfoldArtifacts @31 :List(LandfoldArtifact);
 }
