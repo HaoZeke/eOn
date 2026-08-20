@@ -50,3 +50,31 @@ eon.optimizer.v1 optimizer_provenance_schema
     assert parsed["optimizer"]["backend"] == "xtsci"
     assert parsed["optimizer"]["schema"] == "eon.optimizer.v1"
     assert parsed["optimizer"]["xts_abi"] == {"major": 1, "minor": 0, "layout": 2}
+
+
+def test_results_dat_adapter_exposes_compatibility_provenance():
+    import sys
+
+    sys.path.insert(0, str(ROOT / "packages" / "eon-schema" / "src"))
+    from eon_schema.jobs import job_result_scalars_from_results_dat
+
+    parsed = job_result_scalars_from_results_dat(
+        """0 termination_reason
+lj potential_type
+eon.compatibility.v1 compatibility_schema
+3 compatibility_readcon_spec_version
+0.14.7 compatibility_readcon_min_version
+2.11.1 engine_version
+abc123 engine_build_identity
+"""
+    )
+    assert parsed["compatibility"]["schema"] == "eon.compatibility.v1"
+    assert parsed["compatibility"]["readcon"] == {
+        "spec_version": 3,
+        "min_version": "0.14.7",
+    }
+    assert parsed["compatibility"]["engine"] == {
+        "id": "lj",
+        "version": "2.11.1",
+        "build_identity": "abc123",
+    }

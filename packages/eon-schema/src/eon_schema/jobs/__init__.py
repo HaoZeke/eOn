@@ -96,6 +96,27 @@ def job_result_scalars_from_results_dat(text: str) -> Dict[str, Any]:
                 "layout": d.get("optimizer_xts_abi_layout", 0),
             },
         },
+        "compatibility": {
+            "schema": d.get("compatibility_schema", ""),
+            "readcon": {
+                "spec_version": d.get("compatibility_readcon_spec_version", 0),
+                "min_version": d.get("compatibility_readcon_min_version", ""),
+            },
+            "eon_schema": {
+                "min_version": d.get("compatibility_eon_schema_min_version", "")
+            },
+            "rgpycrumbs": {
+                "min_version": d.get("compatibility_rgpycrumbs_min_version", "")
+            },
+            "chemparseplot": {
+                "min_version": d.get("compatibility_chemparseplot_min_version", "")
+            },
+            "engine": {
+                "id": d.get("engine_id", d.get("potential_type", "")),
+                "version": d.get("engine_version"),
+                "build_identity": d.get("engine_build_identity"),
+            },
+        },
     }
     if "simulation_time" in d:
         out["simulation_time"] = d["simulation_time"]
