@@ -11,6 +11,7 @@ def test_schema_file_in_monorepo():
     assert "struct JobResult" in text
     assert "struct JobRequest" in text
     assert "struct Geometry" in text
+    assert "struct OptimizerProvenance" in text
     # Flat geometry, not con text blobs
     assert "positions @0" in text
     assert ".con" not in text or "not .con text" in text
