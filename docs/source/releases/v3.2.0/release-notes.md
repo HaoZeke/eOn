@@ -8,7 +8,7 @@ See monorepo `CHANGELOG.md` section 3.2.0 for the full fragment list.
 
 ## Compatibility: eOn writes CON spec 3
 
-The C++ wrap and the Python `readcon` pin both move to **0.14.5**, and the
+The C++ wrap and the Python `readcon` pin both move to **0.14.7**, and the
 0.14 writer emits `con_spec_version = 3`. A reader linked against readcon
 0.13.x rejects those files with `UnsupportedSpecVersion`.
 
@@ -16,7 +16,7 @@ What this means in practice:
 
 - A `.con` written by eOn 3.2.0 is not readable by an eOn 3.1.x client, nor by
   a downstream tool pinned to `readcon>=0.13,<0.14`.
-- Pin downstream consumers to `readcon>=0.14.5` in the same change that moves
+- Pin downstream consumers to `readcon>=0.14.7` in the same change that moves
   them to eOn 3.2.0. `chemparseplot` and anything reading trajectory output
   through it are the ones to check.
 - Reading older spec-2 files is unaffected; the change is on the write side.
@@ -28,7 +28,7 @@ flag per atom, and `getFree()` derives the optimizer mask per axis instead of
 broadcasting. A slab or reaction coordinate fixed along one axis keeps the two
 degrees of freedom it declared free.
 
-This depends on readcon 0.14.5: the 0.13 decoder read column-4 value 1 as
+This depends on readcon 0.14.7: the 0.13 decoder read column-4 value 1 as
 fully fixed, so an x-only constraint could not survive a write and read
 (readcon-core #24, fixed in #25). eOn 3.2.0 round-trips every mask value.
 
