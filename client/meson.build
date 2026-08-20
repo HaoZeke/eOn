@@ -317,6 +317,28 @@ if get_option('with_xtsci')
     _args += ['-DWITH_XTSCI']
 endif
 
+if get_option('with_job_result')
+    job_result_capnp_dep = dependency('capnp', required: true)
+    job_result_capnp = find_program('capnp', required: true)
+    job_result_schema = meson.project_source_root() / 'schema' / 'eon_job_result.capnp'
+    job_result_generated = custom_target(
+        'eon_job_result_capnp',
+        input: job_result_schema,
+        output: ['eon_job_result.capnp.c++', 'eon_job_result.capnp.h'],
+        command: [
+            job_result_capnp,
+            'compile',
+            '-oc++:@OUTDIR@',
+            '-I' + meson.project_source_root() / 'schema',
+            '@INPUT@',
+        ],
+        build_by_default: true,
+    )
+    _deps += [job_result_capnp_dep]
+    _args += ['-DWITH_JOB_RESULT']
+    _incdirs += include_directories(meson.current_build_dir())
+endif
+
 eigen_dep = dependency('eigen3', required: false)
 if not eigen_dep.found()
     eigen_dep = dependency(
@@ -680,6 +702,10 @@ eonclib_sources = [
     'SaddleSearchJob.cpp',
     'BasinHoppingSaddleSearch.cpp',
 ]
+
+if get_option('with_job_result')
+    eonclib_sources += [job_result_generated]
+endif
 
 if get_option('with_xtsci')
     eonclib_sources += ['XtsciOptimizer.cpp']

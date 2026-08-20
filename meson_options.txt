@@ -44,6 +44,8 @@ option('with_pyeonclient', type : 'boolean', value : false,
        description : 'Build pyeonclient (nanobind only; stable ABI abi3 on 3.12+, free-threaded when Py_GIL_DISABLED)')
 option('with_xtsci', type : 'boolean', value : false,
        description : 'Enable the opt-in xtsci-optimize ObjectiveFunction backend')
+option('with_job_result', type : 'boolean', value : false,
+       description : 'Emit schema-backed Cap\'n Proto JobResult envelopes')
 # Install eon/ server package + eonclient CLI (disable for pyeonclient-only wheels)
 option('install_eon_server', type : 'boolean', value : true,
        description : 'Install eon Python package and eonclient binary (false for standalone pyeonclient)')

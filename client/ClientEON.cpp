@@ -38,8 +38,10 @@
 #include <chrono>
 #include <cstring>
 #include <ctime>
+#include <cstdint>
 #include <filesystem>
 #include <ranges>
+#include <stdexcept>
 
 #ifdef EONMPI
 #include <Python.h>
@@ -62,6 +64,13 @@
 
 #ifdef WITH_XTSCI
 #include <xts.h>
+#endif
+
+#ifdef WITH_JOB_RESULT
+#include "eon_job_result.capnp.h"
+#include <capnp/message.h>
+#include <capnp/serialize-packed.h>
+#include <kj/io.h>
 #endif
 
 #ifdef _WIN32
@@ -101,6 +110,52 @@ void print_memory_usage() {
       static_cast<double>(vs) / 1024 / 1024);
 }
 #endif
+#endif
+
+#ifdef WITH_JOB_RESULT
+void write_job_result_envelope(
+    const std::filesystem::path &path, std::string_view job_type,
+    int32_t status_code, std::string_view optimizer_backend,
+    uint16_t optimizer_abi_major, uint16_t optimizer_abi_minor,
+    uint16_t optimizer_abi_layout) {
+  capnp::MallocMessageBuilder message;
+  auto result = message.initRoot<eonc::job_ssot::JobResult>();
+  result.setJobType(job_type);
+  result.setStatusCode(status_code);
+  result.setStatusText(status_code == 0 ? "good" : "failed");
+  result.setClientVersion(VERSION_STRING);
+
+  auto optimizer = result.initOptimizer();
+  optimizer.setSchema("eon.optimizer.v1");
+  optimizer.setBackend(optimizer_backend);
+  optimizer.setXtsAbiMajor(optimizer_abi_major);
+  optimizer.setXtsAbiMinor(optimizer_abi_minor);
+  optimizer.setXtsAbiLayout(optimizer_abi_layout);
+
+  auto compatibility = result.initCompatibility();
+  compatibility.setSchema("eon.compatibility.v1");
+  compatibility.setEngineId("eon");
+  compatibility.setProtocolFamily("eon.objective");
+  compatibility.setProtocolMajor(1);
+  compatibility.setProtocolMinor(0);
+  compatibility.setAbiMajor(optimizer_abi_major);
+  compatibility.setAbiMinor(optimizer_abi_minor);
+  compatibility.setLayoutRevision(optimizer_abi_layout);
+  compatibility.setBuildIdentity(std::string(VERSION) + "+" + GIT_HASH);
+
+  kj::VectorOutputStream packed;
+  capnp::writePackedMessage(packed, message);
+  const auto bytes = packed.getArray();
+  std::ofstream output(path, std::ios::binary | std::ios::trunc);
+  if (!output) {
+    throw std::runtime_error("could not open " + path.string());
+  }
+  output.write(reinterpret_cast<const char *>(bytes.begin()),
+               static_cast<std::streamsize>(bytes.size()));
+  if (!output) {
+    throw std::runtime_error("could not write " + path.string());
+  }
+}
 #endif
 
 void printSystemInfo() {
@@ -433,6 +488,8 @@ static int eonClientMain(int argc, char **argv) {
         unbundledFilenames = eonc::unbundle(i);
       }
 
+      int32_t job_status = 0;
+
       // check to see if parameters file exists before loading
       int error = 0;
       std::string config_file =
@@ -463,13 +520,14 @@ static int eonClientMain(int argc, char **argv) {
       try {
         filenames = job->run();
       } catch (int e) {
+        job_status = static_cast<int32_t>(e);
         QUILL_LOG_CRITICAL(logger, "[ERROR] job exited on error {}", e);
         logger->flush_log();
       } catch (const std::exception &e) {
+        job_status = 1;
         QUILL_LOG_CRITICAL(logger, "[ERROR] unhandled exception: {}", e.what());
         logger->flush_log();
         std::cerr << "[ERROR] unhandled exception: " << e.what() << "\n";
-        return EXIT_FAILURE;
       }
 
       job.reset(); // Force Potential destruction so PotRegistry records entries
@@ -500,6 +558,11 @@ static int eonClientMain(int argc, char **argv) {
       QUILL_LOG_INFO(logger, "  User time: {:.3f} seconds", utime);
       QUILL_LOG_INFO(logger, "  System time: {:.3f} seconds", stime);
 
+      std::string optimizer_backend = std::string(
+          magic_enum::enum_name(parameters.optimizer_options.method));
+      std::ranges::transform(optimizer_backend, optimizer_backend.begin(),
+                             [](unsigned char c) { return std::tolower(c); });
+
       // results.dat contract is "<value> <key>" (same as all job writers and
       // eon.fileio.parse_results / eon_schema.jobs adapters).
       std::ofstream result_file("results.dat", std::ios::app);
@@ -509,10 +572,6 @@ static int eonClientMain(int argc, char **argv) {
         result_file << std::format("{:.12e} user_time\n", utime);
         result_file << std::format("{:.12e} system_time\n", stime);
 #endif
-        std::string optimizer_backend = std::string(
-            magic_enum::enum_name(parameters.optimizer_options.method));
-        std::ranges::transform(optimizer_backend, optimizer_backend.begin(),
-                               [](unsigned char c) { return std::tolower(c); });
         result_file << std::format("{} optimizer_backend\n", optimizer_backend);
         result_file << "eon.optimizer.v1 optimizer_provenance_schema\n";
         result_file << "eon.compatibility.v1 compatibility_schema\n";
@@ -547,6 +606,32 @@ static int eonClientMain(int argc, char **argv) {
       } else {
         QUILL_LOG_ERROR(logger, "Failed to write timing to results.dat");
       }
+
+#ifdef WITH_JOB_RESULT
+      try {
+        uint16_t optimizer_abi_major = 0;
+        uint16_t optimizer_abi_minor = 0;
+        uint16_t optimizer_abi_layout = 0;
+#ifdef WITH_XTSCI
+        if (parameters.optimizer_options.method == OptType::XTSCI) {
+          const auto stamp = xts_abi_stamp();
+          optimizer_abi_major = stamp.abi_major;
+          optimizer_abi_minor = stamp.abi_minor;
+          optimizer_abi_layout = stamp.layout_revision;
+        }
+#endif
+        const auto job_type = std::string(
+            magic_enum::enum_name<JobType>(parameters.main_options.job));
+        write_job_result_envelope(
+            "eon_job_result.capnp", job_type, job_status, optimizer_backend,
+            optimizer_abi_major, optimizer_abi_minor, optimizer_abi_layout);
+        filenames.push_back("eon_job_result.capnp");
+      } catch (const std::exception &error) {
+        QUILL_LOG_ERROR(logger, "Failed to write JobResult envelope: {}",
+                        error.what());
+        return EXIT_FAILURE;
+      }
+#endif
 
       if (bundlingEnabled) {
         eonc::bundle(i, filenames, &bundledFilenames);
