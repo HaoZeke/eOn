@@ -203,6 +203,7 @@ NudgedElasticBand::NudgedElasticBand(std::vector<Matter> initPath,
 
 NudgedElasticBand::NEBStatus NudgedElasticBand::compute() {
   long iteration = 0;
+  lastIteration_ = 0;
   this->status = NEBStatus::RUNNING;
 
   QUILL_LOG_DEBUG(log, "Nudged elastic band calculation started.");
@@ -399,6 +400,7 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute() {
     }
 
     iteration++;
+    lastIteration_ = iteration;
 
     double dE = path[maxEnergyImage]->getPotentialEnergy() -
                 path[0]->getPotentialEnergy();

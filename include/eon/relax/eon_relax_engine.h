@@ -26,8 +26,9 @@
  *
  * - Return values are three-valued: 0 success, positive recoverable,
  *   negative fatal (the instance is unusable).
- * - Closed enums. Unknown enumerants are fail-closed
- *   (EON_RELAX_INVALID_PARAMETER), never a silent fallback.
+ * - Closed enums. Unknown kind is EON_RELAX_UNKNOWN_KIND. Other
+ *   unknown enumerants are EON_RELAX_INVALID_PARAMETER. Never a
+ *   silent fallback.
  * - Version stamp: major = layout break (do not read other fields),
  *   minor = new enum values / additive symbols.
  * - Capability discovery is by symbol presence (dlsym).
@@ -95,6 +96,7 @@ typedef enum {
   EON_RELAX_UNKNOWN_STATUS = -12,
   EON_RELAX_CAPNP_ROOT = -13,
   EON_RELAX_SURFACE_FATAL = -15,
+  EON_RELAX_ALLOC = -19,
   EON_RELAX_SADDLE_NIMAGES = -17,
   EON_RELAX_BAND_SIZE = -18,
   EON_RELAX_UNAVAILABLE = -21,
@@ -117,8 +119,9 @@ typedef enum {
  * 3*n_atoms) and is written on a successful run. atomic_nrs is n_atoms
  * (shared composition), boxes is 9*n_images (row-major). is_fixed may
  * be NULL (all free) or n_atoms (1 = fixed atom). mode may be NULL;
- * required for kind=saddle (3*n_atoms). image_ids may be NULL
- * (then 0..n_images-1).
+ * required for kind=saddle (3*n_atoms). image_ids may be NULL.
+ * positions layout matches Matter AtomMatrix (row-major xyz per atom).
+ * boxes are 9 doubles per image, same order as Matter::getCell().data().
  */
 typedef struct {
   long n_images;

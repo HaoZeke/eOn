@@ -22,6 +22,14 @@
 
 namespace eonc {
 
+struct SurfaceRecoverable : std::exception {
+  explicit SurfaceRecoverable(int code) : rc{code} {}
+  int rc{0};
+  [[nodiscard]] const char *what() const noexcept override {
+    return "host surface recoverable";
+  }
+};
+
 class HostSurfacePotential : public Potential {
 public:
   HostSurfacePotential(eon_relax_surface_fn fn, void *user,
@@ -87,9 +95,6 @@ public:
           }
         }
       }
-      if (id == EON_RELAX_IMAGE_NONE && path_.empty()) {
-        id = s;
-      }
       ids[static_cast<size_t>(s)] = id;
       if (positions && positions[s]) {
         for (long k = 0; k < 3 * nAtoms; ++k) {
@@ -107,8 +112,11 @@ public:
     std::uint64_t new_epoch = epoch_;
     last_ = fn_(user_, nSystems, nAtoms, pos.data(), z.data(), box.data(),
                 ids.data(), ebuf.data(), frc.data(), vbuf.data(), &new_epoch);
-    if (last_ != 0) {
+    if (last_ < 0) {
       throw std::runtime_error("HostSurfacePotential: surface failed");
+    }
+    if (last_ > 0) {
+      throw SurfaceRecoverable(last_);
     }
     if (new_epoch != epoch_) {
       epoch_ = new_epoch;
@@ -126,8 +134,6 @@ public:
         }
       }
     }
-    forceCallCounter += static_cast<size_t>(nSystems);
-    PotRegistry::get().on_force_call(ptype);
   }
 
 private:

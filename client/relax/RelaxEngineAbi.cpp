@@ -25,6 +25,7 @@
 #include <new>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -65,7 +66,7 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
   m.setMasses(Eigen::VectorXd::Ones(band->n_atoms));
   AtomMatrix pos(band->n_atoms, 3);
   const double *src = band->positions + image * 3 * band->n_atoms;
-  // Match Potential::force / Matter storage (Eigen column-major n x 3).
+  // Match Potential::force / Matter storage (AtomMatrix row-major xyz).
   Eigen::Map<const AtomMatrix> mapped(src, band->n_atoms, 3);
   pos = mapped;
   m.setPositions(pos);
@@ -95,6 +96,13 @@ struct EonRelaxEngine {
   uint64_t epoch{0};
   int last_rc{EON_RELAX_OK};
 };
+
+static int stamp_rc(EonRelaxEngine *eng, int rc) {
+  if (eng) {
+    eng->last_rc = rc;
+  }
+  return rc;
+}
 
 extern "C" {
 
@@ -151,13 +159,6 @@ int eon_relax_last_error(const EonRelaxEngine *eng) {
     return EON_RELAX_NULL_ENGINE;
   }
   return eng->last_rc;
-}
-
-int stamp_rc(EonRelaxEngine *eng, int rc) {
-  if (eng) {
-    eng->last_rc = rc;
-  }
-  return rc;
 }
 
 int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
@@ -219,9 +220,11 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       const auto st = neb->compute();
       if (st == NudgedElasticBand::NEBStatus::INIT ||
           st == NudgedElasticBand::NEBStatus::RUNNING) {
+        out->status = neb_status(st);
         return stamp_rc(eng, EON_RELAX_UNKNOWN_STATUS);
       }
       out->status = neb_status(st);
+      out->iterations = neb->lastIteration();
       out->climbing_image = neb->climbingImage;
       out->max_force = neb->convergenceForce();
       out->surface_epoch = pot->surfaceEpoch();
@@ -251,8 +254,11 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     out->surface_epoch = pot->surfaceEpoch();
     out->status = sst;
     return stamp_rc(eng, EON_RELAX_OK);
+  } catch (const eonc::SurfaceRecoverable &rec) {
+    out->status = -1;
+    return stamp_rc(eng, rec.rc);
   } catch (const std::exception &) {
-    out->status = 0;
+    out->status = -1;
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
 }

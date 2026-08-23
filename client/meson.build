@@ -1294,9 +1294,8 @@ eon_relax_engine = library(
     build_rpath: ':'.join(_runtime_rpath),
     install_rpath: ':'.join(_runtime_rpath),
     install: true,
-    gnu_symbol_visibility: 'default',
+    gnu_symbol_visibility: 'inlineshidden',
 )
-_linkto += eon_relax_engine
 
 # RGPOT-metatomic engine (slow path); fat pot already in potentials above.
 if get_option('with_metatomic')
@@ -1524,7 +1523,9 @@ if get_option('with_tests')
                 # Include /STACK:16M (Windows) so EAM Al Fortran pots do not
                 # SIGSEGV with STATUS_STACK_OVERFLOW (default stack is 1 MB).
                 link_args: _linkargs,
-                link_with: _linkto,
+                link_with: test.get(0) == 'test_relax_engine'
+                ? _linkto + [eon_relax_engine]
+                : _linkto,
                 build_rpath: ':'.join(_runtime_rpath),
             ),
             workdir: meson.project_source_root() + '/client/unit_tests/data/systems/' + test.get(

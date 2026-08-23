@@ -57,6 +57,7 @@ public:
 
   NudgedElasticBand::NEBStatus compute(void);
   NudgedElasticBand::NEBStatus getStatus() { return this->status; };
+  [[nodiscard]] long lastIteration() const { return lastIteration_; }
   void updateForces(bool ci_active);
   void updateForces(void) { updateForces(ci_enabled_); }
   void setCIEnabled(bool enabled) { ci_enabled_ = enabled; }
@@ -101,6 +102,7 @@ private:
   // Cached strategies (constant across iterations)
   neb::TangentStrategy tangentStrat_;
   neb::ProjectionStrategy projectionStrat_;
+  long lastIteration_{0};
 };
 
 class NEBObjectiveFunction : public ObjectiveFunction {
