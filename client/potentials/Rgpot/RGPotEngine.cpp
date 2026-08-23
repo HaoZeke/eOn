@@ -264,7 +264,18 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
     return;
   }
   if (impl_->backend == Impl::Backend::Uma) {
-    impl_->uma->force(N, R, atomicNrs, F, U, nullptr, box);
+    // Molecular .con endpoints may omit the cell; gprn substitutes a
+    // 25 A diagonal there, so the same rule here keeps both drivers on
+    // the identical oracle (a singular box also breaks vesin outright).
+    const bool got_cell =
+        box && box[0] > 0.0 && box[4] > 0.0 && box[8] > 0.0;
+    std::array<double, 9> cell_sub{};
+    const double *effective_box = box;
+    if (!got_cell) {
+      cell_sub[0] = cell_sub[4] = cell_sub[8] = 25.0;
+      effective_box = cell_sub.data();
+    }
+    impl_->uma->force(N, R, atomicNrs, F, U, nullptr, effective_box);
     return;
   }
   if (impl_->backend == Impl::Backend::Xtb) {
