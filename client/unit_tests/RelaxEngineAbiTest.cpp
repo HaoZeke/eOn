@@ -100,49 +100,6 @@ static int surface_fail(void *, long, long, const double *, const int *,
   return -3;
 }
 
-static void pack_image(std::vector<double> &pos, std::vector<double> &boxes,
-                       std::vector<int> &z, const Matter &m, long image) {
-  const long n = m.numberOfAtoms();
-  const AtomMatrix &p = m.getPositions();
-  double *dst = pos.data() + image * 3 * n;
-  Eigen::Map<AtomMatrix> mapped(dst, n, 3);
-  mapped = p;
-  const Matrix3d cell = m.getCell();
-  double *b = boxes.data() + image * 9;
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
-      b[i * 3 + j] = cell(i, j);
-    }
-  }
-  if (image == 0) {
-    auto nrs = m.getAtomicNrs();
-    z.resize(static_cast<size_t>(n));
-    for (long a = 0; a < n; ++a) {
-      z[static_cast<size_t>(a)] = nrs(a);
-    }
-  }
-}
-
-static void pack_linear_band(std::vector<double> &pos, std::vector<double> &boxes,
-                             std::vector<int> &z, const Matter &a,
-                             const Matter &b, long n_images) {
-  const long n = a.numberOfAtoms();
-  pos.assign(static_cast<size_t>(n_images * 3 * n), 0.0);
-  boxes.assign(static_cast<size_t>(n_images * 9), 0.0);
-  pack_image(pos, boxes, z, a, 0);
-  pack_image(pos, boxes, z, b, n_images - 1);
-  const AtomMatrix pa = a.getPositions();
-  const AtomMatrix pb = b.getPositions();
-  for (long im = 1; im < n_images - 1; ++im) {
-    const double t = static_cast<double>(im) / static_cast<double>(n_images - 1);
-    AtomMatrix mid = pa + t * (pb - pa);
-    double *dst = pos.data() + im * 3 * n;
-    Eigen::Map<AtomMatrix> mapped(dst, n, 3);
-    mapped = mid;
-    std::memcpy(boxes.data() + im * 9, boxes.data(), 9 * sizeof(double));
-  }
-}
-
 TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
   REQUIRE(eon_relax_abi_version() == static_cast<int>(EON_RELAX_ABI_VERSION));
   REQUIRE(EON_RELAX_ABI_UNPACK_MAJOR(eon_relax_abi_version()) == 1);
