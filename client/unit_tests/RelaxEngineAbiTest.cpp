@@ -124,6 +124,10 @@ TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
   REQUIRE(eon_relax_version_hash() != 0);
 }
 
+TEST_CASE("relax engine destroy NULL is a no-op", "[relax][abi]") {
+  eon_relax_destroy(nullptr);
+}
+
 TEST_CASE("relax engine create NULL config and reject unknown capnp",
           "[relax][abi]") {
   char err[128]{};
