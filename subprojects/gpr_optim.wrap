@@ -1,0 +1,5 @@
+[wrap-git]
+directory = gpr_optim
+url = git@github.com:TheochemUI/gpr_optim.git
+revision = 74288ec643e7f57ecfc70a74ea465749f86786f9
+depth = 1
