@@ -159,6 +159,22 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
           EON_RELAX_BAND_SIZE);
   REQUIRE(eon_relax_last_error(eng) == EON_RELAX_BAND_SIZE);
+  short_band.n_images = 7;
+  short_band.n_atoms = 0;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_NATOMS);
+  short_band.n_atoms = 1;
+  short_band.positions = nullptr;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_NULL_POSITIONS);
+  short_band.positions = pos1;
+  short_band.atomic_nrs = nullptr;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_NULL_ATOMIC_NRS);
+  short_band.atomic_nrs = z1;
+  short_band.boxes = nullptr;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_NULL_BOXES);
   eon_relax_destroy(eng);
 }
 
@@ -188,6 +204,7 @@ TEST_CASE("relax engine NEB on a harmonic surface converges",
   REQUIRE(out.max_force <= 0.01 + 1e-6);
   REQUIRE(ctx.calls > 0);
   REQUIRE(out.version_hash != 0);
+  REQUIRE(std::abs(pos[0]) < 0.3);
   eon_relax_destroy(eng);
 }
 
