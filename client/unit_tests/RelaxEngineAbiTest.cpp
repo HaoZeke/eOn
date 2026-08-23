@@ -166,6 +166,7 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   short_band.n_images = 4;
   REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
           EON_RELAX_BAND_SIZE);
+  REQUIRE(eon_relax_last_error(eng) == EON_RELAX_BAND_SIZE);
   eon_relax_destroy(eng);
 }
 
@@ -298,6 +299,9 @@ TEST_CASE("libeon_relax_engine exports the C waist", "[relax][dlopen]") {
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_create") != nullptr);
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_run") != nullptr);
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_destroy") != nullptr);
+  REQUIRE(eonc::dynlib::sym(h, "eon_relax_status_name") != nullptr);
+  REQUIRE(eonc::dynlib::sym(h, "eon_relax_last_error") != nullptr);
+  REQUIRE(eonc::dynlib::sym(h, "eon_relax_version_hash_str") != nullptr);
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_abi_version") != nullptr);
   auto abi = eonc::dynlib::loadSym<int (*)()>(h, "eon_relax_abi_version");
   REQUIRE(abi != nullptr);

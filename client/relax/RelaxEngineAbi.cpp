@@ -93,6 +93,7 @@ struct EonRelaxEngine {
   Parameters params;
   eon_relax_kind_t kind{EON_RELAX_KIND_NEB};
   uint64_t epoch{0};
+  int last_rc{EON_RELAX_OK};
 };
 
 extern "C" {
@@ -141,7 +142,22 @@ int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
     return EON_RELAX_INVALID_PARAMETER;
   }
   eng->epoch = epoch;
+  eng->last_rc = EON_RELAX_OK;
   return EON_RELAX_OK;
+}
+
+int eon_relax_last_error(const EonRelaxEngine *eng) {
+  if (!eng) {
+    return EON_RELAX_NULL_ENGINE;
+  }
+  return eng->last_rc;
+}
+
+int stamp_rc(EonRelaxEngine *eng, int rc) {
+  if (eng) {
+    eng->last_rc = rc;
+  }
+  return rc;
 }
 
 int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
@@ -151,28 +167,28 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     return EON_RELAX_NULL_ENGINE;
   }
   if (!band) {
-    return EON_RELAX_NULL_BAND;
+    return stamp_rc(eng, EON_RELAX_NULL_BAND);
   }
   if (!surface) {
-    return EON_RELAX_NULL_SURFACE;
+    return stamp_rc(eng, EON_RELAX_NULL_SURFACE);
   }
   if (!out) {
-    return EON_RELAX_NULL_OUTCOME;
+    return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
   }
   if (band->n_atoms <= 0) {
-    return EON_RELAX_NATOMS;
+    return stamp_rc(eng, EON_RELAX_NATOMS);
   }
   if (!band->positions) {
-    return EON_RELAX_NULL_POSITIONS;
+    return stamp_rc(eng, EON_RELAX_NULL_POSITIONS);
   }
   if (!band->atomic_nrs) {
-    return EON_RELAX_NULL_ATOMIC_NRS;
+    return stamp_rc(eng, EON_RELAX_NULL_ATOMIC_NRS);
   }
   if (!band->boxes) {
-    return EON_RELAX_NULL_BOXES;
+    return stamp_rc(eng, EON_RELAX_NULL_BOXES);
   }
   if (!known_kind(eng->kind)) {
-    return EON_RELAX_UNKNOWN_KIND;
+    return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
   }
   std::memset(out, 0, sizeof(*out));
   out->kind = eng->kind;
@@ -184,11 +200,11 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
   try {
     if (eng->kind == EON_RELAX_KIND_NEB) {
       if (band->n_images < 3) {
-        return EON_RELAX_BAND_TOO_SHORT;
+        return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
       }
       const long want = eng->params.neb_options.image_count + 2;
       if (band->n_images != want) {
-        return EON_RELAX_BAND_SIZE;
+        return stamp_rc(eng, EON_RELAX_BAND_SIZE);
       }
       std::vector<Matter> path;
       path.reserve(static_cast<size_t>(band->n_images));
@@ -203,7 +219,7 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       const auto st = neb->compute();
       if (st == NudgedElasticBand::NEBStatus::INIT ||
           st == NudgedElasticBand::NEBStatus::RUNNING) {
-        return EON_RELAX_UNKNOWN_STATUS;
+        return stamp_rc(eng, EON_RELAX_UNKNOWN_STATUS);
       }
       out->status = neb_status(st);
       out->climbing_image = neb->climbingImage;
@@ -213,14 +229,14 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
         write_image(band->positions + i * 3 * band->n_atoms, *neb->path[i],
                     band->n_atoms);
       }
-      return EON_RELAX_OK;
+      return stamp_rc(eng, EON_RELAX_OK);
     }
 
     if (band->n_images != 1) {
-      return EON_RELAX_SADDLE_NIMAGES;
+      return stamp_rc(eng, EON_RELAX_SADDLE_NIMAGES);
     }
     if (!band->mode) {
-      return EON_RELAX_NULL_MODE;
+      return stamp_rc(eng, EON_RELAX_NULL_MODE);
     }
     auto matter = std::make_shared<Matter>(pot, eng->params);
     fill_matter(*matter, band, 0, eng->epoch);
@@ -234,10 +250,10 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     out->iterations = search.getIterationCount();
     out->surface_epoch = pot->surfaceEpoch();
     out->status = sst;
-    return EON_RELAX_OK;
+    return stamp_rc(eng, EON_RELAX_OK);
   } catch (const std::exception &) {
     out->status = 0;
-    return EON_RELAX_SURFACE_FATAL;
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
 }
 
