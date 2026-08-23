@@ -111,11 +111,13 @@ int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out) {
   return EON_RELAX_OK;
 }
 
+const char *eon_relax_version_hash_str(void) {
+  static const std::string id = VERSION + "+git." + GIT_HASH;
+  return id.c_str();
+}
+
 uint64_t eon_relax_version_hash(void) {
-  const uint64_t abi = (uint64_t)EON_RELAX_ABI_MAJOR << 48 |
-                       (uint64_t)EON_RELAX_ABI_MINOR << 32 |
-                       (uint64_t)EON_RELAX_ABI_LAYOUT << 16;
-  return abi ^ fnv1a64(GIT_HASH.c_str());
+  return fnv1a64(eon_relax_version_hash_str());
 }
 
 EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,

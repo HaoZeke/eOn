@@ -122,6 +122,9 @@ TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
   REQUIRE(stamp.layout_revision == 1);
   REQUIRE(eon_relax_abi_stamp(nullptr) == EON_RELAX_INVALID_PARAMETER);
   REQUIRE(eon_relax_version_hash() != 0);
+  const char *id = eon_relax_version_hash_str();
+  REQUIRE(id != nullptr);
+  REQUIRE(std::string(id).find("+git.") != std::string::npos);
 }
 
 TEST_CASE("relax engine destroy NULL is a no-op", "[relax][abi]") {

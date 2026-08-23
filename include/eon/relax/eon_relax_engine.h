@@ -156,6 +156,9 @@ typedef int (*eon_relax_surface_fn)(
 EON_RELAX_API int eon_relax_abi_version(void);
 EON_RELAX_API int eon_relax_available(void);
 EON_RELAX_API int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out);
+/** Immortal dest identity string. Never NULL. */
+EON_RELAX_API const char *eon_relax_version_hash_str(void);
+/** FNV-1a64 of eon_relax_version_hash_str(). Copied to outcome.version_hash. */
 EON_RELAX_API uint64_t eon_relax_version_hash(void);
 
 /**
