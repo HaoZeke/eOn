@@ -204,7 +204,9 @@ TEST_CASE("relax engine NEB on a harmonic surface converges",
   REQUIRE(out.max_force <= 0.01 + 1e-6);
   REQUIRE(ctx.calls > 0);
   REQUIRE(out.version_hash != 0);
-  REQUIRE(std::abs(pos[0]) < 0.3);
+  // Endpoints stay put: NudgedElasticBandJob owns endpoint min, not compute().
+  REQUIRE(std::abs(pos[0] - 0.3) < 1e-6);
+  REQUIRE(std::abs(pos[3]) <= 0.2 + 1e-6);
   eon_relax_destroy(eng);
 }
 
