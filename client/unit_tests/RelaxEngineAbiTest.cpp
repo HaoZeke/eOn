@@ -46,10 +46,26 @@ static int surface_forward(void *user, long n_images, long n_atoms,
   auto *ctx = static_cast<SurfaceCtx *>(user);
   ++ctx->calls;
   for (long s = 0; s < n_images; ++s) {
-    double var = 0.0;
-    ctx->pot->force(n_atoms, positions + s * 3 * n_atoms, atomic_nrs,
-                    forces + s * 3 * n_atoms, &energies[s], &var,
-                    boxes + s * 9);
+    if (ctx->pot) {
+      double var = 0.0;
+      ctx->pot->force(n_atoms, positions + s * 3 * n_atoms, atomic_nrs,
+                      forces + s * 3 * n_atoms, &energies[s], &var,
+                      boxes + s * 9);
+    } else {
+      const double *p = positions + s * 3 * n_atoms;
+      double *f = forces + s * 3 * n_atoms;
+      double e = 0.0;
+      for (long a = 0; a < n_atoms; ++a) {
+        const double x = p[3 * a];
+        const double y = p[3 * a + 1];
+        const double z = p[3 * a + 2];
+        e += 0.5 * (x * x + y * y + z * z);
+        f[3 * a] = -x;
+        f[3 * a + 1] = -y;
+        f[3 * a + 2] = -z;
+      }
+      energies[s] = e;
+    }
     if (variances) {
       variances[s] = ctx->variance;
     }
@@ -58,6 +74,24 @@ static int surface_forward(void *user, long n_images, long n_atoms,
     *epoch_out = ctx->epoch;
   }
   return 0;
+}
+
+static void pack_harmonic_band(std::vector<double> &pos,
+                               std::vector<double> &boxes, std::vector<int> &z,
+                               long n_images) {
+  const long n_atoms = 1;
+  pos.assign(static_cast<size_t>(n_images * 3 * n_atoms), 0.0);
+  boxes.assign(static_cast<size_t>(n_images * 9), 0.0);
+  z.assign(1, 1);
+  for (long im = 0; im < n_images; ++im) {
+    const double t =
+        static_cast<double>(im) / static_cast<double>(n_images - 1);
+    pos[static_cast<size_t>(im * 3)] = 0.3 - 0.6 * t;
+    double *b = boxes.data() + im * 9;
+    b[0] = 10.0;
+    b[4] = 10.0;
+    b[8] = 10.0;
+  }
 }
 
 static int surface_fail(void *, long, long, const double *, const int *,
@@ -171,36 +205,20 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   eon_relax_destroy(eng);
 }
 
-TEST_CASE("relax engine NEB on LJ cluster reaches a finite force",
+TEST_CASE("relax engine NEB on a harmonic surface converges",
           "[relax][neb]") {
-  Parameters params;
-  params.potential_options.potential = PotType::LJ;
-  auto pot = eonc::helpers::makePotential(PotType::LJ, params);
-  auto reactant = std::make_shared<Matter>(pot, params);
-  auto product = std::make_shared<Matter>(pot, params);
-  REQUIRE(reactant->con2matter(std::string("reactant.con")) ==
-          eonc::io::IoStatus::Ok);
-  REQUIRE(product->con2matter(std::string("reactant.con")) ==
-          eonc::io::IoStatus::Ok);
-  auto p = product->getPositions();
-  p(0, 0) += 0.5;
-  p(0, 1) -= 0.3;
-  p(0, 2) += 0.2;
-  product->setPositions(p);
-
-  const long n = reactant->numberOfAtoms();
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
   std::vector<int> z;
-  pack_linear_band(pos, boxes, z, *reactant, *product, n_images);
+  pack_harmonic_band(pos, boxes, z, n_images);
 
-  SurfaceCtx ctx{pot, 0.0, 0, 0};
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
   band.n_images = n_images;
-  band.n_atoms = n;
+  band.n_atoms = 1;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
   band.boxes = boxes.data();
@@ -218,32 +236,18 @@ TEST_CASE("relax engine NEB on LJ cluster reaches a finite force",
 
 TEST_CASE("relax engine MAX_UNCERTAINTY surfaces from host variance",
           "[relax][neb][uncertainty]") {
-  Parameters params;
-  params.potential_options.potential = PotType::LJ;
-  auto pot = eonc::helpers::makePotential(PotType::LJ, params);
-  auto reactant = std::make_shared<Matter>(pot, params);
-  auto product = std::make_shared<Matter>(pot, params);
-  REQUIRE(reactant->con2matter(std::string("reactant.con")) ==
-          eonc::io::IoStatus::Ok);
-  REQUIRE(product->con2matter(std::string("reactant.con")) ==
-          eonc::io::IoStatus::Ok);
-  auto p = product->getPositions();
-  p(0, 0) += 0.5;
-  product->setPositions(p);
-
-  const long n = reactant->numberOfAtoms();
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
   std::vector<int> z;
-  pack_linear_band(pos, boxes, z, *reactant, *product, n_images);
+  pack_harmonic_band(pos, boxes, z, n_images);
 
-  SurfaceCtx ctx{pot, 10.0, 0, 0};
+  SurfaceCtx ctx{nullptr, 10.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
   band.n_images = n_images;
-  band.n_atoms = n;
+  band.n_atoms = 1;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
   band.boxes = boxes.data();
@@ -255,24 +259,17 @@ TEST_CASE("relax engine MAX_UNCERTAINTY surfaces from host variance",
 }
 
 TEST_CASE("relax engine surface failure is fail-closed", "[relax][abi]") {
-  Parameters params;
-  params.potential_options.potential = PotType::LJ;
-  auto pot = eonc::helpers::makePotential(PotType::LJ, params);
-  auto reactant = std::make_shared<Matter>(pot, params);
-  REQUIRE(reactant->con2matter(std::string("reactant.con")) ==
-          eonc::io::IoStatus::Ok);
-  const long n = reactant->numberOfAtoms();
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
   std::vector<int> z;
-  pack_linear_band(pos, boxes, z, *reactant, *reactant, n_images);
+  pack_harmonic_band(pos, boxes, z, n_images);
 
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
   band.n_images = n_images;
-  band.n_atoms = n;
+  band.n_atoms = 1;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
   band.boxes = boxes.data();
