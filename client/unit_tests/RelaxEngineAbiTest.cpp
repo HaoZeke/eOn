@@ -134,6 +134,18 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   REQUIRE(std::string(err).find("-13") != std::string::npos);
   REQUIRE(eon_relax_run(nullptr, nullptr, nullptr, nullptr, nullptr) ==
           EON_RELAX_NULL_ENGINE);
+  eon_relax_band_t short_band{};
+  short_band.n_images = 2;
+  short_band.n_atoms = 1;
+  double pos1[6]{};
+  int z1[1]{1};
+  double box1[18]{};
+  short_band.positions = pos1;
+  short_band.atomic_nrs = z1;
+  short_band.boxes = box1;
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_BAND_TOO_SHORT);
   eon_relax_destroy(eng);
 }
 
