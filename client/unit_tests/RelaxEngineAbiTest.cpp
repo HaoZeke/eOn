@@ -146,6 +146,9 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   eon_relax_outcome_t out{};
   REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
           EON_RELAX_BAND_TOO_SHORT);
+  short_band.n_images = 4;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_BAND_SIZE);
   eon_relax_destroy(eng);
 }
 
