@@ -27,6 +27,9 @@ struct RGPotEngineOptions {
   bool check_consistency{false};
   double uncertainty_threshold{-1.0};
   bool torch_determinism_strict{false};
+  // UMA (backend=uma): dlopen libuma_engine.so (generic engine C ABI);
+  // model_path is the AOTI .pt2, charge/multiplicity ride the shared fields.
+  std::string task_name{"omol"};
   // XTB (backend=xtb): dlopen libxtb_engine.so — not native -Dwith_xtb link
   std::string xtb_paramset{"GFN2xTB"}; // GFNFF / GFN0xTB / GFN1xTB / GFN2xTB
   double xtb_accuracy{1.0};
@@ -36,7 +39,7 @@ struct RGPotEngineOptions {
   int xtb_uhf{0};
 };
 
-/** Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic / xtb). */
+/** Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic / uma / xtb). */
 class RGPotEngine {
 public:
   explicit RGPotEngine(const RGPotEngineOptions &opt);

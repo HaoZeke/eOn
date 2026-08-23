@@ -11,7 +11,9 @@
 #include <vector>
 
 #include <capnp/message.h>
+#include <capnp/serialize.h>
 
+#include "eon/potentials/Rgpot/GenericEngineLoader.h"
 #include "eon/potentials/Rgpot/MetatomicEngineLoader.h"
 #include "eon/potentials/Rgpot/XTBEngineLoader.h"
 #include "rgpot/CPMDPot/CPMDPot.hpp"
@@ -69,11 +71,12 @@ int xtb_method_from_paramset(const std::string &paramset) {
 } // namespace
 
 struct RGPotEngine::Impl {
-  enum class Backend { Nwchemc, Cpmdc, Metatomic, Xtb };
+  enum class Backend { Nwchemc, Cpmdc, Metatomic, Uma, Xtb };
   Backend backend{Backend::Nwchemc};
   std::unique_ptr<rgpot::NWChemPot> nwchem;
   std::unique_ptr<rgpot::CPMDPot> cpmd;
   std::unique_ptr<MetatomicEngineLoader> metatomic;
+  std::unique_ptr<GenericEngineLoader> uma;
   std::unique_ptr<XTBEngineLoader> xtb;
 };
 
@@ -172,6 +175,33 @@ RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
       throw std::runtime_error(
           "RGPOT(metatomic): engine not available (set RGPOT_METATOMIC_ENGINE "
           "or [RgpotPot] engine_path to libmetatomic_engine.so)");
+  } else if (backend_ == "uma" || backend_ == "omol" ||
+             backend_ == "umapot") {
+    backend_ = "uma";
+    impl_->backend = Impl::Backend::Uma;
+    GenericEngineOptions gopt;
+    gopt.library = "libuma_engine.so";
+    gopt.env_var = "RGPOT_UMA_ENGINE";
+    gopt.engine_path =
+        !opt.engine_path.empty() ? opt.engine_path : opt.engine_library;
+    gopt.tag = "uma";
+    {
+      ::capnp::MallocMessageBuilder msg;
+      auto params = msg.initRoot<::UmaParams>();
+      params.setModelPath(opt.model_path);
+      params.setTaskName(opt.task_name);
+      params.setDevice(opt.device);
+      params.setCharge(opt.charge);
+      params.setSpin(opt.multiplicity);
+      const auto words = ::capnp::messageToFlatArray(msg);
+      const auto bytes = words.asBytes();
+      gopt.config.assign(bytes.begin(), bytes.end());
+    }
+    impl_->uma = std::make_unique<GenericEngineLoader>(gopt);
+    if (!impl_->uma->available())
+      throw std::runtime_error(
+          "RGPOT(uma): engine not available (set RGPOT_UMA_ENGINE or "
+          "[RgpotPot] engine_path to libuma_engine.so)");
   } else if (backend_ == "xtb" || backend_ == "xtbpot" || backend_ == "gfn" ||
              backend_ == "gfnxtb") {
     backend_ = "xtb";
@@ -192,7 +222,7 @@ RGPotEngine::RGPotEngine(const RGPotEngineOptions &opt)
           "[RgpotPot] engine_path to libxtb_engine.so)");
   } else {
     throw std::runtime_error("RGPOT: unknown backend '" + opt.backend +
-                             "' (expected nwchemc, cpmdc, metatomic, or xtb)");
+                             "' (expected nwchemc, cpmdc, metatomic, uma, or xtb)");
   }
 }
 
@@ -207,6 +237,8 @@ bool RGPotEngine::available() const {
     return impl_->cpmd->available();
   if (impl_->backend == Impl::Backend::Metatomic && impl_->metatomic)
     return impl_->metatomic->available();
+  if (impl_->backend == Impl::Backend::Uma && impl_->uma)
+    return impl_->uma->available();
   if (impl_->backend == Impl::Backend::Xtb && impl_->xtb)
     return impl_->xtb->available();
   return false;
@@ -229,6 +261,10 @@ void RGPotEngine::force(long N, const double *R, const int *atomicNrs,
 
   if (impl_->backend == Impl::Backend::Metatomic) {
     impl_->metatomic->force(N, R, atomicNrs, F, U, nullptr, box);
+    return;
+  }
+  if (impl_->backend == Impl::Backend::Uma) {
+    impl_->uma->force(N, R, atomicNrs, F, U, nullptr, box);
     return;
   }
   if (impl_->backend == Impl::Backend::Xtb) {

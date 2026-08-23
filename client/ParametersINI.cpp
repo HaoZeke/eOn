@@ -240,6 +240,8 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.Get(sec, "input_block", params.rgpot_options.input_block);
     params.rgpot_options.model_path =
         ini.Get(sec, "model_path", params.rgpot_options.model_path);
+    params.rgpot_options.task_name =
+        ini.Get(sec, "task_name", params.rgpot_options.task_name);
     params.rgpot_options.device =
         ini.Get(sec, "device", params.rgpot_options.device);
     params.rgpot_options.length_unit =

@@ -151,6 +151,8 @@ public:
     bool check_consistency{false};
     double uncertainty_threshold{-1.0};
     bool torch_determinism_strict{false};
+    // UMA dlopen (backend=uma); model_path is the AOTI .pt2 package
+    std::string task_name{"omol"};
     // XTB dlopen (backend=xtb); dual-read [XTBPot] when unset
     std::string xtb_paramset{"GFN2xTB"};
     double xtb_accuracy{1.0};

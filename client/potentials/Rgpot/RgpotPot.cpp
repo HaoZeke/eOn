@@ -36,6 +36,7 @@ RgpotPot::RgpotPot(const Parameters &p)
   opt.check_consistency = o.check_consistency;
   opt.uncertainty_threshold = o.uncertainty_threshold;
   opt.torch_determinism_strict = o.torch_determinism_strict;
+  opt.task_name = o.task_name;
   opt.xtb_paramset = o.xtb_paramset;
   opt.xtb_accuracy = o.xtb_accuracy;
   opt.xtb_electronic_temperature = o.xtb_electronic_temperature;
