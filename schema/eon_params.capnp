@@ -164,6 +164,33 @@ struct OptimizerOptions {
 # ---------------------------------------------------------------------
 # Root message: schema-backed parameters document
 # ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Relax-engine plugin (libeon_relax_engine.so). Wire ordinals are API.
+# eon_relax_create takes a flat-array of RelaxEngineParams.
+# ---------------------------------------------------------------------
+struct NebParams {
+  imageCount @0 :Int64 = 5;
+  maxIterations @1 :Int64 = 1000;
+  forceTolerance @2 :Float64 = 0.01;
+  minimizeEndpoints @3 :Bool = false;
+  climbingImage @4 :Bool = true;
+}
+
+struct SaddleParams {
+  maxIterations @0 :Int64 = 1000;
+  convergedForce @1 :Float64 = 0.01;
+}
+
+struct RelaxEngineParams {
+  # "neb" or "saddle". Unknown tokens are fail-closed at create.
+  kind @0 :Text = "neb";
+  neb @1 :NebParams;
+  saddle @2 :SaddleParams;
+  surfaceEpoch @3 :UInt64 = 0;
+  randomSeed @4 :Int64 = -1;
+  uncertainty @5 :Float64 = 0.05;
+}
+
 struct EonParameters {
   main @0 :MainOptions;
   potential @1 :PotentialOptions;

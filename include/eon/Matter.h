@@ -114,7 +114,10 @@ public:
         cell{Matrix3d::Zero()},
         cellInverse{Matrix3d::Zero()},
         energyVariance{0.0},
-        potentialEnergy{0.0} {} // the number of atoms shall be set later
+        potentialEnergy{0.0},
+        surfaceEpoch_{0},
+        cachedHostEpoch_{0},
+        cachedPotEpoch_{0} {} // the number of atoms shall be set later
   // using resize()
   Matter(const Matter &matter);                  // create a copy of matter
   const Matter &operator=(const Matter &matter); // copy the matter object
@@ -228,8 +231,18 @@ public:
   double getEnergyVariance() const;
   double getPotentialEnergy() const;
 
-  /// Whether forces need recomputation (positions changed since last eval).
-  [[nodiscard]] bool needsForceUpdate() const { return recomputePotential; }
+  /// Whether forces need recomputation (positions or surface epoch changed).
+  [[nodiscard]] bool needsForceUpdate() const {
+    return recomputePotential || epochDirty();
+  }
+
+  /// Host surface generation. A GP refit increments this; identical
+  /// positions then miss the energy cache. Combined with
+  /// Potential::surfaceEpoch() as the other half of the cache key.
+  void setSurfaceEpoch(unsigned long long epoch);
+  [[nodiscard]] unsigned long long getSurfaceEpoch() const noexcept {
+    return surfaceEpoch_;
+  }
 
   /// Mutable access to force storage for batched potential evaluation.
   /// Caller must also call setComputedPotential() after writing forces.
@@ -353,6 +366,8 @@ private:
   // CON file header lines (indices 0-4 map to old headerCon1,2,4,5,6)
   std::array<std::string, 5> headerCon;
 
+  [[nodiscard]] bool epochDirty() const;
+  void stampSurfaceEpoch() const;
   void computePotential() const;
   void applyPeriodicBoundary();
   void applyPeriodicBoundary(double &component, int axis);
@@ -384,6 +399,9 @@ private:
   mutable double energyVariance;
   std::vector<readcon::ConFrame> movie_frames_;
   mutable double potentialEnergy;
+  unsigned long long surfaceEpoch_{0};
+  mutable unsigned long long cachedHostEpoch_{0};
+  mutable unsigned long long cachedPotEpoch_{0};
 };
 
 } // namespace eonc

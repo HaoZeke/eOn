@@ -51,6 +51,9 @@ const Matter &Matter::operator=(const Matter &matter) {
   energyVariance = matter.energyVariance;
   forceCalls = matter.forceCalls;
   recomputePotential = matter.recomputePotential;
+  surfaceEpoch_ = matter.surfaceEpoch_;
+  cachedHostEpoch_ = matter.cachedHostEpoch_;
+  cachedPotEpoch_ = matter.cachedPotEpoch_;
   // Both caches describe the forces this object held before the assignment.
   // resize() above already raises them; state it here alongside the members
   // this function owns.
@@ -107,6 +110,9 @@ Matter &Matter::operator=(Matter &&other) noexcept {
   energyVariance = other.energyVariance;
   movie_frames_ = std::move(other.movie_frames_);
   potentialEnergy = other.potentialEnergy;
+  surfaceEpoch_ = other.surfaceEpoch_;
+  cachedHostEpoch_ = other.cachedHostEpoch_;
+  cachedPotEpoch_ = other.cachedPotEpoch_;
 
   other.nAtoms = 0;
   other.recomputePotential = true;
@@ -495,8 +501,27 @@ void Matter::assertIsolatedMoleculeLayoutSafe() const {
   }
 }
 
+bool Matter::epochDirty() const {
+  const unsigned long long pe =
+      potential ? potential->surfaceEpoch() : 0ULL;
+  return cachedHostEpoch_ != surfaceEpoch_ || cachedPotEpoch_ != pe;
+}
+
+void Matter::stampSurfaceEpoch() const {
+  cachedHostEpoch_ = surfaceEpoch_;
+  cachedPotEpoch_ = potential ? potential->surfaceEpoch() : 0ULL;
+}
+
+void Matter::setSurfaceEpoch(unsigned long long epoch) {
+  if (epoch != surfaceEpoch_) {
+    surfaceEpoch_ = epoch;
+    recomputePotential = true;
+    recomputeMaskedForces = true;
+  }
+}
+
 void Matter::computePotential() const {
-  if (recomputePotential) {
+  if (recomputePotential || epochDirty()) {
     if (!potential) {
       throw std::runtime_error(
           "Matter::computePotential called without a potential");
@@ -522,11 +547,13 @@ void Matter::computePotential() const {
       double var{0};
       potential->force(nAtoms, positions.data(), atomicNrs.data(),
                        forces.data(), &potentialEnergy, &var, cell.data());
+      this->energyVariance = var;
       potential->forceCallCounter++;
       PotRegistry::get().on_force_call(potential->getType());
     }
     forceCalls = forceCalls + 1;
     recomputePotential = false;
+    stampSurfaceEpoch();
 
     if (isFixed.maxCoeff() < 0.5 && removeNetForce) {
       Vector3d tempForce = forces.colwise().sum() / nAtoms;
@@ -644,6 +671,7 @@ void Matter::setComputedPotential(double energy, double variance) {
   potentialEnergy = energy;
   energyVariance = variance;
   recomputePotential = false;
+  stampSurfaceEpoch();
   recomputeMaskedForces = true;
   forceCalls++;
 

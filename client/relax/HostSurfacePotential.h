@@ -1,0 +1,123 @@
+/*
+** This file is part of eOn.
+**
+** SPDX-License-Identifier: BSD-3-Clause
+**
+** Copyright (c) 2010--present, eOn Development Team
+** All rights reserved.
+**
+** Repo:
+** https://github.com/TheochemUI/eOn
+*/
+#pragma once
+
+#include "eon/Potential.h"
+#include "eon/relax/eon_relax_engine.h"
+
+#include <cstdint>
+#include <stdexcept>
+#include <vector>
+
+namespace eonc {
+
+class HostSurfacePotential : public Potential {
+public:
+  HostSurfacePotential(eon_relax_surface_fn fn, void *user,
+                       std::uint64_t epoch)
+      : Potential(PotType::UNKNOWN), fn_{fn}, user_{user}, epoch_{epoch} {}
+
+  [[nodiscard]] bool supportsBatchEvaluation() const noexcept override {
+    return true;
+  }
+  [[nodiscard]] unsigned long long surfaceEpoch() const noexcept override {
+    return epoch_;
+  }
+  [[nodiscard]] int lastStatus() const noexcept { return last_; }
+  void setEpoch(std::uint64_t epoch) { epoch_ = epoch; }
+
+  void force(long nAtoms, const double *positions, const int *atomicNrs,
+             double *forces, double *energy, double *variance,
+             const double *box) override {
+    const double *posv[] = {positions};
+    const int *nrv[] = {atomicNrs};
+    double *frcv[] = {forces};
+    const double *boxv[] = {box};
+    double e{0};
+    double var{0};
+    forceBatch(1, nAtoms, posv, nrv, frcv, &e, &var, boxv);
+    if (energy) {
+      *energy = e;
+    }
+    if (variance) {
+      *variance = var;
+    }
+  }
+
+  void forceBatch(long nSystems, long nAtoms, const double *const *positions,
+                  const int *const *atomicNrs, double *const *forces,
+                  double *energies, double *variances,
+                  const double *const *boxes) override {
+    if (!fn_) {
+      throw std::runtime_error("HostSurfacePotential: NULL surface");
+    }
+    const long npos = 3 * nAtoms * nSystems;
+    const long nbox = 9 * nSystems;
+    std::vector<double> pos(static_cast<size_t>(npos), 0.0);
+    std::vector<double> frc(static_cast<size_t>(npos), 0.0);
+    std::vector<double> box(static_cast<size_t>(nbox), 0.0);
+    std::vector<int> z(static_cast<size_t>(nAtoms), 0);
+    std::vector<long> ids(static_cast<size_t>(nSystems), 0);
+    if (atomicNrs && atomicNrs[0]) {
+      for (long a = 0; a < nAtoms; ++a) {
+        z[static_cast<size_t>(a)] = atomicNrs[0][a];
+      }
+    }
+    for (long s = 0; s < nSystems; ++s) {
+      ids[static_cast<size_t>(s)] = s;
+      if (positions && positions[s]) {
+        for (long k = 0; k < 3 * nAtoms; ++k) {
+          pos[static_cast<size_t>(s * 3 * nAtoms + k)] = positions[s][k];
+        }
+      }
+      if (boxes && boxes[s]) {
+        for (long k = 0; k < 9; ++k) {
+          box[static_cast<size_t>(s * 9 + k)] = boxes[s][k];
+        }
+      }
+    }
+    std::vector<double> ebuf(static_cast<size_t>(nSystems), 0.0);
+    std::vector<double> vbuf(static_cast<size_t>(nSystems), 0.0);
+    std::uint64_t new_epoch = epoch_;
+    last_ = fn_(user_, nSystems, nAtoms, pos.data(), z.data(), box.data(),
+                ids.data(), ebuf.data(), frc.data(), vbuf.data(), &new_epoch);
+    if (last_ != 0) {
+      throw std::runtime_error("HostSurfacePotential: surface failed");
+    }
+    if (new_epoch != epoch_) {
+      epoch_ = new_epoch;
+    }
+    for (long s = 0; s < nSystems; ++s) {
+      if (energies) {
+        energies[s] = ebuf[static_cast<size_t>(s)];
+      }
+      if (variances) {
+        variances[s] = vbuf[static_cast<size_t>(s)];
+      }
+      if (forces && forces[s]) {
+        for (long k = 0; k < 3 * nAtoms; ++k) {
+          forces[s][k] = frc[static_cast<size_t>(s * 3 * nAtoms + k)];
+        }
+      }
+    }
+    forceCallCounter += static_cast<size_t>(nSystems);
+    PotRegistry::get().on_force_call(ptype);
+  }
+
+private:
+  eon_relax_surface_fn fn_;
+  void *user_;
+  std::uint64_t epoch_{0};
+  int last_{0};
+};
+
+} // namespace eonc

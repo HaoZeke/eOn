@@ -102,6 +102,13 @@ public:
     return false;
   }
 
+  /// Host-visible surface generation. A learning host increments this on
+  /// every refit; Matter keys its energy cache on the value so identical
+  /// positions after a refit cannot return a stale energy. Static pots stay 0.
+  [[nodiscard]] virtual unsigned long long surfaceEpoch() const noexcept {
+    return 0;
+  }
+
   /// Evaluate forces for N systems in a single call. Default: loops over
   /// force(). Override in potentials that support native batching (e.g.
   /// MetatomicPotential uses a single model.forward() for all N systems).

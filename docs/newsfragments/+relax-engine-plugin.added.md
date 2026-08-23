@@ -1,0 +1,1 @@
+Tier-2 `libeon_relax_engine.so` exports `eon_relax_create` / `eon_relax_run` / `eon_relax_destroy` so a host can drive eOn NEB and min-mode saddle with a band surface callback. Matter keys its energy cache on a surface epoch.

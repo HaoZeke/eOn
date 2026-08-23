@@ -13,6 +13,8 @@
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
 #include "eon/Parameters.h"
+#include "eon/Potential.h"
+#include <algorithm>
 #include <memory>
 
 using namespace Catch::Matchers;
@@ -58,6 +60,72 @@ TEST_CASE("SetGetAtomicNrs", "[MatterTest]") {
   for (int i = 0; i < 13; i++) {
     REQUIRE(result(i) == 2);
   }
+}
+
+TEST_CASE("surface epoch busts energy cache at identical positions",
+          "[MatterTest][epoch]") {
+  auto [m1, params] = makeLJCluster();
+
+  const double e1 = m1->getPotentialEnergy();
+  const long c1 = m1->getForceCalls();
+  REQUIRE(std::isfinite(e1));
+  const double e2 = m1->getPotentialEnergy();
+  REQUIRE(m1->getForceCalls() == c1);
+  REQUIRE(e2 == e1);
+
+  m1->setSurfaceEpoch(1);
+  REQUIRE(m1->needsForceUpdate());
+  const double e3 = m1->getPotentialEnergy();
+  REQUIRE(m1->getForceCalls() == c1 + 1);
+  REQUIRE(e3 == e1);
+  REQUIRE_FALSE(m1->needsForceUpdate());
+
+  m1->setSurfaceEpoch(1);
+  REQUIRE(m1->getForceCalls() == c1 + 1);
+}
+
+class EpochBumpPot : public Potential {
+public:
+  EpochBumpPot() : Potential(PotType::UNKNOWN) {}
+  void force(long nAtoms, const double *, const int *, double *forces,
+             double *energy, double *variance, const double *) override {
+    *energy = 1.0 + static_cast<double>(epoch_);
+    if (variance) {
+      *variance = 0.0;
+    }
+    if (forces) {
+      std::fill(forces, forces + 3 * nAtoms, 0.0);
+    }
+  }
+  [[nodiscard]] unsigned long long surfaceEpoch() const noexcept override {
+    return epoch_;
+  }
+  void bump() { ++epoch_; }
+
+private:
+  unsigned long long epoch_{0};
+};
+
+TEST_CASE("potential surfaceEpoch busts Matter cache at identical positions",
+          "[MatterTest][epoch]") {
+  Parameters params;
+  auto pot = std::make_shared<EpochBumpPot>();
+  Matter m(pot, params);
+  m.resize(1);
+  m.setAtomicNrs(Eigen::VectorXi::Constant(1, 1));
+  AtomMatrix pos = AtomMatrix::Zero(1, 3);
+  m.setPositions(pos);
+
+  const double e1 = m.getPotentialEnergy();
+  const long c1 = m.getForceCalls();
+  REQUIRE(e1 == 1.0);
+  REQUIRE(m.getPotentialEnergy() == e1);
+  REQUIRE(m.getForceCalls() == c1);
+
+  pot->bump();
+  REQUIRE(m.needsForceUpdate());
+  REQUIRE(m.getPotentialEnergy() == 2.0);
+  REQUIRE(m.getForceCalls() == c1 + 1);
 }
 
 TEST_CASE("SetPotential changes energy", "[MatterTest]") {

@@ -408,22 +408,15 @@ NudgedElasticBand::NEBStatus NudgedElasticBand::compute() {
                     iteration, stepSize, convergenceForce(), maxEnergyImage,
                     dE);
 
-    if (pot->getType() == PotType::CatLearn) {
-      if (objf->isUncertain()) {
-        QUILL_LOG_DEBUG(log, "NEB failed due to high uncertainty");
-        status = NEBStatus::MAX_UNCERTAINTY;
-        break;
-      } else if (objf->isConverged()) {
-        QUILL_LOG_DEBUG(log, "NEB converged\n");
-        status = NEBStatus::GOOD;
-        break;
-      }
-    } else {
-      if (objf->isConverged()) {
-        QUILL_LOG_DEBUG(log, "NEB converged\n");
-        status = NEBStatus::GOOD;
-        break;
-      }
+    if (objf->isUncertain()) {
+      QUILL_LOG_DEBUG(log, "NEB failed due to high uncertainty");
+      status = NEBStatus::MAX_UNCERTAINTY;
+      break;
+    }
+    if (objf->isConverged()) {
+      QUILL_LOG_DEBUG(log, "NEB converged\n");
+      status = NEBStatus::GOOD;
+      break;
     }
   }
   return status;

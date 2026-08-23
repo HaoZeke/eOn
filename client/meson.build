@@ -1284,6 +1284,20 @@ eclib = library(
 
 _linkto += eclib
 
+eon_relax_engine = library(
+    'eon_relax_engine',
+    ['relax/RelaxEngineAbi.cpp'],
+    dependencies: _deps + _gprd_extra_deps,
+    cpp_args: _args + ['-DEON_RELAX_ENGINE_BUILD'],
+    link_with: [eclib, eoncbase],
+    include_directories: _incdirs + [include_directories('.')],
+    build_rpath: ':'.join(_runtime_rpath),
+    install_rpath: ':'.join(_runtime_rpath),
+    install: true,
+    gnu_symbol_visibility: 'default',
+)
+_linkto += eon_relax_engine
+
 # RGPOT-metatomic engine (slow path); fat pot already in potentials above.
 if get_option('with_metatomic')
     metatomic_engine = library(
@@ -1406,6 +1420,7 @@ if get_option('with_tests')
         ['test_lammps_loader', 'LammpsLoaderTest.cpp', ''],
         ['test_pot_registry', 'PotRegistryTest.cpp', ''],
         ['test_neb_lj', 'NEBMorseTest.cpp', 'neb_morse'],
+        ['test_relax_engine', 'RelaxEngineAbiTest.cpp', 'neb_morse'],
         ['test_neb_regression', 'NEBRegressionTest.cpp', 'neb_morse'],
         ['test_dimer', 'DimerTest.cpp', 'neb_morse'],
         ['test_saddle', 'SaddleSearchTest.cpp', 'neb_morse'],
@@ -1477,6 +1492,7 @@ if get_option('with_tests')
         'systems',
     )
     _test_env.set('EON_TEST_SYSTEMS_DIR', _systems_dir)
+    _test_env.set('EON_RELAX_ENGINE', eon_relax_engine.full_path())
     if _fortran_pot_dirs.length() > 0
         # FortranPotLoader splits on ';' on Windows (drive letters break ':').
         # Same pathsep rule as PATH: win=';' unix=':'.
