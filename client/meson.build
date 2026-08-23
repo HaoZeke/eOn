@@ -1450,6 +1450,11 @@ if get_option('with_tests')
     if get_option('with_ase')
         test_array += [['test_ase_pot', 'ASEPotTest.cpp', 'ase_pot']]
     endif
+    if get_option('with_gprd')
+        # gpr_optim-ls8r gate: frozen GprMeanPotential fixed-point parity
+        # between the eonclient LBFGS and the gpr band engine.
+        test_array += [['test_gprmean_fixedpoint', 'GprMeanFixedPointTest.cpp', '']]
+    endif
     if get_option('with_metatomic')
         test_array += [['test_mta', 'MetatomicTest.cpp', 'lj38']]
         # DynLib.h (LoadLibrary / dlopen) — builds on MSVC and POSIX.
