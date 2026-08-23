@@ -239,6 +239,35 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
   }
 }
 
-void eon_relax_destroy(EonRelaxEngine *eng) { delete eng; }
+void eon_relax_destroy(EonRelaxEngine *eng) {
+  delete eng;
+}
+
+const char *eon_relax_status_name(eon_relax_kind_t kind, int status) {
+  if (kind == EON_RELAX_KIND_NEB) {
+    switch (status) {
+    case EON_RELAX_NEB_GOOD:
+      return "GOOD";
+    case EON_RELAX_NEB_INIT:
+      return "INIT";
+    case EON_RELAX_NEB_BAD_MAX_ITERATIONS:
+      return "BAD_MAX_ITERATIONS";
+    case EON_RELAX_NEB_RUNNING:
+      return "RUNNING";
+    case EON_RELAX_NEB_MAX_UNCERTAINTY:
+      return "MAX_UNCERTAINTY";
+    default:
+      return nullptr;
+    }
+  }
+  if (kind == EON_RELAX_KIND_SADDLE) {
+    const auto msg = MinModeSaddleSearch::statusMessage(status);
+    if (msg == "Unknown status") {
+      return nullptr;
+    }
+    return msg.data();
+  }
+  return nullptr;
+}
 
 } // extern "C"

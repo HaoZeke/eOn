@@ -182,6 +182,10 @@ EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
 
 EON_RELAX_API void eon_relax_destroy(EonRelaxEngine *eng);
 
+/** NULL if kind or status is unknown. */
+EON_RELAX_API const char *eon_relax_status_name(eon_relax_kind_t kind,
+                                                int status);
+
 #ifdef __cplusplus
 }
 #endif

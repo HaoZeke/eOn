@@ -128,6 +128,16 @@ TEST_CASE("relax engine destroy NULL is a no-op", "[relax][abi]") {
   eon_relax_destroy(nullptr);
 }
 
+TEST_CASE("relax engine status_name is fail-closed", "[relax][abi]") {
+  REQUIRE(std::string(eon_relax_status_name(EON_RELAX_KIND_NEB,
+                                            EON_RELAX_NEB_GOOD)) == "GOOD");
+  REQUIRE(std::string(eon_relax_status_name(
+              EON_RELAX_KIND_NEB, EON_RELAX_NEB_MAX_UNCERTAINTY)) ==
+          "MAX_UNCERTAINTY");
+  REQUIRE(eon_relax_status_name(EON_RELAX_KIND_NEB, 99) == nullptr);
+  REQUIRE(eon_relax_status_name(EON_RELAX_KIND_INVALID, 0) == nullptr);
+}
+
 TEST_CASE("relax engine create NULL config and reject unknown capnp",
           "[relax][abi]") {
   char err[128]{};
