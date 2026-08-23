@@ -53,11 +53,15 @@ extern "C" {
 
 typedef struct EonRelaxEngine EonRelaxEngine;
 
-#define EON_RELAX_ABI_MAJOR 1
-#define EON_RELAX_ABI_MINOR 0
-#define EON_RELAX_ABI_LAYOUT 1
+#define EON_RELAX_ABI_MAJOR 1u
+#define EON_RELAX_ABI_MINOR 0u
+#define EON_RELAX_ABI_LAYOUT 1u
 #define EON_RELAX_ABI_VERSION                                                  \
-  ((EON_RELAX_ABI_MAJOR << 16) | (EON_RELAX_ABI_MINOR))
+  ((EON_RELAX_ABI_MAJOR << 24) | (EON_RELAX_ABI_MINOR << 16) |                 \
+   (EON_RELAX_ABI_LAYOUT))
+#define EON_RELAX_ABI_UNPACK_MAJOR(v) ((uint32_t)(((v) >> 24) & 0xffu))
+#define EON_RELAX_ABI_UNPACK_MINOR(v) ((uint32_t)(((v) >> 16) & 0xffu))
+#define EON_RELAX_ABI_UNPACK_LAYOUT(v) ((uint32_t)((v) & 0xffffu))
 
 typedef struct {
   uint32_t major;
@@ -66,21 +70,47 @@ typedef struct {
 } eon_relax_abi_stamp_t;
 
 typedef enum {
-  EON_RELAX_KIND_NEB = 0,
-  EON_RELAX_KIND_SADDLE = 1
+  EON_RELAX_KIND_INVALID = 0,
+  EON_RELAX_KIND_NEB = 1,
+  EON_RELAX_KIND_SADDLE = 2
 } eon_relax_kind_t;
 
+#define EON_RELAX_KIND_IS_KNOWN(k)                                             \
+  ((k) == EON_RELAX_KIND_NEB || (k) == EON_RELAX_KIND_SADDLE)
+
+/** Call rc: 0 success (read outcome), positive recoverable, negative fatal. */
 typedef enum {
   EON_RELAX_OK = 0,
-  EON_RELAX_CONVERGED = 1,
-  EON_RELAX_MAX_ITERATIONS = 2,
-  EON_RELAX_MAX_UNCERTAINTY = 3,
-  EON_RELAX_INIT = 4,
-  EON_RELAX_INVALID_PARAMETER = -1,
-  EON_RELAX_UNAVAILABLE = -2,
-  EON_RELAX_SURFACE_FAILED = -3,
-  EON_RELAX_UNKNOWN_KIND = -4
-} eon_relax_status_t;
+  EON_RELAX_NULL_ENGINE = -1,
+  EON_RELAX_NULL_BAND = -2,
+  EON_RELAX_NULL_SURFACE = -3,
+  EON_RELAX_NULL_OUTCOME = -4,
+  EON_RELAX_NULL_POSITIONS = -5,
+  EON_RELAX_NULL_ATOMIC_NRS = -6,
+  EON_RELAX_NULL_BOXES = -7,
+  EON_RELAX_NULL_MODE = -8,
+  EON_RELAX_BAND_TOO_SHORT = -9,
+  EON_RELAX_NATOMS = -10,
+  EON_RELAX_UNKNOWN_KIND = -11,
+  EON_RELAX_UNKNOWN_STATUS = -12,
+  EON_RELAX_CAPNP_ROOT = -13,
+  EON_RELAX_SURFACE_FATAL = -15,
+  EON_RELAX_SADDLE_NIMAGES = -17,
+  EON_RELAX_BAND_SIZE = -18,
+  EON_RELAX_UNAVAILABLE = -21,
+  EON_RELAX_INVALID_PARAMETER = -22
+} eon_relax_rc_t;
+
+/** NudgedElasticBand::NEBStatus integers. Written to outcome.status for NEB. */
+typedef enum {
+  EON_RELAX_NEB_GOOD = 0,
+  EON_RELAX_NEB_INIT = 1,
+  EON_RELAX_NEB_BAD_MAX_ITERATIONS = 2,
+  EON_RELAX_NEB_RUNNING = 3,
+  EON_RELAX_NEB_MAX_UNCERTAINTY = 4
+} eon_relax_neb_status_t;
+
+#define EON_RELAX_IMAGE_NONE (-1L)
 
 /**
  * Caller-owned band. positions is 3*n_atoms*n_images (image stride
@@ -102,7 +132,8 @@ typedef struct {
 } eon_relax_band_t;
 
 typedef struct {
-  eon_relax_status_t status;
+  eon_relax_kind_t kind;
+  int status;
   long iterations;
   long climbing_image;
   double max_force;
@@ -123,6 +154,7 @@ typedef int (*eon_relax_surface_fn)(
     double *energies, double *forces, double *variances, uint64_t *epoch_out);
 
 EON_RELAX_API int eon_relax_abi_version(void);
+EON_RELAX_API int eon_relax_available(void);
 EON_RELAX_API int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out);
 EON_RELAX_API uint64_t eon_relax_version_hash(void);
 
@@ -135,22 +167,16 @@ EON_RELAX_API EonRelaxEngine *eon_relax_create(const void *config,
                                                size_t config_len, char *errbuf,
                                                size_t errlen);
 
-/**
- * Select NEB or saddle. Unknown kind is fail-closed. Default after
- * NULL create is NEB.
- */
-EON_RELAX_API int eon_relax_set_kind(EonRelaxEngine *eng,
-                                     eon_relax_kind_t kind);
-
 EON_RELAX_API int eon_relax_set_surface_epoch(EonRelaxEngine *eng,
                                               uint64_t epoch);
 
 /**
  * Run the bound engine. Writes updated coordinates into
- * band->positions (caller-owned). surface may not be NULL.
+ * band->positions (caller-owned). surface may not be NULL. Kind is
+ * bound at create (NULL config => NEB). Returns eon_relax_rc_t;
+ * on 0, out->status is the dest NEB or saddle table.
  */
-EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng,
-                                const eon_relax_band_t *band,
+EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                                 eon_relax_surface_fn surface, void *user,
                                 eon_relax_outcome_t *out);
 

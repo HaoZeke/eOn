@@ -48,25 +48,10 @@ void set_err(char *errbuf, size_t errlen, const char *msg) {
   std::snprintf(errbuf, errlen, "%s", msg ? msg : "");
 }
 
-bool known_kind(eon_relax_kind_t kind) {
-  return kind == EON_RELAX_KIND_NEB || kind == EON_RELAX_KIND_SADDLE;
-}
+bool known_kind(eon_relax_kind_t kind) { return EON_RELAX_KIND_IS_KNOWN(kind); }
 
-eon_relax_status_t map_neb(NudgedElasticBand::NEBStatus st) {
-  using S = NudgedElasticBand::NEBStatus;
-  switch (st) {
-  case S::GOOD:
-    return EON_RELAX_CONVERGED;
-  case S::BAD_MAX_ITERATIONS:
-    return EON_RELAX_MAX_ITERATIONS;
-  case S::MAX_UNCERTAINTY:
-    return EON_RELAX_MAX_UNCERTAINTY;
-  case S::INIT:
-    return EON_RELAX_INIT;
-  case S::RUNNING:
-    return EON_RELAX_OK;
-  }
-  return EON_RELAX_INVALID_PARAMETER;
+int neb_status(NudgedElasticBand::NEBStatus st) {
+  return static_cast<int>(st);
 }
 
 void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
@@ -112,7 +97,9 @@ struct EonRelaxEngine {
 
 extern "C" {
 
-int eon_relax_abi_version(void) { return EON_RELAX_ABI_VERSION; }
+int eon_relax_abi_version(void) { return static_cast<int>(EON_RELAX_ABI_VERSION); }
+
+int eon_relax_available(void) { return 1; }
 
 int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out) {
   if (!out) {
@@ -135,28 +122,16 @@ EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,
                                  char *errbuf, size_t errlen) {
   if (config != nullptr && config_len > 0) {
     set_err(errbuf, errlen,
-            "RelaxEngineParams capnp parse is not wired; pass NULL config");
+            "-13 RelaxEngineParams capnp parse is not wired; pass NULL config");
     return nullptr;
   }
   auto *eng = new (std::nothrow) EonRelaxEngine();
   if (!eng) {
-    set_err(errbuf, errlen, "out of memory");
+    set_err(errbuf, errlen, "-19 out of memory");
     return nullptr;
   }
-  // Host owns endpoint relaxation; keep NSDMI otherwise.
-  eng->params.neb_options.endpoints.minimize = false;
+  eng->kind = EON_RELAX_KIND_NEB;
   return eng;
-}
-
-int eon_relax_set_kind(EonRelaxEngine *eng, eon_relax_kind_t kind) {
-  if (!eng) {
-    return EON_RELAX_INVALID_PARAMETER;
-  }
-  if (!known_kind(kind)) {
-    return EON_RELAX_UNKNOWN_KIND;
-  }
-  eng->kind = kind;
-  return EON_RELAX_OK;
 }
 
 int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
@@ -167,20 +142,38 @@ int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
   return EON_RELAX_OK;
 }
 
-int eon_relax_run(EonRelaxEngine *eng, const eon_relax_band_t *band,
+int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                   eon_relax_surface_fn surface, void *user,
                   eon_relax_outcome_t *out) {
-  if (!eng || !band || !surface || !out) {
-    return EON_RELAX_INVALID_PARAMETER;
+  if (!eng) {
+    return EON_RELAX_NULL_ENGINE;
   }
-  if (band->n_atoms <= 0 || !band->positions || !band->atomic_nrs ||
-      !band->boxes) {
-    return EON_RELAX_INVALID_PARAMETER;
+  if (!band) {
+    return EON_RELAX_NULL_BAND;
+  }
+  if (!surface) {
+    return EON_RELAX_NULL_SURFACE;
+  }
+  if (!out) {
+    return EON_RELAX_NULL_OUTCOME;
+  }
+  if (band->n_atoms <= 0) {
+    return EON_RELAX_NATOMS;
+  }
+  if (!band->positions) {
+    return EON_RELAX_NULL_POSITIONS;
+  }
+  if (!band->atomic_nrs) {
+    return EON_RELAX_NULL_ATOMIC_NRS;
+  }
+  if (!band->boxes) {
+    return EON_RELAX_NULL_BOXES;
   }
   if (!known_kind(eng->kind)) {
     return EON_RELAX_UNKNOWN_KIND;
   }
   std::memset(out, 0, sizeof(*out));
+  out->kind = eng->kind;
   out->version_hash = eon_relax_version_hash();
   out->surface_epoch = eng->epoch;
 
@@ -188,49 +181,44 @@ int eon_relax_run(EonRelaxEngine *eng, const eon_relax_band_t *band,
                                                           eng->epoch);
   try {
     if (eng->kind == EON_RELAX_KIND_NEB) {
-      if (band->n_images < 2) {
-        return EON_RELAX_INVALID_PARAMETER;
+      if (band->n_images < 3) {
+        return EON_RELAX_BAND_TOO_SHORT;
       }
-      auto initial = std::make_shared<Matter>(pot, eng->params);
-      auto final = std::make_shared<Matter>(pot, eng->params);
-      fill_matter(*initial, band, 0, eng->epoch);
-      fill_matter(*final, band, band->n_images - 1, eng->epoch);
-      std::unique_ptr<NudgedElasticBand> neb;
-      if (band->n_images == 2) {
-        neb = std::make_unique<NudgedElasticBand>(initial, final, eng->params,
-                                                  pot);
-      } else {
-        eng->params.neb_options.image_count = band->n_images - 2;
-        std::vector<Matter> path;
-        path.reserve(static_cast<size_t>(band->n_images));
-        for (long i = 0; i < band->n_images; ++i) {
-          Matter img(pot, eng->params);
-          fill_matter(img, band, i, eng->epoch);
-          path.push_back(std::move(img));
-        }
-        neb = std::make_unique<NudgedElasticBand>(std::move(path), eng->params,
-                                                  pot);
+      const long want = eng->params.neb_options.image_count + 2;
+      if (band->n_images != want) {
+        return EON_RELAX_BAND_SIZE;
       }
+      std::vector<Matter> path;
+      path.reserve(static_cast<size_t>(band->n_images));
+      for (long i = 0; i < band->n_images; ++i) {
+        Matter img(pot, eng->params);
+        fill_matter(img, band, i, eng->epoch);
+        path.push_back(std::move(img));
+      }
+      auto neb = std::make_unique<NudgedElasticBand>(std::move(path),
+                                                     eng->params, pot);
+      pot->bindPath(neb->path);
       const auto st = neb->compute();
-      out->status = map_neb(st);
+      if (st == NudgedElasticBand::NEBStatus::INIT ||
+          st == NudgedElasticBand::NEBStatus::RUNNING) {
+        return EON_RELAX_UNKNOWN_STATUS;
+      }
+      out->status = neb_status(st);
       out->climbing_image = neb->climbingImage;
       out->max_force = neb->convergenceForce();
       out->surface_epoch = pot->surfaceEpoch();
-      if (band->n_images == 2) {
-        write_image(band->positions, *neb->path.front(), band->n_atoms);
-        write_image(band->positions + 3 * band->n_atoms, *neb->path.back(),
+      for (long i = 0; i < band->n_images; ++i) {
+        write_image(band->positions + i * 3 * band->n_atoms, *neb->path[i],
                     band->n_atoms);
-      } else {
-        for (long i = 0; i < band->n_images; ++i) {
-          write_image(band->positions + i * 3 * band->n_atoms, *neb->path[i],
-                      band->n_atoms);
-        }
       }
-      return out->status >= 0 ? EON_RELAX_OK : out->status;
+      return EON_RELAX_OK;
     }
 
-    if (band->n_images < 1 || !band->mode) {
-      return EON_RELAX_INVALID_PARAMETER;
+    if (band->n_images != 1) {
+      return EON_RELAX_SADDLE_NIMAGES;
+    }
+    if (!band->mode) {
+      return EON_RELAX_NULL_MODE;
     }
     auto matter = std::make_shared<Matter>(pot, eng->params);
     fill_matter(*matter, band, 0, eng->epoch);
@@ -243,19 +231,11 @@ int eon_relax_run(EonRelaxEngine *eng, const eon_relax_band_t *band,
     write_image(band->positions, *matter, band->n_atoms);
     out->iterations = search.getIterationCount();
     out->surface_epoch = pot->surfaceEpoch();
-    if (sst == MinModeSaddleSearch::STATUS_GOOD) {
-      out->status = EON_RELAX_CONVERGED;
-      return EON_RELAX_OK;
-    }
-    if (sst == MinModeSaddleSearch::STATUS_BAD_MAX_ITERATIONS) {
-      out->status = EON_RELAX_MAX_ITERATIONS;
-      return EON_RELAX_OK;
-    }
-    out->status = EON_RELAX_UNAVAILABLE;
+    out->status = sst;
     return EON_RELAX_OK;
   } catch (const std::exception &) {
-    out->status = EON_RELAX_SURFACE_FAILED;
-    return EON_RELAX_SURFACE_FAILED;
+    out->status = 0;
+    return EON_RELAX_SURFACE_FATAL;
   }
 }
 

@@ -89,8 +89,32 @@ static void pack_image(std::vector<double> &pos, std::vector<double> &boxes,
   }
 }
 
-TEST_CASE("relax engine ABI stamp is layout 1.0", "[relax][abi]") {
-  REQUIRE(eon_relax_abi_version() == EON_RELAX_ABI_VERSION);
+static void pack_linear_band(std::vector<double> &pos, std::vector<double> &boxes,
+                             std::vector<int> &z, const Matter &a,
+                             const Matter &b, long n_images) {
+  const long n = a.numberOfAtoms();
+  pos.assign(static_cast<size_t>(n_images * 3 * n), 0.0);
+  boxes.assign(static_cast<size_t>(n_images * 9), 0.0);
+  pack_image(pos, boxes, z, a, 0);
+  pack_image(pos, boxes, z, b, n_images - 1);
+  const AtomMatrix pa = a.getPositions();
+  const AtomMatrix pb = b.getPositions();
+  for (long im = 1; im < n_images - 1; ++im) {
+    const double t = static_cast<double>(im) / static_cast<double>(n_images - 1);
+    AtomMatrix mid = pa + t * (pb - pa);
+    double *dst = pos.data() + im * 3 * n;
+    Eigen::Map<AtomMatrix> mapped(dst, n, 3);
+    mapped = mid;
+    std::memcpy(boxes.data() + im * 9, boxes.data(), 9 * sizeof(double));
+  }
+}
+
+TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
+  REQUIRE(eon_relax_abi_version() == static_cast<int>(EON_RELAX_ABI_VERSION));
+  REQUIRE(EON_RELAX_ABI_UNPACK_MAJOR(eon_relax_abi_version()) == 1);
+  REQUIRE(EON_RELAX_ABI_UNPACK_MINOR(eon_relax_abi_version()) == 0);
+  REQUIRE(EON_RELAX_ABI_UNPACK_LAYOUT(eon_relax_abi_version()) == 1);
+  REQUIRE(eon_relax_available() == 1);
   eon_relax_abi_stamp_t stamp{};
   REQUIRE(eon_relax_abi_stamp(&stamp) == EON_RELAX_OK);
   REQUIRE(stamp.major == 1);
@@ -100,19 +124,16 @@ TEST_CASE("relax engine ABI stamp is layout 1.0", "[relax][abi]") {
   REQUIRE(eon_relax_version_hash() != 0);
 }
 
-TEST_CASE("relax engine create NULL config and reject unknown kind",
+TEST_CASE("relax engine create NULL config and reject unknown capnp",
           "[relax][abi]") {
   char err[128]{};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, err, sizeof(err));
   REQUIRE(eng != nullptr);
-  REQUIRE(eon_relax_set_kind(eng, static_cast<eon_relax_kind_t>(99)) ==
-          EON_RELAX_UNKNOWN_KIND);
-  REQUIRE(eon_relax_set_kind(eng, EON_RELAX_KIND_NEB) == EON_RELAX_OK);
-  REQUIRE(eon_relax_set_kind(nullptr, EON_RELAX_KIND_NEB) ==
-          EON_RELAX_INVALID_PARAMETER);
   const char blob[] = "not-capnp";
   REQUIRE(eon_relax_create(blob, sizeof(blob), err, sizeof(err)) == nullptr);
-  REQUIRE(std::string(err).find("NULL config") != std::string::npos);
+  REQUIRE(std::string(err).find("-13") != std::string::npos);
+  REQUIRE(eon_relax_run(nullptr, nullptr, nullptr, nullptr, nullptr) ==
+          EON_RELAX_NULL_ENGINE);
   eon_relax_destroy(eng);
 }
 
@@ -134,17 +155,17 @@ TEST_CASE("relax engine NEB on LJ cluster reaches a finite force",
   product->setPositions(p);
 
   const long n = reactant->numberOfAtoms();
-  std::vector<double> pos(static_cast<size_t>(2 * 3 * n), 0.0);
-  std::vector<double> boxes(18, 0.0);
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
   std::vector<int> z;
-  pack_image(pos, boxes, z, *reactant, 0);
-  pack_image(pos, boxes, z, *product, 1);
+  pack_linear_band(pos, boxes, z, *reactant, *product, n_images);
 
   SurfaceCtx ctx{pot, 0.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
-  band.n_images = 2;
+  band.n_images = n_images;
   band.n_atoms = n;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
@@ -152,7 +173,8 @@ TEST_CASE("relax engine NEB on LJ cluster reaches a finite force",
   eon_relax_outcome_t out{};
   const int rc = eon_relax_run(eng, &band, surface_forward, &ctx, &out);
   REQUIRE(rc == EON_RELAX_OK);
-  REQUIRE(out.status == EON_RELAX_CONVERGED);
+  REQUIRE(out.status == EON_RELAX_NEB_GOOD);
+  REQUIRE(out.kind == EON_RELAX_KIND_NEB);
   REQUIRE(std::isfinite(out.max_force));
   REQUIRE(out.max_force <= 0.01 + 1e-6);
   REQUIRE(ctx.calls > 0);
@@ -176,17 +198,17 @@ TEST_CASE("relax engine MAX_UNCERTAINTY surfaces from host variance",
   product->setPositions(p);
 
   const long n = reactant->numberOfAtoms();
-  std::vector<double> pos(static_cast<size_t>(2 * 3 * n), 0.0);
-  std::vector<double> boxes(18, 0.0);
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
   std::vector<int> z;
-  pack_image(pos, boxes, z, *reactant, 0);
-  pack_image(pos, boxes, z, *product, 1);
+  pack_linear_band(pos, boxes, z, *reactant, *product, n_images);
 
   SurfaceCtx ctx{pot, 10.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
-  band.n_images = 2;
+  band.n_images = n_images;
   band.n_atoms = n;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
@@ -194,7 +216,7 @@ TEST_CASE("relax engine MAX_UNCERTAINTY surfaces from host variance",
   eon_relax_outcome_t out{};
   const int rc = eon_relax_run(eng, &band, surface_forward, &ctx, &out);
   REQUIRE(rc == EON_RELAX_OK);
-  REQUIRE(out.status == EON_RELAX_MAX_UNCERTAINTY);
+  REQUIRE(out.status == EON_RELAX_NEB_MAX_UNCERTAINTY);
   eon_relax_destroy(eng);
 }
 
@@ -206,24 +228,23 @@ TEST_CASE("relax engine surface failure is fail-closed", "[relax][abi]") {
   REQUIRE(reactant->con2matter(std::string("reactant.con")) ==
           eonc::io::IoStatus::Ok);
   const long n = reactant->numberOfAtoms();
-  std::vector<double> pos(static_cast<size_t>(2 * 3 * n), 0.0);
-  std::vector<double> boxes(18, 0.0);
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
   std::vector<int> z;
-  pack_image(pos, boxes, z, *reactant, 0);
-  pack_image(pos, boxes, z, *reactant, 1);
+  pack_linear_band(pos, boxes, z, *reactant, *reactant, n_images);
 
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
-  band.n_images = 2;
+  band.n_images = n_images;
   band.n_atoms = n;
   band.positions = pos.data();
   band.atomic_nrs = z.data();
   band.boxes = boxes.data();
   eon_relax_outcome_t out{};
   const int rc = eon_relax_run(eng, &band, surface_fail, nullptr, &out);
-  REQUIRE(rc == EON_RELAX_SURFACE_FAILED);
-  REQUIRE(out.status == EON_RELAX_SURFACE_FAILED);
+  REQUIRE(rc == EON_RELAX_SURFACE_FATAL);
   eon_relax_destroy(eng);
 }
 

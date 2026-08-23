@@ -11,10 +11,12 @@
 */
 #pragma once
 
+#include "eon/Matter.h"
 #include "eon/Potential.h"
 #include "eon/relax/eon_relax_engine.h"
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
@@ -34,6 +36,9 @@ public:
   }
   [[nodiscard]] int lastStatus() const noexcept { return last_; }
   void setEpoch(std::uint64_t epoch) { epoch_ = epoch; }
+  void bindPath(const std::vector<std::shared_ptr<Matter>> &path) {
+    path_ = path;
+  }
 
   void force(long nAtoms, const double *positions, const int *atomicNrs,
              double *forces, double *energy, double *variance,
@@ -73,7 +78,19 @@ public:
       }
     }
     for (long s = 0; s < nSystems; ++s) {
-      ids[static_cast<size_t>(s)] = s;
+      long id = EON_RELAX_IMAGE_NONE;
+      if (positions && positions[s]) {
+        for (size_t i = 0; i < path_.size(); ++i) {
+          if (path_[i] && path_[i]->getPositions().data() == positions[s]) {
+            id = static_cast<long>(i);
+            break;
+          }
+        }
+      }
+      if (id == EON_RELAX_IMAGE_NONE && path_.empty()) {
+        id = s;
+      }
+      ids[static_cast<size_t>(s)] = id;
       if (positions && positions[s]) {
         for (long k = 0; k < 3 * nAtoms; ++k) {
           pos[static_cast<size_t>(s * 3 * nAtoms + k)] = positions[s][k];
@@ -118,6 +135,7 @@ private:
   void *user_;
   std::uint64_t epoch_{0};
   int last_{0};
+  std::vector<std::shared_ptr<Matter>> path_;
 };
 
 } // namespace eonc
