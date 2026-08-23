@@ -129,6 +129,7 @@ TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
 
 TEST_CASE("relax engine destroy NULL is a no-op", "[relax][abi]") {
   eon_relax_destroy(nullptr);
+  REQUIRE(eon_relax_last_error(nullptr) == EON_RELAX_NULL_ENGINE);
 }
 
 TEST_CASE("relax engine status_name is fail-closed", "[relax][abi]") {
