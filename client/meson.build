@@ -264,7 +264,9 @@ git_hash_full = run_command(
     'HEAD',
     check: false,
 ).stdout().strip()
-if git_hash_full.length() != 40
+# 40 hex: substring(40) is empty and index 39 exists.
+hash_is_40 = git_hash_full.substring(40) == '' and git_hash_full.substring(39) != ''
+if not hash_is_40
     if fs.is_dir(meson.project_source_root() / '.git')
         error('libeon_relax_engine identity needs git rev-parse HEAD (40 hex)')
     endif
