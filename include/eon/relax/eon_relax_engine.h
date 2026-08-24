@@ -22,6 +22,10 @@
  *
  * Units: positions Angstrom, energy eV, forces eV/Angstrom.
  *
+ * Plugin Matters use the Matter default (PBC on for a non-isolated
+ * pot). fill and endpoint dirty write positions with PBC off so the
+ * caller frame is kept (a 10 A box must not map x=-0.3 to 9.7).
+ *
  * Layout discipline (dlpack.h is the model):
  *
  * - Every wire struct opens with an eon_relax_version_t and a uint64

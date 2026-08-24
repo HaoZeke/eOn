@@ -135,10 +135,16 @@ void stamp_outcome(eon_relax_outcome_t *out, eon_relax_kind_t kind,
   out->surface_epoch = epoch;
 }
 
+void dirty_keep_frame(Matter &m) {
+  const bool pbc = m.getPeriodic();
+  m.setPeriodic(false);
+  m.setPositions(m.getPositions());
+  m.setPeriodic(pbc);
+}
+
 void dirty_endpoints(NudgedElasticBand &neb) {
-  neb.path[0]->setPositions(neb.path[0]->getPositions());
-  neb.path[static_cast<size_t>(neb.numImages + 1)]->setPositions(
-      neb.path[static_cast<size_t>(neb.numImages + 1)]->getPositions());
+  dirty_keep_frame(*neb.path[0]);
+  dirty_keep_frame(*neb.path[static_cast<size_t>(neb.numImages + 1)]);
 }
 
 int apply_relax_params(Parameters &params, eon_relax_kind_t *kind,

@@ -267,6 +267,38 @@ TEST_CASE("relax engine sheared box keeps RowMajor data order",
   eon_relax_destroy(eng);
 }
 
+TEST_CASE("relax engine first surface keeps host-frame negatives",
+          "[relax][neb][pbc]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  double min_x = 0.0;
+  auto record = [](void *user, eon_relax_surface_request_t *req) -> int {
+    double *mn = static_cast<double *>(user);
+    const long n = static_cast<long>(req->n_images * req->n_atoms);
+    for (long i = 0; i < n; ++i) {
+      *mn = std::min(*mn, req->positions[static_cast<size_t>(3 * i)]);
+    }
+    SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+    return surface_forward(&ctx, req);
+  };
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, record, &min_x, &out) == EON_RELAX_OK);
+  REQUIRE(min_x < -0.25);
+  eon_relax_destroy(eng);
+}
+
 TEST_CASE("relax engine ABI stamp is 2.1", "[relax][abi]") {
   REQUIRE(eon_relax_abi_version() ==
           static_cast<int>((EON_RELAX_ABI_MAJOR << 16) | EON_RELAX_ABI_MINOR));
