@@ -91,7 +91,7 @@ public:
              double *energy, double *variance, const double *) override {
     *energy = 1.0 + static_cast<double>(epoch_);
     if (variance) {
-      *variance = 0.0;
+      *variance = 10.0 + static_cast<double>(epoch_);
     }
     if (forces) {
       std::fill(forces, forces + 3 * nAtoms, 0.0);
@@ -125,6 +125,27 @@ TEST_CASE("potential surfaceEpoch busts Matter cache at identical positions",
   pot->bump();
   REQUIRE(m.needsForceUpdate());
   REQUIRE(m.getPotentialEnergy() == 2.0);
+  REQUIRE(m.getForceCalls() == c1 + 1);
+}
+
+TEST_CASE("potential surfaceEpoch busts Matter variance cache",
+          "[MatterTest][epoch][variance]") {
+  Parameters params;
+  auto pot = std::make_shared<EpochBumpPot>();
+  Matter m(pot, params);
+  m.resize(1);
+  m.setAtomicNrs(Eigen::VectorXi::Constant(1, 1));
+  m.setPositions(AtomMatrix::Zero(1, 3));
+
+  const double v1 = m.getEnergyVariance();
+  const long c1 = m.getForceCalls();
+  REQUIRE(v1 == 10.0);
+  REQUIRE(m.getEnergyVariance() == v1);
+  REQUIRE(m.getForceCalls() == c1);
+
+  pot->bump();
+  REQUIRE(m.needsForceUpdate());
+  REQUIRE(m.getEnergyVariance() == 11.0);
   REQUIRE(m.getForceCalls() == c1 + 1);
 }
 

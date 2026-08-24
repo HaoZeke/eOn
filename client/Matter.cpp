@@ -688,7 +688,12 @@ size_t Matter::getPotentialCalls() const {
   return this->potential->forceCallCounter;
 }
 
-double Matter::getEnergyVariance() const { return this->energyVariance; }
+double Matter::getEnergyVariance() const {
+  if (nAtoms > 0) {
+    computePotential();
+  }
+  return this->energyVariance;
+}
 
 // Eigen::VectorXd Matter::getForceVariance() {
 //   return this->variance.segment(1, numberOfFreeAtoms() * 3);
