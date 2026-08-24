@@ -80,22 +80,16 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
     }
   }
   m.setMasses(masses);
-  Matrix3d cell;
-  const double *b = band->boxes + image * 9;
-  cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
-  // Cell first so a later wrap uses the incoming box, not Matter's
-  // default Zero cell. Ingest with PBC off so host coordinates stay in
-  // the caller frame (a 10 A box would otherwise send x=-0.3 to 9.7).
-  const bool pbc = m.getPeriodic();
-  m.setCell(cell);
-  m.setPeriodic(false);
   AtomMatrix pos(band->n_atoms, 3);
   const double *src = band->positions + image * 3 * band->n_atoms;
   // Match Potential::force / Matter storage (AtomMatrix row-major xyz).
   Eigen::Map<const AtomMatrix> mapped(src, band->n_atoms, 3);
   pos = mapped;
   m.setPositions(pos);
-  m.setPeriodic(pbc);
+  Matrix3d cell;
+  const double *b = band->boxes + image * 9;
+  cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
+  m.setCell(cell);
   if (band->is_fixed) {
     for (long a = 0; a < band->n_atoms; ++a) {
       m.setFixed(a, band->is_fixed[a] ? 1 : 0);

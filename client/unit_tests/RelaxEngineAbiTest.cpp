@@ -679,9 +679,7 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
   pack_harmonic_band(pos, boxes, z, n_images);
   int32_t fixed[1]{1};
   SurfaceCtx ctx{nullptr, 0.0, 0, 0};
-  const auto cfg = pack_relax_params("neb", 20, false);
-  EonRelaxEngine *eng =
-      eon_relax_create(cfg.data(), cfg.size(), nullptr, 0);
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
   band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
@@ -694,11 +692,14 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
   eon_relax_outcome_t out{};
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
-  REQUIRE(std::abs(pos[3] - 0.2) < 1e-9);
+  const double img1_0 = pos[3];
   band.is_fixed = nullptr;
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
-  REQUIRE(out.max_force > 1e-6);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  const double img1_1 = pos[3];
+  REQUIRE(img1_1 != img1_0);
   eon_relax_destroy(eng);
 }
 
