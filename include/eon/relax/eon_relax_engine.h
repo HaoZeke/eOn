@@ -85,9 +85,8 @@ typedef enum {
   ((k) == EON_RELAX_KIND_NEB || (k) == EON_RELAX_KIND_SADDLE)
 
 /** Call rc: 0 success (read outcome), positive recoverable, negative a
- *  named fail. SURFACE_FATAL makes the instance unusable. BAND_TOO_SHORT,
- *  BAND_SIZE, SADDLE_NIMAGES, NULL_*, NATOMS, INVALID_PARAMETER, and
- *  ABI_MISMATCH leave the handle reusable. */
+ *  named fail. SURFACE_FATAL makes the instance unusable. Every other
+ *  named fail leaves the handle reusable. */
 typedef enum {
   EON_RELAX_OK = 0,
   EON_RELAX_NULL_ENGINE = -1,

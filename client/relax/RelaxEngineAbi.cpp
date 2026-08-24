@@ -83,6 +83,7 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
   Matrix3d cell;
   const double *b = band->boxes + image * 9;
   cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
+  // Cell first: setPositions wraps with the current cell when PBC is on.
   m.setCell(cell);
   AtomMatrix pos(band->n_atoms, 3);
   const double *src = band->positions + image * 3 * band->n_atoms;
