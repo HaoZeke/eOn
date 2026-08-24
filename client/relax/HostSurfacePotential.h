@@ -135,6 +135,10 @@ public:
       epoch_ = new_epoch;
     }
     for (long s = 0; s < nSystems; ++s) {
+      forceCallCounter++;
+      PotRegistry::get().on_force_call(ptype);
+    }
+    for (long s = 0; s < nSystems; ++s) {
       if (energies) {
         energies[s] = ebuf[static_cast<size_t>(s)];
       }

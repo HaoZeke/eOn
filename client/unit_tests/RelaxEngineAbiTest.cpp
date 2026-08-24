@@ -19,6 +19,7 @@
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 #include "eon/relax/eon_relax_engine.h"
+#include "relax/HostSurfacePotential.h"
 #include "eon_params.capnp.h"
 
 #include <capnp/message.h>
@@ -128,6 +129,30 @@ static std::vector<uint8_t> pack_relax_params(const char *kind,
   const auto words = ::capnp::messageToFlatArray(msg);
   const auto bytes = words.asBytes();
   return {bytes.begin(), bytes.end()};
+}
+
+TEST_CASE("HostSurfacePotential forceBatch counts each system",
+          "[relax][pot]") {
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  eonc::HostSurfacePotential pot(surface_forward, &ctx, 0);
+  double pos0[3]{0.1, 0.0, 0.0};
+  double pos1[3]{0.2, 0.0, 0.0};
+  double frc0[3]{};
+  double frc1[3]{};
+  double box0[9]{10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0};
+  double box1[9]{10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0};
+  int nrs0[1]{1};
+  int nrs1[1]{1};
+  const double *positions[] = {pos0, pos1};
+  const int *atomicNrs[] = {nrs0, nrs1};
+  double *forces[] = {frc0, frc1};
+  const double *boxes[] = {box0, box1};
+  double energies[2]{};
+  double variances[2]{};
+  pot.forceBatch(2, 1, positions, atomicNrs, forces, energies, variances,
+                 boxes);
+  REQUIRE(pot.forceCallCounter.load() == 2);
+  REQUIRE(ctx.calls == 1);
 }
 
 TEST_CASE("relax engine ABI stamp is 2.1", "[relax][abi]") {
