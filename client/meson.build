@@ -1322,7 +1322,7 @@ eon_relax_engine = library(
     build_rpath: ':'.join(_runtime_rpath),
     install_rpath: ':'.join(_runtime_rpath),
     install: true,
-    gnu_symbol_visibility: 'hidden',
+    gnu_symbol_visibility: 'inlineshidden',
 )
 
 # RGPOT-metatomic engine (slow path); fat pot already in potentials above.

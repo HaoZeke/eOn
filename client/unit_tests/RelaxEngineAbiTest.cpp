@@ -40,10 +40,10 @@ struct SurfaceCtx {
   std::shared_ptr<Potential> pot;
   double variance{0.0};
   uint64_t epoch{0};
-  uint64_t seen_epoch{0};
   long calls{0};
-  long recover_on_call{0};
   int64_t product_id{-1};
+  uint64_t seen_epoch{0};
+  long recover_on_call{0};
 };
 
 static int surface_forward(void *user, eon_relax_surface_request_t *req) {
@@ -621,7 +621,8 @@ TEST_CASE("relax engine MAX_UNCERTAINTY sees the product image",
   std::vector<double> boxes;
   std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
-  SurfaceCtx ctx{nullptr, 0.0, 0, 0, n_images - 1};
+  SurfaceCtx ctx{};
+  ctx.product_id = n_images - 1;
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
