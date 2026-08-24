@@ -118,12 +118,14 @@ static void pack_harmonic_band(std::vector<double> &pos,
 static int surface_fail(void *, eon_relax_surface_request_t *) { return -3; }
 
 static std::vector<uint8_t> pack_relax_params(const char *kind,
-                                              int64_t saddle_iters = 20) {
+                                              int64_t saddle_iters = 20,
+                                              bool climbing = true) {
   ::capnp::MallocMessageBuilder msg;
   auto root = msg.initRoot<eonc::params_ssot::RelaxEngineParams>();
   root.setKind(kind);
   auto neb = root.getNeb();
   neb.setMinimizeEndpoints(true);
+  neb.setClimbingImage(climbing);
   auto saddle = root.getSaddle();
   saddle.setMaxIterations(saddle_iters);
   const auto words = ::capnp::messageToFlatArray(msg);
@@ -677,7 +679,9 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
   pack_harmonic_band(pos, boxes, z, n_images);
   int32_t fixed[1]{1};
   SurfaceCtx ctx{nullptr, 0.0, 0, 0};
-  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  const auto cfg = pack_relax_params("neb", 20, false);
+  EonRelaxEngine *eng =
+      eon_relax_create(cfg.data(), cfg.size(), nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
   band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
