@@ -283,4 +283,49 @@ TEST_CASE("libeon_relax_engine exports the C waist", "[relax][dlopen]") {
   eonc::dynlib::close(h);
 }
 
+
+TEST_CASE("relax engine stepper converges the harmonic band one step at a "
+          "time",
+          "[relax][neb][stepper]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+
+  eon_relax_outcome_t out{};
+  int steps = 0;
+  int rc = EON_RELAX_OK;
+  do {
+    rc = eon_relax_step(eng, &band, surface_forward, &ctx, &out);
+    REQUIRE(rc == EON_RELAX_OK);
+    ++steps;
+  } while (out.status == EON_RELAX_NEB_RUNNING && steps < 500);
+  REQUIRE(out.status == EON_RELAX_NEB_GOOD);
+  REQUIRE(out.iterations <= steps);
+  REQUIRE(std::isfinite(out.max_force));
+  // Endpoints are the caller's; the stepper never moves them.
+  REQUIRE(std::abs(pos[0] - 0.3) < 1e-12);
+  REQUIRE(std::abs(pos[(n_images - 1) * 3] + 0.3) < 1e-12);
+
+  // A different surface pointer without a reset is refused.
+  REQUIRE(eon_relax_step(eng, &band, surface_fail, &ctx, &out) ==
+          EON_RELAX_INVALID_PARAMETER);
+  // Reset drops the band state; the next step reinitializes.
+  REQUIRE(eon_relax_reset(eng) == EON_RELAX_OK);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  eon_relax_destroy(eng);
+}
+
 } // namespace tests

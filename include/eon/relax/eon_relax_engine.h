@@ -55,7 +55,7 @@ extern "C" {
 typedef struct EonRelaxEngine EonRelaxEngine;
 
 #define EON_RELAX_ABI_MAJOR 1u
-#define EON_RELAX_ABI_MINOR 0u
+#define EON_RELAX_ABI_MINOR 1u
 #define EON_RELAX_ABI_LAYOUT 1u
 #define EON_RELAX_ABI_VERSION                                                  \
   ((EON_RELAX_ABI_MAJOR << 24) | (EON_RELAX_ABI_MINOR << 16) |                 \
@@ -189,6 +189,31 @@ EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                                 eon_relax_outcome_t *out);
 
 EON_RELAX_API void eon_relax_destroy(EonRelaxEngine *eng);
+
+/**
+ * One band optimizer step (kind=NEB only; minor >= 1). The first call
+ * on a fresh or reset engine initializes the band state from the
+ * caller's positions and captures the baseline force; every call
+ * syncs band->positions in (the host may have moved images between
+ * steps), assembles NEB forces on the host surface, takes ONE
+ * optimizer step, and writes the stepped positions back. Climbing
+ * image activation follows the engine's own trigger rule; saddle
+ * POLICY (MMF bursts, resampling, acquisition) stays with the host.
+ * outcome.status is RUNNING until convergenceForce() reaches the
+ * configured tolerance, then GOOD. surface and user must not change
+ * across steps without an eon_relax_reset.
+ */
+EON_RELAX_API int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
+                                 eon_relax_surface_fn surface, void *user,
+                                 eon_relax_outcome_t *out);
+
+/**
+ * Drop the stepper's band state and optimizer history; the next
+ * eon_relax_step reinitializes from the caller's band. This is the
+ * host's model-update hook: quasi-Newton memory taken on one surface
+ * epoch must not survive onto the next.
+ */
+EON_RELAX_API int eon_relax_reset(EonRelaxEngine *eng);
 
 /** NULL if kind or status is unknown. */
 EON_RELAX_API const char *eon_relax_status_name(eon_relax_kind_t kind,

@@ -16,6 +16,7 @@
 #include "eon/Matter.h"
 #include "eon/MinModeSaddleSearch.h"
 #include "eon/NudgedElasticBand.h"
+#include "eon/Optimizer.h"
 #include "eon/Parameters.h"
 #include "version.h"
 
@@ -95,6 +96,18 @@ struct EonRelaxEngine {
   eon_relax_kind_t kind{EON_RELAX_KIND_NEB};
   uint64_t epoch{0};
   int last_rc{EON_RELAX_OK};
+
+  // Stepper state (eon_relax_step): band, objective, and optimizer
+  // persist across calls so quasi-Newton history accumulates on one
+  // surface epoch; eon_relax_reset drops all of it.
+  std::shared_ptr<eonc::HostSurfacePotential> step_pot;
+  std::unique_ptr<NudgedElasticBand> step_neb;
+  std::shared_ptr<NEBObjectiveFunction> step_objf;
+  std::unique_ptr<Optimizer> step_opt;
+  eon_relax_surface_fn step_surface{nullptr};
+  void *step_user{nullptr};
+  double step_baseline{0.0};
+  long step_iteration{0};
 };
 
 static int stamp_rc(EonRelaxEngine *eng, int rc) {
@@ -261,6 +274,148 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     out->status = -1;
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
+}
+
+int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
+                   eon_relax_surface_fn surface, void *user,
+                   eon_relax_outcome_t *out) {
+  if (!eng) {
+    return EON_RELAX_NULL_ENGINE;
+  }
+  if (!band) {
+    return stamp_rc(eng, EON_RELAX_NULL_BAND);
+  }
+  if (!surface) {
+    return stamp_rc(eng, EON_RELAX_NULL_SURFACE);
+  }
+  if (!out) {
+    return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
+  }
+  if (eng->kind != EON_RELAX_KIND_NEB) {
+    return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
+  }
+  if (band->n_atoms <= 0) {
+    return stamp_rc(eng, EON_RELAX_NATOMS);
+  }
+  if (!band->positions) {
+    return stamp_rc(eng, EON_RELAX_NULL_POSITIONS);
+  }
+  if (!band->atomic_nrs) {
+    return stamp_rc(eng, EON_RELAX_NULL_ATOMIC_NRS);
+  }
+  if (!band->boxes) {
+    return stamp_rc(eng, EON_RELAX_NULL_BOXES);
+  }
+  if (band->n_images < 3) {
+    return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
+  }
+  const long want = eng->params.neb_options.image_count + 2;
+  if (band->n_images != want) {
+    return stamp_rc(eng, EON_RELAX_BAND_SIZE);
+  }
+  if (eng->step_neb &&
+      (eng->step_surface != surface || eng->step_user != user)) {
+    return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
+  }
+  std::memset(out, 0, sizeof(*out));
+  out->kind = EON_RELAX_KIND_NEB;
+  out->version_hash = eon_relax_version_hash();
+  out->surface_epoch = eng->epoch;
+
+  try {
+    if (!eng->step_neb) {
+      eng->step_pot = std::make_shared<eonc::HostSurfacePotential>(
+          surface, user, eng->epoch);
+      std::vector<Matter> path;
+      path.reserve(static_cast<size_t>(band->n_images));
+      for (long i = 0; i < band->n_images; ++i) {
+        Matter img(eng->step_pot, eng->params);
+        fill_matter(img, band, i, eng->epoch);
+        path.push_back(std::move(img));
+      }
+      eng->step_neb = std::make_unique<NudgedElasticBand>(std::move(path),
+                                                          eng->params,
+                                                          eng->step_pot);
+      eng->step_pot->bindPath(eng->step_neb->path);
+      eng->step_neb->E_ref =
+          std::min(eng->step_neb->path[0]->getPotentialEnergy(),
+                   eng->step_neb
+                       ->path[eng->step_neb->numImages + 1]
+                       ->getPotentialEnergy());
+      eng->step_neb->updateForces();
+      eng->step_objf = std::make_shared<NEBObjectiveFunction>(
+          eng->step_neb.get(), eng->params);
+      eng->step_opt = eonc::helpers::create::mkOptim(
+          eng->step_objf, eng->params.neb_options.opt_method, eng->params);
+      eng->step_surface = surface;
+      eng->step_user = user;
+      eng->step_baseline = eng->step_neb->convergenceForce();
+      eng->step_iteration = 0;
+    } else {
+      // The host may have moved images between steps (acquisition,
+      // reparameterization); resync and mark the band dirty.
+      for (long i = 0; i < band->n_images; ++i) {
+        fill_matter(*eng->step_neb->path[i], band, i, eng->epoch);
+      }
+      eng->step_neb->movedAfterForceCall = true;
+      eng->step_neb->updateForces();
+    }
+
+    NudgedElasticBand &neb = *eng->step_neb;
+    const double convForce = neb.convergenceForce();
+    const auto &ci_opt = eng->params.neb_options.climbing_image;
+    const bool ci_active =
+        ci_opt.enabled &&
+        (convForce < eng->step_baseline * ci_opt.trigger_factor ||
+         convForce < ci_opt.trigger_force);
+    neb.setCIEnabled(ci_active);
+
+    const double force_tol = eng->params.neb_options.force_tolerance;
+    int status = EON_RELAX_NEB_RUNNING;
+    if (convForce <= force_tol) {
+      status = EON_RELAX_NEB_GOOD;
+    } else {
+      eng->step_opt->step(eng->params.optimizer_options.max_move);
+      ++eng->step_iteration;
+      neb.updateForces();
+      if (neb.convergenceForce() <= force_tol) {
+        status = EON_RELAX_NEB_GOOD;
+      }
+    }
+
+    for (long i = 0; i < band->n_images; ++i) {
+      write_image(band->positions + i * 3 * band->n_atoms, *neb.path[i],
+                  band->n_atoms);
+    }
+    out->status = status;
+    out->iterations = eng->step_iteration;
+    out->climbing_image = neb.climbingImage;
+    out->max_force = neb.convergenceForce();
+    out->surface_epoch = eng->step_pot->surfaceEpoch();
+    return stamp_rc(eng, EON_RELAX_OK);
+  } catch (const eonc::SurfaceRecoverable &rec) {
+    out->status = -1;
+    return stamp_rc(eng, rec.rc);
+  } catch (const std::exception &) {
+    out->status = -1;
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
+  }
+}
+
+int eon_relax_reset(EonRelaxEngine *eng) {
+  if (!eng) {
+    return EON_RELAX_NULL_ENGINE;
+  }
+  eng->step_opt.reset();
+  eng->step_objf.reset();
+  eng->step_neb.reset();
+  eng->step_pot.reset();
+  eng->step_surface = nullptr;
+  eng->step_user = nullptr;
+  eng->step_baseline = 0.0;
+  eng->step_iteration = 0;
+  eng->last_rc = EON_RELAX_OK;
+  return EON_RELAX_OK;
 }
 
 void eon_relax_destroy(EonRelaxEngine *eng) {
