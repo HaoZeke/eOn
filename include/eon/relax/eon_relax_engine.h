@@ -33,7 +33,9 @@
  * - The surface callback takes ONE request struct, so the callback
  *   contract can grow without a new function symbol.
  * - Return values are three-valued: 0 success (read the outcome),
- *   positive recoverable, negative fatal (the instance is unusable).
+ *   positive recoverable, negative a named fail. SURFACE_FATAL makes
+ *   the instance unusable; BAND_TOO_SHORT / BAND_SIZE / NULL_* leave
+ *   the handle reusable.
  * - Closed enums. Unknown kind is EON_RELAX_UNKNOWN_KIND; other
  *   unknown enumerants are EON_RELAX_INVALID_PARAMETER. Never a
  *   silent fallback.
@@ -125,7 +127,10 @@ typedef enum {
  * n_atoms (shared composition), boxes is 9*n_images (row-major, the
  * Matter::getCell().data() order). is_fixed may be NULL (all free) or
  * n_atoms (1 = fixed atom). mode may be NULL; required for
- * kind=saddle (3*n_atoms). image_ids may be NULL. positions layout
+ * kind=saddle (3*n_atoms). image_ids may be NULL; dest run/step
+ * emits dest path[] slots on the surface request (pointer identity)
+ * and does not read this field. For kind=NEB, n_images must equal
+ * Parameters.neb_options.image_count + 2 (NSDMI 7). positions layout
  * matches Matter AtomMatrix (row-major xyz per atom).
  */
 typedef struct {
@@ -192,9 +197,9 @@ EON_RELAX_API const char *eon_relax_version_hash_str(void);
 EON_RELAX_API uint64_t eon_relax_version_hash(void);
 
 /**
- * Create from a Cap'n Proto flat-array RelaxEngineParams message.
- * config may be NULL (documented defaults, kind=NEB). Returns NULL on
- * failure with a message in errbuf.
+ * Create. Only config==NULL && config_len==0 is accepted (NSDMI
+ * defaults, kind=NEB). Any non-NULL config fails closed with
+ * EON_RELAX_CAPNP_ROOT until RelaxEngineParams parse is wired.
  */
 EON_RELAX_API EonRelaxEngine *eon_relax_create(const void *config,
                                                size_t config_len, char *errbuf,
@@ -224,9 +229,11 @@ EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
  * and writes the stepped positions back. Climbing-image activation
  * follows the engine's own trigger rule; saddle POLICY (MMF bursts,
  * resampling, acquisition) stays with the host. outcome.status is
- * RUNNING until convergenceForce() reaches the configured tolerance,
- * then GOOD. surface and user must not change across steps without an
- * eon_relax_reset.
+ * RUNNING until convergenceForce() reaches the configured tolerance
+ * (GOOD), host variance exceeds the GP-surrogate threshold
+ * (MAX_UNCERTAINTY), or neb.max_iterations is hit
+ * (BAD_MAX_ITERATIONS). surface and user must not change across
+ * steps without an eon_relax_reset.
  */
 EON_RELAX_API int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
                                  eon_relax_surface_fn surface, void *user,

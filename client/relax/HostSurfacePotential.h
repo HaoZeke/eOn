@@ -15,6 +15,7 @@
 #include "eon/Potential.h"
 #include "eon/relax/eon_relax_engine.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>

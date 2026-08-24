@@ -121,6 +121,8 @@ TEST_CASE("relax engine ABI stamp is 2.0", "[relax][abi]") {
 TEST_CASE("relax engine destroy NULL is a no-op", "[relax][abi]") {
   eon_relax_destroy(nullptr);
   REQUIRE(eon_relax_last_error(nullptr) == EON_RELAX_NULL_ENGINE);
+  REQUIRE(eon_relax_set_surface_epoch(nullptr, 1) == EON_RELAX_NULL_ENGINE);
+  REQUIRE(eon_relax_reset(nullptr) == EON_RELAX_NULL_ENGINE);
 }
 
 TEST_CASE("relax engine status_name is fail-closed", "[relax][abi]") {
@@ -141,6 +143,7 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   const char blob[] = "not-capnp";
   REQUIRE(eon_relax_create(blob, sizeof(blob), err, sizeof(err)) == nullptr);
   REQUIRE(std::string(err).find("-13") != std::string::npos);
+  REQUIRE(eon_relax_create(blob, 0, err, sizeof(err)) == nullptr);
   REQUIRE(eon_relax_run(nullptr, nullptr, nullptr, nullptr, nullptr) ==
           EON_RELAX_NULL_ENGINE);
   eon_relax_band_t short_band{};
@@ -176,6 +179,10 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   short_band.boxes = nullptr;
   REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
           EON_RELAX_NULL_BOXES);
+  short_band.boxes = box1;
+  short_band.version.major = 0;
+  REQUIRE(eon_relax_run(eng, &short_band, surface_fail, nullptr, &out) ==
+          EON_RELAX_ABI_MISMATCH);
   eon_relax_destroy(eng);
 }
 
@@ -281,6 +288,8 @@ TEST_CASE("libeon_relax_engine exports the C waist", "[relax][dlopen]") {
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_last_error") != nullptr);
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_version_hash_str") != nullptr);
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_abi_version") != nullptr);
+  REQUIRE(eonc::dynlib::sym(h, "eon_relax_step") != nullptr);
+  REQUIRE(eonc::dynlib::sym(h, "eon_relax_reset") != nullptr);
   auto abi = eonc::dynlib::loadSym<int (*)()>(h, "eon_relax_abi_version");
   REQUIRE(abi != nullptr);
   REQUIRE(abi() == static_cast<int>((EON_RELAX_ABI_MAJOR << 16) |
@@ -331,6 +340,30 @@ TEST_CASE("relax engine stepper converges the harmonic band one step at a "
   REQUIRE(eon_relax_reset(eng) == EON_RELAX_OK);
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine stepper surfaces MAX_UNCERTAINTY",
+          "[relax][neb][stepper][uncertainty]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  SurfaceCtx ctx{nullptr, 10.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(out.status == EON_RELAX_NEB_MAX_UNCERTAINTY);
   eon_relax_destroy(eng);
 }
 

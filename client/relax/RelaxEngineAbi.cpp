@@ -20,6 +20,7 @@
 #include "eon/Parameters.h"
 #include "version.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -145,7 +146,7 @@ uint64_t eon_relax_version_hash(void) {
 
 EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,
                                  char *errbuf, size_t errlen) {
-  if (config != nullptr && config_len > 0) {
+  if (config != nullptr || config_len != 0) {
     set_err(errbuf, errlen,
             "-13 RelaxEngineParams capnp parse is not wired; pass NULL config");
     return nullptr;
@@ -161,7 +162,7 @@ EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,
 
 int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
   if (!eng) {
-    return EON_RELAX_INVALID_PARAMETER;
+    return EON_RELAX_NULL_ENGINE;
   }
   eng->epoch = epoch;
   eng->last_rc = EON_RELAX_OK;
@@ -220,11 +221,13 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
   try {
     if (eng->kind == EON_RELAX_KIND_NEB) {
       if (band->n_images < 3) {
+        out->status = -1;
         return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
       }
       const int64_t want =
           static_cast<int64_t>(eng->params.neb_options.image_count) + 2;
       if (band->n_images != want) {
+        out->status = -1;
         return stamp_rc(eng, EON_RELAX_BAND_SIZE);
       }
       std::vector<Matter> path;
@@ -319,11 +322,13 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
   }
   if (band->n_images < 3) {
+    out->status = -1;
     return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
   }
   const int64_t want =
       static_cast<int64_t>(eng->params.neb_options.image_count) + 2;
   if (band->n_images != want) {
+    out->status = -1;
     return stamp_rc(eng, EON_RELAX_BAND_SIZE);
   }
   if (eng->step_neb &&
@@ -387,15 +392,24 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     neb.setCIEnabled(ci_active);
 
     const double force_tol = eng->params.neb_options.force_tolerance;
+    const long max_iter = eng->params.neb_options.max_iterations;
     int status = EON_RELAX_NEB_RUNNING;
-    if (convForce <= force_tol) {
+    if (eng->step_objf && eng->step_objf->isUncertain()) {
+      status = EON_RELAX_NEB_MAX_UNCERTAINTY;
+    } else if (convForce <= force_tol) {
       status = EON_RELAX_NEB_GOOD;
+    } else if (eng->step_iteration >= max_iter) {
+      status = EON_RELAX_NEB_BAD_MAX_ITERATIONS;
     } else {
       eng->step_opt->step(eng->params.optimizer_options.max_move);
       ++eng->step_iteration;
       neb.updateForces();
-      if (neb.convergenceForce() <= force_tol) {
+      if (eng->step_objf && eng->step_objf->isUncertain()) {
+        status = EON_RELAX_NEB_MAX_UNCERTAINTY;
+      } else if (neb.convergenceForce() <= force_tol) {
         status = EON_RELAX_NEB_GOOD;
+      } else if (eng->step_iteration >= max_iter) {
+        status = EON_RELAX_NEB_BAD_MAX_ITERATIONS;
       }
     }
 
