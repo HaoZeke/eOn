@@ -213,7 +213,7 @@ EON_RELAX_API EonRelaxEngine *eon_relax_create(const void *config,
 
 EON_RELAX_API int eon_relax_set_surface_epoch(EonRelaxEngine *eng,
                                               uint64_t epoch);
-/** Last named run/create rc on this handle. 0 if none. */
+/** Last named create/run/step/reset/set_epoch rc on this handle. 0 if none. */
 EON_RELAX_API int eon_relax_last_error(const EonRelaxEngine *eng);
 
 /**

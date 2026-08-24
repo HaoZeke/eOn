@@ -513,6 +513,7 @@ TEST_CASE("relax engine SURFACE_FATAL makes the instance unusable",
   REQUIRE(calls == after_fatal);
   REQUIRE(eon_relax_set_surface_epoch(eng, 9) == EON_RELAX_SURFACE_FATAL);
   REQUIRE(eon_relax_last_error(eng) == EON_RELAX_SURFACE_FATAL);
+  REQUIRE(eon_relax_reset(eng) == EON_RELAX_SURFACE_FATAL);
   eon_relax_destroy(eng);
 }
 
@@ -663,6 +664,99 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
           EON_RELAX_OK);
   const double img1_1 = pos[3];
   REQUIRE(img1_1 != img1_0);
+  eon_relax_destroy(eng);
+}
+
+static int surface_recover(void *, eon_relax_surface_request_t *) { return 5; }
+
+TEST_CASE("relax engine NULL_BAND stamps leftover outcome", "[relax][abi]") {
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_outcome_t out{};
+  out.status = EON_RELAX_NEB_GOOD;
+  out.iterations = 9;
+  REQUIRE(eon_relax_run(eng, nullptr, surface_fail, nullptr, &out) ==
+          EON_RELAX_NULL_BAND);
+  REQUIRE(out.status == -1);
+  REQUIRE(out.version.major == 2);
+  REQUIRE(out.iterations == 0);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine first-step recoverable does not leave a dead stepper",
+          "[relax][neb][stepper]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_recover, nullptr, &out) == 5);
+  REQUIRE(out.status == -1);
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine live step refuses a changed atom count",
+          "[relax][neb][stepper]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  band.n_atoms = 2;
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_INVALID_PARAMETER);
+  REQUIRE(out.status == -1);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine run leaves caller endpoints in the caller frame",
+          "[relax][neb]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_run(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(std::abs(pos[0] - 0.3) < 1e-12);
+  REQUIRE(std::abs(pos[(n_images - 1) * 3] + 0.3) < 1e-12);
   eon_relax_destroy(eng);
 }
 

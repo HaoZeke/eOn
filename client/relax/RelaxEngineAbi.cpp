@@ -222,6 +222,17 @@ static int fail_out(EonRelaxEngine *eng, eon_relax_outcome_t *out, int rc,
   return stamp_rc(eng, rc);
 }
 
+static void clear_stepper(EonRelaxEngine *eng) {
+  eng->step_opt.reset();
+  eng->step_objf.reset();
+  eng->step_neb.reset();
+  eng->step_pot.reset();
+  eng->step_surface = nullptr;
+  eng->step_user = nullptr;
+  eng->step_baseline = 0.0;
+  eng->step_iteration = 0;
+}
+
 extern "C" {
 
 int eon_relax_abi_version(void) {
@@ -304,17 +315,18 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     return EON_RELAX_NULL_ENGINE;
   }
   if (eng->unusable) {
-    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
+    return fail_out(eng, out, EON_RELAX_SURFACE_FATAL, eng->kind, eng->epoch);
   }
   if (!band) {
-    return stamp_rc(eng, EON_RELAX_NULL_BAND);
+    return fail_out(eng, out, EON_RELAX_NULL_BAND, eng->kind, eng->epoch);
   }
   if (!surface) {
-    return stamp_rc(eng, EON_RELAX_NULL_SURFACE);
+    return fail_out(eng, out, EON_RELAX_NULL_SURFACE, eng->kind, eng->epoch);
   }
   if (!out) {
     return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
   }
+  clear_stepper(eng);
   if (band->n_atoms <= 0) {
     return fail_out(eng, out, EON_RELAX_NATOMS, eng->kind, eng->epoch);
   }
@@ -375,7 +387,7 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       out->climbing_image = neb->climbingImage;
       out->max_force = neb->convergenceForce();
       out->surface_epoch = pot->surfaceEpoch();
-      for (int64_t i = 0; i < band->n_images; ++i) {
+      for (int64_t i = 1; i + 1 < band->n_images; ++i) {
         write_image(band->positions + i * 3 * band->n_atoms,
                     *neb->path[static_cast<size_t>(i)],
                     static_cast<long>(band->n_atoms));
@@ -422,13 +434,13 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return EON_RELAX_NULL_ENGINE;
   }
   if (eng->unusable) {
-    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
+    return fail_out(eng, out, EON_RELAX_SURFACE_FATAL, eng->kind, eng->epoch);
   }
   if (!band) {
-    return stamp_rc(eng, EON_RELAX_NULL_BAND);
+    return fail_out(eng, out, EON_RELAX_NULL_BAND, eng->kind, eng->epoch);
   }
   if (!surface) {
-    return stamp_rc(eng, EON_RELAX_NULL_SURFACE);
+    return fail_out(eng, out, EON_RELAX_NULL_SURFACE, eng->kind, eng->epoch);
   }
   if (!out) {
     return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
@@ -464,6 +476,12 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return fail_out(eng, out, mass_rc, EON_RELAX_KIND_NEB, eng->epoch);
   }
   stamp_outcome(out, EON_RELAX_KIND_NEB, eng->epoch);
+  if (eng->step_neb &&
+      (band->n_atoms != eng->step_neb->atoms ||
+       band->n_images != eng->step_neb->numImages + 2)) {
+    out->status = -1;
+    return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
+  }
   if (band->n_images < 3) {
     out->status = -1;
     return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
@@ -568,6 +586,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_OK);
   } catch (const eonc::SurfaceRecoverable &rec) {
     out->status = -1;
+    if (!eng->step_opt) {
+      clear_stepper(eng);
+    }
     return stamp_rc(eng, rec.rc);
   } catch (const std::exception &) {
     out->status = -1;
@@ -583,14 +604,7 @@ int eon_relax_reset(EonRelaxEngine *eng) {
   if (eng->unusable) {
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
-  eng->step_opt.reset();
-  eng->step_objf.reset();
-  eng->step_neb.reset();
-  eng->step_pot.reset();
-  eng->step_surface = nullptr;
-  eng->step_user = nullptr;
-  eng->step_baseline = 0.0;
-  eng->step_iteration = 0;
+  clear_stepper(eng);
   eng->last_rc = EON_RELAX_OK;
   return EON_RELAX_OK;
 }
