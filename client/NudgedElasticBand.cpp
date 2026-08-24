@@ -564,6 +564,16 @@ void NudgedElasticBand::updateForces(bool ci_active) {
     climbingImage = 0;
   }
 
+  long ci_target = maxEnergyImage;
+  if (ci_active && climbingImage > 0 && climbingImage <= numImages) {
+    const double e_ci = path[climbingImage]->getPotentialEnergy();
+    const double e_prev = path[climbingImage - 1]->getPotentialEnergy();
+    const double e_next = path[climbingImage + 1]->getPotentialEnergy();
+    if (e_ci > e_prev && e_ci > e_next) {
+      ci_target = climbingImage;
+    }
+  }
+
   // Spring strategy must be rebuilt each iteration (depends on maxEnergy,
   // E_ref). Tangent and projection strategies are cached as members.
   auto spring = eonc::neb::buildSpringStrategy(params, path, numImages, atoms,
@@ -613,8 +623,8 @@ void NudgedElasticBand::updateForces(bool ci_active) {
         spring);
 
     // Climbing image or projected force
-    if (ci_active && i == static_cast<long>(maxEnergyImage)) {
-      climbingImage = maxEnergyImage;
+    if (ci_active && i == ci_target) {
+      climbingImage = ci_target;
       // CI force: F - 2*(F.t)*t, plus DNEB correction if active
       AtomMatrix forceDNEB = AtomMatrix::Zero(atoms, 3);
       if (std::holds_alternative<eonc::neb::DNEB_Projection>(

@@ -993,4 +993,73 @@ TEST_CASE("relax engine run leaves caller endpoints in the caller frame",
   eon_relax_destroy(eng);
 }
 
+static int two_atom_saddle_surface(void *, eon_relax_surface_request_t *req) {
+  const long n_images = static_cast<long>(req->n_images);
+  const long n_atoms = static_cast<long>(req->n_atoms);
+  for (long s = 0; s < n_images; ++s) {
+    const double *p = req->positions + s * 3 * n_atoms;
+    double *f = req->forces + s * 3 * n_atoms;
+    for (long k = 0; k < 3 * n_atoms; ++k) {
+      f[k] = 0.0;
+    }
+    const double x0 = p[0];
+    const double y0 = p[1] - 1.0;
+    const double x1 = n_atoms > 1 ? p[3] : 0.0;
+    const double y1 = n_atoms > 1 ? p[4] : 0.0;
+    const double xs0 = x0 * x0 - 1.0;
+    const double xs1 = x1 * x1 - 1.0;
+    req->energies[s] =
+        0.5 * xs0 * xs0 + 0.5 * xs1 * xs1 + 0.5 * (y0 * y0 + y1 * y1);
+    f[0] = -2.0 * x0 * xs0;
+    f[1] = -y0;
+    if (n_atoms > 1) {
+      f[3] = -2.0 * x1 * xs1;
+      f[4] = -y1;
+    }
+    if (req->variances) {
+      req->variances[s] = 0.0;
+    }
+  }
+  return 0;
+}
+
+TEST_CASE("relax engine stepper keeps the climbing image on a local max",
+          "[relax][neb][stepper][ci]") {
+  const long n_images = 7;
+  const long n_atoms = 2;
+  std::vector<double> pos(static_cast<size_t>(n_images * 3 * n_atoms), 0.0);
+  std::vector<double> boxes(static_cast<size_t>(n_images * 9), 0.0);
+  std::vector<int32_t> z = {1, 1};
+  for (long im = 0; im < n_images; ++im) {
+    const double t =
+        static_cast<double>(im) / static_cast<double>(n_images - 1);
+    const double x = 2.0 - 4.0 * t;
+    pos[static_cast<size_t>(im * 6)] = x;
+    pos[static_cast<size_t>(im * 6 + 3)] = x;
+    double *b = boxes.data() + im * 9;
+    b[0] = b[4] = b[8] = 10.0;
+  }
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = n_atoms;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, two_atom_saddle_surface, nullptr, &out) ==
+          EON_RELAX_OK);
+  const int64_t first_ci = out.climbing_image;
+  REQUIRE(first_ci == 3);
+  REQUIRE(eon_relax_step(eng, &band, two_atom_saddle_surface, nullptr, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(out.climbing_image == first_ci);
+  REQUIRE(eon_relax_step(eng, &band, two_atom_saddle_surface, nullptr, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(out.climbing_image == first_ci);
+  eon_relax_destroy(eng);
+}
+
 } // namespace tests
