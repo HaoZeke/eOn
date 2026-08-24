@@ -691,7 +691,9 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
   const double img1_0 = pos[3];
+  REQUIRE(std::abs(img1_0 - 0.2) < 1e-9);
   band.is_fixed = nullptr;
+  REQUIRE(eon_relax_reset(eng) == EON_RELAX_OK);
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
