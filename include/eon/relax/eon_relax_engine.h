@@ -84,7 +84,10 @@ typedef enum {
 #define EON_RELAX_KIND_IS_KNOWN(k)                                             \
   ((k) == EON_RELAX_KIND_NEB || (k) == EON_RELAX_KIND_SADDLE)
 
-/** Call rc: 0 success (read outcome), positive recoverable, negative fatal. */
+/** Call rc: 0 success (read outcome), positive recoverable, negative a
+ *  named fail. SURFACE_FATAL makes the instance unusable. BAND_TOO_SHORT,
+ *  BAND_SIZE, SADDLE_NIMAGES, NULL_*, NATOMS, INVALID_PARAMETER, and
+ *  ABI_MISMATCH leave the handle reusable. */
 typedef enum {
   EON_RELAX_OK = 0,
   EON_RELAX_NULL_ENGINE = -1,
@@ -123,9 +126,10 @@ typedef enum {
 /**
  * Caller-owned band. The caller stamps version (EON_RELAX_VERSION_INIT)
  * and zeroes flags. positions is 3*n_atoms*n_images (image stride
- * 3*n_atoms) and is written on a successful run or step. atomic_nrs is
- * n_atoms (shared composition), boxes is 9*n_images (row-major, the
- * Matter::getCell().data() order). is_fixed may be NULL (all free) or
+ * 3*n_atoms). A successful NEB run or step writes interior images only;
+ * endpoints stay in the caller frame. atomic_nrs is n_atoms (shared
+ * composition), boxes is 9*n_images in Matter::getCell().data() order
+ * (column-major 3x3). is_fixed may be NULL (all free) or
  * n_atoms (1 = fixed atom). mode may be NULL; required for
  * kind=saddle (3*n_atoms). image_ids may be NULL; dest run/step
  * emits dest path[] slots on the surface request (pointer identity)
@@ -217,10 +221,13 @@ EON_RELAX_API int eon_relax_set_surface_epoch(EonRelaxEngine *eng,
 EON_RELAX_API int eon_relax_last_error(const EonRelaxEngine *eng);
 
 /**
- * Run the bound engine to completion. Writes updated coordinates into
- * band->positions (caller-owned). surface may not be NULL. Kind is
- * bound at create (NULL config => NEB). Returns eon_relax_rc_t;
- * on 0, out->status is the dest NEB or saddle table.
+ * Run the bound engine to completion. Writes updated interior
+ * coordinates into band->positions (caller-owned); endpoints stay in
+ * the caller frame. Endpoint minimization stays with the host
+ * (NudgedElasticBand::compute does not minimize endpoints).
+ * surface may not be NULL. Kind is bound at create (NULL config =>
+ * NEB). Returns eon_relax_rc_t; on 0, out->status is the dest NEB
+ * or saddle table.
  */
 EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                                 eon_relax_surface_fn surface, void *user,

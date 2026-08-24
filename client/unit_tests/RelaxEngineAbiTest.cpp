@@ -708,6 +708,76 @@ TEST_CASE("relax engine first-step recoverable does not leave a dead stepper",
   eon_relax_destroy(eng);
 }
 
+TEST_CASE("relax engine live-step recoverable drops QN history",
+          "[relax][neb][stepper]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(eon_relax_step(eng, &band, surface_recover, nullptr, &out) == 5);
+  REQUIRE(out.status == -1);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine set_surface_epoch updates a live pot",
+          "[relax][neb][epoch]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(eon_relax_set_surface_epoch(eng, 9) == EON_RELAX_OK);
+  uint64_t seen = 0;
+  struct Probe {
+    SurfaceCtx *fwd;
+    uint64_t *seen;
+  } probe{&ctx, &seen};
+  auto record = [](void *user, eon_relax_surface_request_t *req) -> int {
+    auto *p = static_cast<Probe *>(user);
+    if (req->epoch_out) {
+      *p->seen = *req->epoch_out;
+    }
+    const int rc = surface_forward(p->fwd, req);
+    if (req->epoch_out) {
+      *req->epoch_out = *p->seen;
+    }
+    return rc;
+  };
+  REQUIRE(eon_relax_step(eng, &band, record, &probe, &out) == EON_RELAX_OK);
+  REQUIRE(seen == 9);
+  REQUIRE(out.surface_epoch == 9);
+  eon_relax_destroy(eng);
+}
+
 TEST_CASE("relax engine live step refuses a changed atom count",
           "[relax][neb][stepper]") {
   const long n_images = 7;

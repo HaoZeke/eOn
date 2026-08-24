@@ -80,16 +80,16 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
     }
   }
   m.setMasses(masses);
+  Matrix3d cell;
+  const double *b = band->boxes + image * 9;
+  cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
+  m.setCell(cell);
   AtomMatrix pos(band->n_atoms, 3);
   const double *src = band->positions + image * 3 * band->n_atoms;
   // Match Potential::force / Matter storage (AtomMatrix row-major xyz).
   Eigen::Map<const AtomMatrix> mapped(src, band->n_atoms, 3);
   pos = mapped;
   m.setPositions(pos);
-  Matrix3d cell;
-  const double *b = band->boxes + image * 9;
-  cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
-  m.setCell(cell);
   if (band->is_fixed) {
     for (long a = 0; a < band->n_atoms; ++a) {
       m.setFixed(a, band->is_fixed[a] ? 1 : 0);
@@ -297,6 +297,9 @@ int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
   eng->epoch = epoch;
+  if (eng->step_pot) {
+    eng->step_pot->setEpoch(epoch);
+  }
   eng->last_rc = EON_RELAX_OK;
   return EON_RELAX_OK;
 }
@@ -586,9 +589,7 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_OK);
   } catch (const eonc::SurfaceRecoverable &rec) {
     out->status = -1;
-    if (!eng->step_opt) {
-      clear_stepper(eng);
-    }
+    clear_stepper(eng);
     return stamp_rc(eng, rec.rc);
   } catch (const std::exception &) {
     out->status = -1;
