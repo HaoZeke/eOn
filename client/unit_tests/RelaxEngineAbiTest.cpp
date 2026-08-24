@@ -40,6 +40,7 @@ struct SurfaceCtx {
   double variance{0.0};
   uint64_t epoch{0};
   long calls{0};
+  int64_t product_id{-1};
 };
 
 static int surface_forward(void *user, eon_relax_surface_request_t *req) {
@@ -112,6 +113,8 @@ static std::vector<uint8_t> pack_relax_params(const char *kind,
   ::capnp::MallocMessageBuilder msg;
   auto root = msg.initRoot<eonc::params_ssot::RelaxEngineParams>();
   root.setKind(kind);
+  auto neb = root.getNeb();
+  neb.setMinimizeEndpoints(true);
   auto saddle = root.getSaddle();
   saddle.setMaxIterations(saddle_iters);
   const auto words = ::capnp::messageToFlatArray(msg);
@@ -430,6 +433,8 @@ TEST_CASE("relax engine saddle kind requires one image and a mode",
   eon_relax_outcome_t out{};
   REQUIRE(eon_relax_run(eng, &band, surface_forward, nullptr, &out) ==
           EON_RELAX_SADDLE_NIMAGES);
+  REQUIRE(out.status == -1);
+  REQUIRE(out.version.major == 2);
   band.n_images = 1;
   band.mode = nullptr;
   REQUIRE(eon_relax_run(eng, &band, surface_forward, nullptr, &out) ==
@@ -506,6 +511,8 @@ TEST_CASE("relax engine SURFACE_FATAL makes the instance unusable",
   REQUIRE(eon_relax_step(eng, &band, count_fail, &calls, &out) ==
           EON_RELAX_SURFACE_FATAL);
   REQUIRE(calls == after_fatal);
+  REQUIRE(eon_relax_set_surface_epoch(eng, 9) == EON_RELAX_SURFACE_FATAL);
+  REQUIRE(eon_relax_last_error(eng) == EON_RELAX_SURFACE_FATAL);
   eon_relax_destroy(eng);
 }
 
@@ -564,7 +571,7 @@ static int surface_product_var(void *user, eon_relax_surface_request_t *req) {
     req->energies[s] = e;
     if (req->variances) {
       const int64_t id = req->image_ids ? req->image_ids[s] : EON_RELAX_IMAGE_NONE;
-      req->variances[s] = (id == req->n_images - 1) ? 10.0 : 0.0;
+      req->variances[s] = (id == ctx->product_id) ? 10.0 : 0.0;
     }
   }
   if (req->epoch_out) {
@@ -580,7 +587,7 @@ TEST_CASE("relax engine MAX_UNCERTAINTY sees the product image",
   std::vector<double> boxes;
   std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
-  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0, n_images - 1};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
@@ -623,6 +630,39 @@ TEST_CASE("relax engine copies host masses and refuses non-positive",
   REQUIRE(eon_relax_run(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
   REQUIRE(out.status == EON_RELAX_NEB_GOOD);
+  eon_relax_destroy(eng);
+}
+
+TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
+          "[relax][abi][fixed]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  int32_t fixed[1]{1};
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  band.is_fixed = fixed;
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  const double mid0 = pos[static_cast<size_t>(3 * 3)];
+  band.is_fixed = nullptr;
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  const double mid1 = pos[static_cast<size_t>(3 * 3)];
+  REQUIRE(mid1 != mid0);
   eon_relax_destroy(eng);
 }
 

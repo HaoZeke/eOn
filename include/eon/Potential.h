@@ -103,8 +103,9 @@ public:
   }
 
   /// Host-visible surface generation. A learning host increments this on
-  /// every refit; Matter keys its energy cache on the value so identical
-  /// positions after a refit cannot return a stale energy. Static pots stay 0.
+  /// every refit; Matter keys its energy and variance caches on the value
+  /// so identical positions after a refit cannot return a stale energy or
+  /// variance. Static pots stay 0.
   [[nodiscard]] virtual unsigned long long surfaceEpoch() const noexcept {
     return 0;
   }

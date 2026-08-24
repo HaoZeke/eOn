@@ -94,6 +94,10 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
     for (long a = 0; a < band->n_atoms; ++a) {
       m.setFixed(a, band->is_fixed[a] ? 1 : 0);
     }
+  } else {
+    for (long a = 0; a < band->n_atoms; ++a) {
+      m.setFixed(a, 0);
+    }
   }
   m.setSurfaceEpoch(epoch);
 }
@@ -162,6 +166,7 @@ int apply_relax_params(Parameters &params, eon_relax_kind_t *kind,
         static_cast<long>(neb.getMaxIterations());
     params.neb_options.force_tolerance = neb.getForceTolerance();
     params.neb_options.climbing_image.enabled = neb.getClimbingImage();
+    params.neb_options.endpoints.minimize = neb.getMinimizeEndpoints();
     auto saddle = root.getSaddle();
     params.saddle_search_options.max_iterations =
         static_cast<long>(saddle.getMaxIterations());
@@ -206,6 +211,15 @@ static int stamp_rc(EonRelaxEngine *eng, int rc) {
     eng->last_rc = rc;
   }
   return rc;
+}
+
+static int fail_out(EonRelaxEngine *eng, eon_relax_outcome_t *out, int rc,
+                    eon_relax_kind_t kind, uint64_t epoch) {
+  if (out) {
+    stamp_outcome(out, kind, epoch);
+    out->status = -1;
+  }
+  return stamp_rc(eng, rc);
 }
 
 extern "C" {
@@ -268,6 +282,9 @@ int eon_relax_set_surface_epoch(EonRelaxEngine *eng, uint64_t epoch) {
   if (!eng) {
     return EON_RELAX_NULL_ENGINE;
   }
+  if (eng->unusable) {
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
+  }
   eng->epoch = epoch;
   eng->last_rc = EON_RELAX_OK;
   return EON_RELAX_OK;
@@ -299,26 +316,26 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
   }
   if (band->n_atoms <= 0) {
-    return stamp_rc(eng, EON_RELAX_NATOMS);
+    return fail_out(eng, out, EON_RELAX_NATOMS, eng->kind, eng->epoch);
   }
   if (!band->positions) {
-    return stamp_rc(eng, EON_RELAX_NULL_POSITIONS);
+    return fail_out(eng, out, EON_RELAX_NULL_POSITIONS, eng->kind, eng->epoch);
   }
   if (!band->atomic_nrs) {
-    return stamp_rc(eng, EON_RELAX_NULL_ATOMIC_NRS);
+    return fail_out(eng, out, EON_RELAX_NULL_ATOMIC_NRS, eng->kind, eng->epoch);
   }
   if (!band->boxes) {
-    return stamp_rc(eng, EON_RELAX_NULL_BOXES);
+    return fail_out(eng, out, EON_RELAX_NULL_BOXES, eng->kind, eng->epoch);
   }
   if (band->version.major != EON_RELAX_ABI_MAJOR) {
-    return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
+    return fail_out(eng, out, EON_RELAX_ABI_MISMATCH, eng->kind, eng->epoch);
   }
   if (!known_kind(eng->kind)) {
-    return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
+    return fail_out(eng, out, EON_RELAX_UNKNOWN_KIND, eng->kind, eng->epoch);
   }
   const int mass_rc = masses_ok(band);
   if (mass_rc != EON_RELAX_OK) {
-    return stamp_rc(eng, mass_rc);
+    return fail_out(eng, out, mass_rc, eng->kind, eng->epoch);
   }
   stamp_outcome(out, eng->kind, eng->epoch);
 
@@ -367,9 +384,11 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     }
 
     if (band->n_images != 1) {
+      out->status = -1;
       return stamp_rc(eng, EON_RELAX_SADDLE_NIMAGES);
     }
     if (!band->mode) {
+      out->status = -1;
       return stamp_rc(eng, EON_RELAX_NULL_MODE);
     }
     auto matter = std::make_shared<Matter>(pot, eng->params);
@@ -415,29 +434,34 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
   }
   if (eng->kind == EON_RELAX_KIND_SADDLE) {
-    return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
+    return fail_out(eng, out, EON_RELAX_INVALID_PARAMETER, eng->kind,
+                    eng->epoch);
   }
   if (eng->kind != EON_RELAX_KIND_NEB) {
-    return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
+    return fail_out(eng, out, EON_RELAX_UNKNOWN_KIND, eng->kind, eng->epoch);
   }
   if (band->n_atoms <= 0) {
-    return stamp_rc(eng, EON_RELAX_NATOMS);
+    return fail_out(eng, out, EON_RELAX_NATOMS, EON_RELAX_KIND_NEB, eng->epoch);
   }
   if (!band->positions) {
-    return stamp_rc(eng, EON_RELAX_NULL_POSITIONS);
+    return fail_out(eng, out, EON_RELAX_NULL_POSITIONS, EON_RELAX_KIND_NEB,
+                    eng->epoch);
   }
   if (!band->atomic_nrs) {
-    return stamp_rc(eng, EON_RELAX_NULL_ATOMIC_NRS);
+    return fail_out(eng, out, EON_RELAX_NULL_ATOMIC_NRS, EON_RELAX_KIND_NEB,
+                    eng->epoch);
   }
   if (!band->boxes) {
-    return stamp_rc(eng, EON_RELAX_NULL_BOXES);
+    return fail_out(eng, out, EON_RELAX_NULL_BOXES, EON_RELAX_KIND_NEB,
+                    eng->epoch);
   }
   if (band->version.major != EON_RELAX_ABI_MAJOR) {
-    return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
+    return fail_out(eng, out, EON_RELAX_ABI_MISMATCH, EON_RELAX_KIND_NEB,
+                    eng->epoch);
   }
   const int mass_rc = masses_ok(band);
   if (mass_rc != EON_RELAX_OK) {
-    return stamp_rc(eng, mass_rc);
+    return fail_out(eng, out, mass_rc, EON_RELAX_KIND_NEB, eng->epoch);
   }
   stamp_outcome(out, EON_RELAX_KIND_NEB, eng->epoch);
   if (band->n_images < 3) {
@@ -452,6 +476,7 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
   }
   if (eng->step_neb &&
       (eng->step_surface != surface || eng->step_user != user)) {
+    out->status = -1;
     return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
   }
 

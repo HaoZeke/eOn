@@ -237,7 +237,7 @@ public:
   }
 
   /// Host surface generation. A GP refit increments this; identical
-  /// positions then miss the energy cache. Combined with
+  /// positions then miss the energy and variance caches. Combined with
   /// Potential::surfaceEpoch() as the other half of the cache key.
   void setSurfaceEpoch(unsigned long long epoch);
   [[nodiscard]] unsigned long long getSurfaceEpoch() const noexcept {
