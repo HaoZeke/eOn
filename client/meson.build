@@ -1290,6 +1290,10 @@ eclib = library(
 _linkto += eclib
 
 capnp_prog = find_program('capnp', required: true)
+# capnp resolves its bundled /capnp/c++.capnp relative to its install
+# prefix; a relocated toolchain (conda, pixi, spack) needs the import
+# path spelled out.
+_capnp_import_path = fs.parent(fs.parent(capnp_prog.full_path())) / 'include'
 capnp_dep = dependency('capnp', required: true)
 eon_params_capnp = custom_target(
     'eon_params_capnp',
@@ -1299,6 +1303,7 @@ eon_params_capnp = custom_target(
         capnp_prog,
         'compile',
         '-oc++:@OUTDIR@',
+        '--import-path=' + _capnp_import_path,
         '--src-prefix=' + meson.project_source_root() / 'schema',
         '@INPUT@',
     ],
