@@ -1213,7 +1213,7 @@ if not readcon_dep.found()
     readcon_dep = readcon_proj.get_variable('readcon_dep')
     # Order stamp: cargo still emits cdylib+staticlib. partial_dependency
     # drops declare_dependency.sources, so attach the stamp here.
-    readcon_order_srcs += readcon_proj.get_variable('readcon_order')
+    readcon_order_srcs += readcon_proj.get_variable('readcon_order', [])
 endif
 if is_windows
     # On Windows, do not put cargo .lib/.dll on eonclib: llvm-ar treats
