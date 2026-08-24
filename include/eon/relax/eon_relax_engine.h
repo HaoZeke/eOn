@@ -232,7 +232,9 @@ EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
  * positions and captures the baseline force; every call syncs
  * band->positions in (the host may have moved images between steps),
  * assembles NEB forces on the host surface, takes ONE optimizer step,
- * and writes the stepped positions back. Climbing-image activation
+ * and writes the stepped INTERIOR positions back (endpoints are the
+ * caller's and are never rewritten, so the caller's frame survives
+ * eOn's own cell wrapping). Climbing-image activation
  * follows the engine's own trigger rule; saddle POLICY (MMF bursts,
  * resampling, acquisition) stays with the host. outcome.status is
  * RUNNING until convergenceForce() reaches the configured tolerance

@@ -527,7 +527,10 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
       }
     }
 
-    for (int64_t i = 0; i < band->n_images; ++i) {
+    // Interior images only: eOn never moves the endpoints, and Matter
+    // wraps positions into the cell, so writing them back would hand
+    // the caller a different frame than the one it supplied.
+    for (int64_t i = 1; i + 1 < band->n_images; ++i) {
       write_image(band->positions + i * 3 * band->n_atoms,
                   *neb.path[static_cast<size_t>(i)],
                   static_cast<long>(band->n_atoms));
