@@ -39,13 +39,21 @@ struct SurfaceCtx {
   std::shared_ptr<Potential> pot;
   double variance{0.0};
   uint64_t epoch{0};
+  uint64_t seen_epoch{0};
   long calls{0};
+  long recover_on_call{0};
   int64_t product_id{-1};
 };
 
 static int surface_forward(void *user, eon_relax_surface_request_t *req) {
   auto *ctx = static_cast<SurfaceCtx *>(user);
   ++ctx->calls;
+  if (req->epoch_out) {
+    ctx->seen_epoch = *req->epoch_out;
+  }
+  if (ctx->recover_on_call > 0 && ctx->calls == ctx->recover_on_call) {
+    return 5;
+  }
   const long n_images = static_cast<long>(req->n_images);
   const long n_atoms = static_cast<long>(req->n_atoms);
   const double *positions = req->positions;
@@ -82,7 +90,7 @@ static int surface_forward(void *user, eon_relax_surface_request_t *req) {
       variances[s] = ctx->variance;
     }
   }
-  if (epoch_out) {
+  if (epoch_out && ctx->epoch != 0) {
     *epoch_out = ctx->epoch;
   }
   return 0;
@@ -662,6 +670,10 @@ TEST_CASE("relax engine NULL is_fixed frees a previously fixed atom",
           EON_RELAX_OK);
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
   const double img1_1 = pos[3];
   REQUIRE(img1_1 != img1_0);
   eon_relax_destroy(eng);
@@ -728,8 +740,10 @@ TEST_CASE("relax engine live-step recoverable drops QN history",
   eon_relax_outcome_t out{};
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
-  REQUIRE(eon_relax_step(eng, &band, surface_recover, nullptr, &out) == 5);
+  ctx.recover_on_call = ctx.calls + 1;
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) == 5);
   REQUIRE(out.status == -1);
+  ctx.recover_on_call = 0;
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
   eon_relax_destroy(eng);
@@ -756,24 +770,9 @@ TEST_CASE("relax engine set_surface_epoch updates a live pot",
   REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
           EON_RELAX_OK);
   REQUIRE(eon_relax_set_surface_epoch(eng, 9) == EON_RELAX_OK);
-  uint64_t seen = 0;
-  struct Probe {
-    SurfaceCtx *fwd;
-    uint64_t *seen;
-  } probe{&ctx, &seen};
-  auto record = [](void *user, eon_relax_surface_request_t *req) -> int {
-    auto *p = static_cast<Probe *>(user);
-    if (req->epoch_out) {
-      *p->seen = *req->epoch_out;
-    }
-    const int rc = surface_forward(p->fwd, req);
-    if (req->epoch_out) {
-      *req->epoch_out = *p->seen;
-    }
-    return rc;
-  };
-  REQUIRE(eon_relax_step(eng, &band, record, &probe, &out) == EON_RELAX_OK);
-  REQUIRE(seen == 9);
+  REQUIRE(eon_relax_step(eng, &band, surface_forward, &ctx, &out) ==
+          EON_RELAX_OK);
+  REQUIRE(ctx.seen_epoch == 9);
   REQUIRE(out.surface_epoch == 9);
   eon_relax_destroy(eng);
 }

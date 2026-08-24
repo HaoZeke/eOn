@@ -34,8 +34,8 @@
  *   contract can grow without a new function symbol.
  * - Return values are three-valued: 0 success (read the outcome),
  *   positive recoverable, negative a named fail. SURFACE_FATAL makes
- *   the instance unusable; BAND_TOO_SHORT / BAND_SIZE / NULL_* leave
- *   the handle reusable.
+ *   the instance unusable. Every other named fail leaves the handle
+ *   reusable.
  * - Closed enums. Unknown kind is EON_RELAX_UNKNOWN_KIND; other
  *   unknown enumerants are EON_RELAX_INVALID_PARAMETER. Never a
  *   silent fallback.
