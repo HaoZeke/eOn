@@ -256,6 +256,10 @@ version_bits = version_output.split(',')
 version = version_bits[0]
 build_date = version_bits[1]
 git_hash = version_bits[2]
+git_hash_full = run_command('git', 'rev-parse', 'HEAD', check: false).stdout().strip()
+if git_hash_full == ''
+    git_hash_full = git_hash
+endif
 
 # Parse semver into components
 version_parts = version.split('.')
@@ -1263,6 +1267,7 @@ configure_file(
         'OS_INFO': host_system,
         'ARCH': architecture,
         'GIT_HASH': git_hash,
+        'GIT_HASH_FULL': git_hash_full,
         'FEATURES': features_string,
     },
 )
@@ -1284,10 +1289,25 @@ eclib = library(
 
 _linkto += eclib
 
+capnp_prog = find_program('capnp', required: true)
+capnp_dep = dependency('capnp', required: true)
+eon_params_capnp = custom_target(
+    'eon_params_capnp',
+    input: meson.project_source_root() / 'schema' / 'eon_params.capnp',
+    output: ['eon_params.capnp.h', 'eon_params.capnp.c++'],
+    command: [
+        capnp_prog,
+        'compile',
+        '-oc++:@OUTDIR@',
+        '--src-prefix=' + meson.project_source_root() / 'schema',
+        '@INPUT@',
+    ],
+)
+
 eon_relax_engine = library(
     'eon_relax_engine',
-    ['relax/RelaxEngineAbi.cpp'],
-    dependencies: _deps + _gprd_extra_deps,
+    ['relax/RelaxEngineAbi.cpp', eon_params_capnp],
+    dependencies: _deps + _gprd_extra_deps + [capnp_dep],
     cpp_args: _args + ['-DEON_RELAX_ENGINE_BUILD'],
     link_with: [eclib, eoncbase],
     include_directories: _incdirs + [include_directories('.')],
@@ -1517,8 +1537,12 @@ if get_option('with_tests')
                     'unit_tests/' + test.get(1),
                     'thirdparty/catch2/catch_amalgamated.cpp',
                 ],
-                dependencies: test_deps,
-                include_directories: _incdirs,
+                dependencies: test.get(0) == 'test_relax_engine'
+                ? test_deps + [capnp_dep]
+                : test_deps,
+                include_directories: test.get(0) == 'test_relax_engine'
+                ? _incdirs + [eon_relax_engine.private_dir_include()]
+                : _incdirs,
                 cpp_args: test_args,
                 # Include /STACK:16M (Windows) so EAM Al Fortran pots do not
                 # SIGSEGV with STATUS_STACK_OVERFLOW (default stack is 1 MB).

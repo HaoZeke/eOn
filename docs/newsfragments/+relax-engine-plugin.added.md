@@ -1,1 +1,1 @@
-Tier-2 `libeon_relax_engine.so` exports `eon_relax_create` / `eon_relax_run` / `eon_relax_destroy` so a host can drive eOn NEB with a band surface callback. Saddle kind waits on RelaxEngineParams parse. Matter keys its energy cache on a surface epoch.
+Tier-2 `libeon_relax_engine.so` exports `eon_relax_create` / `eon_relax_run` / `eon_relax_step` / `eon_relax_reset` / `eon_relax_destroy`. NULL create is NEB with Parameters NSDMI defaults. A Cap'n Proto RelaxEngineParams flat-array selects neb or saddle. Matter keys energy and variance caches on a surface epoch.

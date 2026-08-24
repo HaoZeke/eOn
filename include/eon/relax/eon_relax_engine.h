@@ -64,7 +64,7 @@ extern "C" {
 typedef struct EonRelaxEngine EonRelaxEngine;
 
 #define EON_RELAX_ABI_MAJOR 2u
-#define EON_RELAX_ABI_MINOR 0u
+#define EON_RELAX_ABI_MINOR 1u
 
 /** Version head carried by every wire struct (dlpack DLPackVersion). */
 typedef struct {
@@ -129,7 +129,9 @@ typedef enum {
  * n_atoms (1 = fixed atom). mode may be NULL; required for
  * kind=saddle (3*n_atoms). image_ids may be NULL; dest run/step
  * emits dest path[] slots on the surface request (pointer identity)
- * and does not read this field. For kind=NEB, n_images must equal
+ * and does not read this field. masses may be NULL (each atom mass
+ * 1.0) or n_atoms (amu); readers honor masses only when
+ * version.minor >= 1. For kind=NEB, n_images must equal
  * Parameters.neb_options.image_count + 2 (NSDMI 7). positions layout
  * matches Matter AtomMatrix (row-major xyz per atom).
  */
@@ -144,6 +146,7 @@ typedef struct {
   const int32_t *is_fixed;
   const double *mode;
   const int64_t *image_ids;
+  const double *masses;
 } eon_relax_band_t;
 
 /** Engine-written result. The engine stamps version and flags. */
@@ -197,9 +200,12 @@ EON_RELAX_API const char *eon_relax_version_hash_str(void);
 EON_RELAX_API uint64_t eon_relax_version_hash(void);
 
 /**
- * Create. Only config==NULL && config_len==0 is accepted (NSDMI
- * defaults, kind=NEB). Any non-NULL config fails closed with
- * EON_RELAX_CAPNP_ROOT until RelaxEngineParams parse is wired.
+ * Create. NULL config && config_len==0 selects Parameters NSDMI
+ * defaults and kind=NEB. A non-empty buffer is a Cap'n Proto
+ * flat-array whose root is RelaxEngineParams. kind tokens are
+ * "neb" and "saddle"; any other token fails closed
+ * (EON_RELAX_UNKNOWN_KIND). An unparseable buffer is
+ * EON_RELAX_CAPNP_ROOT. config!=NULL && config_len==0 is refused.
  */
 EON_RELAX_API EonRelaxEngine *eon_relax_create(const void *config,
                                                size_t config_len, char *errbuf,

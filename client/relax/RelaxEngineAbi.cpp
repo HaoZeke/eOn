@@ -18,9 +18,15 @@
 #include "eon/NudgedElasticBand.h"
 #include "eon/Optimizer.h"
 #include "eon/Parameters.h"
+#include "eon_params.capnp.h"
 #include "version.h"
 
+#include <capnp/serialize.h>
+#include <kj/array.h>
+#include <kj/common.h>
+
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <memory>
@@ -28,6 +34,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+extern "C" uint64_t eon_relax_version_hash(void);
 
 namespace {
 
@@ -65,7 +73,13 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
     z(a) = band->atomic_nrs[a];
   }
   m.setAtomicNrs(z);
-  m.setMasses(Eigen::VectorXd::Ones(band->n_atoms));
+  Eigen::VectorXd masses = Eigen::VectorXd::Ones(band->n_atoms);
+  if (band->version.minor >= 1 && band->masses) {
+    for (long a = 0; a < band->n_atoms; ++a) {
+      masses(a) = band->masses[a];
+    }
+  }
+  m.setMasses(masses);
   AtomMatrix pos(band->n_atoms, 3);
   const double *src = band->positions + image * 3 * band->n_atoms;
   // Match Potential::force / Matter storage (AtomMatrix row-major xyz).
@@ -90,6 +104,81 @@ void write_image(double *dst, const Matter &m, long n_atoms) {
   mapped = pos;
 }
 
+int masses_ok(const eon_relax_band_t *band) {
+  if (!band || band->version.minor < 1 || !band->masses) {
+    return EON_RELAX_OK;
+  }
+  for (int64_t a = 0; a < band->n_atoms; ++a) {
+    const double m = band->masses[a];
+    if (!(m > 0.0) || !std::isfinite(m)) {
+      return EON_RELAX_INVALID_PARAMETER;
+    }
+  }
+  return EON_RELAX_OK;
+}
+
+void stamp_outcome(eon_relax_outcome_t *out, eon_relax_kind_t kind,
+                   uint64_t epoch) {
+  std::memset(out, 0, sizeof(*out));
+  out->version.major = EON_RELAX_ABI_MAJOR;
+  out->version.minor = EON_RELAX_ABI_MINOR;
+  out->kind = static_cast<int32_t>(kind);
+  out->version_hash = eon_relax_version_hash();
+  out->surface_epoch = epoch;
+}
+
+void dirty_endpoints(NudgedElasticBand &neb) {
+  neb.path[0]->setPositions(neb.path[0]->getPositions());
+  neb.path[static_cast<size_t>(neb.numImages + 1)]->setPositions(
+      neb.path[static_cast<size_t>(neb.numImages + 1)]->getPositions());
+}
+
+int apply_relax_params(Parameters &params, eon_relax_kind_t *kind,
+                       uint64_t *epoch, const void *config, size_t config_len,
+                       char *errbuf, size_t errlen) {
+  if (config_len % sizeof(::capnp::word) != 0) {
+    set_err(errbuf, errlen, "-13 RelaxEngineParams capnp root");
+    return EON_RELAX_CAPNP_ROOT;
+  }
+  try {
+    const auto nwords = config_len / sizeof(::capnp::word);
+    std::vector<::capnp::word> words(nwords);
+    std::memcpy(words.data(), config, config_len);
+    ::kj::ArrayPtr<const ::capnp::word> view(words.data(), nwords);
+    ::capnp::FlatArrayMessageReader reader(view);
+    auto root = reader.getRoot<eonc::params_ssot::RelaxEngineParams>();
+    const auto kind_txt = root.getKind();
+    if (kind_txt == "neb") {
+      *kind = EON_RELAX_KIND_NEB;
+    } else if (kind_txt == "saddle") {
+      *kind = EON_RELAX_KIND_SADDLE;
+    } else {
+      set_err(errbuf, errlen, "-11 unknown RelaxEngineParams.kind");
+      return EON_RELAX_UNKNOWN_KIND;
+    }
+    auto neb = root.getNeb();
+    params.neb_options.image_count = static_cast<long>(neb.getImageCount());
+    params.neb_options.max_iterations =
+        static_cast<long>(neb.getMaxIterations());
+    params.neb_options.force_tolerance = neb.getForceTolerance();
+    params.neb_options.climbing_image.enabled = neb.getClimbingImage();
+    auto saddle = root.getSaddle();
+    params.saddle_search_options.max_iterations =
+        static_cast<long>(saddle.getMaxIterations());
+    params.saddle_search_options.converged_force = saddle.getConvergedForce();
+    *epoch = root.getSurfaceEpoch();
+    params.main_options.randomSeed = static_cast<long>(root.getRandomSeed());
+    params.gp_surrogate_options.uncertainty = root.getUncertainty();
+    return EON_RELAX_OK;
+  } catch (const std::exception &) {
+    set_err(errbuf, errlen, "-13 RelaxEngineParams capnp root");
+    return EON_RELAX_CAPNP_ROOT;
+  } catch (...) {
+    set_err(errbuf, errlen, "-13 RelaxEngineParams capnp root");
+    return EON_RELAX_CAPNP_ROOT;
+  }
+}
+
 } // namespace
 
 struct EonRelaxEngine {
@@ -97,6 +186,7 @@ struct EonRelaxEngine {
   eon_relax_kind_t kind{EON_RELAX_KIND_NEB};
   uint64_t epoch{0};
   int last_rc{EON_RELAX_OK};
+  bool unusable{false};
 
   // Stepper state (eon_relax_step): band, objective, and optimizer
   // persist across calls so quasi-Newton history accumulates on one
@@ -136,7 +226,8 @@ int eon_relax_abi_stamp(eon_relax_version_t *out) {
 }
 
 const char *eon_relax_version_hash_str(void) {
-  static const std::string id = VERSION + "+git." + GIT_HASH;
+  static const std::string id = VERSION + "+git." + GIT_HASH_FULL + "+feat." +
+                                std::to_string(fnv1a64(FEATURES_STRING.c_str()));
   return id.c_str();
 }
 
@@ -146,9 +237,17 @@ uint64_t eon_relax_version_hash(void) {
 
 EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,
                                  char *errbuf, size_t errlen) {
-  if (config != nullptr || config_len != 0) {
-    set_err(errbuf, errlen,
-            "-13 RelaxEngineParams capnp parse is not wired; pass NULL config");
+  if (config == nullptr && config_len == 0) {
+    auto *eng = new (std::nothrow) EonRelaxEngine();
+    if (!eng) {
+      set_err(errbuf, errlen, "-19 out of memory");
+      return nullptr;
+    }
+    eng->kind = EON_RELAX_KIND_NEB;
+    return eng;
+  }
+  if (config == nullptr || config_len == 0) {
+    set_err(errbuf, errlen, "-13 RelaxEngineParams capnp root");
     return nullptr;
   }
   auto *eng = new (std::nothrow) EonRelaxEngine();
@@ -156,7 +255,12 @@ EonRelaxEngine *eon_relax_create(const void *config, size_t config_len,
     set_err(errbuf, errlen, "-19 out of memory");
     return nullptr;
   }
-  eng->kind = EON_RELAX_KIND_NEB;
+  const int prc = apply_relax_params(eng->params, &eng->kind, &eng->epoch,
+                                     config, config_len, errbuf, errlen);
+  if (prc != EON_RELAX_OK) {
+    delete eng;
+    return nullptr;
+  }
   return eng;
 }
 
@@ -181,6 +285,9 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                   eon_relax_outcome_t *out) {
   if (!eng) {
     return EON_RELAX_NULL_ENGINE;
+  }
+  if (eng->unusable) {
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
   if (!band) {
     return stamp_rc(eng, EON_RELAX_NULL_BAND);
@@ -209,12 +316,11 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
   if (!known_kind(eng->kind)) {
     return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
   }
-  std::memset(out, 0, sizeof(*out));
-  out->version.major = EON_RELAX_ABI_MAJOR;
-  out->version.minor = EON_RELAX_ABI_MINOR;
-  out->kind = static_cast<int32_t>(eng->kind);
-  out->version_hash = eon_relax_version_hash();
-  out->surface_epoch = eng->epoch;
+  const int mass_rc = masses_ok(band);
+  if (mass_rc != EON_RELAX_OK) {
+    return stamp_rc(eng, mass_rc);
+  }
+  stamp_outcome(out, eng->kind, eng->epoch);
 
   auto pot = std::make_shared<eonc::HostSurfacePotential>(surface, user,
                                                           eng->epoch);
@@ -240,6 +346,7 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       auto neb = std::make_unique<NudgedElasticBand>(std::move(path),
                                                      eng->params, pot);
       pot->bindPath(neb->path);
+      dirty_endpoints(*neb);
       const auto st = neb->compute();
       if (st == NudgedElasticBand::NEBStatus::INIT ||
           st == NudgedElasticBand::NEBStatus::RUNNING) {
@@ -284,6 +391,7 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, rec.rc);
   } catch (const std::exception &) {
     out->status = -1;
+    eng->unusable = true;
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
 }
@@ -294,6 +402,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
   if (!eng) {
     return EON_RELAX_NULL_ENGINE;
   }
+  if (eng->unusable) {
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
+  }
   if (!band) {
     return stamp_rc(eng, EON_RELAX_NULL_BAND);
   }
@@ -302,6 +413,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
   }
   if (!out) {
     return stamp_rc(eng, EON_RELAX_NULL_OUTCOME);
+  }
+  if (eng->kind == EON_RELAX_KIND_SADDLE) {
+    return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
   }
   if (eng->kind != EON_RELAX_KIND_NEB) {
     return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
@@ -321,6 +435,11 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
   if (band->version.major != EON_RELAX_ABI_MAJOR) {
     return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
   }
+  const int mass_rc = masses_ok(band);
+  if (mass_rc != EON_RELAX_OK) {
+    return stamp_rc(eng, mass_rc);
+  }
+  stamp_outcome(out, EON_RELAX_KIND_NEB, eng->epoch);
   if (band->n_images < 3) {
     out->status = -1;
     return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
@@ -335,12 +454,6 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
       (eng->step_surface != surface || eng->step_user != user)) {
     return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
   }
-  std::memset(out, 0, sizeof(*out));
-  out->version.major = EON_RELAX_ABI_MAJOR;
-  out->version.minor = EON_RELAX_ABI_MINOR;
-  out->kind = static_cast<int32_t>(EON_RELAX_KIND_NEB);
-  out->version_hash = eon_relax_version_hash();
-  out->surface_epoch = eng->epoch;
 
   try {
     if (!eng->step_neb) {
@@ -357,6 +470,7 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
                                                           eng->params,
                                                           eng->step_pot);
       eng->step_pot->bindPath(eng->step_neb->path);
+      dirty_endpoints(*eng->step_neb);
       eng->step_neb->E_ref =
           std::min(eng->step_neb->path[0]->getPotentialEnergy(),
                    eng->step_neb
@@ -429,6 +543,7 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, rec.rc);
   } catch (const std::exception &) {
     out->status = -1;
+    eng->unusable = true;
     return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
 }
@@ -436,6 +551,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
 int eon_relax_reset(EonRelaxEngine *eng) {
   if (!eng) {
     return EON_RELAX_NULL_ENGINE;
+  }
+  if (eng->unusable) {
+    return stamp_rc(eng, EON_RELAX_SURFACE_FATAL);
   }
   eng->step_opt.reset();
   eng->step_objf.reset();
