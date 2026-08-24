@@ -1290,11 +1290,14 @@ eclib = library(
 _linkto += eclib
 
 capnp_prog = find_program('capnp', required: true)
-# capnp resolves its bundled /capnp/c++.capnp relative to its install
-# prefix; a relocated toolchain (conda, pixi, spack) needs the import
-# path spelled out.
-_capnp_import_path = fs.parent(fs.parent(capnp_prog.full_path())) / 'include'
 capnp_dep = dependency('capnp', required: true)
+# pixi global exposes ~/.pixi/bin/capnp; parent(parent(that))/include
+# is ~/.pixi/include and does not exist. pkg-config includedir is the
+# env that actually owns /capnp/c++.capnp.
+_capnp_import_path = capnp_dep.get_variable('includedir', default_value: '')
+if _capnp_import_path == ''
+    _capnp_import_path = fs.parent(fs.parent(capnp_prog.full_path())) / 'include'
+endif
 eon_params_capnp = custom_target(
     'eon_params_capnp',
     input: meson.project_source_root() / 'schema' / 'eon_params.capnp',
