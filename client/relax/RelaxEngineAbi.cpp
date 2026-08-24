@@ -87,13 +87,12 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
   pos = mapped;
   const double *b = band->boxes + image * 9;
   const Matrix3d cell = Eigen::Map<const Matrix3d>(b);
-  // Cell first so wrap uses the incoming box. PBC off for the write so
-  // a 10 A box does not map the host frame x=-0.3 to 9.7.
-  const bool pbc = m.getPeriodic();
+  // Cell first. PBC stays off so dest optimizer writes
+  // (setPositionsFree) do not wrap a host-frame x=-0.667 to 9.333
+  // and hop the climbing image onto a wrapped shoulder.
   m.setPeriodic(false);
   m.setCell(cell);
   m.setPositions(pos);
-  m.setPeriodic(pbc);
   if (band->is_fixed) {
     for (long a = 0; a < band->n_atoms; ++a) {
       m.setFixed(a, band->is_fixed[a] ? 1 : 0);

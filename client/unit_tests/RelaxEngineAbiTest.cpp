@@ -1060,6 +1060,11 @@ TEST_CASE("relax engine stepper keeps the climbing image on a local max",
   REQUIRE(eon_relax_step(eng, &band, two_atom_saddle_surface, nullptr, &out) ==
           EON_RELAX_OK);
   REQUIRE(out.climbing_image == first_ci);
+  for (long im = 1; im + 1 < n_images; ++im) {
+    const double x = pos[static_cast<size_t>(im * 6)];
+    REQUIRE(x < 2.5);
+    REQUIRE(x > -2.5);
+  }
   eon_relax_destroy(eng);
 }
 
