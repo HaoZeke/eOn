@@ -78,19 +78,19 @@ public:
     std::vector<double> pos(static_cast<size_t>(npos), 0.0);
     std::vector<double> frc(static_cast<size_t>(npos), 0.0);
     std::vector<double> box(static_cast<size_t>(nbox), 0.0);
-    std::vector<int> z(static_cast<size_t>(nAtoms), 0);
-    std::vector<long> ids(static_cast<size_t>(nSystems), 0);
+    std::vector<int32_t> z(static_cast<size_t>(nAtoms), 0);
+    std::vector<int64_t> ids(static_cast<size_t>(nSystems), 0);
     if (atomicNrs && atomicNrs[0]) {
       for (long a = 0; a < nAtoms; ++a) {
         z[static_cast<size_t>(a)] = atomicNrs[0][a];
       }
     }
     for (long s = 0; s < nSystems; ++s) {
-      long id = EON_RELAX_IMAGE_NONE;
+      int64_t id = EON_RELAX_IMAGE_NONE;
       if (positions && positions[s]) {
         for (size_t i = 0; i < path_.size(); ++i) {
           if (path_[i] && path_[i]->getPositions().data() == positions[s]) {
-            id = static_cast<long>(i);
+            id = static_cast<int64_t>(i);
             break;
           }
         }
@@ -110,8 +110,20 @@ public:
     std::vector<double> ebuf(static_cast<size_t>(nSystems), 0.0);
     std::vector<double> vbuf(static_cast<size_t>(nSystems), 0.0);
     std::uint64_t new_epoch = epoch_;
-    last_ = fn_(user_, nSystems, nAtoms, pos.data(), z.data(), box.data(),
-                ids.data(), ebuf.data(), frc.data(), vbuf.data(), &new_epoch);
+    eon_relax_surface_request_t req{};
+    req.version.major = EON_RELAX_ABI_MAJOR;
+    req.version.minor = EON_RELAX_ABI_MINOR;
+    req.n_images = static_cast<int64_t>(nSystems);
+    req.n_atoms = static_cast<int64_t>(nAtoms);
+    req.positions = pos.data();
+    req.atomic_nrs = z.data();
+    req.boxes = box.data();
+    req.image_ids = ids.data();
+    req.energies = ebuf.data();
+    req.forces = frc.data();
+    req.variances = vbuf.data();
+    req.epoch_out = &new_epoch;
+    last_ = fn_(user_, &req);
     if (last_ < 0) {
       throw std::runtime_error("HostSurfacePotential: surface failed");
     }

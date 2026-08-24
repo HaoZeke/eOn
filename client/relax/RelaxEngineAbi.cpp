@@ -119,17 +119,18 @@ static int stamp_rc(EonRelaxEngine *eng, int rc) {
 
 extern "C" {
 
-int eon_relax_abi_version(void) { return static_cast<int>(EON_RELAX_ABI_VERSION); }
+int eon_relax_abi_version(void) {
+  return static_cast<int>((EON_RELAX_ABI_MAJOR << 16) | EON_RELAX_ABI_MINOR);
+}
 
 int eon_relax_available(void) { return 1; }
 
-int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out) {
+int eon_relax_abi_stamp(eon_relax_version_t *out) {
   if (!out) {
     return EON_RELAX_INVALID_PARAMETER;
   }
   out->major = EON_RELAX_ABI_MAJOR;
   out->minor = EON_RELAX_ABI_MINOR;
-  out->layout_revision = EON_RELAX_ABI_LAYOUT;
   return EON_RELAX_OK;
 }
 
@@ -201,11 +202,16 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
   if (!band->boxes) {
     return stamp_rc(eng, EON_RELAX_NULL_BOXES);
   }
+  if (band->version.major != EON_RELAX_ABI_MAJOR) {
+    return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
+  }
   if (!known_kind(eng->kind)) {
     return stamp_rc(eng, EON_RELAX_UNKNOWN_KIND);
   }
   std::memset(out, 0, sizeof(*out));
-  out->kind = eng->kind;
+  out->version.major = EON_RELAX_ABI_MAJOR;
+  out->version.minor = EON_RELAX_ABI_MINOR;
+  out->kind = static_cast<int32_t>(eng->kind);
   out->version_hash = eon_relax_version_hash();
   out->surface_epoch = eng->epoch;
 
@@ -216,15 +222,16 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       if (band->n_images < 3) {
         return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
       }
-      const long want = eng->params.neb_options.image_count + 2;
+      const int64_t want =
+          static_cast<int64_t>(eng->params.neb_options.image_count) + 2;
       if (band->n_images != want) {
         return stamp_rc(eng, EON_RELAX_BAND_SIZE);
       }
       std::vector<Matter> path;
       path.reserve(static_cast<size_t>(band->n_images));
-      for (long i = 0; i < band->n_images; ++i) {
+      for (int64_t i = 0; i < band->n_images; ++i) {
         Matter img(pot, eng->params);
-        fill_matter(img, band, i, eng->epoch);
+        fill_matter(img, band, static_cast<long>(i), eng->epoch);
         path.push_back(std::move(img));
       }
       auto neb = std::make_unique<NudgedElasticBand>(std::move(path),
@@ -241,9 +248,10 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
       out->climbing_image = neb->climbingImage;
       out->max_force = neb->convergenceForce();
       out->surface_epoch = pot->surfaceEpoch();
-      for (long i = 0; i < band->n_images; ++i) {
-        write_image(band->positions + i * 3 * band->n_atoms, *neb->path[i],
-                    band->n_atoms);
+      for (int64_t i = 0; i < band->n_images; ++i) {
+        write_image(band->positions + i * 3 * band->n_atoms,
+                    *neb->path[static_cast<size_t>(i)],
+                    static_cast<long>(band->n_atoms));
       }
       return stamp_rc(eng, EON_RELAX_OK);
     }
@@ -262,7 +270,8 @@ int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
     const double reactant_e = matter->getPotentialEnergy();
     MinModeSaddleSearch search(matter, mode, reactant_e, eng->params, pot);
     const int sst = search.run();
-    write_image(band->positions, *matter, band->n_atoms);
+    write_image(band->positions, *matter,
+                static_cast<long>(band->n_atoms));
     out->iterations = search.getIterationCount();
     out->surface_epoch = pot->surfaceEpoch();
     out->status = sst;
@@ -306,10 +315,14 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
   if (!band->boxes) {
     return stamp_rc(eng, EON_RELAX_NULL_BOXES);
   }
+  if (band->version.major != EON_RELAX_ABI_MAJOR) {
+    return stamp_rc(eng, EON_RELAX_ABI_MISMATCH);
+  }
   if (band->n_images < 3) {
     return stamp_rc(eng, EON_RELAX_BAND_TOO_SHORT);
   }
-  const long want = eng->params.neb_options.image_count + 2;
+  const int64_t want =
+      static_cast<int64_t>(eng->params.neb_options.image_count) + 2;
   if (band->n_images != want) {
     return stamp_rc(eng, EON_RELAX_BAND_SIZE);
   }
@@ -318,7 +331,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     return stamp_rc(eng, EON_RELAX_INVALID_PARAMETER);
   }
   std::memset(out, 0, sizeof(*out));
-  out->kind = EON_RELAX_KIND_NEB;
+  out->version.major = EON_RELAX_ABI_MAJOR;
+  out->version.minor = EON_RELAX_ABI_MINOR;
+  out->kind = static_cast<int32_t>(EON_RELAX_KIND_NEB);
   out->version_hash = eon_relax_version_hash();
   out->surface_epoch = eng->epoch;
 
@@ -328,9 +343,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
           surface, user, eng->epoch);
       std::vector<Matter> path;
       path.reserve(static_cast<size_t>(band->n_images));
-      for (long i = 0; i < band->n_images; ++i) {
+      for (int64_t i = 0; i < band->n_images; ++i) {
         Matter img(eng->step_pot, eng->params);
-        fill_matter(img, band, i, eng->epoch);
+        fill_matter(img, band, static_cast<long>(i), eng->epoch);
         path.push_back(std::move(img));
       }
       eng->step_neb = std::make_unique<NudgedElasticBand>(std::move(path),
@@ -354,8 +369,9 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
     } else {
       // The host may have moved images between steps (acquisition,
       // reparameterization); resync and mark the band dirty.
-      for (long i = 0; i < band->n_images; ++i) {
-        fill_matter(*eng->step_neb->path[i], band, i, eng->epoch);
+      for (int64_t i = 0; i < band->n_images; ++i) {
+        fill_matter(*eng->step_neb->path[static_cast<size_t>(i)], band,
+                    static_cast<long>(i), eng->epoch);
       }
       eng->step_neb->movedAfterForceCall = true;
       eng->step_neb->updateForces();
@@ -383,9 +399,10 @@ int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
       }
     }
 
-    for (long i = 0; i < band->n_images; ++i) {
-      write_image(band->positions + i * 3 * band->n_atoms, *neb.path[i],
-                  band->n_atoms);
+    for (int64_t i = 0; i < band->n_images; ++i) {
+      write_image(band->positions + i * 3 * band->n_atoms,
+                  *neb.path[static_cast<size_t>(i)],
+                  static_cast<long>(band->n_atoms));
     }
     out->status = status;
     out->iterations = eng->step_iteration;

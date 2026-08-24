@@ -22,16 +22,23 @@
  *
  * Units: positions Angstrom, energy eV, forces eV/Angstrom.
  *
- * Conventions:
+ * Layout discipline (dlpack.h is the model):
  *
- * - Return values are three-valued: 0 success, positive recoverable,
- *   negative fatal (the instance is unusable).
- * - Closed enums. Unknown kind is EON_RELAX_UNKNOWN_KIND. Other
+ * - Every wire struct opens with an eon_relax_version_t and a uint64
+ *   flags word. The writer stamps the version it was built against;
+ *   the reader refuses a major it does not know
+ *   (EON_RELAX_ABI_MISMATCH). Growth is append-only behind the
+ *   version head, gated on minor.
+ * - Fixed-width integer types only. Never long in a wire struct.
+ * - The surface callback takes ONE request struct, so the callback
+ *   contract can grow without a new function symbol.
+ * - Return values are three-valued: 0 success (read the outcome),
+ *   positive recoverable, negative fatal (the instance is unusable).
+ * - Closed enums. Unknown kind is EON_RELAX_UNKNOWN_KIND; other
  *   unknown enumerants are EON_RELAX_INVALID_PARAMETER. Never a
  *   silent fallback.
- * - Version stamp: major = layout break (do not read other fields),
- *   minor = new enum values / additive symbols.
- * - Capability discovery is by symbol presence (dlsym).
+ * - Optional symbols are discovered by dlsym; absence means the
+ *   operation is unsupported.
  */
 #pragma once
 
@@ -54,21 +61,17 @@ extern "C" {
 
 typedef struct EonRelaxEngine EonRelaxEngine;
 
-#define EON_RELAX_ABI_MAJOR 1u
-#define EON_RELAX_ABI_MINOR 1u
-#define EON_RELAX_ABI_LAYOUT 1u
-#define EON_RELAX_ABI_VERSION                                                  \
-  ((EON_RELAX_ABI_MAJOR << 24) | (EON_RELAX_ABI_MINOR << 16) |                 \
-   (EON_RELAX_ABI_LAYOUT))
-#define EON_RELAX_ABI_UNPACK_MAJOR(v) ((uint32_t)(((v) >> 24) & 0xffu))
-#define EON_RELAX_ABI_UNPACK_MINOR(v) ((uint32_t)(((v) >> 16) & 0xffu))
-#define EON_RELAX_ABI_UNPACK_LAYOUT(v) ((uint32_t)((v) & 0xffffu))
+#define EON_RELAX_ABI_MAJOR 2u
+#define EON_RELAX_ABI_MINOR 0u
 
+/** Version head carried by every wire struct (dlpack DLPackVersion). */
 typedef struct {
   uint32_t major;
   uint32_t minor;
-  uint32_t layout_revision;
-} eon_relax_abi_stamp_t;
+} eon_relax_version_t;
+
+#define EON_RELAX_VERSION_INIT                                                 \
+  { EON_RELAX_ABI_MAJOR, EON_RELAX_ABI_MINOR }
 
 typedef enum {
   EON_RELAX_KIND_INVALID = 0,
@@ -96,11 +99,12 @@ typedef enum {
   EON_RELAX_UNKNOWN_STATUS = -12,
   EON_RELAX_CAPNP_ROOT = -13,
   EON_RELAX_SURFACE_FATAL = -15,
-  EON_RELAX_ALLOC = -19,
   EON_RELAX_SADDLE_NIMAGES = -17,
   EON_RELAX_BAND_SIZE = -18,
+  EON_RELAX_ALLOC = -19,
   EON_RELAX_UNAVAILABLE = -21,
-  EON_RELAX_INVALID_PARAMETER = -22
+  EON_RELAX_INVALID_PARAMETER = -22,
+  EON_RELAX_ABI_MISMATCH = -23
 } eon_relax_rc_t;
 
 /** NudgedElasticBand::NEBStatus integers. Written to outcome.status for NEB. */
@@ -112,53 +116,76 @@ typedef enum {
   EON_RELAX_NEB_MAX_UNCERTAINTY = 4
 } eon_relax_neb_status_t;
 
-#define EON_RELAX_IMAGE_NONE (-1L)
+#define EON_RELAX_IMAGE_NONE INT64_C(-1)
 
 /**
- * Caller-owned band. positions is 3*n_atoms*n_images (image stride
- * 3*n_atoms) and is written on a successful run. atomic_nrs is n_atoms
- * (shared composition), boxes is 9*n_images (row-major). is_fixed may
- * be NULL (all free) or n_atoms (1 = fixed atom). mode may be NULL;
- * required for kind=saddle (3*n_atoms). image_ids may be NULL.
- * positions layout matches Matter AtomMatrix (row-major xyz per atom).
- * boxes are 9 doubles per image, same order as Matter::getCell().data().
+ * Caller-owned band. The caller stamps version (EON_RELAX_VERSION_INIT)
+ * and zeroes flags. positions is 3*n_atoms*n_images (image stride
+ * 3*n_atoms) and is written on a successful run or step. atomic_nrs is
+ * n_atoms (shared composition), boxes is 9*n_images (row-major, the
+ * Matter::getCell().data() order). is_fixed may be NULL (all free) or
+ * n_atoms (1 = fixed atom). mode may be NULL; required for
+ * kind=saddle (3*n_atoms). image_ids may be NULL. positions layout
+ * matches Matter AtomMatrix (row-major xyz per atom).
  */
 typedef struct {
-  long n_images;
-  long n_atoms;
+  eon_relax_version_t version;
+  uint64_t flags;
+  int64_t n_images;
+  int64_t n_atoms;
   double *positions;
-  const int *atomic_nrs;
+  const int32_t *atomic_nrs;
   const double *boxes;
-  const int *is_fixed;
+  const int32_t *is_fixed;
   const double *mode;
-  const long *image_ids;
+  const int64_t *image_ids;
 } eon_relax_band_t;
 
+/** Engine-written result. The engine stamps version and flags. */
 typedef struct {
-  eon_relax_kind_t kind;
-  int status;
-  long iterations;
-  long climbing_image;
+  eon_relax_version_t version;
+  uint64_t flags;
+  int32_t kind;
+  int32_t status;
+  int64_t iterations;
+  int64_t climbing_image;
   double max_force;
   uint64_t version_hash;
   uint64_t surface_epoch;
 } eon_relax_outcome_t;
 
 /**
- * Host surface. n_images systems, one composition. positions/forces
+ * Host-surface request: one struct, engine-stamped version, so the
+ * callback contract grows behind the version head instead of by new
+ * symbols. n_images systems of one composition. positions/forces are
  * 3*n_atoms*n_images, boxes 9*n_images, energies n_images, variances
- * n_images (may be NULL). image_ids n_images (may be NULL). epoch_out
- * may be NULL; if written, Matter caches key on the new generation.
- * Return 0 on success, positive recoverable, negative fatal.
+ * n_images (NULL when the engine does not consume variance),
+ * image_ids n_images (NULL when unmapped). epoch_out may be NULL; a
+ * written value keys Matter caches on the new surface generation.
  */
-typedef int (*eon_relax_surface_fn)(
-    void *user, long n_images, long n_atoms, const double *positions,
-    const int *atomic_nrs, const double *boxes, const long *image_ids,
-    double *energies, double *forces, double *variances, uint64_t *epoch_out);
+typedef struct {
+  eon_relax_version_t version;
+  uint64_t flags;
+  int64_t n_images;
+  int64_t n_atoms;
+  const double *positions;
+  const int32_t *atomic_nrs;
+  const double *boxes;
+  const int64_t *image_ids;
+  double *energies;
+  double *forces;
+  double *variances;
+  uint64_t *epoch_out;
+} eon_relax_surface_request_t;
 
+/** Return 0 on success, positive recoverable, negative fatal. */
+typedef int (*eon_relax_surface_fn)(void *user,
+                                    eon_relax_surface_request_t *req);
+
+/** (major << 16) | minor. */
 EON_RELAX_API int eon_relax_abi_version(void);
 EON_RELAX_API int eon_relax_available(void);
-EON_RELAX_API int eon_relax_abi_stamp(eon_relax_abi_stamp_t *out);
+EON_RELAX_API int eon_relax_abi_stamp(eon_relax_version_t *out);
 /** Immortal dest identity string. Never NULL. */
 EON_RELAX_API const char *eon_relax_version_hash_str(void);
 /** FNV-1a64 of eon_relax_version_hash_str(). Copied to outcome.version_hash. */
@@ -179,7 +206,7 @@ EON_RELAX_API int eon_relax_set_surface_epoch(EonRelaxEngine *eng,
 EON_RELAX_API int eon_relax_last_error(const EonRelaxEngine *eng);
 
 /**
- * Run the bound engine. Writes updated coordinates into
+ * Run the bound engine to completion. Writes updated coordinates into
  * band->positions (caller-owned). surface may not be NULL. Kind is
  * bound at create (NULL config => NEB). Returns eon_relax_rc_t;
  * on 0, out->status is the dest NEB or saddle table.
@@ -188,20 +215,18 @@ EON_RELAX_API int eon_relax_run(EonRelaxEngine *eng, eon_relax_band_t *band,
                                 eon_relax_surface_fn surface, void *user,
                                 eon_relax_outcome_t *out);
 
-EON_RELAX_API void eon_relax_destroy(EonRelaxEngine *eng);
-
 /**
- * One band optimizer step (kind=NEB only; minor >= 1). The first call
- * on a fresh or reset engine initializes the band state from the
- * caller's positions and captures the baseline force; every call
- * syncs band->positions in (the host may have moved images between
- * steps), assembles NEB forces on the host surface, takes ONE
- * optimizer step, and writes the stepped positions back. Climbing
- * image activation follows the engine's own trigger rule; saddle
- * POLICY (MMF bursts, resampling, acquisition) stays with the host.
- * outcome.status is RUNNING until convergenceForce() reaches the
- * configured tolerance, then GOOD. surface and user must not change
- * across steps without an eon_relax_reset.
+ * One band optimizer step (kind=NEB only). The first call on a fresh
+ * or reset engine initializes the band state from the caller's
+ * positions and captures the baseline force; every call syncs
+ * band->positions in (the host may have moved images between steps),
+ * assembles NEB forces on the host surface, takes ONE optimizer step,
+ * and writes the stepped positions back. Climbing-image activation
+ * follows the engine's own trigger rule; saddle POLICY (MMF bursts,
+ * resampling, acquisition) stays with the host. outcome.status is
+ * RUNNING until convergenceForce() reaches the configured tolerance,
+ * then GOOD. surface and user must not change across steps without an
+ * eon_relax_reset.
  */
 EON_RELAX_API int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
                                  eon_relax_surface_fn surface, void *user,
@@ -214,6 +239,8 @@ EON_RELAX_API int eon_relax_step(EonRelaxEngine *eng, eon_relax_band_t *band,
  * epoch must not survive onto the next.
  */
 EON_RELAX_API int eon_relax_reset(EonRelaxEngine *eng);
+
+EON_RELAX_API void eon_relax_destroy(EonRelaxEngine *eng);
 
 /** NULL if kind or status is unknown. */
 EON_RELAX_API const char *eon_relax_status_name(eon_relax_kind_t kind,

@@ -38,13 +38,20 @@ struct SurfaceCtx {
   long calls{0};
 };
 
-static int surface_forward(void *user, long n_images, long n_atoms,
-                           const double *positions, const int *atomic_nrs,
-                           const double *boxes, const long *,
-                           double *energies, double *forces, double *variances,
-                           uint64_t *epoch_out) {
+static int surface_forward(void *user, eon_relax_surface_request_t *req) {
   auto *ctx = static_cast<SurfaceCtx *>(user);
   ++ctx->calls;
+  const long n_images = static_cast<long>(req->n_images);
+  const long n_atoms = static_cast<long>(req->n_atoms);
+  const double *positions = req->positions;
+  const int32_t *atomic_nrs_i32 = req->atomic_nrs;
+  std::vector<int> nrs(atomic_nrs_i32, atomic_nrs_i32 + n_atoms);
+  const int *atomic_nrs = nrs.data();
+  const double *boxes = req->boxes;
+  double *energies = req->energies;
+  double *forces = req->forces;
+  double *variances = req->variances;
+  uint64_t *epoch_out = req->epoch_out;
   for (long s = 0; s < n_images; ++s) {
     if (ctx->pot) {
       double var = 0.0;
@@ -77,7 +84,7 @@ static int surface_forward(void *user, long n_images, long n_atoms,
 }
 
 static void pack_harmonic_band(std::vector<double> &pos,
-                               std::vector<double> &boxes, std::vector<int> &z,
+                               std::vector<double> &boxes, std::vector<int32_t> &z,
                                long n_images) {
   const long n_atoms = 1;
   pos.assign(static_cast<size_t>(n_images * 3 * n_atoms), 0.0);
@@ -94,23 +101,16 @@ static void pack_harmonic_band(std::vector<double> &pos,
   }
 }
 
-static int surface_fail(void *, long, long, const double *, const int *,
-                        const double *, const long *, double *, double *,
-                        double *, uint64_t *) {
-  return -3;
-}
+static int surface_fail(void *, eon_relax_surface_request_t *) { return -3; }
 
-TEST_CASE("relax engine ABI stamp is layout 1.0.1", "[relax][abi]") {
-  REQUIRE(eon_relax_abi_version() == static_cast<int>(EON_RELAX_ABI_VERSION));
-  REQUIRE(EON_RELAX_ABI_UNPACK_MAJOR(eon_relax_abi_version()) == 1);
-  REQUIRE(EON_RELAX_ABI_UNPACK_MINOR(eon_relax_abi_version()) == 0);
-  REQUIRE(EON_RELAX_ABI_UNPACK_LAYOUT(eon_relax_abi_version()) == 1);
+TEST_CASE("relax engine ABI stamp is 2.0", "[relax][abi]") {
+  REQUIRE(eon_relax_abi_version() ==
+          static_cast<int>((EON_RELAX_ABI_MAJOR << 16) | EON_RELAX_ABI_MINOR));
   REQUIRE(eon_relax_available() == 1);
-  eon_relax_abi_stamp_t stamp{};
+  eon_relax_version_t stamp{};
   REQUIRE(eon_relax_abi_stamp(&stamp) == EON_RELAX_OK);
-  REQUIRE(stamp.major == 1);
+  REQUIRE(stamp.major == 2);
   REQUIRE(stamp.minor == 0);
-  REQUIRE(stamp.layout_revision == 1);
   REQUIRE(eon_relax_abi_stamp(nullptr) == EON_RELAX_INVALID_PARAMETER);
   REQUIRE(eon_relax_version_hash() != 0);
   const char *id = eon_relax_version_hash_str();
@@ -144,10 +144,11 @@ TEST_CASE("relax engine create NULL config and reject unknown capnp",
   REQUIRE(eon_relax_run(nullptr, nullptr, nullptr, nullptr, nullptr) ==
           EON_RELAX_NULL_ENGINE);
   eon_relax_band_t short_band{};
+  short_band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
   short_band.n_images = 2;
   short_band.n_atoms = 1;
   double pos1[6]{};
-  int z1[1]{1};
+  int32_t z1[1]{1};
   double box1[18]{};
   short_band.positions = pos1;
   short_band.atomic_nrs = z1;
@@ -183,13 +184,14 @@ TEST_CASE("relax engine NEB on a harmonic surface converges",
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
-  std::vector<int> z;
+  std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
 
   SurfaceCtx ctx{nullptr, 0.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
   band.n_images = n_images;
   band.n_atoms = 1;
   band.positions = pos.data();
@@ -215,13 +217,14 @@ TEST_CASE("relax engine MAX_UNCERTAINTY surfaces from host variance",
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
-  std::vector<int> z;
+  std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
 
   SurfaceCtx ctx{nullptr, 10.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
   band.n_images = n_images;
   band.n_atoms = 1;
   band.positions = pos.data();
@@ -238,12 +241,13 @@ TEST_CASE("relax engine surface failure is fail-closed", "[relax][abi]") {
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
-  std::vector<int> z;
+  std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
 
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
   band.n_images = n_images;
   band.n_atoms = 1;
   band.positions = pos.data();
@@ -279,7 +283,8 @@ TEST_CASE("libeon_relax_engine exports the C waist", "[relax][dlopen]") {
   REQUIRE(eonc::dynlib::sym(h, "eon_relax_abi_version") != nullptr);
   auto abi = eonc::dynlib::loadSym<int (*)()>(h, "eon_relax_abi_version");
   REQUIRE(abi != nullptr);
-  REQUIRE(abi() == EON_RELAX_ABI_VERSION);
+  REQUIRE(abi() == static_cast<int>((EON_RELAX_ABI_MAJOR << 16) |
+                                    EON_RELAX_ABI_MINOR));
   eonc::dynlib::close(h);
 }
 
@@ -290,13 +295,14 @@ TEST_CASE("relax engine stepper converges the harmonic band one step at a "
   const long n_images = 7;
   std::vector<double> pos;
   std::vector<double> boxes;
-  std::vector<int> z;
+  std::vector<int32_t> z;
   pack_harmonic_band(pos, boxes, z, n_images);
 
   SurfaceCtx ctx{nullptr, 0.0, 0, 0};
   EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
   REQUIRE(eng != nullptr);
   eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
   band.n_images = n_images;
   band.n_atoms = 1;
   band.positions = pos.data();
