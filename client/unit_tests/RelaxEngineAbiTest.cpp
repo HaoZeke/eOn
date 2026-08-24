@@ -16,6 +16,7 @@
 #include "eon/Eigen.h"
 #include "eon/HelperFunctions.h"
 #include "eon/Matter.h"
+#include "eon/NudgedElasticBand.h"
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 #include "eon/relax/eon_relax_engine.h"
@@ -155,6 +156,115 @@ TEST_CASE("HostSurfacePotential forceBatch counts each system",
                  boxes);
   REQUIRE(pot.forceCallCounter.load() == 2);
   REQUIRE(ctx.calls == 1);
+}
+
+TEST_CASE("HostSurfacePotential force plus Matter counts one call",
+          "[relax][pot][epoch]") {
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  auto pot = std::make_shared<eonc::HostSurfacePotential>(surface_forward,
+                                                          &ctx, 0);
+  Parameters params;
+  Matter m(pot, params);
+  m.resize(1);
+  Eigen::VectorXi z(1);
+  z(0) = 1;
+  m.setAtomicNrs(z);
+  m.setMasses(Eigen::VectorXd::Ones(1));
+  Matrix3d cell = Matrix3d::Zero();
+  cell(0, 0) = 10.0;
+  cell(1, 1) = 10.0;
+  cell(2, 2) = 10.0;
+  m.setPeriodic(false);
+  m.setCell(cell);
+  AtomMatrix p(1, 3);
+  p << 0.2, 0.0, 0.0;
+  m.setPositions(p);
+  ctx.calls = 0;
+  const double e1 = m.getPotentialEnergy();
+  REQUIRE(ctx.calls == 1);
+  REQUIRE(pot->forceCallCounter.load() == 1);
+  REQUIRE(m.getPotentialEnergy() == e1);
+  REQUIRE(ctx.calls == 1);
+  pot->setEpoch(7);
+  REQUIRE(m.getPotentialEnergy() == e1);
+  REQUIRE(ctx.calls == 2);
+}
+
+TEST_CASE("NEBObjectiveFunction returns interior host masses",
+          "[relax][neb][masses]") {
+  SurfaceCtx ctx{nullptr, 0.0, 0, 0};
+  auto pot = std::make_shared<eonc::HostSurfacePotential>(surface_forward,
+                                                          &ctx, 0);
+  Parameters params;
+  params.neb_options.image_count = 5;
+  std::vector<Matter> path;
+  path.reserve(7);
+  for (int im = 0; im < 7; ++im) {
+    Matter m(pot, params);
+    m.resize(2);
+    Eigen::VectorXi z(2);
+    z << 1, 1;
+    m.setAtomicNrs(z);
+    Eigen::VectorXd masses(2);
+    masses << 1.0, 16.0;
+    m.setMasses(masses);
+    Matrix3d cell = Matrix3d::Zero();
+    cell(0, 0) = 10.0;
+    cell(1, 1) = 10.0;
+    cell(2, 2) = 10.0;
+    m.setPeriodic(false);
+    m.setCell(cell);
+    AtomMatrix p(2, 3);
+    p.setZero();
+    p(0, 0) = 0.3 - 0.1 * im;
+    p(1, 0) = 0.1;
+    m.setPositions(p);
+    path.push_back(std::move(m));
+  }
+  auto neb = std::make_unique<NudgedElasticBand>(std::move(path), params, pot);
+  NEBObjectiveFunction objf(neb.get(), params);
+  const VectorXd masses = objf.getMasses();
+  REQUIRE(masses.size() == 10);
+  REQUIRE(masses(0) == 1.0);
+  REQUIRE(masses(1) == 16.0);
+  REQUIRE(masses(8) == 1.0);
+  REQUIRE(masses(9) == 16.0);
+}
+
+TEST_CASE("relax engine sheared box keeps RowMajor data order",
+          "[relax][neb][box]") {
+  const long n_images = 7;
+  std::vector<double> pos;
+  std::vector<double> boxes;
+  std::vector<int32_t> z;
+  pack_harmonic_band(pos, boxes, z, n_images);
+  for (long im = 0; im < n_images; ++im) {
+    boxes[static_cast<size_t>(im * 9 + 1)] = 0.25;
+  }
+  struct BoxCtx {
+    SurfaceCtx fwd;
+    double seen{0.0};
+  } bctx{};
+  auto record = [](void *user, eon_relax_surface_request_t *req) -> int {
+    auto *c = static_cast<BoxCtx *>(user);
+    if (req->boxes) {
+      c->seen = req->boxes[1];
+    }
+    return surface_forward(&c->fwd, req);
+  };
+  EonRelaxEngine *eng = eon_relax_create(nullptr, 0, nullptr, 0);
+  REQUIRE(eng != nullptr);
+  eon_relax_band_t band{};
+  band.version = eon_relax_version_t EON_RELAX_VERSION_INIT;
+  band.n_images = n_images;
+  band.n_atoms = 1;
+  band.positions = pos.data();
+  band.atomic_nrs = z.data();
+  band.boxes = boxes.data();
+  eon_relax_outcome_t out{};
+  REQUIRE(eon_relax_step(eng, &band, record, &bctx, &out) == EON_RELAX_OK);
+  REQUIRE(bctx.seen == 0.25);
+  eon_relax_destroy(eng);
 }
 
 TEST_CASE("relax engine ABI stamp is 2.1", "[relax][abi]") {

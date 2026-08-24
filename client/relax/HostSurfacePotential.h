@@ -58,7 +58,9 @@ public:
     const double *boxv[] = {box};
     double e{0};
     double var{0};
+    count_calls_ = false;
     forceBatch(1, nAtoms, posv, nrv, frcv, &e, &var, boxv);
+    count_calls_ = true;
     if (energy) {
       *energy = e;
     }
@@ -134,9 +136,11 @@ public:
     if (new_epoch != epoch_) {
       epoch_ = new_epoch;
     }
-    for (long s = 0; s < nSystems; ++s) {
-      forceCallCounter++;
-      PotRegistry::get().on_force_call(ptype);
+    if (count_calls_) {
+      for (long s = 0; s < nSystems; ++s) {
+        forceCallCounter++;
+        PotRegistry::get().on_force_call(ptype);
+      }
     }
     for (long s = 0; s < nSystems; ++s) {
       if (energies) {
@@ -158,6 +162,7 @@ private:
   void *user_;
   std::uint64_t epoch_{0};
   int last_{0};
+  bool count_calls_{true};
   std::vector<std::shared_ptr<Matter>> path_;
 };
 

@@ -256,8 +256,18 @@ version_bits = version_output.split(',')
 version = version_bits[0]
 build_date = version_bits[1]
 git_hash = version_bits[2]
-git_hash_full = run_command('git', 'rev-parse', 'HEAD', check: false).stdout().strip()
-if git_hash_full == ''
+git_hash_full = run_command(
+    'git',
+    '-C',
+    meson.project_source_root(),
+    'rev-parse',
+    'HEAD',
+    check: false,
+).stdout().strip()
+if git_hash_full.length() != 40
+    if fs.is_dir(meson.project_source_root() / '.git')
+        error('libeon_relax_engine identity needs git rev-parse HEAD (40 hex)')
+    endif
     git_hash_full = git_hash
 endif
 

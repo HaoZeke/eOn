@@ -85,9 +85,8 @@ void fill_matter(Matter &m, const eon_relax_band_t *band, long image,
   // Match Potential::force / Matter storage (AtomMatrix row-major xyz).
   Eigen::Map<const AtomMatrix> mapped(src, band->n_atoms, 3);
   pos = mapped;
-  Matrix3d cell;
   const double *b = band->boxes + image * 9;
-  cell << b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8];
+  const Matrix3d cell = Eigen::Map<const Matrix3d>(b);
   // Cell first so wrap uses the incoming box. PBC off for the write so
   // a 10 A box does not map the host frame x=-0.3 to 9.7.
   const bool pbc = m.getPeriodic();

@@ -53,6 +53,15 @@ VectorXd NEBObjectiveFunction::getPositions() {
   return posV;
 }
 
+VectorXd NEBObjectiveFunction::getMasses() const {
+  VectorXd masses(neb->numImages * neb->atoms);
+  for (long i = 1; i <= neb->numImages; i++) {
+    masses.segment(neb->atoms * (i - 1), neb->atoms) =
+        neb->path[static_cast<size_t>(i)]->getMasses();
+  }
+  return masses;
+}
+
 int NEBObjectiveFunction::degreesOfFreedom() {
   return 3 * neb->numImages * neb->atoms;
 }

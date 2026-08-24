@@ -127,8 +127,8 @@ typedef enum {
  * and zeroes flags. positions is 3*n_atoms*n_images (image stride
  * 3*n_atoms). A successful NEB run or step writes interior images only;
  * endpoints stay in the caller frame. atomic_nrs is n_atoms (shared
- * composition), boxes is 9*n_images in Matter::getCell().data() order
- * (column-major 3x3). is_fixed may be NULL (all free) or
+ * composition), boxes is 9*n_images in Matter::getCell().data()
+ * order (eOn Matrix3d is RowMajor). is_fixed may be NULL (all free) or
  * n_atoms (1 = fixed atom). mode may be NULL; required for
  * kind=saddle (3*n_atoms). image_ids may be NULL; dest run/step
  * emits dest path[] slots on the surface request (pointer identity)

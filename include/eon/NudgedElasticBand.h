@@ -119,6 +119,7 @@ public:
   double getEnergy();
   void setPositions(const VectorXd &x);
   VectorXd getPositions();
+  VectorXd getMasses() const override;
   int degreesOfFreedom();
   bool isConverged();
   bool isUncertain();
