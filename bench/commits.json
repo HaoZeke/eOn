@@ -64,7 +64,7 @@
     "9429": "docs(releases): curate the v3.2.0 release notes",
     "9430": "Merge pull request #397 from HaoZeke/chore/release-3.2.0-notes",
     "9431": "chore(version): v3.2.0",
-    "9629": "docs: credit antics, drop Umami tracker and label"
+    "9628": "docs: credit antics, drop Umami tracker and label"
   },
   "dcbade17ecc8386a4ee5804354b4994c8ba1d6d8": "update lammps webpage",
   "292bc143343709b10fb7ed150ae5bb493748b289": "gitig: Update",
