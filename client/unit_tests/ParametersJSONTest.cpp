@@ -261,6 +261,43 @@ cut_global = 2.0
   REQUIRE(p.zbl_options.cut_global == Catch::Approx(2.0));
 }
 
+TEST_CASE("EXPR INI keeps D3 functional when D4Pot is also present",
+          "[params][ini][expr][dftd]") {
+  const auto tmpfile =
+      std::filesystem::temp_directory_path() / "eon_expr_d3_d4.ini";
+  {
+    std::ofstream ofs(tmpfile);
+    ofs << R"(
+[Potential]
+potential = expr
+
+[ExprPot]
+expression = 0.5*lj + d3
+terms = lj:lj, d3:d3
+
+[D3Pot]
+functional = pbe0
+atm = false
+damping = zero
+
+[D4Pot]
+functional = pbe
+atm = true
+charge = 1.0
+)";
+  }
+  Parameters p;
+  REQUIRE(p.load(tmpfile.string()) == 0);
+  std::filesystem::remove(tmpfile);
+  REQUIRE(p.potential_options.potential == PotType::EXPR);
+  REQUIRE(p.dftd_options.functional == "pbe0");
+  REQUIRE_FALSE(p.dftd_options.atm);
+  REQUIRE(p.dftd_options.d3_damping == "zero");
+  REQUIRE(p.dftd_options.d4_functional == "pbe");
+  REQUIRE(p.dftd_options.d4_atm);
+  REQUIRE(p.dftd_options.d4_charge == Catch::Approx(1.0));
+}
+
 TEST_CASE("DFTD4 INI does not take functional from D3Pot",
           "[params][ini][dftd]") {
   const auto tmpfile =

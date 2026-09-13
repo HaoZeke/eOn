@@ -168,24 +168,32 @@ std::unique_ptr<rgpot::PotentialBase> make_expr_term(const std::string &raw,
         .cut_global = params.zbl_options.cut_global,
     });
   }
-#ifdef RGPOT_HAS_DFTD3
   if (name == "d3" || name == "dftd3") {
+#ifdef RGPOT_HAS_DFTD3
     return std::make_unique<rgpot::D3Pot>(rgpot::D3Config{
         .damping = d3_damping_from_params(params),
         .functional = params.dftd_options.functional,
         .atm = params.dftd_options.atm,
     });
-  }
+#else
+    throw std::runtime_error(
+        "DFTD3 requires a librgpot built with -Dwith_dftd3=true "
+        "(or -Drgpot:with_dftd3=true on the wrap)");
 #endif
-#ifdef RGPOT_HAS_DFTD4
+  }
   if (name == "d4" || name == "dftd4") {
+#ifdef RGPOT_HAS_DFTD4
     return std::make_unique<rgpot::D4Pot>(rgpot::D4Config{
-        .functional = params.dftd_options.functional,
+        .functional = params.dftd_options.d4_functional,
         .charge = params.dftd_options.d4_charge,
-        .atm = params.dftd_options.atm,
+        .atm = params.dftd_options.d4_atm,
     });
-  }
+#else
+    throw std::runtime_error(
+        "DFTD4 requires a librgpot built with -Dwith_dftd4=true "
+        "(or -Drgpot:with_dftd4=true on the wrap)");
 #endif
+  }
   if (name == "mopac") {
     return std::make_unique<rgpot::MOPACPot>(rgpot::MOPACPot::Config{
         .charge = params.mopac_options.charge,

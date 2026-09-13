@@ -176,9 +176,10 @@ int load_ini(INIReader &ini, Parameters &params) {
     }
   }
   // [D3Pot] / [D4Pot]: rgpot 3.1 Grimme DFT-D (also ExprPot children).
-  // DFTD3 reads only [D3Pot]; DFTD4 reads only [D4Pot]. EXPR loads D3
-  // first, then D4 with the current value as default so a missing D4
-  // key does not wipe a D3 functional.
+  // DFTD3 reads only [D3Pot] into functional/atm. DFTD4 reads only
+  // [D4Pot] into functional/atm. EXPR keeps those fields on D3 and
+  // loads D4 into d4_functional/d4_atm so a schema-written [D4Pot]
+  // cannot overwrite the D3 child.
   const auto pot = params.potential_options.potential;
   const bool expr_pot = pot == PotType::EXPR;
   if (pot == PotType::DFTD3 || expr_pot) {
@@ -189,11 +190,20 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.dftd_options.d3_damping =
         ini.Get("D3Pot", "damping", params.dftd_options.d3_damping);
   }
-  if (pot == PotType::DFTD4 || expr_pot) {
+  if (pot == PotType::DFTD4) {
     params.dftd_options.functional =
         ini.Get("D4Pot", "functional", params.dftd_options.functional);
     params.dftd_options.atm =
         ini.GetBoolean("D4Pot", "atm", params.dftd_options.atm);
+    params.dftd_options.d4_charge =
+        ini.GetReal("D4Pot", "charge", params.dftd_options.d4_charge);
+    params.dftd_options.d4_functional = params.dftd_options.functional;
+    params.dftd_options.d4_atm = params.dftd_options.atm;
+  } else if (expr_pot) {
+    params.dftd_options.d4_functional =
+        ini.Get("D4Pot", "functional", params.dftd_options.d4_functional);
+    params.dftd_options.d4_atm =
+        ini.GetBoolean("D4Pot", "atm", params.dftd_options.d4_atm);
     params.dftd_options.d4_charge =
         ini.GetReal("D4Pot", "charge", params.dftd_options.d4_charge);
   }

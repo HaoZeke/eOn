@@ -49,7 +49,7 @@ void bind_parameters(nb::module_ &m) {
           [](eonc::Parameters &s, const std::string &v) {
             s.dftd_options.functional = v;
           },
-          "s-dftd3 / dftd4 method key (default pbe)")
+          "s-dftd3 method key; also standalone DFTD4 (default pbe)")
       .def_prop_rw(
           "dftd_atm",
           [](const eonc::Parameters &s) { return s.dftd_options.atm; },
@@ -66,6 +66,20 @@ void bind_parameters(nb::module_ &m) {
           "d4_charge",
           [](const eonc::Parameters &s) { return s.dftd_options.d4_charge; },
           [](eonc::Parameters &s, double v) { s.dftd_options.d4_charge = v; })
+      .def_prop_rw(
+          "d4_functional",
+          [](const eonc::Parameters &s) {
+            return s.dftd_options.d4_functional;
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.dftd_options.d4_functional = v;
+          },
+          "dftd4 method key for an Expr d4 child (default pbe)")
+      .def_prop_rw(
+          "d4_atm",
+          [](const eonc::Parameters &s) { return s.dftd_options.d4_atm; },
+          [](eonc::Parameters &s, bool v) { s.dftd_options.d4_atm = v; },
+          "D4 Axilrod-Teller-Muto three-body term")
       .def_prop_rw(
           "expr_expression",
           [](const eonc::Parameters &s) { return s.expr_options.expression; },

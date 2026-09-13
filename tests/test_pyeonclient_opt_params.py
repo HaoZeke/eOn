@@ -30,9 +30,13 @@ def test_dftd_pot_types_and_params():
     params.dftd_functional = "pbe"
     params.dftd_atm = True
     params.d3_damping = "bj"
+    params.d4_functional = "pbe0"
+    params.d4_atm = False
     assert params.potential == pyec.PotType.DFTD3
     assert params.dftd_functional == "pbe"
     assert params.d3_damping == "bj"
+    assert params.d4_functional == "pbe0"
+    assert params.d4_atm is False
 
 
 def test_expr_pot_lj_plus_morse():

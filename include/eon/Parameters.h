@@ -114,11 +114,16 @@ public:
   } zbl_options;
 
   // [D3Pot] / [D4Pot]: rgpot 3.1 in-process Grimme DFT-D (s-dftd3 / dftd4).
+  // functional/atm are D3 (and standalone DFTD3/DFTD4). d4_* are the
+  // independent D4 child so a present [D4Pot] cannot overwrite [D3Pot]
+  // when potential=expr writes both sections.
   struct dftd_options_t {
     std::string functional{"pbe"};
     bool atm{true};
     std::string d3_damping{"bj"};
     double d4_charge{0.0};
+    std::string d4_functional{"pbe"};
+    bool d4_atm{true};
   } dftd_options;
 
   // [ExprPot]: rgpot 3.1 Lepton algebra over named child kernels.

@@ -270,6 +270,63 @@ TEST_CASE("INI ExprPot 0.5*lj + d3 matches independent sum",
   REQUIRE(F_e[0] == Catch::Approx(0.5793081483943868).epsilon(1e-12));
   REQUIRE(F_e[3] == Catch::Approx(-0.5793081483943868).epsilon(1e-12));
 }
+
+TEST_CASE("Expr D3 child keeps D3Pot functional when D4Pot is present",
+          "[pot][rgpot-adapter][expr]") {
+  const auto tmp =
+      std::filesystem::temp_directory_path() / "eon_expr_d3_not_d4.ini";
+  {
+    std::ofstream f(tmp);
+    f << "[Potential]\n"
+         "potential = expr\n"
+         "\n"
+         "[ExprPot]\n"
+         "expression = d3\n"
+         "terms = d3:d3\n"
+         "\n"
+         "[D3Pot]\n"
+         "functional = pbe0\n"
+         "atm = false\n"
+         "damping = bj\n"
+         "\n"
+         "[D4Pot]\n"
+         "functional = pbe\n"
+         "atm = true\n";
+  }
+  Parameters params;
+  REQUIRE(params.load(tmp.string()) == 0);
+  std::filesystem::remove(tmp);
+  REQUIRE(params.dftd_options.functional == "pbe0");
+  REQUIRE_FALSE(params.dftd_options.atm);
+  REQUIRE(params.dftd_options.d4_functional == "pbe");
+
+  auto expr = eonc::helpers::makePotential(params);
+
+  Parameters d3_pbe0;
+  d3_pbe0.potential_options.potential = PotType::DFTD3;
+  d3_pbe0.dftd_options.functional = "pbe0";
+  d3_pbe0.dftd_options.atm = false;
+  auto d3 = eonc::helpers::makePotential(d3_pbe0);
+
+  Parameters d3_pbe;
+  d3_pbe.potential_options.potential = PotType::DFTD3;
+  d3_pbe.dftd_options.functional = "pbe";
+  d3_pbe.dftd_options.atm = true;
+  auto d3_wrong = eonc::helpers::makePotential(d3_pbe);
+
+  const long nAtoms = 2;
+  const double R[] = {0.0, 0.0, 0.0, 1.5, 0.0, 0.0};
+  const int Z[] = {18, 18};
+  const double box[] = {40.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 40.0};
+  double F_e[6] = {}, F_ok[6] = {}, F_bad[6] = {};
+  double U_e = 0.0, U_ok = 0.0, U_bad = 0.0, var = 0.0;
+  expr->force(nAtoms, R, Z, F_e, &U_e, &var, box);
+  d3->force(nAtoms, R, Z, F_ok, &U_ok, &var, box);
+  d3_wrong->force(nAtoms, R, Z, F_bad, &U_bad, &var, box);
+
+  REQUIRE(U_e == Catch::Approx(U_ok).epsilon(1e-12));
+  REQUIRE(U_e != Catch::Approx(U_bad).epsilon(1e-8));
+}
 #endif
 #endif
 
@@ -281,6 +338,24 @@ TEST_CASE("DFTD3 without wrap names the rebuild flag",
   REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
                       Catch::Matchers::ContainsSubstring("with_dftd3"));
 }
+#ifdef RGPOT_HAS_EXPR
+TEST_CASE("Expr d3 without wrap names the rebuild flag",
+          "[pot][rgpot-adapter][expr]") {
+  Parameters params;
+  params.potential_options.potential = PotType::EXPR;
+  params.expr_options.expression = "d3";
+  params.expr_options.terms = "d3";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd3"));
+  params.expr_options.terms = "d3:d3";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd3"));
+  params.expr_options.expression = "dftd3";
+  params.expr_options.terms = "dftd3";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd3"));
+}
+#endif
 #endif
 
 #ifndef RGPOT_HAS_DFTD4
@@ -291,6 +366,24 @@ TEST_CASE("DFTD4 without wrap names the rebuild flag",
   REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
                       Catch::Matchers::ContainsSubstring("with_dftd4"));
 }
+#ifdef RGPOT_HAS_EXPR
+TEST_CASE("Expr d4 without wrap names the rebuild flag",
+          "[pot][rgpot-adapter][expr]") {
+  Parameters params;
+  params.potential_options.potential = PotType::EXPR;
+  params.expr_options.expression = "d4";
+  params.expr_options.terms = "d4";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd4"));
+  params.expr_options.terms = "d4:d4";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd4"));
+  params.expr_options.expression = "dftd4";
+  params.expr_options.terms = "dftd4";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd4"));
+}
+#endif
 #endif
 
 #ifndef RGPOT_HAS_EXPR
