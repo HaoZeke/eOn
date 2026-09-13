@@ -261,6 +261,37 @@ cut_global = 2.0
   REQUIRE(p.zbl_options.cut_global == Catch::Approx(2.0));
 }
 
+TEST_CASE("DFTD4 INI does not take functional from D3Pot",
+          "[params][ini][dftd]") {
+  const auto tmpfile =
+      std::filesystem::temp_directory_path() / "eon_dftd4_not_d3.ini";
+  {
+    std::ofstream ofs(tmpfile);
+    ofs << R"(
+[Potential]
+potential = dftd4
+
+[D3Pot]
+functional = b3lyp
+atm = false
+damping = zero
+
+[D4Pot]
+functional = pbe0
+atm = true
+charge = -1.0
+)";
+  }
+  Parameters p;
+  REQUIRE(p.load(tmpfile.string()) == 0);
+  std::filesystem::remove(tmpfile);
+  REQUIRE(p.potential_options.potential == PotType::DFTD4);
+  REQUIRE(p.dftd_options.functional == "pbe0");
+  REQUIRE(p.dftd_options.atm);
+  REQUIRE(p.dftd_options.d4_charge == Catch::Approx(-1.0));
+  REQUIRE(p.dftd_options.d3_damping == "bj");
+}
+
 TEST_CASE("JSON from_json rejects unknown convergence_metric",
           "[params][json]") {
   nlohmann::json j = nlohmann::json::object();

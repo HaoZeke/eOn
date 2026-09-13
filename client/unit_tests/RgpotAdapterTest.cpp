@@ -150,6 +150,15 @@ TEST_CASE("ExprPot rejects empty expression and unknown child kind",
                       Catch::Matchers::ContainsSubstring("unknown term kind"));
 }
 
+TEST_CASE("ExprPot bare term names construct", "[pot][rgpot-adapter][expr]") {
+  Parameters params;
+  params.potential_options.potential = PotType::EXPR;
+  params.expr_options.expression = "0.5*lj + morse";
+  params.expr_options.terms = "lj,morse";
+  auto pot = eonc::helpers::makePotential(params);
+  REQUIRE(pot->getType() == PotType::EXPR);
+}
+
 TEST_CASE("ExprPot 0.5*lj + morse matches independent sum",
           "[pot][rgpot-adapter][expr]") {
   Parameters params;
@@ -271,6 +280,28 @@ TEST_CASE("DFTD3 without wrap names the rebuild flag",
   params.potential_options.potential = PotType::DFTD3;
   REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
                       Catch::Matchers::ContainsSubstring("with_dftd3"));
+}
+#endif
+
+#ifndef RGPOT_HAS_DFTD4
+TEST_CASE("DFTD4 without wrap names the rebuild flag",
+          "[pot][rgpot-adapter][d4]") {
+  Parameters params;
+  params.potential_options.potential = PotType::DFTD4;
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_dftd4"));
+}
+#endif
+
+#ifndef RGPOT_HAS_EXPR
+TEST_CASE("EXPR without wrap names the rebuild flag",
+          "[pot][rgpot-adapter][expr]") {
+  Parameters params;
+  params.potential_options.potential = PotType::EXPR;
+  params.expr_options.expression = "lj";
+  params.expr_options.terms = "lj";
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(params),
+                      Catch::Matchers::ContainsSubstring("with_expr"));
 }
 #endif
 
