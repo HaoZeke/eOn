@@ -90,9 +90,12 @@ Potential:
                 - ase_nwchem
                 - ase_orca
                 - cuh2
+                - dftd3
+                - dftd4
                 - eam_al
                 - edip
                 - emt
+                - expr
                 - ext_pot
                 - fehe
                 - gpr

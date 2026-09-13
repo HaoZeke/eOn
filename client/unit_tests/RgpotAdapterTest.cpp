@@ -151,10 +151,26 @@ TEST_CASE("Adapter D3 evaluates a two-atom Ar pair",
   pot->force(nAtoms, R, Z, F, &U, &var, box);
   REQUIRE(std::isfinite(U));
   REQUIRE(std::isfinite(F[0]));
+  // Implied D3 of rgpot v3.1.2 half_lj_plus_d3 - 0.5 * identity LJ.
+  REQUIRE(U == Catch::Approx(-0.023417417876102353).epsilon(1e-10));
 }
 #endif
 
 #ifdef RGPOT_HAS_EXPR
+TEST_CASE("ExprPot rejects empty expression and unknown child kind",
+          "[pot][rgpot-adapter][expr]") {
+  Parameters empty;
+  empty.potential_options.potential = PotType::EXPR;
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(empty),
+                      Catch::Matchers::ContainsSubstring("expression"));
+  Parameters bad;
+  bad.potential_options.potential = PotType::EXPR;
+  bad.expr_options.expression = "x";
+  bad.expr_options.terms = {{"x", "not_a_kernel"}};
+  REQUIRE_THROWS_WITH(eonc::helpers::makePotential(bad),
+                      Catch::Matchers::ContainsSubstring("Unknown ExprPot"));
+}
+
 #ifdef RGPOT_HAS_DFTD3
 TEST_CASE("INI ExprPot 0.5*lj + d3 matches independent sum",
           "[pot][rgpot-adapter][expr]") {
@@ -208,6 +224,10 @@ TEST_CASE("INI ExprPot 0.5*lj + d3 matches independent sum",
   for (int i = 0; i < 6; ++i) {
     REQUIRE(F_e[i] == Catch::Approx(0.5 * F_lj[i] + F_d3[i]).epsilon(1e-10));
   }
+  // rgpot v3.1.2 CppCore/tests/data/expr/half_lj_plus_d3_{energy,forces}.npy
+  REQUIRE(U_e == Catch::Approx(-0.18358553943241468).epsilon(1e-12));
+  REQUIRE(F_e[0] == Catch::Approx(0.5793081483943868).epsilon(1e-12));
+  REQUIRE(F_e[3] == Catch::Approx(-0.5793081483943868).epsilon(1e-12));
 }
 #endif
 #endif

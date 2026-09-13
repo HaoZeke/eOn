@@ -381,6 +381,12 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
         rgpot::ExprPot(params.expr_options.expression, std::move(terms)));
     break;
   }
+#else
+  case PotType::EXPR: {
+    throw std::runtime_error(
+        "PotType.EXPR needs librgpot built with -Dwith_expr");
+    break;
+  }
 #endif
   case PotType::ZBL: {
     return makeRgpot<rgpot::ZBLPot>(

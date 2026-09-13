@@ -249,6 +249,22 @@ TEST_CASE("Parameters INI loads ExprPot expression and terms",
   REQUIRE(eonc::format_expr_terms(p.expr_options.terms) == "lj, d3");
 }
 
+TEST_CASE("parse_expr_terms accepts csv and whitespace lists",
+          "[params][ini][expr]") {
+  auto csv = eonc::parse_expr_terms("lj:lj, d3:dftd3");
+  REQUIRE(csv.size() == 2);
+  REQUIRE(csv[0].name == "lj");
+  REQUIRE(csv[0].kind == "lj");
+  REQUIRE(csv[1].name == "d3");
+  REQUIRE(csv[1].kind == "dftd3");
+  REQUIRE(eonc::format_expr_terms(csv) == "lj, d3:dftd3");
+
+  auto ws = eonc::parse_expr_terms("lj d3");
+  REQUIRE(ws.size() == 2);
+  REQUIRE(ws[0].name == "lj");
+  REQUIRE(ws[1].kind == "d3");
+}
+
 TEST_CASE("JSON from_json rejects unknown convergence_metric",
           "[params][json]") {
   nlohmann::json j = nlohmann::json::object();
