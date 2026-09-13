@@ -31,3 +31,8 @@ rgpot **v3.1.2** (ForceBatch is on that tag; do not track a deleted
 branch), readcon-core **v0.14.10** / PyPI readcon **0.14.9**, vesin
 **0.6.1**, Highway **1.4.0**, potentials-schema **v1.15.1**, xtb
 **v6.7.1**.
+
+rgpot 3.1 ships in-process D3 and D4 kernels. eOn now constructs them:
+`potential = dftd3` or `dftd4`, with `[D3Pot]` / `[D4Pot]` for functional,
+ATM, D3 damping, and D4 charge. ExprPot algebra is compiled into librgpot
+(`-Dwith_expr`) but the eOn factory for `PotType.EXPR` is still open.
