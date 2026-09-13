@@ -195,7 +195,7 @@ std::unique_ptr<rgpot::PotentialBase> make_expr_term(const std::string &raw,
     });
   }
   throw std::runtime_error(
-      "ExprPot unknown term '" + raw +
+      "ExprPot unknown term kind '" + raw +
       "' (lj, ljcluster, morse, zbl, d3/dftd3, d4/dftd4, mopac)");
 }
 
@@ -213,12 +213,32 @@ std::vector<rgpot::ExprPot::Term> parse_expr_terms(const Parameters &params) {
       token.pop_back();
     }
     if (!token.empty()) {
-      terms.emplace_back(token, make_expr_term(token, params));
+      std::string name = token;
+      std::string kind = token;
+      const auto colon = token.find(':');
+      if (colon != std::string::npos) {
+        name = token.substr(0, colon);
+        kind = token.substr(colon + 1);
+        while (!name.empty() &&
+               std::isspace(static_cast<unsigned char>(name.back()))) {
+          name.pop_back();
+        }
+        while (!kind.empty() &&
+               std::isspace(static_cast<unsigned char>(kind.front()))) {
+          kind.erase(kind.begin());
+        }
+        if (kind.empty()) {
+          kind = name;
+        }
+      }
+      if (!name.empty()) {
+        terms.emplace_back(name, make_expr_term(kind, params));
+      }
       token.clear();
     }
   };
   for (char c : buf) {
-    if (c == ',') {
+    if (c == ',' || c == ';') {
       flush();
     } else {
       token.push_back(c);
@@ -227,8 +247,8 @@ std::vector<rgpot::ExprPot::Term> parse_expr_terms(const Parameters &params) {
   flush();
   if (terms.empty()) {
     throw std::runtime_error(
-        "ExprPot needs [ExprPot] terms (comma-separated names used in "
-        "expression)");
+        "ExprPot needs [ExprPot] terms (comma-separated names or name:kind "
+        "used in expression)");
   }
   return terms;
 }
@@ -410,6 +430,12 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
                         .atm = params.dftd_options.atm});
     break;
   }
+#else
+  case PotType::DFTD3: {
+    throw std::runtime_error(
+        "DFTD3 requires a librgpot built with -Dwith_dftd3=true "
+        "(or -Drgpot:with_dftd3=true on the wrap)");
+  }
 #endif
 #ifdef RGPOT_HAS_DFTD4
   case PotType::DFTD4: {
@@ -419,6 +445,12 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
                         .charge = params.dftd_options.d4_charge,
                         .atm = params.dftd_options.atm});
     break;
+  }
+#else
+  case PotType::DFTD4: {
+    throw std::runtime_error(
+        "DFTD4 requires a librgpot built with -Dwith_dftd4=true "
+        "(or -Drgpot:with_dftd4=true on the wrap)");
   }
 #endif
   case PotType::ZBL: {
@@ -464,6 +496,11 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
     return std::make_shared<RgpotAdapter<rgpot::ExprPot>>(PotType::EXPR, params,
                                                           std::move(expr));
     break;
+  }
+#else
+  case PotType::EXPR: {
+    throw std::runtime_error(
+        "EXPR requires a librgpot built with -Drgpot:with_expr=true");
   }
 #endif
   default:

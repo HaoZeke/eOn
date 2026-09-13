@@ -79,7 +79,7 @@ void bind_parameters(nb::module_ &m) {
           [](eonc::Parameters &s, const std::string &v) {
             s.expr_options.terms = v;
           },
-          "Comma-separated term names matching the expression")
+          "Comma-separated names or name:kind matching the expression")
       .def_prop_rw(
           "mopac_charge",
           [](const eonc::Parameters &s) { return s.mopac_options.charge; },

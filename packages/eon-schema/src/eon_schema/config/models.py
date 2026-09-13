@@ -600,7 +600,8 @@ class PotentialConfig(BaseModel):
      - ``edip``: Environment-Dependent Interatomic Potential, for carbon.
      - ``emt``: Effective medium theory, for metals.
      - ``expr``: rgpot ExprPot algebra over named terms (``[ExprPot]``
-       expression and comma-separated terms: lj, morse, zbl, d3, d4).
+       expression and comma-separated ``name`` or ``name:kind`` terms:
+       lj, morse, zbl, d3, d4, mopac).
      - ``ext_pot``: External potential with system call interface.
      - ``fehe``: Potential for iron-hydrogen systems.
      - ``gpr``: Gaussian process regression potential.
@@ -672,6 +673,54 @@ class ZBLPot(BaseModel):
     )
     cut_global: float = Field(
         default=2.5, description="Global cutoff for the ZBL interaction."
+    )
+
+
+class D3Pot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    functional: str = Field(
+        default="pbe", description="s-dftd3 method key (default pbe)."
+    )
+    atm: bool = Field(
+        default=True, description="Axilrod-Teller-Muto three-body term."
+    )
+    damping: str = Field(default="bj", description="bj | zero")
+
+
+class D4Pot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    functional: str = Field(
+        default="pbe", description="dftd4 method key (default pbe)."
+    )
+    atm: bool = Field(
+        default=True, description="Axilrod-Teller-Muto three-body term."
+    )
+    charge: float = Field(default=0.0, description="Total charge for D4.")
+
+
+class ExprPot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    expression: str = Field(
+        default="",
+        description="Lepton expression over named terms, e.g. 0.5*lj + d3.",
+    )
+    terms: str = Field(
+        default="",
+        description="Comma-separated names or name:kind matching the expression.",
+    )
+
+
+class MOPACPot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    charge: int = Field(default=0, description="Total charge.")
+    spin: int = Field(default=0, description="Spin multiplicity offset.")
+    model: int = Field(default=4, description="OpenMOPAC model id (4 is AM1).")
+    engine_path: str = Field(
+        default="", description="libmopacc path; empty uses default search."
     )
 
 

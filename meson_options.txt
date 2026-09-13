@@ -23,6 +23,12 @@ option('with_metatomic', type : 'boolean', value : false)
 # 1) Direct in-process: eOn Potential RGPOT → rgpot NWChemPot/CPMDPot → dlopen engines.
 option('with_rgpot', type : 'boolean', value : false,
        description : 'Direct in-process rgpot: Potential RGPOT links NWChemPot/CPMDPot and dlopens libnwchemc/libcpmdc (NOT potserv RPC, NOT --serve)')
+# Forwarded to the rgpot wrap. Off by default so s-dftd3/dftd4 tests stay
+# out of isolated wheel builds; CI uses meson test --suite eon.
+option('with_dftd3', type : 'boolean', value : false,
+       description : 'Build rgpot s-dftd3 (PotType DFTD3 / Expr d3 term)')
+option('with_dftd4', type : 'boolean', value : false,
+       description : 'Build rgpot dftd4 (PotType DFTD4 / Expr d4 term)')
 # 2) eOn as RPC server: eonclient --serve implements rgpot Potential RPC for any pot.
 option('with_serve', type : 'boolean', value : false,
        description : 'eOn as rgpot-compatible Cap\'n Proto RPC *server* (eonclient --serve); clients connect TO eOn (NOT RGPOT pot, NOT potserv client)')

@@ -163,8 +163,9 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.xtb_options.charge =
         ini.GetReal("XTBPot", "charge", params.xtb_options.charge);
   }
-  // [ZBLPot]
-  if (params.potential_options.potential == PotType::ZBL) {
+  // [ZBLPot] (also when ExprPot names a zbl child)
+  if (params.potential_options.potential == PotType::ZBL ||
+      params.potential_options.potential == PotType::EXPR) {
     params.zbl_options.cut_inner =
         ini.GetReal("ZBLPot", "cut_inner", params.zbl_options.cut_inner);
     params.zbl_options.cut_global =
@@ -174,9 +175,10 @@ int load_ini(INIReader &ini, Parameters &params) {
           "Switching function must begin before the global cutoff!");
     }
   }
-  // [D3Pot] / [D4Pot]: rgpot 3.1 Grimme DFT-D
+  // [D3Pot] / [D4Pot]: rgpot 3.1 Grimme DFT-D (also ExprPot children)
   if (params.potential_options.potential == PotType::DFTD3 ||
-      params.potential_options.potential == PotType::DFTD4) {
+      params.potential_options.potential == PotType::DFTD4 ||
+      params.potential_options.potential == PotType::EXPR) {
     params.dftd_options.functional =
         ini.Get("D3Pot", "functional",
                 ini.Get("D4Pot", "functional", params.dftd_options.functional));
@@ -194,7 +196,8 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.expr_options.terms =
         ini.Get("ExprPot", "terms", params.expr_options.terms);
   }
-  if (params.potential_options.potential == PotType::MOPAC) {
+  if (params.potential_options.potential == PotType::MOPAC ||
+      params.potential_options.potential == PotType::EXPR) {
     params.mopac_options.charge = static_cast<int>(
         ini.GetInteger("MOPACPot", "charge", params.mopac_options.charge));
     params.mopac_options.spin = static_cast<int>(

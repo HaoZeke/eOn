@@ -429,6 +429,12 @@ if not _rgpot_pkg.found()
         # Fortran kernels inside librgpot.
         'with_fortran_pots': 'enabled',
     }
+    if get_option('with_dftd3')
+        rgpot_opts += {'with_dftd3': true}
+    endif
+    if get_option('with_dftd4')
+        rgpot_opts += {'with_dftd4': true}
+    endif
     if get_option('with_rgpot') or get_option('with_serve')
         rgpot_opts += {'with_rpc': true}
     endif

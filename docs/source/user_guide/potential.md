@@ -80,12 +80,15 @@ ZBL
 DFTD3 / DFTD4
 : Grimme DFT-D via rgpot 3.2 (`potential = dftd3` / `dftd4`,
   `[D3Pot]` / `[D4Pot]`). Enable the wraps at meson configure time
-  (`-Dwith_dftd3=true`).
+  (`-Dwith_dftd3=true` / `-Dwith_dftd4=true`; forwarded to the rgpot
+  wrap). Off by default so s-dftd3/dftd4 stay out of isolated wheels.
 
 EXPR
 : rgpot ExprPot. `potential = expr` with `[ExprPot]` `expression` and
-  comma-separated `terms` (`0.5*lj + d3`). Terms: `lj`, `ljcluster`,
-  `morse`, `zbl`, `d3`/`dftd3`, `d4`/`dftd4`, `mopac`.
+  comma-separated `terms` (`0.5*lj + d3`). Each term is `name` or
+  `name:kind` (kind defaults to name). Kinds: `lj`, `ljcluster`,
+  `morse`, `zbl`, `d3`/`dftd3`, `d4`/`dftd4`, `mopac`. Child
+  `[D3Pot]` / `[D4Pot]` / `[ZBLPot]` / `[MOPACPot]` keys apply.
 
 MOPAC
 : rgpot 3.2 MOPACPot (libmopacc). `potential = mopac`, `[MOPACPot]`

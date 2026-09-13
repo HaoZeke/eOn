@@ -103,3 +103,19 @@ def test_write_models_ini(tmp_path: Path):
 def test_models_to_ini_combined():
     secs = models_to_ini(MainConfig(job="point"), PotentialConfig(potential="emt"))
     assert set(secs) >= {"Main", "Potential"}
+
+
+def test_dftd_expr_mopac_ini_sections():
+    from eon_schema.config import D3Pot, D4Pot, ExprPot, MOPACPot
+
+    secs = models_to_ini(
+        D3Pot(functional="pbe0", damping="zero"),
+        D4Pot(charge=1.0),
+        ExprPot(expression="0.5*lj + d3", terms="lj:lj, d3:d3"),
+        MOPACPot(model=4, charge=0),
+    )
+    assert secs["D3Pot"]["functional"] == "pbe0"
+    assert secs["D3Pot"]["damping"] == "zero"
+    assert secs["D4Pot"]["charge"] == "1.0"
+    assert secs["ExprPot"]["terms"] == "lj:lj, d3:d3"
+    assert secs["MOPACPot"]["model"] == "4"
