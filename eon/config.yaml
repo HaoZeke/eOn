@@ -90,9 +90,12 @@ Potential:
                 - ase_nwchem
                 - ase_orca
                 - cuh2
+                - dftd3
+                - dftd4
                 - eam_al
                 - edip
                 - emt
+                - expr
                 - ext_pot
                 - fehe
                 - gpr
@@ -101,6 +104,7 @@ Potential:
                 - lj
                 - ljcluster
                 - metatomic
+                - mopac
                 - morse_pt
                 - mpi
                 - rgpot
@@ -1828,6 +1832,70 @@ ZBLPot:
         cut_global:
             kind: float
             default: 2.5
+
+################################################################################
+
+D3Pot:
+    options:
+        functional:
+            kind: string
+            default: "pbe"
+
+        atm:
+            kind: boolean
+            default: True
+
+        damping:
+            kind: string
+            default: "bj"
+
+################################################################################
+
+D4Pot:
+    options:
+        functional:
+            kind: string
+            default: "pbe"
+
+        atm:
+            kind: boolean
+            default: True
+
+        charge:
+            kind: float
+            default: 0.0
+
+################################################################################
+
+ExprPot:
+    options:
+        expression:
+            kind: string
+            default: ""
+
+        terms:
+            kind: string
+            default: ""
+
+################################################################################
+
+MOPACPot:
+    options:
+        charge:
+            kind: int
+            default: 0
+
+        spin:
+            kind: int
+            default: 0
+
+        model:
+            kind: int
+            default: 4
+
+        engine_path:
+            kind: string
+            default: ""
 
 ################################################################################
 

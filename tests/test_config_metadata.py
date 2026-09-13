@@ -34,6 +34,10 @@ SECTION_CLASS_NAMES = {
     "ARTn": "ARTnConfig",
     "IRA": "IRAConfig",
     "BGSD": "BGSDConfig",
+    "D3Pot": "D3Pot",
+    "D4Pot": "D4Pot",
+    "ExprPot": "ExprPot",
+    "MOPACPot": "MOPACPot",
 }
 
 
