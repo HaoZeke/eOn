@@ -23,3 +23,11 @@ INI already had `[Optimizer]` and Refine. The nanobind `Parameters`
 object did not. Dimers and NEBs were stuck on compiled defaults. The
 bindings now expose `opt_method`, `neb_opt_method`,
 `refine_opt_method`, and `refine_threshold` as `OptType` values.
+
+## Dependency floors
+
+The meson wrap and Python floors move with the current releases:
+rgpot **v3.1.2** (ForceBatch is on that tag; do not track a deleted
+branch), readcon-core **v0.14.10** / PyPI readcon **0.14.9**, vesin
+**0.6.1**, Highway **1.4.0**, potentials-schema **v1.15.1**, xtb
+**v6.7.1**.
