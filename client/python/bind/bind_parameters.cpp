@@ -67,6 +67,22 @@ void bind_parameters(nb::module_ &m) {
           [](const eonc::Parameters &s) { return s.dftd_options.d4_charge; },
           [](eonc::Parameters &s, double v) { s.dftd_options.d4_charge = v; })
       .def_prop_rw(
+          "expr_expression",
+          [](const eonc::Parameters &s) { return s.expr_options.expression; },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.expr_options.expression = v;
+          },
+          "Lepton energy string over named ExprPot children")
+      .def_prop_rw(
+          "expr_terms",
+          [](const eonc::Parameters &s) {
+            return eonc::format_expr_terms(s.expr_options.terms);
+          },
+          [](eonc::Parameters &s, const std::string &v) {
+            s.expr_options.terms = eonc::parse_expr_terms(v);
+          },
+          "Comma-separated name:kind list (kind defaults to name)")
+      .def_prop_rw(
           "temperature",
           [](const eonc::Parameters &s) { return s.main_options.temperature; },
           [](eonc::Parameters &s, double t) { s.main_options.temperature = t; })

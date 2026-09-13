@@ -33,3 +33,14 @@ def test_dftd_pot_types_and_params():
     assert params.potential == pyec.PotType.DFTD3
     assert params.dftd_functional == "pbe"
     assert params.d3_damping == "bj"
+
+
+def test_expr_pot_params():
+    assert pyec.PotType.EXPR != pyec.PotType.DFTD3
+    params = pyec.Parameters()
+    params.potential = pyec.PotType.EXPR
+    params.expr_expression = "0.5*lj + d3"
+    params.expr_terms = "lj:lj, d3:d3"
+    assert params.potential == pyec.PotType.EXPR
+    assert params.expr_expression == "0.5*lj + d3"
+    assert params.expr_terms == "lj, d3"

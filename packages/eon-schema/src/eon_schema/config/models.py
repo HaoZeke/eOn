@@ -597,7 +597,7 @@ class PotentialConfig(BaseModel):
      - ``dftd4``: Grimme DFT-D4 via rgpot 3.1 dftd4 (``[D4Pot]``).
      - ``edip``: Environment-Dependent Interatomic Potential, for carbon.
      - ``emt``: Effective medium theory, for metals.
-     - ``expr``: rgpot ExprPot algebra (requires ``-Dwith_expr``; factory pending).
+     - ``expr``: rgpot ExprPot algebra (``[ExprPot]`` expression plus named children).
      - ``ext_pot``: External potential with system call interface.
      - ``fehe``: Potential for iron-hydrogen systems.
      - ``gpr``: Gaussian process regression potential.
@@ -660,6 +660,50 @@ class ZBLPot(BaseModel):
     )
     cut_global: float = Field(
         default=2.5, description="Global cutoff for the ZBL interaction."
+    )
+
+
+class D3Pot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    functional: str = Field(
+        default="pbe", description="s-dftd3 method key for C6 parameters."
+    )
+    atm: bool = Field(
+        default=True, description="Axilrod-Teller-Muto three-body term."
+    )
+    damping: Literal["bj", "zero"] = Field(
+        default="bj", description="D3 damping form (Becke-Johnson or zero)."
+    )
+
+
+class D4Pot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    functional: str = Field(
+        default="pbe", description="dftd4 method key for damping parameters."
+    )
+    atm: bool = Field(
+        default=True, description="Many-body ATM (dftd4 mdb) term."
+    )
+    charge: float = Field(
+        default=0.0, description="Total molecular charge for dftd4_new_structure."
+    )
+
+
+class ExprPot(BaseModel):
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
+    expression: str = Field(
+        default="",
+        description="Lepton energy string over named children (for example 0.5*lj + d3).",
+    )
+    terms: str = Field(
+        default="",
+        description=(
+            "Comma-separated name:kind list. Kind defaults to name. "
+            "Kinds: lj, ljcluster, morse, zbl, d3, d4."
+        ),
     )
 
 

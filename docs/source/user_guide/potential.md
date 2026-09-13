@@ -76,6 +76,15 @@ Morse_Pt
 ZBL
 : Ziegler-Biersack-Littmark screened nuclear repulsion, served by `rgpot`.
 
+DFTD3
+: Grimme DFT-D3 via rgpot 3.1 s-dftd3 (`potential = dftd3`, `[D3Pot]`).
+
+DFTD4
+: Grimme DFT-D4 via rgpot 3.1 dftd4 (`potential = dftd4`, `[D4Pot]`).
+
+EXPR
+: rgpot ExprPot algebra over named child kernels (`potential = expr`, `[ExprPot]`).
+
 Lenosky_Si {cite:p}`pot-lenoskyHighlyOptimizedEmpirical2000`
 : Lenosky potential, for silicon.
 
@@ -124,6 +133,36 @@ Several potentials have additional configuration stanzas.
 
 ```{eval-rst}
 .. autopydantic_model:: eon.schema.ZBLPot
+```
+
+### DFT-D3 / DFT-D4
+
+```{eval-rst}
+.. autopydantic_model:: eon.schema.D3Pot
+```
+
+```{eval-rst}
+.. autopydantic_model:: eon.schema.D4Pot
+```
+
+### ExprPot
+
+```{eval-rst}
+.. autopydantic_model:: eon.schema.ExprPot
+```
+
+```{code-block} ini
+[Potential]
+potential = expr
+
+[ExprPot]
+expression = 0.5*lj + d3
+terms = lj:lj, d3:d3
+
+[D3Pot]
+functional = pbe
+atm = true
+damping = bj
 ```
 
 ### NWChem

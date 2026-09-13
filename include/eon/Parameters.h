@@ -121,6 +121,16 @@ public:
     double d4_charge{0.0};
   } dftd_options;
 
+  // [ExprPot]: rgpot ExprPot algebra over named child kernels.
+  struct expr_term_t {
+    std::string name;
+    std::string kind;
+  };
+  struct expr_options_t {
+    std::string expression;
+    std::vector<expr_term_t> terms;
+  } expr_options;
+
   // [SocketNWChemPot] //
   struct socket_nwchem_options_t {
     std::string host{"127.0.0.1"};
@@ -755,6 +765,12 @@ public:
     long scan_planes{40}; // uniform planes across the guideline
   } oh_tst_options;
 };
+
+/// Parse `[ExprPot] terms` (`lj:lj, d3:d3` or `lj, d3`). Kind defaults to name.
+std::vector<Parameters::expr_term_t> parse_expr_terms(const std::string &spec);
+/// Inverse of parse_expr_terms for pyeonclient / logs.
+std::string
+format_expr_terms(const std::vector<Parameters::expr_term_t> &terms);
 
 } // namespace eonc
 

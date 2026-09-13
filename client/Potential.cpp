@@ -14,8 +14,11 @@
 #include <csignal>
 #include <ctime>
 #include <limits>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "eon/HelperFunctions.h"
 #include "eon/Parameters.h"
@@ -42,6 +45,9 @@
 #endif
 #ifdef RGPOT_HAS_DFTD4
 #include "rgpot/D4Pot/D4Pot.hpp"
+#endif
+#ifdef RGPOT_HAS_EXPR
+#include "rgpot/ExprPot/ExprPot.hpp"
 #endif
 #include "rgpot/fortran/FortranPots.hpp"
 #ifndef IS_WINDOWS
@@ -105,7 +111,67 @@
 #include "eon/potentials/XTBPot/XTBPot.h"
 #endif
 
-#include <limits>
+#ifdef RGPOT_HAS_DFTD3
+namespace {
+rgpot::D3Config d3ConfigFrom(const Parameters &params) {
+  rgpot::D3Damping damp = rgpot::D3Damping::BJ;
+  std::string dname = params.dftd_options.d3_damping;
+  for (char &c : dname) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  if (dname == "zero") {
+    damp = rgpot::D3Damping::Zero;
+  }
+  return rgpot::D3Config{.damping = damp,
+                         .functional = params.dftd_options.functional,
+                         .atm = params.dftd_options.atm};
+}
+} // namespace
+#endif
+
+#ifdef RGPOT_HAS_EXPR
+namespace {
+std::string lowerKind(std::string s) {
+  for (char &c : s) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  return s;
+}
+
+std::unique_ptr<rgpot::PotentialBase> makeExprChild(const std::string &kind,
+                                                    const Parameters &params) {
+  const std::string k = lowerKind(kind);
+  if (k == "lj") {
+    return std::make_unique<rgpot::LJPot>(rgpot::LJConfig{});
+  }
+  if (k == "ljcluster") {
+    return std::make_unique<rgpot::LJClusterPot>(rgpot::LJClusterConfig{});
+  }
+  if (k == "morse" || k == "morse_pt") {
+    return std::make_unique<rgpot::MorsePot>(rgpot::MorseConfig{});
+  }
+  if (k == "zbl") {
+    return std::make_unique<rgpot::ZBLPot>(
+        rgpot::ZBLConfig{.cut_inner = params.zbl_options.cut_inner,
+                         .cut_global = params.zbl_options.cut_global});
+  }
+#ifdef RGPOT_HAS_DFTD3
+  if (k == "d3" || k == "dftd3") {
+    return std::make_unique<rgpot::D3Pot>(d3ConfigFrom(params));
+  }
+#endif
+#ifdef RGPOT_HAS_DFTD4
+  if (k == "d4" || k == "dftd4") {
+    return std::make_unique<rgpot::D4Pot>(
+        rgpot::D4Config{.functional = params.dftd_options.functional,
+                        .charge = params.dftd_options.d4_charge,
+                        .atm = params.dftd_options.atm});
+  }
+#endif
+  throw std::runtime_error("Unknown ExprPot term kind: " + kind);
+}
+} // namespace
+#endif
 
 std::tuple<double, AtomMatrix> Potential::get_ef(const AtomMatrix &pos,
                                                  const VectorXi &atmnrs,
@@ -282,19 +348,8 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
 #endif
 #ifdef RGPOT_HAS_DFTD3
   case PotType::DFTD3: {
-    rgpot::D3Damping damp = rgpot::D3Damping::BJ;
-    std::string dname = params.dftd_options.d3_damping;
-    for (char &c : dname) {
-      c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    }
-    if (dname == "zero") {
-      damp = rgpot::D3Damping::Zero;
-    }
-    return makeRgpot<rgpot::D3Pot>(
-        PotType::DFTD3, params,
-        rgpot::D3Config{.damping = damp,
-                        .functional = params.dftd_options.functional,
-                        .atm = params.dftd_options.atm});
+    return makeRgpot<rgpot::D3Pot>(PotType::DFTD3, params,
+                                   d3ConfigFrom(params));
     break;
   }
 #endif
@@ -305,6 +360,25 @@ std::shared_ptr<Potential> makePotential(PotType ptype,
         rgpot::D4Config{.functional = params.dftd_options.functional,
                         .charge = params.dftd_options.d4_charge,
                         .atm = params.dftd_options.atm});
+    break;
+  }
+#endif
+#ifdef RGPOT_HAS_EXPR
+  case PotType::EXPR: {
+    if (params.expr_options.expression.empty()) {
+      throw std::runtime_error("ExprPot requires [ExprPot] expression");
+    }
+    if (params.expr_options.terms.empty()) {
+      throw std::runtime_error("ExprPot requires [ExprPot] terms");
+    }
+    std::vector<rgpot::ExprPot::Term> terms;
+    terms.reserve(params.expr_options.terms.size());
+    for (const auto &t : params.expr_options.terms) {
+      terms.emplace_back(t.name, makeExprChild(t.kind, params));
+    }
+    return makeRgpotMoved(
+        PotType::EXPR, params,
+        rgpot::ExprPot(params.expr_options.expression, std::move(terms)));
     break;
   }
 #endif

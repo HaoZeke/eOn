@@ -1831,6 +1831,50 @@ ZBLPot:
 
 ################################################################################
 
+D3Pot:
+    options:
+        functional:
+            kind: string
+            default: "pbe"
+
+        atm:
+            kind: boolean
+            default: True
+
+        damping:
+            kind: string
+            default: "bj"
+
+################################################################################
+
+D4Pot:
+    options:
+        functional:
+            kind: string
+            default: "pbe"
+
+        atm:
+            kind: boolean
+            default: True
+
+        charge:
+            kind: float
+            default: 0.0
+
+################################################################################
+
+ExprPot:
+    options:
+        expression:
+            kind: string
+            default: ""
+
+        terms:
+            kind: string
+            default: ""
+
+################################################################################
+
 SocketNWChemPot:
     options:
         host:

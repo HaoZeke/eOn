@@ -19,12 +19,15 @@
 
 #include <INIReader.h>
 
+#include <cctype>
 #include <cerrno>
 #include <cmath>
 #include <ctime>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "eon/EonLogger.h"
 
@@ -35,7 +38,76 @@ std::string toLowerCase(std::string s) {
   }
   return s;
 }
+
+std::string trimCopy(const std::string &s) {
+  const auto b = s.find_first_not_of(" \t\r\n");
+  if (b == std::string::npos) {
+    return {};
+  }
+  const auto e = s.find_last_not_of(" \t\r\n");
+  return s.substr(b, e - b + 1);
+}
 } // namespace
+
+namespace eonc {
+
+std::vector<Parameters::expr_term_t> parse_expr_terms(const std::string &spec) {
+  std::vector<Parameters::expr_term_t> out;
+  const bool csv = spec.find(',') != std::string::npos ||
+                   spec.find(';') != std::string::npos;
+  std::string cur;
+  auto flush = [&]() {
+    const std::string tok = trimCopy(cur);
+    cur.clear();
+    if (tok.empty()) {
+      return;
+    }
+    const auto colon = tok.find(':');
+    Parameters::expr_term_t term;
+    if (colon == std::string::npos) {
+      term.name = tok;
+      term.kind = tok;
+    } else {
+      term.name = trimCopy(tok.substr(0, colon));
+      term.kind = trimCopy(tok.substr(colon + 1));
+      if (term.kind.empty()) {
+        term.kind = term.name;
+      }
+    }
+    if (!term.name.empty()) {
+      out.push_back(std::move(term));
+    }
+  };
+  for (char c : spec) {
+    const bool sep = csv ? (c == ',' || c == ';')
+                         : std::isspace(static_cast<unsigned char>(c));
+    if (sep) {
+      flush();
+    } else {
+      cur.push_back(c);
+    }
+  }
+  flush();
+  return out;
+}
+
+std::string
+format_expr_terms(const std::vector<Parameters::expr_term_t> &terms) {
+  std::ostringstream ss;
+  for (size_t i = 0; i < terms.size(); ++i) {
+    if (i != 0) {
+      ss << ", ";
+    }
+    if (terms[i].kind.empty() || terms[i].kind == terms[i].name) {
+      ss << terms[i].name;
+    } else {
+      ss << terms[i].name << ':' << terms[i].kind;
+    }
+  }
+  return ss.str();
+}
+
+} // namespace eonc
 
 namespace eonc::config {
 
@@ -163,8 +235,9 @@ int load_ini(INIReader &ini, Parameters &params) {
     params.xtb_options.charge =
         ini.GetReal("XTBPot", "charge", params.xtb_options.charge);
   }
-  // [ZBLPot]
-  if (params.potential_options.potential == PotType::ZBL) {
+  // [ZBLPot] (also when ExprPot names a zbl child)
+  if (params.potential_options.potential == PotType::ZBL ||
+      params.potential_options.potential == PotType::EXPR) {
     params.zbl_options.cut_inner =
         ini.GetReal("ZBLPot", "cut_inner", params.zbl_options.cut_inner);
     params.zbl_options.cut_global =
@@ -174,9 +247,10 @@ int load_ini(INIReader &ini, Parameters &params) {
           "Switching function must begin before the global cutoff!");
     }
   }
-  // [D3Pot] / [D4Pot]: rgpot 3.1 Grimme DFT-D
+  // [D3Pot] / [D4Pot]: rgpot 3.1 Grimme DFT-D (also ExprPot children)
   if (params.potential_options.potential == PotType::DFTD3 ||
-      params.potential_options.potential == PotType::DFTD4) {
+      params.potential_options.potential == PotType::DFTD4 ||
+      params.potential_options.potential == PotType::EXPR) {
     params.dftd_options.functional =
         ini.Get("D3Pot", "functional",
                 ini.Get("D4Pot", "functional", params.dftd_options.functional));
@@ -187,6 +261,14 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.Get("D3Pot", "damping", params.dftd_options.d3_damping);
     params.dftd_options.d4_charge =
         ini.GetReal("D4Pot", "charge", params.dftd_options.d4_charge);
+  }
+  // [ExprPot]: Lepton expression plus named child kernels
+  if (params.potential_options.potential == PotType::EXPR) {
+    params.expr_options.expression =
+        ini.Get("ExprPot", "expression", params.expr_options.expression);
+    params.expr_options.terms = eonc::parse_expr_terms(
+        ini.Get("ExprPot", "terms",
+                eonc::format_expr_terms(params.expr_options.terms)));
   }
   // [SocketNWChemPot]
   if (params.potential_options.potential == PotType::SocketNWChem) {

@@ -224,6 +224,31 @@ neighbor_cutoff = 4.0
   std::filesystem::remove(tmpfile);
 }
 
+TEST_CASE("Parameters INI loads ExprPot expression and terms",
+          "[params][ini][expr]") {
+  auto tmppath = std::filesystem::temp_directory_path() / "_test_expr.ini";
+  {
+    std::ofstream f(tmppath);
+    f << "[Potential]\n"
+         "potential = expr\n"
+         "\n"
+         "[ExprPot]\n"
+         "expression = 0.5*lj + d3\n"
+         "terms = lj:lj, d3:d3\n";
+  }
+  Parameters p;
+  REQUIRE(p.load(tmppath.string()) == 0);
+  std::filesystem::remove(tmppath);
+  REQUIRE(p.potential_options.potential == PotType::EXPR);
+  REQUIRE(p.expr_options.expression == "0.5*lj + d3");
+  REQUIRE(p.expr_options.terms.size() == 2);
+  REQUIRE(p.expr_options.terms[0].name == "lj");
+  REQUIRE(p.expr_options.terms[0].kind == "lj");
+  REQUIRE(p.expr_options.terms[1].name == "d3");
+  REQUIRE(p.expr_options.terms[1].kind == "d3");
+  REQUIRE(eonc::format_expr_terms(p.expr_options.terms) == "lj, d3");
+}
+
 TEST_CASE("JSON from_json rejects unknown convergence_metric",
           "[params][json]") {
   nlohmann::json j = nlohmann::json::object();

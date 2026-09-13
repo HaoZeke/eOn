@@ -13,6 +13,10 @@
 #include "catch2/catch_amalgamated.hpp"
 #include "eon/Matter.h"
 
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+
 namespace tests {
 
 static eonc::helpers::test::QuillTestLogger _quill_setup;
@@ -130,5 +134,82 @@ TEST_CASE("Adapter forceBatch agrees with per-system force calls",
   REQUIRE((batchF0 - singleF0).cwiseAbs().maxCoeff() < 1e-10);
   REQUIRE((batchF1 - singleF1).cwiseAbs().maxCoeff() < 1e-10);
 }
+
+#ifdef RGPOT_HAS_DFTD3
+TEST_CASE("Adapter D3 evaluates a two-atom Ar pair",
+          "[pot][rgpot-adapter][d3]") {
+  Parameters params;
+  params.potential_options.potential = PotType::DFTD3;
+  auto pot = eonc::helpers::makePotential(params);
+  const long nAtoms = 2;
+  const double R[] = {0.0, 0.0, 0.0, 1.5, 0.0, 0.0};
+  const int Z[] = {18, 18};
+  const double box[] = {40.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 40.0};
+  double F[6] = {};
+  double U = 0.0;
+  double var = 0.0;
+  pot->force(nAtoms, R, Z, F, &U, &var, box);
+  REQUIRE(std::isfinite(U));
+  REQUIRE(std::isfinite(F[0]));
+}
+#endif
+
+#ifdef RGPOT_HAS_EXPR
+#ifdef RGPOT_HAS_DFTD3
+TEST_CASE("INI ExprPot 0.5*lj + d3 matches independent sum",
+          "[pot][rgpot-adapter][expr]") {
+  const auto tmp =
+      std::filesystem::temp_directory_path() / "eon_expr_lj_d3.ini";
+  {
+    std::ofstream f(tmp);
+    f << "[Potential]\n"
+         "potential = expr\n"
+         "\n"
+         "[ExprPot]\n"
+         "expression = 0.5*lj + d3\n"
+         "terms = lj:lj, d3:d3\n"
+         "\n"
+         "[D3Pot]\n"
+         "functional = pbe\n"
+         "atm = true\n"
+         "damping = bj\n";
+  }
+  Parameters params;
+  REQUIRE(params.load(tmp.string()) == 0);
+  std::filesystem::remove(tmp);
+  REQUIRE(params.potential_options.potential == PotType::EXPR);
+  REQUIRE(params.expr_options.expression == "0.5*lj + d3");
+  REQUIRE(params.expr_options.terms.size() == 2);
+  REQUIRE(params.expr_options.terms[0].name == "lj");
+  REQUIRE(params.expr_options.terms[1].kind == "d3");
+
+  auto expr = eonc::helpers::makePotential(params);
+
+  Parameters lj_p;
+  lj_p.potential_options.potential = PotType::LJ;
+  auto lj = eonc::helpers::makePotential(lj_p);
+
+  Parameters d3_p;
+  d3_p.potential_options.potential = PotType::DFTD3;
+  d3_p.dftd_options = params.dftd_options;
+  auto d3 = eonc::helpers::makePotential(d3_p);
+
+  const long nAtoms = 2;
+  const double R[] = {0.0, 0.0, 0.0, 1.5, 0.0, 0.0};
+  const int Z[] = {18, 18};
+  const double box[] = {40.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 40.0};
+  double F_e[6] = {}, F_lj[6] = {}, F_d3[6] = {};
+  double U_e = 0.0, U_lj = 0.0, U_d3 = 0.0, var = 0.0;
+  expr->force(nAtoms, R, Z, F_e, &U_e, &var, box);
+  lj->force(nAtoms, R, Z, F_lj, &U_lj, &var, box);
+  d3->force(nAtoms, R, Z, F_d3, &U_d3, &var, box);
+
+  REQUIRE(U_e == Catch::Approx(0.5 * U_lj + U_d3).epsilon(1e-12));
+  for (int i = 0; i < 6; ++i) {
+    REQUIRE(F_e[i] == Catch::Approx(0.5 * F_lj[i] + F_d3[i]).epsilon(1e-10));
+  }
+}
+#endif
+#endif
 
 } /* namespace tests */
