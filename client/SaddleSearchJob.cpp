@@ -25,7 +25,7 @@
 #include <string>
 
 std::vector<std::string> SaddleSearchJob::run() {
-  std::string reactantFilename("pos.con");
+  std::string reactantFilename = eonc::helpers::getRelevantFile("pos.con");
   std::string displacementFilename("displacement.con");
   std::string modeFilename("direction.dat");
 
