@@ -165,7 +165,18 @@ int ARTnSaddleSearch::run() {
       std::istringstream ss(params.artn_options.nperp_limitation);
       std::string token;
       while (std::getline(ss, token, ',')) {
-        nperp_vals.push_back(std::stoi(token));
+        try {
+          nperp_vals.push_back(std::stoi(token));
+        } catch (const std::exception &) {
+          QUILL_LOG_ERROR(log, "artn nperp_limitation token '{}' is not an int",
+                          token);
+        }
+      }
+      if (nperp_vals.empty()) {
+        QUILL_LOG_ERROR(log, "artn nperp_limitation parsed no integers");
+        res.get_destroy_fn()();
+        status = STATUS_BAD_ARTN_ERROR;
+        return status;
       }
       if (!nperp_vals.empty()) {
         int nperp_size = static_cast<int>(nperp_vals.size());
