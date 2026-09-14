@@ -1,0 +1,1 @@
+XTB uses the box diagonal to set periodicity instead of always passing `{false,false,false}`.
