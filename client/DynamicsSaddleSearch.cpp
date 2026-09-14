@@ -123,6 +123,10 @@ int DynamicsSaddleSearch::run() {
 
       if (!product->compare(*reactant)) {
         QUILL_LOG_DEBUG(log, "Found new state");
+        if (mdSnapshots.empty()) {
+          QUILL_LOG_ERROR(log, "transition found with no MD snapshots");
+          return MinModeSaddleSearch::STATUS_BAD_MD_TRAJECTORY_TOO_SHORT;
+        }
         int image = refineTransition(mdSnapshots, product);
         *saddle = *mdSnapshots[image];
         QUILL_LOG_DEBUG(log, "Found transition at snapshot image {}", image);

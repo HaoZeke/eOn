@@ -10,14 +10,11 @@
 ** https://github.com/TheochemUI/eOn
 */
 #include "eon/BasinHoppingSaddleSearch.h"
-#include "eon/Dimer.h"
-#include "eon/ImprovedDimer.h"
-#include "eon/Lanczos.h"
-#include "eon/LowestEigenmode.h"
+#include "eon/HelperFunctions.h"
 #include "eon/MinModeSaddleSearch.h"
 #include "eon/NudgedElasticBand.h"
 #include <cmath>
-#include <cstdio>
+#include <stdexcept>
 
 int BasinHoppingSaddleSearch::run() {
   // minimize "saddle"
@@ -32,11 +29,13 @@ int BasinHoppingSaddleSearch::run() {
   de = eproduct - ereactant;
   double kB = params.constants.kB;
   double Temperature = params.main_options.temperature;
-  double arg = -de / (kB * Temperature);
-  double p = std::exp(arg);
-  double r = eonc::helpers::random();
   if (ereactant < eproduct) {
-    if (r > p) { // reject
+    if (!(Temperature > 0.0) || !(kB > 0.0)) {
+      return 1;
+    }
+    const double arg = -de / (kB * Temperature);
+    const double p = std::exp(arg);
+    if (eonc::helpers::random() > p) {
       return 1;
     }
   }
@@ -56,7 +55,7 @@ int BasinHoppingSaddleSearch::run() {
   double Emax = -1e100;
   int HighestImage = 0;
 
-  for (int i = 1; i < neb.numImages; i++) {
+  for (int i = 1; i <= neb.numImages; i++) {
     double Etest = neb.path[i]->getPotentialEnergy();
     QUILL_LOG_DEBUG(log, "i: {} Etest: {:.1f}", i, Etest);
     if (Etest > Emax) {
@@ -64,14 +63,17 @@ int BasinHoppingSaddleSearch::run() {
       HighestImage = i;
     }
   }
-  // do dimer
-  // Calculate initial direction
   AtomMatrix r_1 = neb.path[HighestImage - 1]->getPositions();
-  AtomMatrix r_2 = neb.path[HighestImage]->getPositions();
   AtomMatrix r_3 = neb.path[HighestImage + 1]->getPositions();
-  AtomMatrix direction = (r_3 - r_1) / 2;
-  MinModeSaddleSearch dim(neb.path[HighestImage], direction.normalized(),
-                          ereactant, params, pot);
+  AtomMatrix direction = neb.path[HighestImage]->pbc(r_3 - r_1);
+  const double dirNorm = direction.norm();
+  if (!(dirNorm > 0.0)) {
+    throw std::runtime_error(
+        "BasinHoppingSaddleSearch: zero NEB tangent at the highest image");
+  }
+  direction /= dirNorm;
+  MinModeSaddleSearch dim(neb.path[HighestImage], direction, ereactant, params,
+                          pot);
   dim.run();
   *saddle = *neb.path[HighestImage];
   eigenvalue = dim.getEigenvalue();

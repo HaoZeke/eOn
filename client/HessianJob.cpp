@@ -12,6 +12,7 @@
 #include "eon/HessianJob.h"
 #include "eon/BaseStructures.h"
 #include "eon/EonLogger.h"
+#include "eon/HelperFunctions.h"
 #include "eon/Hessian.h"
 #include "eon/Matter.h"
 #include "eon/MobileAtoms.h"
@@ -26,7 +27,7 @@
 #include <string>
 
 std::vector<std::string> HessianJob::run(void) {
-  std::string matter_in("pos.con");
+  std::string matter_in = eonc::helpers::getRelevantFile("pos.con");
 
   std::vector<std::string> returnFiles;
 
@@ -54,17 +55,22 @@ std::vector<std::string> HessianJob::run(void) {
   returnFiles.push_back(results_file);
 
   std::ofstream out(results_file, std::ios::binary);
-  if (out) {
-    const auto status =
-        freqs_ok ? RunStatus::GOOD : RunStatus::FAIL_POTENTIAL_FAILED;
-    out << std::format("{} termination_reason\n", static_cast<int>(status));
-    out << std::format("{} termination_reason_text\n",
-                       magic_enum::enum_name<RunStatus>(status));
-    out << "hessian job_type\n";
-    out << std::format("{} force_calls\n",
-                       PotRegistry::get().total_force_calls());
-    out << std::format("{} total_force_calls\n",
-                       PotRegistry::get().total_force_calls());
+  if (!out) {
+    throw std::runtime_error("failed to open " + results_file);
+  }
+  const auto status =
+      freqs_ok ? RunStatus::GOOD : RunStatus::FAIL_POTENTIAL_FAILED;
+  out << std::format("{} termination_reason\n", static_cast<int>(status));
+  out << std::format("{} termination_reason_text\n",
+                     magic_enum::enum_name<RunStatus>(status));
+  out << "hessian job_type\n";
+  out << std::format("{} force_calls\n",
+                     PotRegistry::get().total_force_calls());
+  out << std::format("{} total_force_calls\n",
+                     PotRegistry::get().total_force_calls());
+  out.close();
+  if (!out) {
+    throw std::runtime_error("failed to write " + results_file);
   }
   if (std::filesystem::exists("hessian.dat")) {
     returnFiles.push_back("hessian.dat");

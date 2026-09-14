@@ -1,0 +1,1 @@
+A dynamics saddle search that finds a new state with no recorded snapshots returns `STATUS_BAD_MD_TRAJECTORY_TOO_SHORT` instead of indexing an empty list.
