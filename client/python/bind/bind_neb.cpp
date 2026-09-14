@@ -9,6 +9,7 @@
 #include "eon/NEBSplineExtrema.h"
 #include "eon/NudgedElasticBand.h"
 #include "eon/Parameters.h"
+#include "eon/SafeMath.h"
 #include "eon/PotRegistry.h"
 #include "eon/Potential.h"
 #ifdef WITH_GP_SURROGATE
@@ -643,7 +644,7 @@ void bind_neb(nb::module_ &m) {
             AtomMatrix peakMode =
                 (1.0 - f) * (*neb.tangent[static_cast<size_t>(leftIdx)]) +
                 f * (*neb.tangent[static_cast<size_t>(leftIdx + 1)]);
-            peakMode.normalize();
+            eonc::safemath::safe_normalize_inplace(peakMode);
             std::string peakModeFile =
                 std::format("peak{:02d}_mode.dat", peakCount);
             {

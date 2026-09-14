@@ -11,6 +11,7 @@
 */
 #include "eon/NudgedElasticBandJob.h"
 #include "eon/BaseStructures.h"
+#include "eon/SafeMath.h"
 #include "eon/ConjugateGradients.h"
 #include "eon/EonLogger.h"
 #include "eon/JobResult.h"
@@ -280,7 +281,7 @@ void NudgedElasticBandJob::saveData(NudgedElasticBand::NEBStatus status,
         // 2. Write Interpolated Tangent as standard mode.dat
         AtomMatrix peakMode = (1.0 - f) * (*neb->tangent[leftIdx]) +
                               f * (*neb->tangent[leftIdx + 1]);
-        peakMode.normalize();
+        eonc::safemath::safe_normalize_inplace(peakMode);
 
         std::string peakModeFile =
             std::format("peak{:02d}_mode.dat", peakCount);
