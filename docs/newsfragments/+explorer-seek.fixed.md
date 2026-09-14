@@ -1,0 +1,1 @@
+`parse_results` already seeks to the start of `results.dat`. Explorer no longer seeks again.
