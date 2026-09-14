@@ -1,0 +1,1 @@
+MPI `cancel_state` / `stop_clients` send `STOPCAR` to ready client ranks. AKMC uses that instead of `COMM_WORLD.Abort`.
