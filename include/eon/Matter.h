@@ -190,6 +190,8 @@ public:
   void setForces(const AtomMatrix &f);
   AtomMatrix getAccelerations();
 
+  /// Pre: pot is set. Post: rows of fixed atoms are zero. May compute
+  /// if `recomputePotential`. Not thread-safe on one Matter.
   const AtomMatrix &getForces() const;
   const AtomMatrix &getForcesRaw() const;
   AtomMatrix getBiasForces();

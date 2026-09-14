@@ -49,6 +49,9 @@ public:
 
   // Does not take into account the fixed / free atoms
   // Variance here is null when not needed and that's OK
+  // Pre: positions/atomicNrs/box have nAtoms rows; forces is writable.
+  // Post: energy and forces are finite or the implementation throws.
+  // Same instance is not concurrent unless isThreadSafe().
   void virtual force(long nAtoms, const double *positions, const int *atomicNrs,
                      double *forces, double *energy, double *variance,
                      const double *box) = 0;
@@ -105,6 +108,8 @@ public:
   /// Whether this potential supports batched evaluation of N systems in a
   /// single call. When true, callers (NEB, Dimer) should use forceBatch()
   /// instead of N individual force() calls for better GPU utilization.
+  /// Default false. ASE/CatLearn must not override this to true unless
+  /// they implement a real forceBatch (eOn-bueh).
   [[nodiscard]] virtual bool supportsBatchEvaluation() const noexcept {
     return false;
   }
