@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
+#include "NEBInitialPaths.hpp"
 #include "NudgedElasticBand.h"
 #include "PotRegistry.h"
 #include "TestUtils.hpp"
@@ -77,6 +78,18 @@ TEST_CASE_METHOD(NEBLJFixture, "NEB construction and basic state",
   REQUIRE(neb->movedAfterForceCall == true);
   REQUIRE(neb->tangent.size() == neb->path.size());
   REQUIRE(neb->projectedForce.size() == neb->path.size());
+}
+
+TEST_CASE_METHOD(NEBLJFixture, "NEB rejects reactant/product atom count mismatch",
+                 "[neb][construction][issue540]") {
+  REQUIRE(product->numberOfAtoms() > 1);
+  product->resize(product->numberOfAtoms() - 1);
+  REQUIRE_THROWS_WITH(
+      makeNEB(),
+      Catch::Matchers::ContainsSubstring(
+          "do not have the same number of atoms"));
+  REQUIRE_THROWS_AS(eonc::helpers::neb_paths::linearPath(*reactant, *product, 5),
+                    std::invalid_argument);
 }
 
 TEST_CASE_METHOD(NEBLJFixture, "NEB endpoints match input structures",

@@ -129,7 +129,14 @@ NudgedElasticBand::NudgedElasticBand(std::vector<Matter> initPath,
   log = eonc::log::get();
   this->status = NEBStatus::INIT;
   numImages = params.neb_options.image_count;
+  if (initPath.empty()) {
+    throw std::invalid_argument("NEB: initPath is empty");
+  }
   atoms = initPath.front().numberOfAtoms();
+  for (size_t i = 1; i < initPath.size(); ++i) {
+    eonc::helpers::neb_paths::requireSameAtomCount(initPath.front(),
+                                                   initPath[i], "path images");
+  }
 
   // Common initialization logic
   path.resize(numImages + 2);
