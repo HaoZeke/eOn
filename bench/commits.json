@@ -64,7 +64,8 @@
     "9429": "docs(releases): curate the v3.2.0 release notes",
     "9430": "Merge pull request #397 from HaoZeke/chore/release-3.2.0-notes",
     "9431": "chore(version): v3.2.0",
-    "9628": "docs: credit antics, drop Umami tracker and label"
+    "9628": "docs: credit antics, drop Umami tracker and label",
+    "9906": "fix(neb): default minimize_endpoints to false"
   },
   "dcbade17ecc8386a4ee5804354b4994c8ba1d6d8": "update lammps webpage",
   "292bc143343709b10fb7ed150ae5bb493748b289": "gitig: Update",
@@ -130,5 +131,6 @@
   "2475932861b1316d175938acc4d593ec7bf840b0": "docs(releases): curate the v3.2.0 release notes",
   "be3df63a7043a44bb3a289518d2fb7750c0dad58": "Merge pull request #397 from HaoZeke/chore/release-3.2.0-notes",
   "be4ed4f13b0af8bfd8511afa2a893e50a9206f00": "chore(version): v3.2.0",
-  "a2c0207fb6ffffe747845d987e6ab558ddfac7be": "docs: credit antics, drop Umami tracker and label"
+  "a2c0207fb6ffffe747845d987e6ab558ddfac7be": "docs: credit antics, drop Umami tracker and label",
+  "106cf5ac415770aa8262c84cf00d7fe274de96cd": "fix(neb): default minimize_endpoints to false"
 }
