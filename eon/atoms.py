@@ -132,25 +132,12 @@ def rot_match(a, b, eps_r):
         logger.warning("Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly")
     if len(a) == 0:
         return len(b) == 0
-    try:
-        from pyeonclient import _core
+    from readcon_ops import rotational_match
 
-        ira = getattr(_core, "ira_match", None)
-        if ira is not None:
-            z1 = numpy.asarray([atomic_number(s) for s in a.names], dtype=numpy.int64)
-            z2 = numpy.asarray([atomic_number(s) for s in b.names], dtype=numpy.int64)
-            hd, err = ira(
-                numpy.ascontiguousarray(a.r, dtype=float),
-                z1,
-                numpy.ascontiguousarray(b.r, dtype=float),
-                z2,
-                float(eps_r),
-            )
-            if err == 0:
-                return hd < eps_r
-    except Exception:
-        pass
-    return _rot_match_kabsch(a, b, eps_r)
+    judged = rotational_match(a, b, eps_r, atomic_number=atomic_number)
+    if judged is None:
+        return _rot_match_kabsch(a, b, eps_r)
+    return judged
 
 
 def _rot_match_kabsch(a, b, eps_r):
