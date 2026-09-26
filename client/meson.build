@@ -902,9 +902,15 @@ if get_option('with_xtb')
                 _xtb_machine,
                 check: true,
             )
+            # link_args on a static library do not reach the executables.
+            # find_library does, so testWriteR and the client link xtb.lib.
             xtb_dep = declare_dependency(
                 compile_args: ['-I' + _xtb_pc.get_variable(pkgconfig: 'includedir')],
-                link_args: [_xtb_implib],
+                dependencies: cppc.find_library(
+                    'xtb',
+                    dirs: [meson.current_build_dir()],
+                    required: true,
+                ),
                 version: _xtb_pc.version(),
             )
         endif
