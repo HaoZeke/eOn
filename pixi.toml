@@ -40,6 +40,7 @@ capnproto = ">=1.0,<2"
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
 readcon = ">=0.14.9"
+readcon-ops = { git = "https://github.com/lode-org/readcon-ops.git", rev = "0186697" }
 vesin = ">=0.6.1, <0.7"
 linkcell = ">=0.3.3, <0.4"
 nanobind = ">=2.4.0, <3"  # pyeonclient (stable ABI / free-threaded); not pybind11

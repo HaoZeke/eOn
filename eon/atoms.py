@@ -9,7 +9,7 @@ Geometry kernels
     PBC, neighbor lists (vesin), and process-atom selection live under
     :mod:`eon.geometry`. This module re-exports them for compatibility and
     keeps CNA helpers plus a radius/color overlay. Matching and rigid
-    alignment live in :mod:`eon.readcon_ops`, the operations layer beside
+    alignment live in the ``readcon_ops`` package, the operations layer beside
     the ``readcon`` codec and ``readcon-db``.
 """
 import numpy
@@ -62,7 +62,7 @@ def symbol_for_z(z):
     raise KeyError(f"unknown Z {z!r}")
 
 
-from eon.readcon_ops.match import (  # noqa: F401
+from readcon_ops.match import (  # noqa: F401
     get_rotation_matrix,
     identical,
     internal_motion,
