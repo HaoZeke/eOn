@@ -532,17 +532,6 @@ eoncbase_sources = [
     'potentials/PluginLoader.cpp',
 ]
 
-eoncbase = library(
-    'eoncbase',
-    sources: eoncbase_sources,
-    dependencies: _deps,
-    cpp_args: _args,
-    include_directories: _incdirs,
-    install: true,
-)
-
-_linkto += eoncbase
-
 # readcon-core: Rust-based .con file I/O (required).
 # Resolve before plugin subdirs. SocketNWChem includes <readcon-core.hpp>
 # and links rkr_*; library() snapshots dependencies at call time, so a
@@ -588,6 +577,19 @@ if is_windows
 else
     _deps += [readcon_dep]
 endif
+
+# library() snapshots dependencies. ParametersINI.cpp includes
+# readcon-core.hpp, so eoncbase is created after readcon is on _deps.
+eoncbase = library(
+    'eoncbase',
+    sources: eoncbase_sources,
+    dependencies: _deps,
+    cpp_args: _args,
+    include_directories: _incdirs,
+    install: true,
+)
+
+_linkto += eoncbase
 
 # Potentials
 subdir('potentials/EAM')
