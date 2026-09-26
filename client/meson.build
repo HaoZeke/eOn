@@ -525,6 +525,9 @@ eoncbase_sources = [
     'PotRegistry.cpp',
     'PotentialParams.cpp',
     'Parameters.cpp',
+    'ParametersINI.cpp',
+    'ParametersJSON.cpp',
+    'ParametersSSOT.cpp',
     'VesinNeighbors.cpp',
     'potentials/PluginLoader.cpp',
 ]
@@ -688,9 +691,6 @@ if not is_windows
 endif
 
 eonclib_sources = [
-    'ParametersINI.cpp',
-    'ParametersJSON.cpp',
-    'ParametersSSOT.cpp',
     'ConFileIO.cpp',
     'GeometryAnalysis.cpp',
     'Optimizer.cpp',
