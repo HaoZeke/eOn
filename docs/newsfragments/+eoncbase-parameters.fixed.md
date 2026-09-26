@@ -1,1 +1,1 @@
-``Parameters`` and its INI, JSON, and default loaders are compiled into ``libeoncbase``. The shared base library calls those methods.
+``Parameters`` and its configuration loaders are compiled into ``libeoncbase``. The shared base library calls those methods.
