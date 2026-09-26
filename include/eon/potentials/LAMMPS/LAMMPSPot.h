@@ -16,8 +16,34 @@
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 
+#include <cerrno>
 #include <mutex>
+#include <string>
 #include <vector>
+
+namespace eonc {
+/// True when waitpid has collected the child. EINTR is not a collection.
+inline bool lammpsWorkerReaped(long got, long child, int err) {
+  if (got == child) {
+    return true;
+  }
+  return got < 0 && err != EINTR;
+}
+
+/// LAMMPS argv. Logging on leaves the default log and screen in place.
+inline std::vector<std::string> lammpsOpenArgs(bool logging, bool with_omp) {
+  std::vector<std::string> args{"liblammps"};
+  if (logging) {
+    args.insert(args.end(), {"-echo", "log"});
+  } else {
+    args.insert(args.end(), {"-log", "none", "-echo", "log", "-screen", "none"});
+  }
+  if (with_omp) {
+    args.insert(args.end(), {"-suffix", "omp"});
+  }
+  return args;
+}
+} // namespace eonc
 
 namespace eonc {
 class ILammpsLoader;
@@ -44,6 +70,8 @@ private:
             bool isolate_worker);
   eonc::ILammpsLoader &loader_;
   int lammpsThr{0};
+  bool lammpsLogging_{false};
+  std::mutex maskMutex_;
 #ifdef EONMPI
   MPI_Comm mpiComm;
 #endif

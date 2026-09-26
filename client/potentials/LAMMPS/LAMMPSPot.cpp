@@ -50,7 +50,8 @@ LAMMPSPot::LAMMPSPot(const eonc::Parameters &p, eonc::ILammpsLoader &loader,
                      bool isolate_worker)
     : eonc::Potential(p),
       loader_{loader},
-      lammpsThr{p.potential_options().LAMMPSThreads}
+      lammpsThr{p.potential_options().LAMMPSThreads},
+      lammpsLogging_{p.potential_options().LAMMPSLogging}
 #ifdef EONMPI
       ,
       mpiComm{eonc::getMpiClientComm(p)}
@@ -77,6 +78,7 @@ LAMMPSPot::LAMMPSPot(const eonc::Parameters &p, eonc::ILammpsLoader &loader,
 LAMMPSPot::~LAMMPSPot() { cleanMemory(); }
 
 void LAMMPSPot::setFixedMask(long nAtoms, const double *isFixed) {
+  std::lock_guard<std::mutex> lock(maskMutex_);
   if (nAtoms <= 0 || isFixed == nullptr) {
     fixedMask_.clear();
     maskN_ = 0;
@@ -87,8 +89,13 @@ void LAMMPSPot::setFixedMask(long nAtoms, const double *isFixed) {
 }
 
 void LAMMPSPot::applySetforce(long N) {
-  if (LAMMPSObj == nullptr || maskN_ != N || fixedMask_.empty()) {
-    return;
+  std::vector<double> mask;
+  {
+    std::lock_guard<std::mutex> lock(maskMutex_);
+    if (LAMMPSObj == nullptr || maskN_ != N || fixedMask_.empty()) {
+      return;
+    }
+    mask = fixedMask_;
   }
   auto &lmp = loader_;
   static constexpr const char *kUnfix[] = {"unfix eon_fx", "unfix eon_fy",
@@ -113,7 +120,7 @@ void LAMMPSPot::applySetforce(long N) {
   std::string ids[3];
   for (long i = 0; i < N; ++i) {
     for (int ax = 0; ax < 3; ++ax) {
-      if (fixedMask_[static_cast<size_t>(3 * i + ax)] >= 0.5) {
+      if (mask[static_cast<size_t>(3 * i + ax)] >= 0.5) {
         ids[ax] += std::format("{} ", i + 1);
       }
     }
@@ -217,7 +224,12 @@ void LAMMPSPot::ensureWorker() {
 
   int reqPipe[2]; // parent -> child
   int resPipe[2]; // child -> parent
-  if (pipe(reqPipe) != 0 || pipe(resPipe) != 0) {
+  if (pipe(reqPipe) != 0) {
+    throw std::runtime_error("LAMMPSPot: failed to create worker pipes");
+  }
+  if (pipe(resPipe) != 0) {
+    close(reqPipe[0]);
+    close(reqPipe[1]);
     throw std::runtime_error("LAMMPSPot: failed to create worker pipes");
   }
 
@@ -226,6 +238,10 @@ void LAMMPSPot::ensureWorker() {
   // MPI_COMM_WORLD; concurrent children never share a communicator.
   pid_t pid = fork();
   if (pid < 0) {
+    close(reqPipe[0]);
+    close(reqPipe[1]);
+    close(resPipe[0]);
+    close(resPipe[1]);
     throw std::runtime_error("LAMMPSPot: fork for worker failed");
   }
 
@@ -334,7 +350,7 @@ void LAMMPSPot::stopWorker() {
     bool reaped = false;
     for (int i = 0; i < 100; ++i) { // up to ~1 s
       pid_t r = waitpid(workerPid, &st, WNOHANG);
-      if (r == workerPid || r < 0) {
+      if (eonc::lammpsWorkerReaped(r, workerPid, errno)) {
         reaped = true;
         break;
       }
@@ -371,8 +387,11 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   ensureWorker();
 
   std::vector<double> mask(static_cast<size_t>(3 * N), 0.0);
-  if (maskN_ == N && fixedMask_.size() == static_cast<size_t>(3 * N)) {
-    mask = fixedMask_;
+  {
+    std::lock_guard<std::mutex> lock(maskMutex_);
+    if (maskN_ == N && fixedMask_.size() == static_cast<size_t>(3 * N)) {
+      mask = fixedMask_;
+    }
   }
   if (!writeExact(reqFd, &N, sizeof(N)) ||
       !writeExact(reqFd, atomicNrs, sizeof(int) * static_cast<size_t>(N)) ||
@@ -576,9 +595,15 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   }
 
 #ifdef EONMPI
-  const char *lmpargv[] = {"liblammps", "-log", "none",    "-echo", "log",
-                           "-screen",   "none", "-suffix", "omp"};
-  int lmpargc = sizeof(lmpargv) / sizeof(const char *);
+  const std::vector<std::string> argStore =
+      eonc::lammpsOpenArgs(lammpsLogging_, true);
+  std::vector<char *> argPtrs;
+  argPtrs.reserve(argStore.size());
+  for (const std::string &arg : argStore) {
+    argPtrs.push_back(const_cast<char *>(arg.c_str()));
+  }
+  int lmpargc = static_cast<int>(argPtrs.size());
+  char **lmpargv = argPtrs.data();
   if (!lmp.open_mpi) {
     throw std::runtime_error(
         "LAMMPS library found but lacks MPI support (lammps_open not found).\n"
@@ -586,13 +611,18 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   }
   MPI_Comm inst_comm = MPI_COMM_NULL;
   MPI_Comm_dup(mpiComm, &inst_comm); // private comm per per-image instance
-  LAMMPSObj =
-      lmp.open_mpi(lmpargc, const_cast<char **>(lmpargv), inst_comm, nullptr);
+  LAMMPSObj = lmp.open_mpi(lmpargc, lmpargv, inst_comm, nullptr);
 #else
-  const char *lmpargv[] = {"liblammps", "-log",    "none", "-echo",
-                           "log",       "-screen", "none"};
-  int lmpargc = sizeof(lmpargv) / sizeof(const char *);
-  LAMMPSObj = lmp.open_no_mpi(lmpargc, const_cast<char **>(lmpargv), nullptr);
+  const std::vector<std::string> argStore =
+      eonc::lammpsOpenArgs(lammpsLogging_, false);
+  std::vector<char *> argPtrs;
+  argPtrs.reserve(argStore.size());
+  for (const std::string &arg : argStore) {
+    argPtrs.push_back(const_cast<char *>(arg.c_str()));
+  }
+  int lmpargc = static_cast<int>(argPtrs.size());
+  LAMMPSObj =
+      lmp.open_no_mpi(lmpargc, argPtrs.data(), nullptr);
 #endif
 
   if (lammpsThr > 0) {
