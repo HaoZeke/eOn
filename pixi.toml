@@ -40,7 +40,7 @@ capnproto = ">=1.0,<2"
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
 readcon = ">=0.14.9"
-readcon-ops = { git = "https://github.com/lode-org/readcon-ops.git", rev = "e626a95cc6564e579f013c3f7f245cff9c3e9480" }
+readcon-ops = { git = "https://github.com/lode-org/readcon-ops.git", rev = "b70c6465d14858a8be0ea8b33413e8cfdd7f2c72" }
 vesin = ">=0.6.1, <0.7"
 minimage = { git = "https://github.com/lode-org/minimage.git", rev = "0545e172d88a887c6d9d8e3977e5c12fc1ba6f38" }
 linkcell = ">=0.3.3, <0.4"
