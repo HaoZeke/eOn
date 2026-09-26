@@ -1,1 +1,1 @@
-``libeoncbase`` is built as a static library. The parameter loaders stay in the client library, which is where their other symbols are defined.
+``libeoncbase`` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
