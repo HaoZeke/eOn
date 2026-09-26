@@ -8,7 +8,9 @@ Storage and I/O
 Geometry kernels
     PBC, neighbor lists (vesin), and process-atom selection live under
     :mod:`eon.geometry`. This module re-exports them for compatibility and
-    keeps structure-matching / CNA helpers plus a radius/color overlay.
+    keeps CNA helpers plus a radius/color overlay. Matching and rigid
+    alignment live in :mod:`eon.readcon_ops`, the operations layer beside
+    the ``readcon`` codec and ``readcon-db``.
 """
 import numpy
 import logging
@@ -60,6 +62,12 @@ def symbol_for_z(z):
     raise KeyError(f"unknown Z {z!r}")
 
 
+from eon.readcon_ops.match import (  # noqa: F401
+    get_rotation_matrix,
+    identical,
+    internal_motion,
+    rotate,
+)
 from eon.geometry import (  # noqa: F401
     box_to_length_angle,
     brute_neighbor_list,
@@ -76,54 +84,6 @@ from eon.geometry import (  # noqa: F401
 )
 
 # --- structure comparison / CNA (unchanged algorithms) ---
-
-def identical(atoms1, atoms2, epsilon_r):
-    """True if two structures match when same-element atoms are interchangeable.
-
-    Parameters
-    ----------
-    atoms1, atoms2 : Structure
-        Configurations to compare (same box within 1e-4).
-    epsilon_r : float
-        Max allowed MIC displacement (Å) for a pair to count as the same site.
-    """
-    if len(atoms1) != len(atoms2):
-        return False
-
-    for i in range(3):
-        for j in range(3):
-            if abs(atoms1.box[i][j] - atoms2.box[i][j]) > 0.0001:
-                logger.warning(
-                    "Identical returned false because boxes were not the same"
-                )
-                return False
-    box = atoms1.box
-    ibox = numpy.linalg.inv(box)
-
-    mismatch = []
-    pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
-    for i in range(len(pan)):
-        if pan[i] > epsilon_r:
-            mismatch.append(i)
-        elif atoms1.names[i] != atoms2.names[i]:
-            return False
-
-    used = {i for i in range(len(atoms1)) if i not in mismatch}
-    for i in mismatch:
-        pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
-        best = None
-        best_d = 1e300
-        for j in range(len(pan)):
-            if j in used:
-                continue
-            if pan[j] < epsilon_r and pan[j] < best_d and atoms1.names[j] == atoms2.names[i]:
-                best = j
-                best_d = pan[j]
-        if best is None:
-            return False
-        used.add(best)
-    return True
-
 
 def match(a, b, eps_r, neighbor_cutoff, indistinguishable,
           check_rotation=False, use_identical=False):
@@ -480,66 +440,6 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings=None):
         if found is not None:
             return found
     return None
-
-def get_rotation_matrix(axis, theta):
-    axis = axis / numpy.linalg.norm(axis)
-    t = theta
-    ct = numpy.cos(t)
-    st = numpy.sin(t)
-    T = 1.0 - ct
-    rx, ry, rz = axis
-    rotmat = numpy.zeros((3, 3))
-    rotmat[0][0] = T*rx*rx + ct
-    rotmat[0][1] = T*ry*rx + rz*st
-    rotmat[0][2] = T*rz*rx - ry*st
-    rotmat[1][0] = T*rx*ry - rz*st
-    rotmat[1][1] = T*ry*ry + ct
-    rotmat[1][2] = T*rz*ry + rx*st
-    rotmat[2][0] = T*rx*rz + ry*st
-    rotmat[2][1] = T*ry*rz - rx*st
-    rotmat[2][2] = T*rz*rz + ct
-    return rotmat
-
-def rotate(r, axis, center, angle):
-    new_r = r.copy()
-    if abs(angle) == 0.0:
-        return new_r
-    rotmat = get_rotation_matrix(axis, angle)
-    center = center.copy()
-    new_r -= center
-    new_r = numpy.dot(new_r, rotmat)
-    new_r += center
-    return new_r
-
-
-def internal_motion(a, b):
-    """ Takes two atoms objects and returns the motion from a to b that is
-    entirely internal - no rotation or translation, in the form of a new atoms
-    object. """
-    b = b.copy()
-    b.r += a.r[0] - b.r[0]
-    a0a1 = (a.r[1] - a.r[0]) / numpy.linalg.norm(a.r[1] - a.r[0])
-    b0b1 = (b.r[1] - b.r[0]) / numpy.linalg.norm(b.r[1] - b.r[0])
-    cross1 = numpy.cross(b0b1, a0a1)
-    norm1 = numpy.linalg.norm(cross1)
-    if norm1 > 1e-12:
-        axis1 = cross1 / norm1
-        theta1 = numpy.arccos(numpy.clip((a0a1 * b0b1).sum(), -1.0, 1.0))
-        b.r = rotate(b.r, axis1, a.r[0], theta1)
-    axis2 = (a.r[2] - a.r[0]) / numpy.linalg.norm(a.r[2] - a.r[0])
-    va = a.r[2] - ((a.r[2] - a.r[0]) * axis2).sum() * axis2
-    vb = b.r[2] - ((b.r[2] - a.r[0]) * axis2).sum() * axis2
-    nva = numpy.linalg.norm(va)
-    nvb = numpy.linalg.norm(vb)
-    if nva > 1e-12 and nvb > 1e-12:
-        va = va / nva
-        vb = vb / nvb
-        cross2 = numpy.cross(vb, va)
-        if numpy.linalg.norm(cross2) > 1e-12:
-            theta2 = numpy.arccos(numpy.clip((va * vb).sum(), -1.0, 1.0))
-            b.r = rotate(b.r, axis2, a.r[0], theta2)
-    return b
-
 
 # Presentation overlay keyed by Z. Symbol / name / mass live in readcon.
 _RADIUS = (
