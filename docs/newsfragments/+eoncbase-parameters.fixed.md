@@ -1,1 +1,1 @@
-``Parameters::potential_options()`` is compiled into ``libeoncbase``. The shared base library calls that method, and the definition had been left in the client library.
+``libeoncbase`` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
