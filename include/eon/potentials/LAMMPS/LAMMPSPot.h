@@ -36,7 +36,8 @@ inline std::vector<std::string> lammpsOpenArgs(bool logging, bool with_omp) {
   if (logging) {
     args.insert(args.end(), {"-echo", "log"});
   } else {
-    args.insert(args.end(), {"-log", "none", "-echo", "log", "-screen", "none"});
+    args.insert(args.end(),
+                {"-log", "none", "-echo", "log", "-screen", "none"});
   }
   if (with_omp) {
     args.insert(args.end(), {"-suffix", "omp"});

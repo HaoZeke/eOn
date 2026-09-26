@@ -621,8 +621,7 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
     argPtrs.push_back(const_cast<char *>(arg.c_str()));
   }
   int lmpargc = static_cast<int>(argPtrs.size());
-  LAMMPSObj =
-      lmp.open_no_mpi(lmpargc, argPtrs.data(), nullptr);
+  LAMMPSObj = lmp.open_no_mpi(lmpargc, argPtrs.data(), nullptr);
 #endif
 
   if (lammpsThr > 0) {
