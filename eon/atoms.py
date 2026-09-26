@@ -127,6 +127,17 @@ def points_energies_match(file_a, energy_a, files_b, energies_b, eps_e, eps_r,
     return None
 
 
+def crystal_spacegroup(structure, symprec=1e-5):
+    """Space-group symbol and number for a periodic crystal.
+
+    This is not the cluster match. Iterative Rotations and Assignments
+    answers that question.
+    """
+    from readcon_ops import spacegroup
+
+    return spacegroup(structure, atomic_number, symprec=symprec)
+
+
 def rot_match(a, b, eps_r):
     if not (a.free.all() and b.free.all()):
         logger.warning("Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly")

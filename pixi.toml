@@ -40,9 +40,10 @@ capnproto = ">=1.0,<2"
 [pypi-dependencies]
 towncrier = ">=25.8.0, <26"
 readcon = ">=0.14.9"
-readcon-ops = { git = "https://github.com/lode-org/readcon-ops.git", rev = "00bf035f29ad1a43d5b899233c35b5ae6868d0c3" }
+readcon-ops = { git = "https://github.com/lode-org/readcon-ops.git", rev = "bce280d6158b0faa60904f0027b7450b45219856" }
 vesin = ">=0.6.1, <0.7"
 minimage = { git = "https://github.com/lode-org/minimage.git", rev = "0545e172d88a887c6d9d8e3977e5c12fc1ba6f38" }
+spglib = ">=2.5"
 linkcell = ">=0.3.3, <0.4"
 nanobind = ">=2.4.0, <3"  # pyeonclient (stable ABI / free-threaded); not pybind11
 xxhash = ">=3.4.0, <4"
