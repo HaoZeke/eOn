@@ -108,18 +108,20 @@ def identical(atoms1, atoms2, epsilon_r):
         elif atoms1.names[i] != atoms2.names[i]:
             return False
 
+    used = {i for i in range(len(atoms1)) if i not in mismatch}
     for i in mismatch:
         pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
-        minpan = 1e300
-        minj = 0
+        best = None
+        best_d = 1e300
         for j in range(len(pan)):
-            if i == j:
+            if j in used:
                 continue
-            if pan[j] < minpan:
-                minpan = pan[j]
-                minj = j
-        if not (minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]):
+            if pan[j] < epsilon_r and pan[j] < best_d and atoms1.names[j] == atoms2.names[i]:
+                best = j
+                best_d = pan[j]
+        if best is None:
             return False
+        used.add(best)
     return True
 
 
@@ -148,7 +150,7 @@ def point_energy_match(file_a, energy_a, file_b, energy_b, eps_e, eps_r,
         return False
     a = io.loadcon(file_a)
     b = io.loadcon(file_b)
-    if match(a, b, eps_r, neighbor_cutoff, False,
+    if match(a, b, eps_r, neighbor_cutoff, use_identical,
              check_rotation=check_rotation, use_identical=use_identical):
         return True
     return False
@@ -515,19 +517,27 @@ def internal_motion(a, b):
     entirely internal - no rotation or translation, in the form of a new atoms
     object. """
     b = b.copy()
-    b.r -= a.r[0] - b.r[0]
+    b.r += a.r[0] - b.r[0]
     a0a1 = (a.r[1] - a.r[0]) / numpy.linalg.norm(a.r[1] - a.r[0])
     b0b1 = (b.r[1] - b.r[0]) / numpy.linalg.norm(b.r[1] - b.r[0])
-    axis1 = numpy.cross(b0b1, a0a1) / numpy.linalg.norm(numpy.cross(b0b1, a0a1))
-    theta1 = numpy.arccos((a0a1*b0b1).sum())
-    b.r = rotate(b.r, axis1, a.r[0], theta1)
+    cross1 = numpy.cross(b0b1, a0a1)
+    norm1 = numpy.linalg.norm(cross1)
+    if norm1 > 1e-12:
+        axis1 = cross1 / norm1
+        theta1 = numpy.arccos(numpy.clip((a0a1 * b0b1).sum(), -1.0, 1.0))
+        b.r = rotate(b.r, axis1, a.r[0], theta1)
     axis2 = (a.r[2] - a.r[0]) / numpy.linalg.norm(a.r[2] - a.r[0])
     va = a.r[2] - ((a.r[2] - a.r[0]) * axis2).sum() * axis2
-    va = va / numpy.linalg.norm(va)
     vb = b.r[2] - ((b.r[2] - a.r[0]) * axis2).sum() * axis2
-    vb = vb / numpy.linalg.norm(vb)
-    theta2 = numpy.arccos((va * vb).sum())
-    b.r = rotate(b.r, axis2, a.r[0], theta2)
+    nva = numpy.linalg.norm(va)
+    nvb = numpy.linalg.norm(vb)
+    if nva > 1e-12 and nvb > 1e-12:
+        va = va / nva
+        vb = vb / nvb
+        cross2 = numpy.cross(vb, va)
+        if numpy.linalg.norm(cross2) > 1e-12:
+            theta2 = numpy.arccos(numpy.clip((va * vb).sum(), -1.0, 1.0))
+            b.r = rotate(b.r, axis2, a.r[0], theta2)
     return b
 
 
