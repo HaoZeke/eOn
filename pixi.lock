@@ -134,7 +134,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -261,7 +261,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h281d3d1_5.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -393,7 +393,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -503,7 +503,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/15/d1/787f91f3d735e34c2e7a5a64e7b7fc6dbe8fd99869aa05bdfa2d42d0f09d/vesin-0.6.1-py3-none-win_amd64.whl
@@ -692,7 +692,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/01/8e/1e35281b8ab6d5d72ebe9911edcdffa3f36b04ed9d51dec6dd140396e220/scipy-1.17.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -870,7 +870,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/d3/8df65da0d4df36b094351dce696f2989bec731d4f10e743b1c5f4da4d3bf/pillow-12.1.1-cp312-cp312-macosx_10_13_x86_64.whl
@@ -1058,7 +1058,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -1207,7 +1207,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -1402,7 +1402,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl
@@ -1569,7 +1569,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-win_amd64.whl
@@ -1767,7 +1767,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/01/8e/1e35281b8ab6d5d72ebe9911edcdffa3f36b04ed9d51dec6dd140396e220/scipy-1.17.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -1931,7 +1931,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/07/d3/8df65da0d4df36b094351dce696f2989bec731d4f10e743b1c5f4da4d3bf/pillow-12.1.1-cp312-cp312-macosx_10_13_x86_64.whl
@@ -2098,7 +2098,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -2242,7 +2242,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -2367,7 +2367,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -2489,7 +2489,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -2614,7 +2614,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -2715,7 +2715,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/15/d1/787f91f3d735e34c2e7a5a64e7b7fc6dbe8fd99869aa05bdfa2d42d0f09d/vesin-0.6.1-py3-none-win_amd64.whl
@@ -2831,7 +2831,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -2948,7 +2948,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h281d3d1_5.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -3070,7 +3070,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -3170,7 +3170,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/15/d1/787f91f3d735e34c2e7a5a64e7b7fc6dbe8fd99869aa05bdfa2d42d0f09d/vesin-0.6.1-py3-none-win_amd64.whl
@@ -3366,7 +3366,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -3596,7 +3596,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -3801,7 +3801,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -3970,7 +3970,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0b/11/7241a63e73ba5a516f1930ac8d5b44cbbfabd35ac73a2d08ca206df007c4/scipy-1.17.0-cp312-cp312-macosx_10_14_x86_64.whl
@@ -4144,7 +4144,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -4291,7 +4291,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -4462,7 +4462,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -4669,7 +4669,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -4849,7 +4849,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -5036,7 +5036,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -5232,7 +5232,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -5401,7 +5401,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -5621,7 +5621,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -5799,7 +5799,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0b/11/7241a63e73ba5a516f1930ac8d5b44cbbfabd35ac73a2d08ca206df007c4/scipy-1.17.0-cp312-cp312-macosx_10_14_x86_64.whl
@@ -5981,7 +5981,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -6141,7 +6141,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl
@@ -6313,7 +6313,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/8e/1e35281b8ab6d5d72ebe9911edcdffa3f36b04ed9d51dec6dd140396e220/scipy-1.17.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -6544,7 +6544,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h281d3d1_5.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/e7/98a2f4ac921d82f33e03f3835f5bf3a4a40aa1bfdc57975e74a97b2b4bdd/rpds_py-0.30.0-cp312-cp312-macosx_10_12_x86_64.whl
@@ -6781,7 +6781,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl
@@ -6996,7 +6996,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/00/c0/8f5d070730d7836adc9c9b6408dec68c6ced86b304a9b26a14df072a6e8c/traitlets-5.14.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/c1/0976b235cf29ead553e22f2fb6385a8252b533715e00d0ae52ed7b900582/h5py-3.16.0-cp312-cp312-win_amd64.whl
@@ -7262,7 +7262,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/01/8e/1e35281b8ab6d5d72ebe9911edcdffa3f36b04ed9d51dec6dd140396e220/scipy-1.17.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
@@ -7534,7 +7534,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl
@@ -7779,7 +7779,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/00/4b/ccc026168948fec4f7555b9164c724cf4125eac006e176541483d2c959be/pydantic_settings-2.13.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/03/c1/0976b235cf29ead553e22f2fb6385a8252b533715e00d0ae52ed7b900582/h5py-3.16.0-cp312-cp312-win_amd64.whl
@@ -8038,7 +8038,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -8179,7 +8179,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h281d3d1_5.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -8332,7 +8332,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -8448,7 +8448,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -8615,7 +8615,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -8760,7 +8760,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -8951,7 +8951,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.47.0-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -9142,7 +9142,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://download.pytorch.org/whl/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl
@@ -9329,7 +9329,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -9462,7 +9462,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h281d3d1_5.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -9600,7 +9600,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -9717,7 +9717,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.45.1-pyhd8ed1ab_1.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -9884,7 +9884,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-2.1.5-cp312-cp312-macosx_10_9_universal2.whl
       - pypi: https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl
@@ -10029,7 +10029,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
@@ -10196,7 +10196,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.46.3-pyhd8ed1ab_0.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/96/34db781c8f0cf99c544ca1f2bc2e5bf55426e1eb4ca6de8ea5da56a9f352/xxhash-3.8.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -10316,7 +10316,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/39/8d/cec69a0a804711fd89f47fad92cd2a438a1ceaafd9dabaf3b8b403b5cbba/nanobind-2.13.0-py3-none-any.whl
@@ -10440,7 +10440,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/19/95/6195171e385007300f0f5574592e467c568becce2d937a0b6804f218bc49/pydantic_core-2.46.4-cp312-cp312-macosx_11_0_arm64.whl
@@ -10540,7 +10540,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./packages/eon-schema
       - pypi: git+https://github.com/lode-org/minimage.git?rev=0545e172d88a887c6d9d8e3977e5c12fc1ba6f38#0545e172d88a887c6d9d8e3977e5c12fc1ba6f38
-      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+      - pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
       - pypi: https://download.pytorch.org/whl/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl
       - pypi: https://download.pytorch.org/whl/jinja2-3.1.6-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/15/d1/787f91f3d735e34c2e7a5a64e7b7fc6dbe8fd99869aa05bdfa2d42d0f09d/vesin-0.6.1-py3-none-win_amd64.whl
@@ -29447,7 +29447,7 @@ packages:
   requires_dist:
   - pytest>=8.0 ; extra == 'test'
   requires_python: '>=3.10'
-- pypi: git+https://github.com/lode-org/readcon-ops.git?rev=b70c6465d14858a8be0ea8b33413e8cfdd7f2c72#b70c6465d14858a8be0ea8b33413e8cfdd7f2c72
+- pypi: git+https://github.com/lode-org/readcon-ops.git?rev=00bf035f29ad1a43d5b899233c35b5ae6868d0c3#00bf035f29ad1a43d5b899233c35b5ae6868d0c3
   name: readcon-ops
   version: 0.1.1
   requires_dist:
