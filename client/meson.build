@@ -524,6 +524,7 @@ eoncbase_sources = [
     'fpe_handler.cpp',
     'PotRegistry.cpp',
     'PotentialParams.cpp',
+    'Parameters.cpp',
     'VesinNeighbors.cpp',
     'potentials/PluginLoader.cpp',
 ]
@@ -687,7 +688,6 @@ if not is_windows
 endif
 
 eonclib_sources = [
-    'Parameters.cpp',
     'ParametersINI.cpp',
     'ParametersJSON.cpp',
     'ParametersSSOT.cpp',
