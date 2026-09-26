@@ -15,7 +15,7 @@
 #include <qd/fpu.h>
 
 #ifdef X86
-#ifdef  _WIN32
+#ifdef _WIN32
 #include <float.h>
 #else
 
@@ -24,11 +24,11 @@
 #endif
 
 #ifndef _FPU_GETCW
-#define _FPU_GETCW(x) asm volatile ("fnstcw %0":"=m" (x));
+#define _FPU_GETCW(x) asm volatile("fnstcw %0" : "=m"(x));
 #endif
 
 #ifndef _FPU_SETCW
-#define _FPU_SETCW(x) asm volatile ("fldcw %0": :"m" (x));
+#define _FPU_SETCW(x) asm volatile("fldcw %0" : : "m"(x));
 #endif
 
 #ifndef _FPU_EXTENDED
@@ -84,7 +84,7 @@ void fpu_fix_end(unsigned int *old_cw) {
 #ifdef __BORLANDC__
   /* Win 32 Borland C */
   if (old_cw) {
-    unsigned short cw = (unsigned short) *old_cw;
+    unsigned short cw = (unsigned short)*old_cw;
     _control87(cw, 0xFFFF);
   }
 #else
@@ -108,16 +108,11 @@ void fpu_fix_end(unsigned int *old_cw) {
 #ifdef HAVE_FORTRAN
 
 #define f_fpu_fix_start FC_FUNC_(f_fpu_fix_start, F_FPU_FIX_START)
-#define f_fpu_fix_end   FC_FUNC_(f_fpu_fix_end,   F_FPU_FIX_END)
+#define f_fpu_fix_end FC_FUNC_(f_fpu_fix_end, F_FPU_FIX_END)
 
-void f_fpu_fix_start(unsigned int *old_cw) {
-  fpu_fix_start(old_cw);
-}
+void f_fpu_fix_start(unsigned int *old_cw) { fpu_fix_start(old_cw); }
 
-void f_fpu_fix_end(unsigned int *old_cw) {
-  fpu_fix_end(old_cw);
-}
+void f_fpu_fix_end(unsigned int *old_cw) { fpu_fix_end(old_cw); }
 
 #endif
-
 }

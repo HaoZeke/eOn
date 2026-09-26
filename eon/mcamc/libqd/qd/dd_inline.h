@@ -20,7 +20,6 @@
 #define inline
 #endif
 
-
 /*********** Additions ************/
 /* double-double = double + double */
 inline dd_real dd_real::add(double a, double b) {
@@ -73,10 +72,7 @@ inline dd_real operator+(const dd_real &a, const dd_real &b) {
 }
 
 /* double + double-double */
-inline dd_real operator+(double a, const dd_real &b) {
-  return (b + a);
-}
-
+inline dd_real operator+(double a, const dd_real &b) { return (b + a); }
 
 /*********** Self-Additions ************/
 /* double-double += double */
@@ -188,9 +184,7 @@ inline dd_real &dd_real::operator-=(const dd_real &a) {
 }
 
 /*********** Unary Minus ***********/
-inline dd_real dd_real::operator-() const {
-  return dd_real(-x[0], -x[1]);
-}
+inline dd_real dd_real::operator-() const { return dd_real(-x[0], -x[1]); }
 
 /*********** Multiplications ************/
 /* double-double = double * double */
@@ -231,9 +225,7 @@ inline dd_real operator*(const dd_real &a, const dd_real &b) {
 }
 
 /* double * double-double */
-inline dd_real operator*(double a, const dd_real &b) {
-  return (b * a);
-}
+inline dd_real operator*(double a, const dd_real &b) { return (b * a); }
 
 /*********** Self-Multiplications ************/
 /* double-double *= double */
@@ -284,7 +276,7 @@ inline dd_real operator/(const dd_real &a, double b) {
   double s, e;
   dd_real r;
 
-  q1 = a.x[0] / b;   /* approximate quotient. */
+  q1 = a.x[0] / b; /* approximate quotient. */
 
   /* Compute  this - q1 * d */
   p1 = qd::two_prod(q1, b, p2);
@@ -306,7 +298,7 @@ inline dd_real dd_real::sloppy_div(const dd_real &a, const dd_real &b) {
   double q1, q2;
   dd_real r;
 
-  q1 = a.x[0] / b.x[0];  /* approximate quotient */
+  q1 = a.x[0] / b.x[0]; /* approximate quotient */
 
   /* compute  this - q1 * dd */
   r = b * q1;
@@ -326,7 +318,7 @@ inline dd_real dd_real::accurate_div(const dd_real &a, const dd_real &b) {
   double q1, q2, q3;
   dd_real r;
 
-  q1 = a.x[0] / b.x[0];  /* approximate quotient */
+  q1 = a.x[0] / b.x[0]; /* approximate quotient */
 
   r = a - q1 * b;
 
@@ -350,13 +342,9 @@ inline dd_real operator/(const dd_real &a, const dd_real &b) {
 }
 
 /* double / double-double */
-inline dd_real operator/(double a, const dd_real &b) {
-  return dd_real(a) / b;
-}
+inline dd_real operator/(double a, const dd_real &b) { return dd_real(a) / b; }
 
-inline dd_real inv(const dd_real &a) {
-  return 1.0 / a;
-}
+inline dd_real inv(const dd_real &a) { return 1.0 / a; }
 
 /*********** Self-Divisions ************/
 /* double-double /= double */
@@ -400,12 +388,8 @@ inline dd_real dd_real::sqr(double a) {
   return dd_real(p1, p2);
 }
 
-
 /********** Exponentiation **********/
-inline dd_real dd_real::operator^(int n) {
-  return npwr(*this, n);
-}
-
+inline dd_real dd_real::operator^(int n) { return npwr(*this, n); }
 
 /*********** Assignments ************/
 /* double-double = double */
@@ -475,9 +459,7 @@ inline bool operator>=(const dd_real &a, const dd_real &b) {
 }
 
 /* double >= double-double */
-inline bool operator>=(double a, const dd_real &b) {
-  return (b <= a);
-}
+inline bool operator>=(double a, const dd_real &b) { return (b <= a); }
 
 /*********** Less-Than-Or-Equal-To Comparisons ************/
 /* double-double <= double */
@@ -491,9 +473,7 @@ inline bool operator<=(const dd_real &a, const dd_real &b) {
 }
 
 /* double <= double-double */
-inline bool operator<=(double a, const dd_real &b) {
-  return (b >= a);
-}
+inline bool operator<=(double a, const dd_real &b) { return (b >= a); }
 
 /*********** Not-Equal-To Comparisons ************/
 /* double-double != double */
@@ -513,33 +493,21 @@ inline bool operator!=(double a, const dd_real &b) {
 
 /*********** Micellaneous ************/
 /*  this == 0 */
-inline bool dd_real::is_zero() const {
-  return (x[0] == 0.0);
-}
+inline bool dd_real::is_zero() const { return (x[0] == 0.0); }
 
 /*  this == 1 */
-inline bool dd_real::is_one() const {
-  return (x[0] == 1.0 && x[1] == 0.0);
-}
+inline bool dd_real::is_one() const { return (x[0] == 1.0 && x[1] == 0.0); }
 
 /*  this > 0 */
-inline bool dd_real::is_positive() const {
-  return (x[0] > 0.0);
-}
+inline bool dd_real::is_positive() const { return (x[0] > 0.0); }
 
 /* this < 0 */
-inline bool dd_real::is_negative() const {
-  return (x[0] < 0.0);
-}
+inline bool dd_real::is_negative() const { return (x[0] < 0.0); }
 
 /* Absolute value */
-inline dd_real abs(const dd_real &a) {
-  return (a.x[0] < 0.0) ? -a : a;
-}
+inline dd_real abs(const dd_real &a) { return (a.x[0] < 0.0) ? -a : a; }
 
-inline dd_real fabs(const dd_real &a) {
-  return abs(a);
-}
+inline dd_real fabs(const dd_real &a) { return abs(a); }
 
 /* Round to Nearest integer */
 inline dd_real nint(const dd_real &a) {
@@ -555,10 +523,10 @@ inline dd_real nint(const dd_real &a) {
   } else {
     /* High word is not an integer. */
     lo = 0.0;
-    if (std::abs(hi-a.x[0]) == 0.5 && a.x[1] < 0.0) {
+    if (std::abs(hi - a.x[0]) == 0.5 && a.x[1] < 0.0) {
       /* There is a tie in the high word, consult the low word
          to break the tie. */
-      hi -= 1.0;      /* NOTE: This does not cause INEXACT. */
+      hi -= 1.0; /* NOTE: This does not cause INEXACT. */
     }
   }
 
@@ -596,18 +564,12 @@ inline dd_real aint(const dd_real &a) {
 }
 
 /* Cast to double. */
-inline double to_double(const dd_real &a) {
-  return a.x[0];
-}
+inline double to_double(const dd_real &a) { return a.x[0]; }
 
 /* Cast to int. */
-inline int to_int(const dd_real &a) {
-  return static_cast<int>(a.x[0]);
-}
+inline int to_int(const dd_real &a) { return static_cast<int>(a.x[0]); }
 
 /* Random number generator */
-inline dd_real dd_real::rand() {
-  return ddrand();
-}
+inline dd_real dd_real::rand() { return ddrand(); }
 
 #endif /* _QD_DD_INLINE_H */

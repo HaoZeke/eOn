@@ -11,23 +11,23 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2019 - 2024 Daniil Goncharov <neargye@gmail.com>.
 //
-// Permission is hereby  granted, free of charge, to any  person obtaining a copy
-// of this software and associated  documentation files (the "Software"), to deal
-// in the Software  without restriction, including without  limitation the rights
-// to  use, copy,  modify, merge,  publish, distribute,  sublicense, and/or  sell
-// copies  of  the Software,  and  to  permit persons  to  whom  the Software  is
-// furnished to do so, subject to the following conditions:
+// Permission is hereby  granted, free of charge, to any  person obtaining a
+// copy of this software and associated  documentation files (the "Software"),
+// to deal in the Software  without restriction, including without  limitation
+// the rights to  use, copy,  modify, merge,  publish, distribute,  sublicense,
+// and/or  sell copies  of  the Software,  and  to  permit persons  to  whom the
+// Software  is furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
-// THE SOFTWARE  IS PROVIDED "AS  IS", WITHOUT WARRANTY  OF ANY KIND,  EXPRESS OR
-// IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  THE  WARRANTIES OF  MERCHANTABILITY,
-// FITNESS FOR  A PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO EVENT  SHALL THE
-// AUTHORS  OR COPYRIGHT  HOLDERS  BE  LIABLE FOR  ANY  CLAIM,  DAMAGES OR  OTHER
-// LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// THE SOFTWARE  IS PROVIDED "AS  IS", WITHOUT WARRANTY  OF ANY KIND,  EXPRESS
+// OR IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  THE  WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR  A PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN
+// NO EVENT  SHALL THE AUTHORS  OR COPYRIGHT  HOLDERS  BE  LIABLE FOR  ANY
+// CLAIM,  DAMAGES OR  OTHER LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT
+// OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef NEARGYE_MAGIC_ENUM_IOSTREAM_HPP
 #define NEARGYE_MAGIC_ENUM_IOSTREAM_HPP
@@ -43,8 +43,10 @@ namespace magic_enum {
 
 namespace ostream_operators {
 
-template <typename Char, typename Traits, typename E, detail::enable_if_t<E, int> = 0>
-std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, E value) {
+template <typename Char, typename Traits, typename E,
+          detail::enable_if_t<E, int> = 0>
+std::basic_ostream<Char, Traits> &
+operator<<(std::basic_ostream<Char, Traits> &os, E value) {
   using D = std::decay_t<E>;
   using U = underlying_type_t<D>;
 
@@ -68,17 +70,21 @@ std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o
   return (os << static_cast<U>(value));
 }
 
-template <typename Char, typename Traits, typename E, detail::enable_if_t<E, int> = 0>
-std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& os, optional<E> value) {
+template <typename Char, typename Traits, typename E,
+          detail::enable_if_t<E, int> = 0>
+std::basic_ostream<Char, Traits> &
+operator<<(std::basic_ostream<Char, Traits> &os, optional<E> value) {
   return value ? (os << *value) : os;
 }
 
-} // namespace magic_enum::ostream_operators
+} // namespace ostream_operators
 
 namespace istream_operators {
 
-template <typename Char, typename Traits, typename E, detail::enable_if_t<E, int> = 0>
-std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& is, E& value) {
+template <typename Char, typename Traits, typename E,
+          detail::enable_if_t<E, int> = 0>
+std::basic_istream<Char, Traits> &
+operator>>(std::basic_istream<Char, Traits> &is, E &value) {
   using D = std::decay_t<E>;
 
   std::basic_string<Char, Traits> s;
@@ -103,14 +109,14 @@ std::basic_istream<Char, Traits>& operator>>(std::basic_istream<Char, Traits>& i
   return is;
 }
 
-} // namespace magic_enum::istream_operators
+} // namespace istream_operators
 
 namespace iostream_operators {
 
 using magic_enum::ostream_operators::operator<<;
 using magic_enum::istream_operators::operator>>;
 
-} // namespace magic_enum::iostream_operators
+} // namespace iostream_operators
 
 } // namespace magic_enum
 

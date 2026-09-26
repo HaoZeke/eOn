@@ -31,10 +31,10 @@
 
 #include <cmath>
 #include <iostream>
-#include <string>
 #include <limits>
-#include <qd/qd_config.h>
 #include <qd/fpu.h>
+#include <qd/qd_config.h>
+#include <string>
 
 // Some compilers define isnan, isfinite, and isinf as macros, even for
 // C++ codes, which cause havoc when overloading these functions.  We undef
@@ -62,17 +62,27 @@
 struct QD_API dd_real {
   double x[2];
 
-  dd_real(double hi, double lo) { x[0] = hi; x[1] = lo; }
-  dd_real() {x[0] = 0.0; x[1] = 0.0; }
-  dd_real(double h) { x[0] = h; x[1] = 0.0; }
+  dd_real(double hi, double lo) {
+    x[0] = hi;
+    x[1] = lo;
+  }
+  dd_real() {
+    x[0] = 0.0;
+    x[1] = 0.0;
+  }
+  dd_real(double h) {
+    x[0] = h;
+    x[1] = 0.0;
+  }
   dd_real(int h) {
     x[0] = (static_cast<double>(h));
     x[1] = 0.0;
   }
 
-  dd_real (const char *s);
-  explicit dd_real (const double *d) {
-    x[0] = d[0]; x[1] = d[1];
+  dd_real(const char *s);
+  explicit dd_real(const double *d) {
+    x[0] = d[0];
+    x[1] = d[1];
   }
 
   static void error(const char *msg);
@@ -145,9 +155,10 @@ struct QD_API dd_real {
   static dd_real rand(void);
 
   void to_digits(char *s, int &expn, int precision = _ndigits) const;
-  void write(char *s, int len, int precision = _ndigits,
-      bool showpos = false, bool uppercase = false) const;
-  std::string to_string(int precision = _ndigits, int width = 0,
+  void write(char *s, int len, int precision = _ndigits, bool showpos = false,
+             bool uppercase = false) const;
+  std::string to_string(
+      int precision = _ndigits, int width = 0,
       std::ios_base::fmtflags fmt = static_cast<std::ios_base::fmtflags>(0),
       bool showpos = false, bool uppercase = false, char fill = ' ') const;
   int read(const char *s, dd_real &a);
@@ -160,26 +171,24 @@ struct QD_API dd_real {
   static dd_real debug_rand();
 };
 
-
 namespace std {
-  template <>
-  class numeric_limits<dd_real> : public numeric_limits<double> {
-  public:
-    inline static double epsilon() { return dd_real::_eps; }
-    inline static dd_real max() { return dd_real::_max; }
-    inline static dd_real safe_max() { return dd_real::_safe_max; }
-    inline static double min() { return dd_real::_min_normalized; }
-    static const int digits = 104;
-    static const int digits10 = 31;
-  };
-}
+template <> class numeric_limits<dd_real> : public numeric_limits<double> {
+public:
+  inline static double epsilon() { return dd_real::_eps; }
+  inline static dd_real max() { return dd_real::_max; }
+  inline static dd_real safe_max() { return dd_real::_safe_max; }
+  inline static double min() { return dd_real::_min_normalized; }
+  static const int digits = 104;
+  static const int digits10 = 31;
+};
+} // namespace std
 
 QD_API dd_real ddrand(void);
 QD_API dd_real sqrt(const dd_real &a);
 
 QD_API dd_real polyeval(const dd_real *c, int n, const dd_real &x);
-QD_API dd_real polyroot(const dd_real *c, int n,
-    const dd_real &x0, int max_iter = 32, double thresh = 0.0);
+QD_API dd_real polyroot(const dd_real *c, int n, const dd_real &x0,
+                        int max_iter = 32, double thresh = 0.0);
 
 QD_API inline bool isnan(const dd_real &a) { return a.isnan(); }
 QD_API inline bool isfinite(const dd_real &a) { return a.isfinite(); }
@@ -250,7 +259,7 @@ QD_API dd_real aint(const dd_real &a);
 QD_API dd_real ddrand(void);
 
 double to_double(const dd_real &a);
-int    to_int(const dd_real &a);
+int to_int(const dd_real &a);
 
 QD_API dd_real exp(const dd_real &a);
 QD_API dd_real ldexp(const dd_real &a, int exp);
@@ -270,20 +279,19 @@ QD_API dd_real atan2(const dd_real &y, const dd_real &x);
 QD_API dd_real sinh(const dd_real &a);
 QD_API dd_real cosh(const dd_real &a);
 QD_API dd_real tanh(const dd_real &a);
-QD_API void sincosh(const dd_real &a,
-                      dd_real &sinh_a, dd_real &cosh_a);
+QD_API void sincosh(const dd_real &a, dd_real &sinh_a, dd_real &cosh_a);
 
 QD_API dd_real asinh(const dd_real &a);
 QD_API dd_real acosh(const dd_real &a);
 QD_API dd_real atanh(const dd_real &a);
 
 QD_API dd_real fabs(const dd_real &a);
-QD_API dd_real abs(const dd_real &a);   /* same as fabs */
+QD_API dd_real abs(const dd_real &a); /* same as fabs */
 
 QD_API dd_real fmod(const dd_real &a, const dd_real &b);
 
-QD_API std::ostream& operator<<(std::ostream &s, const dd_real &a);
-QD_API std::istream& operator>>(std::istream &s, dd_real &a);
+QD_API std::ostream &operator<<(std::ostream &s, const dd_real &a);
+QD_API std::istream &operator>>(std::istream &s, dd_real &a);
 #ifdef QD_INLINE
 #include <qd/dd_inline.h>
 #endif

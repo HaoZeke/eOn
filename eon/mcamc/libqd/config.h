@@ -10,10 +10,10 @@
 
 /* Define to a macro mangling the given C identifier (in lower and upper
    case), which must not contain underscores, for linking with Fortran. */
-#define FC_FUNC(name,NAME) name ## _
+#define FC_FUNC(name, NAME) name##_
 
 /* As FC_FUNC, but for C identifiers containing underscores. */
-#define FC_FUNC_(name,NAME) name ## _
+#define FC_FUNC_(name, NAME) name##_
 
 /* Define to alternate name for `main' routine that is called from a `main' in
    the Fortran libraries. */
@@ -74,7 +74,7 @@
 /* #undef HAVE__BOOL */
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+ */
 #define LT_OBJDIR ".libs/"
 
 /* qd major version number */
@@ -120,7 +120,7 @@
 /* #undef QD_FMA */
 
 /* If fused multiply-subtract is available, define correct macro for using it.
-   */
+ */
 /* #undef QD_FMS */
 
 /* Define to 1 if your compiler have the C++ standard include files. */

@@ -1,5 +1,5 @@
-#include <cstdlib>
 #include "util.h"
+#include <cstdlib>
 
 void append_expn(std::string &str, int expn) {
   int k;
@@ -10,12 +10,12 @@ void append_expn(std::string &str, int expn) {
   if (expn >= 100) {
     k = (expn / 100);
     str += '0' + k;
-    expn -= 100*k;
+    expn -= 100 * k;
   }
 
   k = (expn / 10);
   str += '0' + k;
-  expn -= 10*k;
+  expn -= 10 * k;
 
   str += '0' + expn;
 }

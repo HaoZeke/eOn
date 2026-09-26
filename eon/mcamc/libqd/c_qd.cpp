@@ -13,15 +13,16 @@
 #include <cstring>
 
 #include "config.h"
-#include <qd/qd_real.h>
 #include <qd/c_qd.h>
+#include <qd/qd_real.h>
 
-#define TO_DOUBLE_PTR(a, ptr) ptr[0] = a.x[0]; ptr[1] = a.x[1]; \
-                              ptr[2] = a.x[2]; ptr[3] = a.x[3];
+#define TO_DOUBLE_PTR(a, ptr)                                                  \
+  ptr[0] = a.x[0];                                                             \
+  ptr[1] = a.x[1];                                                             \
+  ptr[2] = a.x[2];                                                             \
+  ptr[3] = a.x[3];
 
 extern "C" {
-
-
 
 /* add */
 void c_qd_add(const double *a, const double *b, double *c) {
@@ -50,8 +51,6 @@ void c_qd_add_d_qd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
-
-
 /* sub */
 void c_qd_sub(const double *a, const double *b, double *c) {
   qd_real cc;
@@ -78,8 +77,6 @@ void c_qd_sub_d_qd(double a, const double *b, double *c) {
   cc = a - qd_real(b);
   TO_DOUBLE_PTR(cc, c);
 }
-
-
 
 /* mul */
 void c_qd_mul(const double *a, const double *b, double *c) {
@@ -108,8 +105,6 @@ void c_qd_mul_d_qd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
-
-
 /* div */
 void c_qd_div(const double *a, const double *b, double *c) {
   qd_real cc;
@@ -137,9 +132,6 @@ void c_qd_div_d_qd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
-
-
-
 /* selfadd */
 void c_qd_selfadd(const double *a, double *b) {
   qd_real bb(b);
@@ -156,8 +148,6 @@ void c_qd_selfadd_d(double a, double *b) {
   bb += a;
   TO_DOUBLE_PTR(bb, b);
 }
-
-
 
 /* selfsub */
 void c_qd_selfsub(const double *a, double *b) {
@@ -176,8 +166,6 @@ void c_qd_selfsub_d(double a, double *b) {
   TO_DOUBLE_PTR(bb, b);
 }
 
-
-
 /* selfmul */
 void c_qd_selfmul(const double *a, double *b) {
   qd_real bb(b);
@@ -195,8 +183,6 @@ void c_qd_selfmul_d(double a, double *b) {
   TO_DOUBLE_PTR(bb, b);
 }
 
-
-
 /* selfdiv */
 void c_qd_selfdiv(const double *a, double *b) {
   qd_real bb(b);
@@ -213,8 +199,6 @@ void c_qd_selfdiv_d(double a, double *b) {
   bb /= a;
   TO_DOUBLE_PTR(bb, b);
 }
-
-
 
 /* copy */
 void c_qd_copy(const double *a, double *b) {
@@ -235,7 +219,6 @@ void c_qd_copy_d(double a, double *b) {
   b[2] = 0.0;
   b[3] = 0.0;
 }
-
 
 void c_qd_sqrt(const double *a, double *b) {
   qd_real bb;
@@ -443,8 +426,5 @@ void c_qd_comp_d_qd(double a, const double *b, int *result) {
     *result = 0;
 }
 
-void c_qd_pi(double *a) {
-  TO_DOUBLE_PTR(qd_real::_pi, a);
-}
-
+void c_qd_pi(double *a) { TO_DOUBLE_PTR(qd_real::_pi, a); }
 }

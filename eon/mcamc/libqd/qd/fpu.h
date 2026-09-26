@@ -36,4 +36,4 @@ QD_API void fpu_fix_end(unsigned int *old_cw);
 }
 #endif
 
-#endif  /* _QD_FPU_H */
+#endif /* _QD_FPU_H */
