@@ -139,4 +139,26 @@ TEST_CASE("PluginLoader: lib_present is a filesystem probe",
   std::filesystem::remove_all(tmp, ec);
 }
 
+TEST_CASE("LAMMPS worker reap ignores EINTR", "[lammps][worker]") {
+  REQUIRE(eonc::lammpsWorkerReaped(7, 7, 0));
+  REQUIRE_FALSE(eonc::lammpsWorkerReaped(-1, 7, EINTR));
+  REQUIRE(eonc::lammpsWorkerReaped(-1, 7, ECHILD));
+}
+
+TEST_CASE("LAMMPS open args honor logging", "[lammps][logging]") {
+  const auto quiet = eonc::lammpsOpenArgs(false, false);
+  REQUIRE(quiet[1] == "-log");
+  REQUIRE(quiet[2] == "none");
+  const auto logged = eonc::lammpsOpenArgs(true, true);
+  REQUIRE(logged[1] == "-echo");
+  bool saw_none = false;
+  for (const auto &arg : logged) {
+    if (arg == "none") {
+      saw_none = true;
+    }
+  }
+  REQUIRE_FALSE(saw_none);
+  REQUIRE(logged.back() == "omp");
+}
+
 } // namespace tests

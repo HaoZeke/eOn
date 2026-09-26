@@ -1,0 +1,1 @@
+LAMMPS logging follows ``lammps_logging``. A failed worker pipe or fork closes the descriptors it opened. ``waitpid`` interrupted by a signal is not treated as a finished child. The fixed-atom mask is copied under its own mutex.
