@@ -13,8 +13,8 @@
 #ifndef _QD_C_DD_H
 #define _QD_C_DD_H
 
-#include <qd/fpu.h>
 #include <qd/qd_config.h>
+#include <qd/fpu.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,4 +95,4 @@ void c_dd_pi(double *a);
 }
 #endif
 
-#endif /* _QD_C_DD_H */
+#endif  /* _QD_C_DD_H */

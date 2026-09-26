@@ -67,12 +67,12 @@ inline double two_diff(double a, double b, double &err) {
 inline void split(double a, double &hi, double &lo) {
   double temp;
   if (a > _QD_SPLIT_THRESH || a < -_QD_SPLIT_THRESH) {
-    a *= 3.7252902984619140625e-09; // 2^-28
+    a *= 3.7252902984619140625e-09;  // 2^-28
     temp = _QD_SPLITTER * a;
     hi = temp - (temp - a);
     lo = a - hi;
-    hi *= 268435456.0; // 2^28
-    lo *= 268435456.0; // 2^28
+    hi *= 268435456.0;          // 2^28
+    lo *= 268435456.0;          // 2^28
   } else {
     temp = _QD_SPLITTER * a;
     hi = temp - (temp - a);
@@ -131,11 +131,13 @@ inline void sincosh(double t, double &sinh_t, double &cosh_t) {
   cosh_t = std::cosh(t);
 }
 
-inline double sqr(double t) { return t * t; }
+inline double sqr(double t) {
+  return t * t;
+}
 
 inline double to_double(double a) { return a; }
-inline int to_int(double a) { return static_cast<int>(a); }
+inline int    to_int(double a) { return static_cast<int>(a); }
 
-} // namespace qd
+}
 
 #endif /* _QD_INLINE_H */

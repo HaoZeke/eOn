@@ -11,14 +11,14 @@
  * number.  This used by the library for debugging purposes.
  */
 
-#include <climits>
-#include <cmath>
-#include <iomanip>
 #include <iostream>
+#include <iomanip>
+#include <cmath>
+#include <climits>
 
 #include "config.h"
-#include <qd/bits.h>
 #include <qd/inline.h>
+#include <qd/bits.h>
 
 #ifdef HAVE_IEEEFP_H
 #include <ieeefp.h>
@@ -52,7 +52,7 @@ int get_double_expn(double x) {
 
 void print_double_info(std::ostream &os, double x) {
   std::streamsize old_prec = os.precision(19);
-  std::ios_base::fmtflags old_flags = os.flags();
+  std::ios_base::fmtflags old_flags  = os.flags();
   os << std::scientific;
 
   os << setw(27) << x << ' ';

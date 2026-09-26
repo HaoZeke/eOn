@@ -13,12 +13,10 @@
 #include <cstring>
 
 #include "config.h"
-#include <qd/c_dd.h>
 #include <qd/dd_real.h>
+#include <qd/c_dd.h>
 
-#define TO_DOUBLE_PTR(a, ptr)                                                  \
-  ptr[0] = a.x[0];                                                             \
-  ptr[1] = a.x[1];
+#define TO_DOUBLE_PTR(a, ptr) ptr[0] = a.x[0]; ptr[1] = a.x[1];
 
 extern "C" {
 
@@ -39,6 +37,7 @@ void c_dd_add_d_dd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
+
 /* sub */
 void c_dd_sub(const double *a, const double *b, double *c) {
   dd_real cc;
@@ -55,6 +54,7 @@ void c_dd_sub_d_dd(double a, const double *b, double *c) {
   cc = a - dd_real(b);
   TO_DOUBLE_PTR(cc, c);
 }
+
 
 /* mul */
 void c_dd_mul(const double *a, const double *b, double *c) {
@@ -73,6 +73,7 @@ void c_dd_mul_d_dd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
+
 /* div */
 void c_dd_div(const double *a, const double *b, double *c) {
   dd_real cc;
@@ -90,6 +91,7 @@ void c_dd_div_d_dd(double a, const double *b, double *c) {
   TO_DOUBLE_PTR(cc, c);
 }
 
+
 /* copy */
 void c_dd_copy(const double *a, double *b) {
   b[0] = a[0];
@@ -99,6 +101,7 @@ void c_dd_copy_d(double a, double *b) {
   b[0] = a;
   b[1] = 0.0;
 }
+
 
 void c_dd_sqrt(const double *a, double *b) {
   dd_real bb;
@@ -304,5 +307,8 @@ void c_dd_comp_d_dd(double a, const double *b, int *result) {
     *result = 0;
 }
 
-void c_dd_pi(double *a) { TO_DOUBLE_PTR(dd_real::_pi, a); }
+void c_dd_pi(double *a) {
+  TO_DOUBLE_PTR(dd_real::_pi, a);
+}
+
 }

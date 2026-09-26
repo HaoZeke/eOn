@@ -34,57 +34,57 @@ extern "C" {
 
 /// Algorithm to use for neighbor list construction
 enum VesinAlgorithm {
-  /// Automatically select algorithm based on system characteristics (number
-  /// of points, size of the box, …), this is the default and recommended
-  /// option.
-  VesinAutoAlgorithm = 0,
-  /// Brute-force O(n^2) algorithm, this requires minimum image convention in
-  /// CUDA, and is not available on CPU.
-  VesinBruteForce = 1,
-  /// Cell list algorithm with O(n) scaling
-  VesinCellList = 2,
+    /// Automatically select algorithm based on system characteristics (number
+    /// of points, size of the box, …), this is the default and recommended
+    /// option.
+    VesinAutoAlgorithm = 0,
+    /// Brute-force O(n^2) algorithm, this requires minimum image convention in
+    /// CUDA, and is not available on CPU.
+    VesinBruteForce = 1,
+    /// Cell list algorithm with O(n) scaling
+    VesinCellList = 2,
 };
 
 /// Options for a neighbor list calculation
 struct VesinOptions {
-  /// Spherical cutoff, only pairs below this cutoff will be included
-  double cutoff;
-  /// Should the returned neighbor list be a full list (include both `i -> j`
-  /// and `j -> i` pairs) or a half list (include only `i -> j`)?
-  bool full;
-  /// Should the neighbor list be sorted? If `true`, the returned pairs will
-  /// be sorted by the first point index (`i`). The order of the second point
-  /// index (`j`) and shifts in the list of pairs is unspecified.
-  bool sorted;
-  /// Which algorithm to use for the calculation
-  VesinAlgorithm algorithm;
-  /// Skin size for Verlet caching. A positive value enables caching: vesin
-  /// builds the cached topology with `cutoff + skin` and reuses it until an
-  /// atom moves more than `skin / 2` from the cached reference positions.
-  double skin;
-  /// Number of CPU threads to use. This must be zero or positive. A value of
-  /// zero means using the `OMP_NUM_THREADS` environment variable when set to a
-  /// positive value, or otherwise defaulting to the number of available CPU
-  /// cores.
-  int32_t n_threads;
+    /// Spherical cutoff, only pairs below this cutoff will be included
+    double cutoff;
+    /// Should the returned neighbor list be a full list (include both `i -> j`
+    /// and `j -> i` pairs) or a half list (include only `i -> j`)?
+    bool full;
+    /// Should the neighbor list be sorted? If `true`, the returned pairs will
+    /// be sorted by the first point index (`i`). The order of the second point
+    /// index (`j`) and shifts in the list of pairs is unspecified.
+    bool sorted;
+    /// Which algorithm to use for the calculation
+    VesinAlgorithm algorithm;
+    /// Skin size for Verlet caching. A positive value enables caching: vesin
+    /// builds the cached topology with `cutoff + skin` and reuses it until an
+    /// atom moves more than `skin / 2` from the cached reference positions.
+    double skin;
+    /// Number of CPU threads to use. This must be zero or positive. A value of
+    /// zero means using the `OMP_NUM_THREADS` environment variable when set to a
+    /// positive value, or otherwise defaulting to the number of available CPU
+    /// cores.
+    int32_t n_threads;
 
-  /// Should the returned `VesinNeighborList` contain `shifts`?
-  bool return_shifts;
-  /// Should the returned `VesinNeighborList` contain `distances`?
-  bool return_distances;
-  /// Should the returned `VesinNeighborList` contain `vector`?
-  bool return_vectors;
+    /// Should the returned `VesinNeighborList` contain `shifts`?
+    bool return_shifts;
+    /// Should the returned `VesinNeighborList` contain `distances`?
+    bool return_distances;
+    /// Should the returned `VesinNeighborList` contain `vector`?
+    bool return_vectors;
 };
 
 /// Device on which the data can be
 enum VesinDeviceKind {
-  /// Unknown device, used for default initialization and to indicate no
-  /// allocated data.
-  VesinUnknownDevice = 0,
-  /// CPU device
-  VesinCPU = 1,
-  // CUDA device
-  VesinCUDA = 2,
+    /// Unknown device, used for default initialization and to indicate no
+    /// allocated data.
+    VesinUnknownDevice = 0,
+    /// CPU device
+    VesinCPU = 1,
+    // CUDA device
+    VesinCUDA = 2,
 };
 
 /// Represents a device on which data can be allocated.
@@ -100,10 +100,10 @@ enum VesinDeviceKind {
 /// VesinDevice gpu1 { VesinCUDA, 1 };
 /// ```
 struct VesinDevice {
-  /// Type of the device
-  VesinDeviceKind type;
-  /// Device index (0 for CPU, GPU index for CUDA)
-  int device_id = 0;
+    /// Type of the device
+    VesinDeviceKind type;
+    /// Device index (0 for CPU, GPU index for CUDA)
+    int device_id = 0;
 };
 
 /// The actual neighbor list
@@ -127,8 +127,8 @@ struct VesinDevice {
 /// each pair having a different periodic shift.
 struct VESIN_API VesinNeighborList {
 #ifdef __cplusplus
-  VesinNeighborList()
-      : length(0),
+    VesinNeighborList():
+        length(0),
         device({VesinUnknownDevice, 0}),
         pairs(nullptr),
         shifts(nullptr),
@@ -136,34 +136,34 @@ struct VESIN_API VesinNeighborList {
         vectors(nullptr) {}
 #endif
 
-  /// Number of pairs in this neighbor list
-  size_t length;
-  /// Device used for the data allocations
-  VesinDevice device;
-  /// Array of pairs (storing the indices of the first and second point in the
-  /// pair), containing `length` elements.
-  size_t (*pairs)[2];
-  /// Array of box shifts, one for each `pair`. This is only set if
-  /// `options.return_pairs` was `true` during the calculation.
-  int32_t (*shifts)[3];
-  /// Array of pair distance (i.e. distance between the two points), one for
-  /// each pair. This is only set if `options.return_distances` was `true`
-  /// during the calculation.
-  double *distances;
-  /// Array of pair vector (i.e. vector between the two points), one for
-  /// each pair. This is only set if `options.return_vector` was `true`
-  /// during the calculation.
-  double (*vectors)[3];
+    /// Number of pairs in this neighbor list
+    size_t length;
+    /// Device used for the data allocations
+    VesinDevice device;
+    /// Array of pairs (storing the indices of the first and second point in the
+    /// pair), containing `length` elements.
+    size_t (*pairs)[2];
+    /// Array of box shifts, one for each `pair`. This is only set if
+    /// `options.return_pairs` was `true` during the calculation.
+    int32_t (*shifts)[3];
+    /// Array of pair distance (i.e. distance between the two points), one for
+    /// each pair. This is only set if `options.return_distances` was `true`
+    /// during the calculation.
+    double* distances;
+    /// Array of pair vector (i.e. vector between the two points), one for
+    /// each pair. This is only set if `options.return_vector` was `true`
+    /// during the calculation.
+    double (*vectors)[3];
 
-  /// Private pointer used to hold additional internal data
-  void *opaque = nullptr;
+    /// Private pointer used to hold additional internal data
+    void* opaque = nullptr;
 
-  // TODO: custom memory allocators?
+    // TODO: custom memory allocators?
 };
 
 /// Free all allocated memory inside a `VesinNeighborList`, according the it's
 /// `device`.
-void VESIN_API vesin_free(struct VesinNeighborList *neighbors);
+void VESIN_API vesin_free(struct VesinNeighborList* neighbors);
 
 /// Compute a neighbor list.
 ///
@@ -187,20 +187,31 @@ void VESIN_API vesin_free(struct VesinNeighborList *neighbors);
 /// @param error_message Pointer to a `char*` that wil be set to the error
 ///     message if this function fails. This does not need to be freed when no
 ///     longer needed.
-int VESIN_API vesin_neighbors(const double (*points)[3], size_t n_points,
-                              const double box[3][3], const bool periodic[3],
-                              VesinDevice device, struct VesinOptions options,
-                              struct VesinNeighborList *neighbors,
-                              const char **error_message);
+int VESIN_API vesin_neighbors(
+    const double (*points)[3],
+    size_t n_points,
+    const double box[3][3],
+    const bool periodic[3],
+    VesinDevice device,
+    struct VesinOptions options,
+    struct VesinNeighborList* neighbors,
+    const char** error_message
+);
 
 /// Callback for `vesin_neighbors_visit`: one invocation per pair with
 /// `distance2 <= visit_cutoff^2`. The vector `(dx, dy, dz)` is
 /// `r_j - r_i + S @ H` for pair `(i, j)`.
 ///
 /// eOn extension (upstream candidate).
-typedef void (*VesinPairVisitor)(void *user_data, size_t first, size_t second,
-                                 double dx, double dy, double dz,
-                                 double distance2);
+typedef void (*VesinPairVisitor)(
+    void* user_data,
+    size_t first,
+    size_t second,
+    double dx,
+    double dy,
+    double dz,
+    double distance2
+);
 
 /// Compute a neighbor list exactly like `vesin_neighbors` and, in the same
 /// pass, invoke `visitor` for every pair within `visit_cutoff`
@@ -212,10 +223,18 @@ typedef void (*VesinPairVisitor)(void *user_data, size_t first, size_t second,
 /// and the same box-width requirements apply. eOn extension (upstream
 /// candidate).
 int VESIN_API vesin_neighbors_visit(
-    const double (*points)[3], size_t n_points, const double box[3][3],
-    const bool periodic[3], VesinDevice device, struct VesinOptions options,
-    double visit_cutoff, VesinPairVisitor visitor, void *user_data,
-    struct VesinNeighborList *neighbors, const char **error_message);
+    const double (*points)[3],
+    size_t n_points,
+    const double box[3][3],
+    const bool periodic[3],
+    VesinDevice device,
+    struct VesinOptions options,
+    double visit_cutoff,
+    VesinPairVisitor visitor,
+    void* user_data,
+    struct VesinNeighborList* neighbors,
+    const char** error_message
+);
 
 #ifdef __cplusplus
 

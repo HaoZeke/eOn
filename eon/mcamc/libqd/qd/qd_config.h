@@ -1,6 +1,6 @@
 /* include/qd/qd_config.h.  Generated from qd_config.h.in by configure.  */
 #ifndef _QD_QD_CONFIG_H
-#define _QD_QD_CONFIG_H 1
+#define _QD_QD_CONFIG_H  1
 
 #ifndef QD_API
 #define QD_API /**/
@@ -83,5 +83,6 @@
 #ifndef QD_ISNAN
 #define QD_ISNAN(x) std::isnan(x)
 #endif
+
 
 #endif /* _QD_QD_CONFIG_H */

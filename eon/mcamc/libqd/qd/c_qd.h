@@ -116,4 +116,4 @@ void c_qd_pi(double *a);
 }
 #endif
 
-#endif /* _QD_C_QD_H */
+#endif  /* _QD_C_QD_H */
