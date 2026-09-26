@@ -524,10 +524,6 @@ eoncbase_sources = [
     'fpe_handler.cpp',
     'PotRegistry.cpp',
     'PotentialParams.cpp',
-    'Parameters.cpp',
-    'ParametersINI.cpp',
-    'ParametersJSON.cpp',
-    'ParametersSSOT.cpp',
     'VesinNeighbors.cpp',
     'potentials/PluginLoader.cpp',
 ]
@@ -580,7 +576,7 @@ endif
 
 # library() snapshots dependencies. ParametersINI.cpp includes
 # readcon-core.hpp, so eoncbase is created after readcon is on _deps.
-eoncbase = library(
+eoncbase = static_library(
     'eoncbase',
     sources: eoncbase_sources,
     dependencies: _deps,
@@ -693,6 +689,10 @@ if not is_windows
 endif
 
 eonclib_sources = [
+    'Parameters.cpp',
+    'ParametersINI.cpp',
+    'ParametersJSON.cpp',
+    'ParametersSSOT.cpp',
     'ConFileIO.cpp',
     'GeometryAnalysis.cpp',
     'Optimizer.cpp',

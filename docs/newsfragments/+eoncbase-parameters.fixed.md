@@ -1,1 +1,1 @@
-``Parameters`` and its configuration loaders are compiled into ``libeoncbase``. The shared base library calls those methods.
+``libeoncbase`` is built as a static library. The parameter loaders stay in the client library, which is where their other symbols are defined.
