@@ -74,11 +74,14 @@ private:
   eonc::ILammpsLoader &loader_;
   int lammpsThr{0};
   bool lammpsLogging_{false};
+  int lammpsLogIndex_{0};
   std::mutex maskMutex_;
-  // Screen capture. Lines are copied into the process logger and the file
-  // is removed. LAMMPS does not keep its own log.
+  // client_lammps-N.log. The worker child writes it. The parent, after the
+  // child has finished a force call, copies new lines into the process log.
+  // The child does not touch that logger: quill does not survive fork.
   std::string lammpsScreenPath_;
   std::int64_t lammpsScreenPos_{0};
+  bool workerChild_{false};
 #ifdef EONMPI
   MPI_Comm mpiComm;
 #endif
