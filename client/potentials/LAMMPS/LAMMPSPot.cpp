@@ -373,11 +373,32 @@ void LAMMPSPot::stopWorker() {
     }
     if (!reaped) {
       kill(workerPid, SIGKILL);
-      waitpid(workerPid, &st, 0);
+      for (;;) {
+        pid_t r = waitpid(workerPid, &st, 0);
+        if (r == workerPid || (r < 0 && errno != EINTR)) {
+          break;
+        }
+      }
     }
     workerPid = -1;
   }
   workerSpawned = false;
+}
+
+bool LAMMPSPot::noteScreenGeometry(long N, const double *box) {
+  bool changed = !screenHaveGeom_ || N != screenAtoms_;
+  if (!changed) {
+    for (int i = 0; i < 9; ++i) {
+      if (screenBox_[i] != box[i]) {
+        changed = true;
+        break;
+      }
+    }
+  }
+  screenHaveGeom_ = true;
+  screenAtoms_ = N;
+  std::memcpy(screenBox_, box, sizeof(screenBox_));
+  return changed;
 }
 #endif // !EONMPI && !IS_WINDOWS
 
@@ -401,7 +422,9 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     rejectGeometry(U, F, N);
     return;
   }
+  const bool newWorker = !workerSpawned;
   ensureWorker();
+  const bool screenRestart = newWorker || noteScreenGeometry(N, box);
 
   std::vector<double> mask(static_cast<size_t>(3 * N), 0.0);
   {
@@ -466,6 +489,9 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     stopWorker();
     rejectGeometry(U, F, N);
     return;
+  }
+  if (screenRestart) {
+    lammpsScreenRestart_ = true;
   }
   if (status != 0) {
     drainLammpsScreen();
@@ -598,20 +624,35 @@ void LAMMPSPot::drainLammpsScreen() {
   if (workerChild_ || !lammpsLogging_ || lammpsScreenPath_.empty()) {
     return;
   }
-  std::ifstream in(lammpsScreenPath_);
+  std::error_code ec;
+  const auto sz = std::filesystem::file_size(lammpsScreenPath_, ec);
+  if (ec) {
+    return;
+  }
+  const auto fileSize = static_cast<std::int64_t>(sz);
+  lammpsScreenPos_ = eonc::lammpsScreenCursor(lammpsScreenPos_, fileSize,
+                                              lammpsScreenRestart_);
+  lammpsScreenRestart_ = false;
+  std::ifstream in(lammpsScreenPath_, std::ios::in | std::ios::binary);
   if (!in) {
     return;
   }
-  in.seekg(lammpsScreenPos_);
+  in.seekg(static_cast<std::streamoff>(lammpsScreenPos_));
   std::string line;
   while (std::getline(in, line)) {
+    if (!line.empty() && line.back() == '\r') {
+      line.pop_back();
+    }
     if (!line.empty()) {
       EONC_LOG_INFO("{}", line);
     }
   }
   in.clear();
   in.seekg(0, std::ios::end);
-  lammpsScreenPos_ = in.tellg();
+  const auto end = in.tellg();
+  if (end >= 0) {
+    lammpsScreenPos_ = static_cast<std::int64_t>(end);
+  }
 }
 
 void LAMMPSPot::lammpsCommand(const char *cmd) {
@@ -674,6 +715,8 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   int lmpargc = static_cast<int>(argPtrs.size());
   LAMMPSObj = lmp.open_no_mpi(lmpargc, argPtrs.data(), nullptr);
 #endif
+  // -screen opens with truncation. The next copy starts at the new file.
+  lammpsScreenRestart_ = true;
 
   if (lammpsThr > 0) {
     std::string cmd = std::format("package omp {} force/neigh", lammpsThr);

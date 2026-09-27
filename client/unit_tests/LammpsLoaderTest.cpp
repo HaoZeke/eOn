@@ -158,7 +158,22 @@ TEST_CASE("LAMMPS open args honor logging", "[lammps][logging]") {
     }
   }
   REQUIRE_FALSE(saw_log_file);
+  bool saw_screen = false;
+  for (const auto &arg : logged) {
+    if (arg == "screen.tmp") {
+      saw_screen = true;
+    }
+  }
+  REQUIRE(saw_screen);
   REQUIRE(logged.back() == "omp");
+}
+
+TEST_CASE("LAMMPS screen cursor rewinds when the file is replaced",
+          "[lammps][logging]") {
+  REQUIRE(eonc::lammpsScreenCursor(40, 10, false) == 0);
+  REQUIRE(eonc::lammpsScreenCursor(40, 80, true) == 0);
+  REQUIRE(eonc::lammpsScreenCursor(40, 80, false) == 40);
+  REQUIRE(eonc::lammpsScreenCursor(-1, 80, false) == 0);
 }
 
 } // namespace tests

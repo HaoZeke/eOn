@@ -31,6 +31,17 @@ inline bool lammpsWorkerReaped(long got, long child, int err) {
   return got < 0 && err != EINTR;
 }
 
+/// Byte offset at which to keep copying a LAMMPS screen file. A new LAMMPS
+/// open truncates that file, so a restart or a shorter file reads from the
+/// start.
+inline std::int64_t lammpsScreenCursor(std::int64_t pos, std::int64_t fileSize,
+                                       bool restarted) {
+  if (restarted || pos < 0 || fileSize < pos) {
+    return 0;
+  }
+  return pos;
+}
+
 /// LAMMPS argv. The log file stays off. A screen path is copied into the
 /// process logger by the caller.
 inline std::vector<std::string> lammpsOpenArgs(bool logging, bool with_omp,
@@ -81,6 +92,9 @@ private:
   // The child does not touch that logger: quill does not survive fork.
   std::string lammpsScreenPath_;
   std::int64_t lammpsScreenPos_{0};
+  // Consumed by drainLammpsScreen. A new LAMMPS open truncates the screen
+  // file, so the next copy starts at the beginning.
+  bool lammpsScreenRestart_{false};
   bool workerChild_{false};
 #ifdef EONMPI
   MPI_Comm mpiComm;
@@ -128,9 +142,15 @@ private:
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)
   bool workerSpawned{false};
+  // Geometry of the last request. The child rebuilds LAMMPS, and truncates
+  // the screen file, when the atom count or the cell changes.
+  bool screenHaveGeom_{false};
+  long screenAtoms_{0};
+  double screenBox_[9]{};
 
   // Fork the worker child on first use; child enters runWorkerLoop().
   void ensureWorker();
+  bool noteScreenGeometry(long N, const double *box);
   // Child main loop: read requests, evaluate, write results; never returns.
   [[noreturn]] void runWorkerLoop();
   void stopWorker();
