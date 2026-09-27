@@ -588,7 +588,10 @@ eoncbase = static_library(
     dependencies: _deps,
     cpp_args: _args,
     include_directories: _incdirs,
-    install: true,
+    # Not installed. A static library's install path is {libdir_static},
+    # which the wheel builder cannot map, and the client library already
+    # links these objects.
+    install: false,
 )
 
 _linkto += eoncbase
@@ -1441,7 +1444,9 @@ eclib = library(
     install: true,
 )
 
-_linkto += eclib
+# MSVC scans static libraries once, left to right. eonclib references
+# XTBPot and the other potentials, so it has to precede them.
+_linkto = [eclib] + _linkto
 
 # RGPOT-metatomic engine (slow path); fat pot already in potentials above.
 if get_option('with_metatomic')
@@ -1501,6 +1506,15 @@ if get_option('with_pyeonclient')
     subdir('python')
 endif
 
+# Shared eonclib already contains the static base objects. Linking that
+# archive into a test as well gives macOS a second PotRegistry, so the
+# process-wide force count stays at zero.
+if get_option('default_library') == 'static'
+    test_link = _linkto
+else
+    test_link = [eclib]
+endif
+
 # ---------------------- Executable
 
 ec = executable(
@@ -1547,7 +1561,7 @@ if get_option('with_tests')
         dependencies: _deps,  # static lib: use _deps (no readcon link_args)
         include_directories: _incdirs,
         cpp_args: test_args,
-        link_with: _linkto,
+        link_with: test_link,
     )
     test_array = [  #
         ['test_impldim', 'ImpDimerTest.cpp', 'saddle_search'],
@@ -1666,7 +1680,7 @@ if get_option('with_tests')
                 # Include /STACK:16M (Windows) so EAM Al Fortran pots do not
                 # SIGSEGV with STATUS_STACK_OVERFLOW (default stack is 1 MB).
                 link_args: _linkargs,
-                link_with: _linkto,
+                link_with: test_link,
                 build_rpath: ':'.join(_runtime_rpath),
             ),
             workdir: meson.project_source_root() + '/client/unit_tests/data/systems/' + test.get(
@@ -1684,7 +1698,7 @@ if get_option('with_tests')
             dependencies: test_deps,
             include_directories: _incdirs,
             cpp_args: test_args,
-            link_with: _linkto,
+            link_with: test_link,
             build_rpath: ':'.join(_runtime_rpath),
             install: false,
         )
@@ -1703,7 +1717,7 @@ if get_option('with_tests')
             dependencies: test_deps,
             include_directories: _incdirs,
             cpp_args: test_args,
-            link_with: _linkto,
+            link_with: test_link,
         )
 
         test_workdir = meson.project_source_root() + '/client/unit_tests/data/systems/nwchem_test'
@@ -1735,7 +1749,7 @@ if get_option('with_tests')
             dependencies: test_deps,
             include_directories: _incdirs,
             cpp_args: test_args,
-            link_with: _linkto,
+            link_with: test_link,
         )
         _rgpot_test_env = environment()
         _rgpot_test_env.set(
@@ -1773,7 +1787,7 @@ if get_option('with_tests')
         dependencies: test_deps,
         include_directories: _incdirs,
         cpp_args: test_args,
-        link_with: _linkto,
+        link_with: test_link,
     )
     benchmark('bench_pot', bench_pot_exe,
         args: ['[.benchmark]'],
