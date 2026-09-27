@@ -1,0 +1,1 @@
+``lammps_logging`` opens the LAMMPS log and screen. The default still passes ``-log none`` and ``-screen none``.
