@@ -62,6 +62,29 @@ def symbol_for_z(z):
     raise KeyError(f"unknown Z {z!r}")
 
 
+def _bind_minimage_wrap_many():
+    """readcon_ops distances call Cell.wrap_many.
+
+    The pinned minimage build exposes displacement and not wrap_many.
+    One row uses the same origin displacement the geometry kernel uses
+    when wrap_many is absent. A Cell that already defines the method
+    keeps it.
+    """
+    import minimage
+
+    if hasattr(minimage.Cell, "wrap_many"):
+        return
+
+    def wrap_many(self, diffs):
+        rows = numpy.atleast_2d(numpy.asarray(diffs, dtype=float))
+        zero = [0.0, 0.0, 0.0]
+        return [self.displacement(zero, row.tolist()) for row in rows]
+
+    minimage.Cell.wrap_many = wrap_many
+
+
+_bind_minimage_wrap_many()
+
 from readcon_ops.match import (  # noqa: F401
     get_rotation_matrix,
     identical,
