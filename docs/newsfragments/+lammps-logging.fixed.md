@@ -1,1 +1,1 @@
-``lammps_logging`` copies LAMMPS screen lines into the process log. LAMMPS does not open its own log file.
+``lammps_logging`` keeps ``client_lammps-N.log``. The worker child writes that file. The parent copies new lines into the process log after each force call. The child does not call the process logger.
