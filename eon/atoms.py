@@ -534,8 +534,7 @@ def internal_motion(a, b):
     if nva > 1e-12 and nvb > 1e-12:
         va = va / nva
         vb = vb / nvb
-        cross2 = numpy.cross(vb, va)
-        if numpy.linalg.norm(cross2) > 1e-12:
+        if numpy.linalg.norm(numpy.cross(vb, va)) > 1e-12:
             theta2 = numpy.arccos(numpy.clip((va * vb).sum(), -1.0, 1.0))
             b.r = rotate(b.r, axis2, a.r[0], theta2)
     return b
