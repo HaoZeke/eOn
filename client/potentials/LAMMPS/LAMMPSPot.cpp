@@ -371,9 +371,11 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   variance = nullptr;
 
 #ifdef EONMPI
+  std::lock_guard<std::mutex> stateLock(workerMutex);
   forceLocal(N, R, atomicNrs, F, U, box);
 #elif defined(IS_WINDOWS)
   // No fork/pipe on Windows; call forceLocal directly.
+  std::lock_guard<std::mutex> stateLock(workerMutex);
   forceLocal(N, R, atomicNrs, F, U, box);
 #else
   // Drive the dedicated worker process so this image's LAMMPS runs in its own

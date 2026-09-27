@@ -85,6 +85,10 @@ private:
   bool realunits{false};
   std::vector<double> fixedMask_;
   long maskN_{0};
+  // Covers fixedMask_ and, on the in-process paths, LAMMPSObj. The worker
+  // pipe uses the same mutex: a shared instance must not update the mask
+  // while another thread copies it or evaluates a force.
+  std::mutex workerMutex;
 
 #if !defined(EONMPI) && !defined(IS_WINDOWS)
   // Process-per-image evaluation.  NEB drives intermediate images on separate
@@ -111,7 +115,6 @@ private:
   // next send finds a closed pipe, and the worker dies, all within the first
   // three force calls of the minimisation. Uncontended when instances really
   // are per-image.
-  std::mutex workerMutex;
   int workerPid{-1};
   int reqFd{-1}; // parent writes requests here (child stdin side)
   int resFd{-1}; // parent reads results here (child stdout side)
