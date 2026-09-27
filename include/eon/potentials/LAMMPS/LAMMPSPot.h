@@ -16,7 +16,9 @@
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
 
+#include <cstdint>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace eonc {
@@ -45,6 +47,10 @@ private:
   eonc::ILammpsLoader &loader_;
   int lammpsThr{0};
   bool lammpsLogging_{false};
+  // Screen capture. Lines are copied into the process logger and the file
+  // is removed. LAMMPS does not keep its own log.
+  std::string lammpsScreenPath_;
+  std::int64_t lammpsScreenPos_{0};
 #ifdef EONMPI
   MPI_Comm mpiComm;
 #endif
@@ -102,4 +108,6 @@ private:
   // inside the worker child on POSIX).
   void forceLocal(long N, const double *R, const int *atomicNrs, double *F,
                   double *U, const double *box);
+  void lammpsCommand(const char *cmd);
+  void drainLammpsScreen();
 };
