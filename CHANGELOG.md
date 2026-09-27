@@ -6,7 +6,7 @@
 
 ### Fixed
 
-- The locked install records linkcell 0.3.3.
+- The locked install records linkcell 0.3.4.
 - `libeoncbase` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
 
 ## [3.2.1](https://github.com/TheochemUI/eOn/tree/3.2.1) - 2026-09-13
