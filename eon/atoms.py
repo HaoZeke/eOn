@@ -101,25 +101,31 @@ def identical(atoms1, atoms2, epsilon_r):
     ibox = numpy.linalg.inv(box)
 
     mismatch = []
+    used = [False] * len(atoms1)
     pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
     for i in range(len(pan)):
         if pan[i] > epsilon_r:
             mismatch.append(i)
         elif atoms1.names[i] != atoms2.names[i]:
             return False
+        else:
+            used[i] = True
 
     for i in mismatch:
         pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
         minpan = 1e300
-        minj = 0
+        minj = -1
         for j in range(len(pan)):
-            if i == j:
+            if used[j]:
                 continue
             if pan[j] < minpan:
                 minpan = pan[j]
                 minj = j
-        if not (minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]):
+        if minj < 0 or not (
+            minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]
+        ):
             return False
+        used[minj] = True
     return True
 
 

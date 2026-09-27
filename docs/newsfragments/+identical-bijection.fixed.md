@@ -1,0 +1,1 @@
+``identical`` keeps a one-to-one map. Two atoms of one structure cannot both match the same atom of the other.
