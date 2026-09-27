@@ -103,10 +103,10 @@ def identical(atoms1, atoms2, epsilon_r):
     mismatch = []
     pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
     for i in range(len(pan)):
-        if pan[i] > epsilon_r:
+        # A close index pair of different elements is not a match. Leave both
+        # atoms free so the bijection can swap them.
+        if pan[i] > epsilon_r or atoms1.names[i] != atoms2.names[i]:
             mismatch.append(i)
-        elif atoms1.names[i] != atoms2.names[i]:
-            return False
 
     used = {i for i in range(len(atoms1)) if i not in mismatch}
     for i in mismatch:
@@ -512,6 +512,12 @@ def rotate(r, axis, center, angle):
     return new_r
 
 
+def _bond_perpendicular(point, origin, axis):
+    """Component of point-origin perpendicular to a unit axis."""
+    relative = point - origin
+    return relative - numpy.dot(relative, axis) * axis
+
+
 def internal_motion(a, b):
     """ Takes two atoms objects and returns the motion from a to b that is
     entirely internal - no rotation or translation, in the form of a new atoms
@@ -522,21 +528,29 @@ def internal_motion(a, b):
     b0b1 = (b.r[1] - b.r[0]) / numpy.linalg.norm(b.r[1] - b.r[0])
     cross1 = numpy.cross(b0b1, a0a1)
     norm1 = numpy.linalg.norm(cross1)
+    dot1 = float(numpy.clip(numpy.dot(a0a1, b0b1), -1.0, 1.0))
     if norm1 > 1e-12:
-        axis1 = cross1 / norm1
-        theta1 = numpy.arccos(numpy.clip((a0a1 * b0b1).sum(), -1.0, 1.0))
-        b.r = rotate(b.r, axis1, a.r[0], theta1)
-    axis2 = (a.r[2] - a.r[0]) / numpy.linalg.norm(a.r[2] - a.r[0])
-    va = a.r[2] - ((a.r[2] - a.r[0]) * axis2).sum() * axis2
-    vb = b.r[2] - ((b.r[2] - a.r[0]) * axis2).sum() * axis2
+        b.r = rotate(b.r, cross1 / norm1, a.r[0], numpy.arccos(dot1))
+    elif dot1 < 0.0:
+        # Antiparallel bonds have a zero cross product. A half turn about any
+        # perpendicular maps the bond onto the reference; atom 2 fixes the rest.
+        helper = (
+            numpy.array([1.0, 0.0, 0.0])
+            if abs(float(a0a1[0])) < 0.9
+            else numpy.array([0.0, 1.0, 0.0])
+        )
+        axis_pi = numpy.cross(a0a1, helper)
+        axis_pi = axis_pi / numpy.linalg.norm(axis_pi)
+        b.r = rotate(b.r, axis_pi, a.r[0], numpy.pi)
+    va = _bond_perpendicular(a.r[2], a.r[0], a0a1)
+    vb = _bond_perpendicular(b.r[2], a.r[0], a0a1)
     nva = numpy.linalg.norm(va)
     nvb = numpy.linalg.norm(vb)
     if nva > 1e-12 and nvb > 1e-12:
-        va = va / nva
-        vb = vb / nvb
-        if numpy.linalg.norm(numpy.cross(vb, va)) > 1e-12:
-            theta2 = numpy.arccos(numpy.clip((va * vb).sum(), -1.0, 1.0))
-            b.r = rotate(b.r, axis2, a.r[0], theta2)
+        theta2 = numpy.arctan2(
+            numpy.dot(a0a1, numpy.cross(vb, va)), numpy.dot(va, vb)
+        )
+        b.r = rotate(b.r, a0a1, a.r[0], theta2)
     return b
 
 

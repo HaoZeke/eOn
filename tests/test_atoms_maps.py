@@ -37,6 +37,22 @@ def test_internal_motion_puts_atom_zero_on_the_reference():
     assert np.allclose(moved.r[0], a.r[0])
 
 
+def test_identical_swaps_unlike_elements_on_the_same_sites():
+    a = _pair([[0.0, 0.0, 0.0], [0.05, 0.0, 0.0]])
+    b = _pair([[0.0, 0.0, 0.0], [0.05, 0.0, 0.0]])
+    a.names = ["Cu", "Au"]
+    b.names = ["Au", "Cu"]
+    assert identical(a, b, epsilon_r=0.2) is True
+
+
+def test_internal_motion_aligns_a_reversed_bond_and_a_twist():
+    a = _pair([[1.0, 2.0, 3.0], [2.0, 2.0, 3.0], [1.0, 3.0, 3.0]])
+    reversed_bond = _pair([[1.0, 2.0, 3.0], [0.0, 2.0, 3.0], [1.0, 3.0, 3.0]])
+    twist = _pair([[1.0, 2.0, 3.0], [2.0, 2.0, 3.0], [1.0, 2.0, 4.0]])
+    assert np.allclose(internal_motion(a, reversed_bond).r, a.r)
+    assert np.allclose(internal_motion(a, twist).r, a.r)
+
+
 def test_point_energy_match_forwards_use_identical(monkeypatch):
     seen = {}
 
