@@ -45,6 +45,23 @@ def test_identical_rejects_two_atoms_on_one_site():
     assert not atoms.identical(a, b, epsilon_r=0.2)
 
 
+def test_identical_accepts_a_crossed_pair_within_epsilon():
+    from eon.structure import Structure
+    from eon import atoms
+
+    # Same-index distances are inside epsilon, and so is the crossed pairing.
+    # Reserving the same-index pair leaves the second atom without a partner.
+    a = Structure(2)
+    a.r = np.array([[0.0, 0.0, 0.0], [0.15, 0.0, 0.0]])
+    a.box = np.eye(3) * 20.0
+    a.names = ["Cu", "Cu"]
+    b = Structure(2)
+    b.r = np.array([[0.1, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    b.box = np.eye(3) * 20.0
+    b.names = ["Cu", "Cu"]
+    assert atoms.identical(a, b, epsilon_r=0.12)
+
+
 def test_process_search_requires_config():
     from eon.explorer import ProcessSearch
     from eon.structure import Structure
