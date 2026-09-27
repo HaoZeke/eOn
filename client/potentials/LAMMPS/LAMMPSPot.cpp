@@ -15,6 +15,7 @@
 #include "eon/fpe_handler.h"
 #include "eon/potentials/LAMMPS/LammpsLoader.h"
 
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -59,6 +60,12 @@ LAMMPSPot::LAMMPSPot(const eonc::Parameters &p, eonc::ILammpsLoader &loader,
 {
   // Fail fast if LAMMPS library not available
   loader_.require_loaded();
+  if (lammpsLogging_) {
+    static std::atomic<int> ids{0};
+    lammpsLogIndex_ = ids.fetch_add(1);
+    lammpsScreenPath_ =
+        "client_lammps-" + std::to_string(lammpsLogIndex_) + ".log";
+  }
 #if !defined(EONMPI) && !defined(IS_WINDOWS)
   if (!isolate_worker) {
     return;
@@ -78,7 +85,12 @@ LAMMPSPot::LAMMPSPot(const eonc::Parameters &p, eonc::ILammpsLoader &loader,
 LAMMPSPot::~LAMMPSPot() { cleanMemory(); }
 
 void LAMMPSPot::setFixedMask(long nAtoms, const double *isFixed) {
-  std::lock_guard<std::mutex> lock(workerMutex);
+  // The worker child inherits this mutex. A respawn forks while the parent
+  // holds it, so the child must not lock the copy.
+  std::unique_lock<std::mutex> lock(workerMutex, std::defer_lock);
+  if (!workerChild_) {
+    lock.lock();
+  }
   if (nAtoms <= 0 || isFixed == nullptr) {
     fixedMask_.clear();
     maskN_ = 0;
@@ -143,12 +155,6 @@ void LAMMPSPot::cleanMemory() {
     drainLammpsScreen();
     loader_.close(LAMMPSObj);
     LAMMPSObj = nullptr;
-  }
-  if (!lammpsScreenPath_.empty()) {
-    std::error_code ec;
-    std::filesystem::remove(lammpsScreenPath_, ec);
-    lammpsScreenPath_.clear();
-    lammpsScreenPos_ = 0;
   }
 }
 
@@ -272,6 +278,7 @@ void LAMMPSPot::ensureWorker() {
 }
 
 void LAMMPSPot::runWorkerLoop() {
+  workerChild_ = true;
   // Running in the forked child.  Evaluate forces with an in-process LAMMPS
   // (this child's own MPI_COMM_WORLD) and stream results back to the parent.
   for (;;) {
@@ -451,6 +458,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     rejectGeometry(U, F, N);
     return;
   }
+  drainLammpsScreen();
   // A saddle search that never terminates silently truncates the event
   // table: the KMC residence time is 1/sum_j k_j over the discovered
   // mechanisms, so a dropped search removes a term and biases the clock
@@ -576,7 +584,7 @@ void LAMMPSPot::drainLammpsScreen() {
   std::string line;
   while (std::getline(in, line)) {
     if (!line.empty()) {
-      EONC_INFO("{}", line);
+      EONC_LOG_INFO("{}", line);
     }
   }
   in.clear();
@@ -585,11 +593,12 @@ void LAMMPSPot::drainLammpsScreen() {
 }
 
 void LAMMPSPot::lammpsCommand(const char *cmd) {
-  if (lammpsLogging_) {
-    EONC_INFO("LAMMPS: {}", cmd);
-  }
   loader_.command(LAMMPSObj, cmd);
-  drainLammpsScreen();
+  // The forked worker must not call the process logger. The parent copies
+  // the screen file after the child returns the force.
+  if (!workerChild_) {
+    drainLammpsScreen();
+  }
 }
 
 void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
@@ -614,16 +623,12 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
     }
   }
 
-  // -log none always: LAMMPS must not open log.lammps. When logging is
-  // on, the screen file is copied into the process logger and removed.
+  // -log none: LAMMPS does not open log.lammps. The screen file is
+  // client_lammps-N.log, named before fork so the parent and the child
+  // share it. The parent appends new lines to the process log.
   std::vector<const char *> lmpargs{"liblammps", "-echo", "screen", "-log",
                                     "none"};
   if (lammpsLogging_) {
-    lammpsScreenPath_ =
-        (std::filesystem::temp_directory_path() /
-         ("eon-lammps-" + std::to_string(reinterpret_cast<std::uintptr_t>(this))))
-            .string();
-    lammpsScreenPos_ = 0;
     lmpargs.insert(lmpargs.end(), {"-screen", lammpsScreenPath_.c_str()});
   } else {
     lmpargs.insert(lmpargs.end(), {"-screen", "none"});
