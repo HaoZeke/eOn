@@ -240,6 +240,10 @@ void LAMMPSPot::ensureWorker() {
   // MPI_COMM_WORLD; concurrent children never share a communicator.
   pid_t pid = fork();
   if (pid < 0) {
+    close(reqPipe[0]);
+    close(reqPipe[1]);
+    close(resPipe[0]);
+    close(resPipe[1]);
     throw std::runtime_error("LAMMPSPot: fork for worker failed");
   }
 
@@ -349,7 +353,12 @@ void LAMMPSPot::stopWorker() {
     bool reaped = false;
     for (int i = 0; i < 100; ++i) { // up to ~1 s
       pid_t r = waitpid(workerPid, &st, WNOHANG);
-      if (r == workerPid || r < 0) {
+      if (r == workerPid) {
+        reaped = true;
+        break;
+      }
+      // EINTR is not a reap. ECHILD means another waiter already collected it.
+      if (r < 0 && errno != EINTR) {
         reaped = true;
         break;
       }
@@ -357,7 +366,8 @@ void LAMMPSPot::stopWorker() {
     }
     if (!reaped) {
       kill(workerPid, SIGKILL);
-      waitpid(workerPid, &st, 0);
+      while (waitpid(workerPid, &st, 0) < 0 && errno == EINTR) {
+      }
     }
     workerPid = -1;
   }
