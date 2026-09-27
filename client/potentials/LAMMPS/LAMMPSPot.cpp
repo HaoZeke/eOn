@@ -105,13 +105,13 @@ void LAMMPSPot::applySetforce(long N) {
       "group eon_frozen delete"};
   for (const char *cmd : kUnfix) {
     try {
-      lmp.command(LAMMPSObj, cmd);
+      lammpsCommand( cmd);
     } catch (...) {
     }
   }
   for (const char *cmd : kUngroup) {
     try {
-      lmp.command(LAMMPSObj, cmd);
+      lammpsCommand( cmd);
     } catch (...) {
     }
   }
@@ -134,10 +134,9 @@ void LAMMPSPot::applySetforce(long N) {
     if (ids[ax].empty()) {
       continue;
     }
-    lmp.command(
-        LAMMPSObj,
+    lammpsCommand(
         ("group " + std::string(kGroup[ax]) + " id " + ids[ax]).c_str());
-    lmp.command(LAMMPSObj, kFix[ax]);
+    lammpsCommand( kFix[ax]);
   }
 }
 
@@ -146,8 +145,15 @@ void LAMMPSPot::cleanMemory() {
   stopWorker();
 #endif
   if (LAMMPSObj != nullptr) {
+    drainLammpsScreen();
     loader_.close(LAMMPSObj);
     LAMMPSObj = nullptr;
+  }
+  if (!lammpsScreenPath_.empty()) {
+    std::error_code ec;
+    std::filesystem::remove(lammpsScreenPath_, ec);
+    lammpsScreenPath_.clear();
+    lammpsScreenPos_ = 0;
   }
 }
 
@@ -522,9 +528,9 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
     // New instance / box change: rebuild neighbors. create_atoms sits at
     // the origin; pre no would evaluate on that neighbor list.
     if (newLammps) {
-      lmp.command(LAMMPSObj, "run 1 pre yes post no");
+      lammpsCommand( "run 1 pre yes post no");
     } else {
-      lmp.command(LAMMPSObj, "run 1 pre no post no");
+      lammpsCommand( "run 1 pre no post no");
     }
 
     auto *pe =
@@ -575,6 +581,34 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
   fpeh.restore_fpe();
 }
 
+void LAMMPSPot::drainLammpsScreen() {
+  if (!lammpsLogging_ || lammpsScreenPath_.empty()) {
+    return;
+  }
+  std::ifstream in(lammpsScreenPath_);
+  if (!in) {
+    return;
+  }
+  in.seekg(lammpsScreenPos_);
+  std::string line;
+  while (std::getline(in, line)) {
+    if (!line.empty()) {
+      EONC_INFO("{}", line);
+    }
+  }
+  in.clear();
+  in.seekg(0, std::ios::end);
+  lammpsScreenPos_ = in.tellg();
+}
+
+void LAMMPSPot::lammpsCommand(const char *cmd) {
+  if (lammpsLogging_) {
+    EONC_INFO("LAMMPS: {}", cmd);
+  }
+  loader_.command(LAMMPSObj, cmd);
+  drainLammpsScreen();
+}
+
 void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
                               const double *box) {
   auto &lmp = loader_;
@@ -583,6 +617,7 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   std::memcpy(oldBox, box, 9 * sizeof(double));
 
   if (LAMMPSObj != nullptr) {
+    drainLammpsScreen();
     loader_.close(LAMMPSObj);
     LAMMPSObj = nullptr;
   }
@@ -596,9 +631,17 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
     }
   }
 
+  if (lammpsLogging_) {
+    lammpsScreenPath_ =
+        (std::filesystem::temp_directory_path() /
+         ("eon-lammps-" +
+          std::to_string(reinterpret_cast<std::uintptr_t>(this))))
+            .string();
+    lammpsScreenPos_ = 0;
+  }
 #ifdef EONMPI
   const std::vector<std::string> argStore =
-      eonc::lammpsOpenArgs(lammpsLogging_, true);
+      eonc::lammpsOpenArgs(lammpsLogging_, true, lammpsScreenPath_);
   std::vector<char *> argPtrs;
   argPtrs.reserve(argStore.size());
   for (const std::string &arg : argStore) {
@@ -616,7 +659,7 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   LAMMPSObj = lmp.open_mpi(lmpargc, lmpargv, inst_comm, nullptr);
 #else
   const std::vector<std::string> argStore =
-      eonc::lammpsOpenArgs(lammpsLogging_, false);
+      eonc::lammpsOpenArgs(lammpsLogging_, false, lammpsScreenPath_);
   std::vector<char *> argPtrs;
   argPtrs.reserve(argStore.size());
   for (const std::string &arg : argStore) {
@@ -628,7 +671,7 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
 
   if (lammpsThr > 0) {
     std::string cmd = std::format("package omp {} force/neigh", lammpsThr);
-    lmp.command(LAMMPSObj, cmd.c_str());
+    lammpsCommand( cmd.c_str());
   }
 
   // Detect units from in.lammps: look for "#!units real" marker
@@ -644,6 +687,7 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
     }
   } else {
     if (LAMMPSObj != nullptr) {
+      drainLammpsScreen();
       lmp.close(LAMMPSObj);
       LAMMPSObj = nullptr;
     }
@@ -652,14 +696,14 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   }
 
   if (realunits) {
-    lmp.command(LAMMPSObj, "units real");
+    lammpsCommand( "units real");
   } else {
-    lmp.command(LAMMPSObj, "units metal");
+    lammpsCommand( "units metal");
   }
 
-  lmp.command(LAMMPSObj, "atom_style charge");
-  lmp.command(LAMMPSObj, "atom_modify map array sort 0 0");
-  lmp.command(LAMMPSObj, "neigh_modify delay 1");
+  lammpsCommand( "atom_style charge");
+  lammpsCommand( "atom_modify map array sort 0 0");
+  lammpsCommand( "neigh_modify delay 1");
 
   // LAMMPS restricted triclinic: (ax, by, cz, bx, cx, cy).
   // Row-major Matter cell also has ay, az, bz at box[1], box[2], box[5].
@@ -672,27 +716,27 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   std::string region_cmd =
       std::format("region cell prism 0 {} 0 {} 0 {} {} {} {} units box", box[0],
                   box[4], box[8], box[3], box[6], box[7]);
-  lmp.command(LAMMPSObj, region_cmd.c_str());
+  lammpsCommand( region_cmd.c_str());
 
   std::string create_box_cmd = std::format("create_box {} cell", ntypes);
-  lmp.command(LAMMPSObj, create_box_cmd.c_str());
+  lammpsCommand( create_box_cmd.c_str());
 
   // Initialize atoms
   for (long i = 0; i < N; i++) {
     std::string atom_cmd =
         std::format("create_atoms {} single {} {} {} units box",
                     type_map[atomicNrs[i]], 0.0, 0.0, 0.0);
-    lmp.command(LAMMPSObj, atom_cmd.c_str());
+    lammpsCommand( atom_cmd.c_str());
   }
 
-  lmp.command(LAMMPSObj, "mass * 1.0");
+  lammpsCommand( "mass * 1.0");
 
   // Load user LAMMPS input script
   lmp.file(LAMMPSObj, "in.lammps");
 
   // Define variables for force/energy extraction
-  lmp.command(LAMMPSObj, "variable fx atom fx");
-  lmp.command(LAMMPSObj, "variable fy atom fy");
-  lmp.command(LAMMPSObj, "variable fz atom fz");
-  lmp.command(LAMMPSObj, "variable pe equal pe");
+  lammpsCommand( "variable fx atom fx");
+  lammpsCommand( "variable fy atom fy");
+  lammpsCommand( "variable fz atom fz");
+  lammpsCommand( "variable pe equal pe");
 }

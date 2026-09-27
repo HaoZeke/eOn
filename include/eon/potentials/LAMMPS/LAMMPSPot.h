@@ -17,6 +17,7 @@
 #include "eon/Potential.h"
 
 #include <cerrno>
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -30,14 +31,15 @@ inline bool lammpsWorkerReaped(long got, long child, int err) {
   return got < 0 && err != EINTR;
 }
 
-/// LAMMPS argv. Logging on leaves the default log and screen in place.
-inline std::vector<std::string> lammpsOpenArgs(bool logging, bool with_omp) {
-  std::vector<std::string> args{"liblammps"};
+/// LAMMPS argv. The log file stays off. A screen path is copied into the
+/// process logger by the caller.
+inline std::vector<std::string> lammpsOpenArgs(bool logging, bool with_omp,
+                                               const std::string &screen) {
+  std::vector<std::string> args{"liblammps", "-echo", "screen", "-log", "none"};
   if (logging) {
-    args.insert(args.end(), {"-echo", "log"});
+    args.insert(args.end(), {"-screen", screen});
   } else {
-    args.insert(args.end(),
-                {"-log", "none", "-echo", "log", "-screen", "none"});
+    args.insert(args.end(), {"-screen", "none"});
   }
   if (with_omp) {
     args.insert(args.end(), {"-suffix", "omp"});
@@ -73,6 +75,10 @@ private:
   int lammpsThr{0};
   bool lammpsLogging_{false};
   std::mutex maskMutex_;
+  // Screen capture. Lines are copied into the process logger and the file
+  // is removed. LAMMPS does not keep its own log.
+  std::string lammpsScreenPath_;
+  std::int64_t lammpsScreenPos_{0};
 #ifdef EONMPI
   MPI_Comm mpiComm;
 #endif
@@ -130,4 +136,6 @@ private:
   // inside the worker child on POSIX).
   void forceLocal(long N, const double *R, const int *atomicNrs, double *F,
                   double *U, const double *box);
+  void lammpsCommand(const char *cmd);
+  void drainLammpsScreen();
 };

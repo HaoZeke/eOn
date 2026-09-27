@@ -146,18 +146,18 @@ TEST_CASE("LAMMPS worker reap ignores EINTR", "[lammps][worker]") {
 }
 
 TEST_CASE("LAMMPS open args honor logging", "[lammps][logging]") {
-  const auto quiet = eonc::lammpsOpenArgs(false, false);
-  REQUIRE(quiet[1] == "-log");
-  REQUIRE(quiet[2] == "none");
-  const auto logged = eonc::lammpsOpenArgs(true, true);
+  const auto quiet = eonc::lammpsOpenArgs(false, false, "");
+  REQUIRE(quiet[3] == "-log");
+  REQUIRE(quiet[4] == "none");
+  const auto logged = eonc::lammpsOpenArgs(true, true, "screen.tmp");
   REQUIRE(logged[1] == "-echo");
-  bool saw_none = false;
+  bool saw_log_file = false;
   for (const auto &arg : logged) {
-    if (arg == "none") {
-      saw_none = true;
+    if (arg == "log.lammps") {
+      saw_log_file = true;
     }
   }
-  REQUIRE_FALSE(saw_none);
+  REQUIRE_FALSE(saw_log_file);
   REQUIRE(logged.back() == "omp");
 }
 
