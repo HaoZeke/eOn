@@ -9,6 +9,7 @@
 - The locked install records linkcell 0.3.4.
 - The hand-built CPMD fake engine compiles with `pkg-config --cflags capnp`. The MSVC xtb import library aliases MinGW's leading-underscore exports.
 - An in-process geometry is a `readcon.ConFrame`, checked with `isinstance`. The packaged job schema matches the monorepo file, including forces and atom ids.
+- The rgpot wrap builds ExprPot, and the client is compiled with `RGPOT_HAS_EXPR`, so `PotType.EXPR` is not the generic terminating error.
 - `libeoncbase` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
 
 ## [3.2.1](https://github.com/TheochemUI/eOn/tree/3.2.1) - 2026-09-13
