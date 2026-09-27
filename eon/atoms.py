@@ -515,7 +515,7 @@ def internal_motion(a, b):
     entirely internal - no rotation or translation, in the form of a new atoms
     object. """
     b = b.copy()
-    b.r -= a.r[0] - b.r[0]
+    b.r += a.r[0] - b.r[0]
     a0a1 = (a.r[1] - a.r[0]) / numpy.linalg.norm(a.r[1] - a.r[0])
     b0b1 = (b.r[1] - b.r[0]) / numpy.linalg.norm(b.r[1] - b.r[0])
     axis1 = numpy.cross(b0b1, a0a1) / numpy.linalg.norm(numpy.cross(b0b1, a0a1))
