@@ -101,7 +101,11 @@ void LAMMPSPot::setFixedMask(long nAtoms, const double *isFixed) {
 void LAMMPSPot::applySetforce(long N) {
   std::vector<double> mask;
   {
-    std::lock_guard<std::mutex> lock(maskMutex_);
+    // The worker child inherits this mutex across fork. Only the parent locks.
+    std::unique_lock<std::mutex> lock(maskMutex_, std::defer_lock);
+    if (!workerChild_) {
+      lock.lock();
+    }
     if (LAMMPSObj == nullptr || maskN_ != N || fixedMask_.empty()) {
       return;
     }
@@ -464,6 +468,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     return;
   }
   if (status != 0) {
+    drainLammpsScreen();
     --workerRespawnsLeft;
     EONC_LOG_WARNING(
         "[LAMMPSPot] worker reported an evaluation error; {} respawns left "
@@ -588,7 +593,9 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
 }
 
 void LAMMPSPot::drainLammpsScreen() {
-  if (!lammpsLogging_ || lammpsScreenPath_.empty()) {
+  // makeNewLAMMPS runs in the worker. The child writes the screen file and
+  // must not call the process logger; the parent copies it after the reply.
+  if (workerChild_ || !lammpsLogging_ || lammpsScreenPath_.empty()) {
     return;
   }
   std::ifstream in(lammpsScreenPath_);
