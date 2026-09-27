@@ -77,6 +77,7 @@ LAMMPSPot::LAMMPSPot(const eonc::Parameters &p, eonc::ILammpsLoader &loader,
 LAMMPSPot::~LAMMPSPot() { cleanMemory(); }
 
 void LAMMPSPot::setFixedMask(long nAtoms, const double *isFixed) {
+  std::lock_guard<std::mutex> lock(workerMutex);
   if (nAtoms <= 0 || isFixed == nullptr) {
     fixedMask_.clear();
     maskN_ = 0;
@@ -355,9 +356,11 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
   variance = nullptr;
 
 #ifdef EONMPI
+  std::lock_guard<std::mutex> stateLock(workerMutex);
   forceLocal(N, R, atomicNrs, F, U, box);
 #elif defined(IS_WINDOWS)
   // No fork/pipe on Windows; call forceLocal directly.
+  std::lock_guard<std::mutex> stateLock(workerMutex);
   forceLocal(N, R, atomicNrs, F, U, box);
 #else
   // Drive the dedicated worker process so this image's LAMMPS runs in its own
