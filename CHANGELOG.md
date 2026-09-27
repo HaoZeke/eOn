@@ -13,6 +13,7 @@
 - LAMMPSPot holds one mutex across the fixed-atom mask and the in-process force call, including Windows and MPI.
 - ``lammps_logging`` writes ``client_lammps-N.log``. The worker child writes that file. The parent copies new lines into the process log after each force call.
 - ``identical`` keeps a one-to-one atom map. A crossed pair within the tolerance still matches. Two atoms cannot both match the same partner.
+- The MSVC xtb import library also aliases exports that carry a trailing underscore.
 - The static base library is not installed, and shared-build tests link the client library so there is one potential-call registry. Static Windows links scan the client library before the potential archives.
 - `libeoncbase` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
 
