@@ -1,1 +1,1 @@
-``lammps_logging`` opens the LAMMPS log and screen. The default still passes ``-log none`` and ``-screen none``.
+``lammps_logging`` copies LAMMPS screen lines into the process log. LAMMPS does not open its own log file.
