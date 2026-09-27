@@ -518,16 +518,23 @@ def internal_motion(a, b):
     b.r += a.r[0] - b.r[0]
     a0a1 = (a.r[1] - a.r[0]) / numpy.linalg.norm(a.r[1] - a.r[0])
     b0b1 = (b.r[1] - b.r[0]) / numpy.linalg.norm(b.r[1] - b.r[0])
-    axis1 = numpy.cross(b0b1, a0a1) / numpy.linalg.norm(numpy.cross(b0b1, a0a1))
-    theta1 = numpy.arccos((a0a1*b0b1).sum())
-    b.r = rotate(b.r, axis1, a.r[0], theta1)
+    cross1 = numpy.cross(b0b1, a0a1)
+    norm1 = numpy.linalg.norm(cross1)
+    if norm1 > 1e-12:
+        axis1 = cross1 / norm1
+        theta1 = numpy.arccos(numpy.clip((a0a1 * b0b1).sum(), -1.0, 1.0))
+        b.r = rotate(b.r, axis1, a.r[0], theta1)
     axis2 = (a.r[2] - a.r[0]) / numpy.linalg.norm(a.r[2] - a.r[0])
     va = a.r[2] - ((a.r[2] - a.r[0]) * axis2).sum() * axis2
-    va = va / numpy.linalg.norm(va)
     vb = b.r[2] - ((b.r[2] - a.r[0]) * axis2).sum() * axis2
-    vb = vb / numpy.linalg.norm(vb)
-    theta2 = numpy.arccos((va * vb).sum())
-    b.r = rotate(b.r, axis2, a.r[0], theta2)
+    nva = numpy.linalg.norm(va)
+    nvb = numpy.linalg.norm(vb)
+    if nva > 1e-12 and nvb > 1e-12:
+        va = va / nva
+        vb = vb / nvb
+        if numpy.linalg.norm(numpy.cross(vb, va)) > 1e-12:
+            theta2 = numpy.arccos(numpy.clip((va * vb).sum(), -1.0, 1.0))
+            b.r = rotate(b.r, axis2, a.r[0], theta2)
     return b
 
 
