@@ -15,6 +15,7 @@
 - ``identical`` keeps a one-to-one atom map. A crossed pair within the tolerance still matches. Two atoms cannot both match the same partner.
 - The MSVC xtb import library is built from the DLL and linked from the build directory, so link.exe does not use the MinGW import library.
 - Writing `hessian.dat` retries after removing a file the previous case still holds.
+- A LAMMPS worker ``waitpid`` interrupted by a signal is retried, and a failed ``fork`` closes the pipes it opened.
 - The static base library is not installed, and shared-build tests link the client library so there is one potential-call registry. Static Windows links scan the client library before the potential archives.
 - `libeoncbase` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
 
