@@ -7,7 +7,7 @@
 ### Fixed
 
 - The locked install records linkcell 0.3.4.
-- The CPMD fake engine sees the Cap'n Proto headers, and the MSVC xtb import library aliases MinGW's leading-underscore exports.
+- The hand-built CPMD fake engine compiles with `pkg-config --cflags capnp`. The MSVC xtb import library aliases MinGW's leading-underscore exports.
 - `libeoncbase` is a static library and it carries the parameter option accessors, so a potential plugin can link them. The parameter loaders stay in the client library.
 
 ## [3.2.1](https://github.com/TheochemUI/eOn/tree/3.2.1) - 2026-09-13
