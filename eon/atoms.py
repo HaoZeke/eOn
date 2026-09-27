@@ -128,10 +128,11 @@ def points_energies_match(file_a, energy_a, files_b, energies_b, eps_e, eps_r,
 
 
 def crystal_spacegroup(structure, symprec=1e-5):
-    """Space-group symbol and number for a periodic crystal.
+    """International symbol, number, and Hall number for a periodic crystal.
 
-    This is not the cluster match. Iterative Rotations and Assignments
-    answers that question.
+    One international number covers several settings. ``hall_number`` names
+    the setting. This is not the cluster match. Iterative Rotations and
+    Assignments answers that question.
     """
     from readcon_ops import spacegroup
 
