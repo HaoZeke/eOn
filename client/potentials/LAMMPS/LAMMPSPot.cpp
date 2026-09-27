@@ -449,6 +449,7 @@ void LAMMPSPot::force(long N, const double *R, const int *atomicNrs, double *F,
     return;
   }
   if (status != 0) {
+    drainLammpsScreen();
     --workerRespawnsLeft;
     EONC_LOG_WARNING(
         "[LAMMPSPot] worker reported an evaluation error; {} respawns left "
@@ -573,7 +574,9 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
 }
 
 void LAMMPSPot::drainLammpsScreen() {
-  if (!lammpsLogging_ || lammpsScreenPath_.empty()) {
+  // makeNewLAMMPS runs in the worker. The child writes the screen file and
+  // must not call the process logger; the parent copies it after the reply.
+  if (workerChild_ || !lammpsLogging_ || lammpsScreenPath_.empty()) {
     return;
   }
   std::ifstream in(lammpsScreenPath_);
