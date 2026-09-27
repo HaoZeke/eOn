@@ -439,6 +439,7 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings=None):
             return found
     return None
 
+
 # Presentation overlay keyed by Z. Symbol / name / mass live in readcon.
 _RADIUS = (
     1.0000,  # 0
