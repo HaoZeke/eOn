@@ -112,13 +112,13 @@ void LAMMPSPot::applySetforce(long N) {
       "group eon_frozen delete"};
   for (const char *cmd : kUnfix) {
     try {
-      lammpsCommand( cmd);
+      lammpsCommand(cmd);
     } catch (...) {
     }
   }
   for (const char *cmd : kUngroup) {
     try {
-      lammpsCommand( cmd);
+      lammpsCommand(cmd);
     } catch (...) {
     }
   }
@@ -143,7 +143,7 @@ void LAMMPSPot::applySetforce(long N) {
     }
     lammpsCommand(
         ("group " + std::string(kGroup[ax]) + " id " + ids[ax]).c_str());
-    lammpsCommand( kFix[ax]);
+    lammpsCommand(kFix[ax]);
   }
 }
 
@@ -519,9 +519,9 @@ void LAMMPSPot::forceLocal(long N, const double *R, const int *atomicNrs,
     // New instance / box change: rebuild neighbors. create_atoms sits at
     // the origin; pre no would evaluate on that neighbor list.
     if (newLammps) {
-      lammpsCommand( "run 1 pre yes post no");
+      lammpsCommand("run 1 pre yes post no");
     } else {
-      lammpsCommand( "run 1 pre no post no");
+      lammpsCommand("run 1 pre no post no");
     }
 
     auto *pe =
@@ -647,13 +647,13 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
                            inst_comm, nullptr);
 #else
   int lmpargc = static_cast<int>(lmpargs.size());
-  LAMMPSObj = lmp.open_no_mpi(lmpargc, const_cast<char **>(lmpargs.data()),
-                              nullptr);
+  LAMMPSObj =
+      lmp.open_no_mpi(lmpargc, const_cast<char **>(lmpargs.data()), nullptr);
 #endif
 
   if (lammpsThr > 0) {
     std::string cmd = std::format("package omp {} force/neigh", lammpsThr);
-    lammpsCommand( cmd.c_str());
+    lammpsCommand(cmd.c_str());
   }
 
   // Detect units from in.lammps: look for "#!units real" marker
@@ -678,14 +678,14 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   }
 
   if (realunits) {
-    lammpsCommand( "units real");
+    lammpsCommand("units real");
   } else {
-    lammpsCommand( "units metal");
+    lammpsCommand("units metal");
   }
 
-  lammpsCommand( "atom_style charge");
-  lammpsCommand( "atom_modify map array sort 0 0");
-  lammpsCommand( "neigh_modify delay 1");
+  lammpsCommand("atom_style charge");
+  lammpsCommand("atom_modify map array sort 0 0");
+  lammpsCommand("neigh_modify delay 1");
 
   // LAMMPS restricted triclinic: (ax, by, cz, bx, cx, cy).
   // Row-major Matter cell also has ay, az, bz at box[1], box[2], box[5].
@@ -698,27 +698,27 @@ void LAMMPSPot::makeNewLAMMPS(long N, const double *R, const int *atomicNrs,
   std::string region_cmd =
       std::format("region cell prism 0 {} 0 {} 0 {} {} {} {} units box", box[0],
                   box[4], box[8], box[3], box[6], box[7]);
-  lammpsCommand( region_cmd.c_str());
+  lammpsCommand(region_cmd.c_str());
 
   std::string create_box_cmd = std::format("create_box {} cell", ntypes);
-  lammpsCommand( create_box_cmd.c_str());
+  lammpsCommand(create_box_cmd.c_str());
 
   // Initialize atoms
   for (long i = 0; i < N; i++) {
     std::string atom_cmd =
         std::format("create_atoms {} single {} {} {} units box",
                     type_map[atomicNrs[i]], 0.0, 0.0, 0.0);
-    lammpsCommand( atom_cmd.c_str());
+    lammpsCommand(atom_cmd.c_str());
   }
 
-  lammpsCommand( "mass * 1.0");
+  lammpsCommand("mass * 1.0");
 
   // Load user LAMMPS input script
   lmp.file(LAMMPSObj, "in.lammps");
 
   // Define variables for force/energy extraction
-  lammpsCommand( "variable fx atom fx");
-  lammpsCommand( "variable fy atom fy");
-  lammpsCommand( "variable fz atom fz");
-  lammpsCommand( "variable pe equal pe");
+  lammpsCommand("variable fx atom fx");
+  lammpsCommand("variable fy atom fy");
+  lammpsCommand("variable fz atom fz");
+  lammpsCommand("variable pe equal pe");
 }
