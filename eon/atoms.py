@@ -100,32 +100,36 @@ def identical(atoms1, atoms2, epsilon_r):
     box = atoms1.box
     ibox = numpy.linalg.inv(box)
 
-    mismatch = []
-    used = [False] * len(atoms1)
-    pan = per_atom_norm(atoms1.r - atoms2.r, box, ibox)
-    for i in range(len(pan)):
-        if pan[i] > epsilon_r:
-            mismatch.append(i)
-        elif atoms1.names[i] != atoms2.names[i]:
-            return False
-        else:
-            used[i] = True
-
-    for i in mismatch:
+    n = len(atoms1)
+    # One augmenting path per atom. A same-index pair is not reserved first:
+    # that reservation rejects a crossed match that is still one-to-one.
+    adj = []
+    for i in range(n):
         pan = per_atom_norm(atoms1.r - atoms2.r[i], box, ibox)
-        minpan = 1e300
-        minj = -1
-        for j in range(len(pan)):
-            if used[j]:
+        cand = [
+            j
+            for j in range(n)
+            if pan[j] <= epsilon_r and atoms1.names[j] == atoms2.names[i]
+        ]
+        cand.sort(key=lambda j: pan[j])
+        adj.append(cand)
+
+    partner = [-1] * n
+
+    def _assign(i, seen):
+        for j in adj[i]:
+            if seen[j]:
                 continue
-            if pan[j] < minpan:
-                minpan = pan[j]
-                minj = j
-        if minj < 0 or not (
-            minpan < epsilon_r and atoms1.names[minj] == atoms2.names[i]
-        ):
+            seen[j] = True
+            prev = partner[j]
+            if prev == -1 or _assign(prev, seen):
+                partner[j] = i
+                return True
+        return False
+
+    for i in range(n):
+        if not _assign(i, [False] * n):
             return False
-        used[minj] = True
     return True
 
 
