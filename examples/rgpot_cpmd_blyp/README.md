@@ -17,6 +17,7 @@ sockets); the CPMD engine library is `dlopen`ed at runtime.
    eonclient
    ```
 
+`[cpmd]` holds the functional, `cutOffRy`, and any deck text.
 Engine lookup order: `[RgpotPot] engine_path` / `engine_library`, then the
 `CPMDC_LIBRARY` / `RGPOT_CPMDC_ENGINE` / `RGPOT_CPMD_ENGINE` environment
 variables. `RGPOT_BACKEND=CPMD` overrides the configured backend.

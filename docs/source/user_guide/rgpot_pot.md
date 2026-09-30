@@ -129,11 +129,37 @@ eOn's `-Dwith_mpi` option builds the client/server program. Calculator
 groups are this page's launch, `mpirun -np N eonclient`, with rgpot built
 `-Drgpot:with_mpi=enabled`.
 
+### The cpmd section
+
+`[RgpotPot]` selects the backend and places the engine: `engine_path`,
+`engine_library`, `engine_root`, `permanent_dir`, `params_path`, and
+`ranks_per_image`. `[cpmd]` is the CPMD message:
+
+```{code-block} ini
+[RgpotPot]
+backend = cpmdc
+
+[cpmd]
+functional = BLYP
+cutOffRy = 70.0
+charge = 0
+multiplicity = 1
+```
+
+`cutOffRy` is the plane-wave cutoff in Rydberg. `cutoff_ry` and
+`cpmd_cut_off_ry` on `[cpmd]` or `[RgpotPot]` still load. `[cpmd]` wins
+when both sections set a key. The other `[cpmd]` keys are `title`,
+`memory_mb`, `scratch_dir`, and `input_block`.
+
+```{eval-rst}
+.. autopydantic_model:: eon.schema.Cpmd
+```
+
 ### CPMDParams file
 
 `params_path` loads a CPMDParams message from disk. The message carries
 the sections, the pseudopotentials, and the cell. It replaces
-`functional`, `cutoff_ry`, `charge`, and `multiplicity`.
+`functional`, `cutOffRy`, `charge`, and `multiplicity`.
 
 After the file is read, `engine_path`, `engine_library`, `engine_root`,
 `scratch_dir`, `permanent_dir`, and `input_block` still apply.
@@ -167,8 +193,8 @@ libcpmdc reads `CPMDC_PSEUDO_DIR` for the pseudopotential directory. When
 that variable is unset, it reads `CPMD_PP_LIBRARY_PATH`.
 
 `RGPOT_CPMD_INPUT_BLOCK` fills `input_block` when the ini key is empty.
-For this backend the text is CPMD `&SECTION` lines. cpmdc places that
-text ahead of the sections it generates.
+For this backend the text is CPMD `&SECTION` lines, set on `[cpmd]`.
+cpmdc places that text ahead of the sections it generates.
 
 `permanent_dir` is the CPMD `FILEPATH` for `RESTART` files. `scratch_dir`
 is the fallback directory.

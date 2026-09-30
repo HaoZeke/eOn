@@ -284,7 +284,9 @@ int load_ini(INIReader &ini, Parameters &params) {
                            .make_template_input);
   }
 
-  // [RgpotPot] — in-process NWChemPot/CPMDPot (also accept legacy [RGPot] keys)
+  // [RgpotPot] is the backend switch and the engine placement. [cpmd]
+  // holds the CPMD message and wins over this section for that backend.
+  // Legacy [RGPot] key names still load.
   if (params.potential_options().potential == PotType::RGPOT) {
     const char *sec = "RgpotPot";
     // Prefer [RgpotPot]; fall back to [RGPot] field names used by direct-link
@@ -308,9 +310,12 @@ int load_ini(INIReader &ini, Parameters &params) {
         ini.Get(sec, "cpmd_functional",
                 ParametersLoadAccess::rgpot_options(params).functional));
     ParametersLoadAccess::rgpot_options(params).cutoff_ry = ini.GetReal(
-        sec, "cutoff_ry",
-        ini.GetReal(sec, "cpmd_cut_off_ry",
-                    ParametersLoadAccess::rgpot_options(params).cutoff_ry));
+        sec, "cutOffRy",
+        ini.GetReal(
+            sec, "cutoff_ry",
+            ini.GetReal(
+                sec, "cpmd_cut_off_ry",
+                ParametersLoadAccess::rgpot_options(params).cutoff_ry)));
     ParametersLoadAccess::rgpot_options(params).charge = ini.GetInteger(
         sec, "charge",
         ini.GetInteger(sec, "nwchem_charge",
@@ -405,6 +410,25 @@ int load_ini(INIReader &ini, Parameters &params) {
                 ParametersLoadAccess::rgpot_options(params).xtb_uhf)));
     const std::string be =
         toLowerCase(ParametersLoadAccess::rgpot_options(params).backend);
+    if (be == "cpmd" || be == "cpmdc" || be == "cpmdpot") {
+      // [cpmd] is the CPMD message: functional, cutOffRy, charge,
+      // multiplicity, title, memory, scratch, and the deck text. It wins
+      // over the same keys on [RgpotPot].
+      auto &rg = ParametersLoadAccess::rgpot_options(params);
+      rg.functional =
+          ini.Get("cpmd", "functional",
+                  ini.Get("cpmd", "cpmd_functional", rg.functional));
+      rg.cutoff_ry = ini.GetReal(
+          "cpmd", "cutOffRy",
+          ini.GetReal("cpmd", "cutoff_ry",
+                      ini.GetReal("cpmd", "cpmd_cut_off_ry", rg.cutoff_ry)));
+      rg.charge = ini.GetInteger("cpmd", "charge", rg.charge);
+      rg.multiplicity = ini.GetInteger("cpmd", "multiplicity", rg.multiplicity);
+      rg.title = ini.Get("cpmd", "title", rg.title);
+      rg.memory_mb = ini.GetInteger("cpmd", "memory_mb", rg.memory_mb);
+      rg.scratch_dir = ini.Get("cpmd", "scratch_dir", rg.scratch_dir);
+      rg.input_block = ini.Get("cpmd", "input_block", rg.input_block);
+    }
     if (be == "xtb" || be == "xtbpot" || be == "gfn" || be == "gfnxtb") {
       ParametersLoadAccess::rgpot_options(params).xtb_paramset =
           ini.Get("XTBPot", "paramset",

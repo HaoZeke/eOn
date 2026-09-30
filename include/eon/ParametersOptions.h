@@ -141,6 +141,8 @@ struct rgpot_options_t {
   std::string theory{"scf"};
   std::string scf_type{"rhf"};
   std::string functional{"BLYP"};
+  // [cpmd] cutOffRy wins. cutoff_ry and cpmd_cut_off_ry on [cpmd] or
+  // [RgpotPot] still load.
   double cutoff_ry{70.0};
   int charge{0};
   int multiplicity{1};

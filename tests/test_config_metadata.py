@@ -42,6 +42,7 @@ SECTION_CLASS_NAMES = {
     "BGSD": "BGSDConfig",
     "RgpotPot": "RgpotPot",
     "amsel": "AmselConfig",
+    "cpmd": "Cpmd",
 }
 
 

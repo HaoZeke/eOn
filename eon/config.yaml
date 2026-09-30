@@ -2127,7 +2127,7 @@ RgpotPot:
             kind: string
             default: "BLYP"
 
-        cutoff_ry:
+        cutOffRy:
             kind: float
             default: 70.0
 
@@ -2235,6 +2235,42 @@ RgpotPot:
         xtb_charge:
             kind: float
             default: 0.0
+
+################################################################################
+
+cpmd:
+    options:
+        functional:
+            kind: string
+            default: "BLYP"
+
+        cutOffRy:
+            kind: float
+            default: 70.0
+
+        charge:
+            kind: int
+            default: 0
+
+        multiplicity:
+            kind: int
+            default: 1
+
+        title:
+            kind: string
+            default: ""
+
+        memory_mb:
+            kind: int
+            default: 0
+
+        scratch_dir:
+            kind: string
+            default: ""
+
+        input_block:
+            kind: string
+            default: ""
 
 ################################################################################
 

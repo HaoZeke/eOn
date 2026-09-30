@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 from pydantic import (
+    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
@@ -715,8 +716,43 @@ class SocketNWChemPot(BaseModel):
     )
 
 
+class Cpmd(BaseModel):
+    model_config = ConfigDict(
+        use_attribute_docstrings=True,
+        populate_by_name=True,
+    )
+
+    functional: str = Field(
+        default="BLYP",
+        validation_alias=AliasChoices("functional", "cpmd_functional"),
+        description="XC functional. The INI section is [cpmd].",
+    )
+    cutOffRy: float = Field(
+        default=70.0,
+        validation_alias=AliasChoices(
+            "cutOffRy", "cutoff_ry", "cpmd_cut_off_ry"
+        ),
+        description="Plane-wave cutoff in Rydberg. The key is cutOffRy.",
+    )
+    charge: int = Field(default=0, description="Total charge.")
+    multiplicity: int = Field(default=1, description="Spin multiplicity.")
+    title: str = Field(default="", description="Job title passed to the CPMD engine.")
+    memory_mb: int = Field(
+        default=0,
+        description="Engine memory limit in MB (0 uses the engine default).",
+    )
+    scratch_dir: str = Field(default="", description="Engine scratch directory.")
+    input_block: str = Field(
+        default="",
+        description="Deck text copied ahead of the sections the engine generates.",
+    )
+
+
 class RgpotPot(BaseModel):
-    model_config = ConfigDict(use_attribute_docstrings=True)
+    model_config = ConfigDict(
+        use_attribute_docstrings=True,
+        populate_by_name=True,
+    )
 
     backend: str = Field(
         default="nwchemc",
@@ -734,10 +770,15 @@ class RgpotPot(BaseModel):
     )
     scf_type: str = Field(default="rhf", description="SCF type for the NWChem backend.")
     functional: str = Field(
-        default="BLYP", description="XC functional for the CPMD backend."
+        default="BLYP",
+        description="Legacy CPMD XC functional. [cpmd] functional wins.",
     )
-    cutoff_ry: float = Field(
-        default=70.0, description="Plane-wave cutoff (Ry) for the CPMD backend."
+    cutOffRy: float = Field(
+        default=70.0,
+        validation_alias=AliasChoices(
+            "cutOffRy", "cutoff_ry", "cpmd_cut_off_ry"
+        ),
+        description="Legacy plane-wave cutoff. [cpmd] cutOffRy wins.",
     )
     charge: int = Field(default=0, description="Total charge.")
     multiplicity: int = Field(default=1, description="Spin multiplicity.")
@@ -808,6 +849,7 @@ class RgpotPot(BaseModel):
         description=(
             "Verbatim input block for the engine: NWChem inputBlocks, or CPMD"
             " &SECTION text placed ahead of the sections cpmdc generates."
+            " [cpmd] input_block wins for the CPMD backend."
         ),
     )
     permanent_dir: str = Field(
@@ -819,7 +861,7 @@ class RgpotPot(BaseModel):
         description=(
             "Path to a Cap'n Proto CPMDParams message. The message is the"
             " CPMD method (sections, pseudopotentials, and cell) and replaces"
-            " functional, cutoff_ry, charge, and multiplicity."
+            " functional, cutOffRy, charge, and multiplicity."
         ),
     )
     ranks_per_image: int = Field(
