@@ -22,12 +22,17 @@
 #include <Eigen/QR>
 #include <Eigen/SVD>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iomanip>
+#include <limits>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -224,8 +229,24 @@ void alignRigid(const Matter &ref, Matter &m) {
 
 namespace {
 
+/// Two beads per bead: the ring with a midpoint between every neighbouring
+/// pair, and the Hessian blocks carried along.
+void refineRing(std::vector<VectorXd> &ring, std::vector<MatrixXd> &hessians) {
+  const size_t n = ring.size();
+  std::vector<VectorXd> fine(2 * n);
+  std::vector<MatrixXd> hFine(2 * n);
+  for (size_t j = 0; j < n; ++j) {
+    fine[2 * j] = ring[j];
+    fine[2 * j + 1] = 0.5 * (ring[j] + ring[(j + 1) % n]);
+    hFine[2 * j] = hessians[j];
+    hFine[2 * j + 1] = 0.5 * (hessians[j] + hessians[(j + 1) % n]);
+  }
+  ring = std::move(fine);
+  hessians = std::move(hFine);
+}
+
 /// Mode rate: the ring-polymer instanton through the saddle out of the
-/// reactant, and its thermal rate.
+/// reactant, and its thermal rate at each requested temperature.
 std::vector<std::string>
 runRate(const Parameters &params, const std::shared_ptr<Potential> &pot,
         const Matter &reactant, const MassWeighted &mw,
@@ -236,6 +257,7 @@ runRate(const Parameters &params, const std::shared_ptr<Potential> &pot,
   const auto &o = params.instanton_options();
   const std::string resultsFile = "results.dat";
   const std::string pathFile = "instanton.con";
+  const std::string tableFile = "rate_instanton.dat";
   std::vector<std::string> returnFiles{resultsFile};
 
   Matter saddle(pot, params);
@@ -246,10 +268,18 @@ runRate(const Parameters &params, const std::shared_ptr<Potential> &pot,
     throw std::runtime_error(
         "instanton: the saddle and the reactant differ in atom count");
   }
-  if (!(o.temperature > 0.0)) {
-    throw std::invalid_argument("instanton: mode rate needs [Instanton] "
-                                "temperature in K");
+  std::vector<double> temperatures = o.temperatures;
+  if (temperatures.empty()) {
+    temperatures.push_back(o.temperature);
   }
+  for (const double t : temperatures) {
+    if (!(t > 0.0)) {
+      throw std::invalid_argument("instanton: mode rate needs [Instanton] "
+                                  "temperature or temperatures in K");
+    }
+  }
+  // Highest first: each ring seeds the next, colder one.
+  std::sort(temperatures.begin(), temperatures.end(), std::greater<>());
   alignRigid(reactant, saddle);
   const long n = mw.dimension();
   const VectorXd qSaddle = mw.toQ(saddle);
@@ -258,16 +288,61 @@ runRate(const Parameters &params, const std::shared_ptr<Potential> &pot,
   const MatrixXd hReactant = hessianAt(VectorXd::Zero(n));
   const MatrixXd hSaddle = hessianAt(qSaddle);
   const double tc = tunneling::crossoverTemperature(hSaddle);
-  const long rigidModes = mw.rigidBasis(reactant, rotationZero).cols();
-  const double beta = 1.0 / (tunneling::kBoltzmann * o.temperature);
-  EONC_LOG_INFO("[Instanton] rate: {} beads at {:.4g} K, crossover {:.4g} K, "
-                "barrier {:.6f} eV, {} degrees of freedom, {} rigid modes",
-                o.beads, o.temperature, tc, vSaddle - vReactant, n, rigidModes);
+  const MatrixXd rigid = mw.rigidBasis(reactant, rotationZero);
   EONC_LOG_INFO("[Instanton] rotation residuals {:.3g}, {:.3g}, {:.3g}",
                 rotationResidual[0], rotationResidual[1], rotationResidual[2]);
+  EONC_LOG_INFO("[Instanton] rate: {} beads, crossover {:.4g} K, barrier "
+                "{:.6f} eV, {} degrees of freedom, {} rigid modes",
+                o.beads, tc, vSaddle - vReactant, n, rigid.cols());
 
+  // A path over the barrier (a band) seeds the ring by the period
+  // condition and carries the one-dimensional WKB rate along it.
+  std::vector<VectorXd> pathQ;
+  std::vector<double> pathV;
+  std::unique_ptr<tunneling::Profile> profile;
+  double hwPath = 0.0;
+  if (!o.initial_path.empty()) {
+    const auto frames = readcon::read_all_frames(o.initial_path);
+    bool energies = true;
+    for (const auto &frame : frames) {
+      Matter m(reactant);
+      if (!io::io_ok(io::con2matter(m, frame))) {
+        throw std::runtime_error("instanton: cannot read " + o.initial_path);
+      }
+      alignRigid(reactant, m);
+      pathQ.push_back(mw.toQ(m));
+      const auto e = frame.energy_opt();
+      energies = energies && e.has_value();
+      pathV.push_back(e.value_or(0.0));
+    }
+    if (pathQ.size() < 3) {
+      throw std::runtime_error("instanton: " + o.initial_path +
+                               " holds fewer than three frames");
+    }
+    if (!energies) {
+      std::vector<VectorXd> grads;
+      evaluate(pathQ, pathV, grads);
+    }
+    std::vector<double> s(pathQ.size(), 0.0);
+    for (size_t k = 1; k < pathQ.size(); ++k) {
+      s[k] = s[k - 1] + (pathQ[k] - pathQ[k - 1]).norm();
+    }
+    profile = std::make_unique<tunneling::Profile>(s, pathV);
+    try {
+      hwPath = tunneling::hbarOmega(tunneling::wellCurvature(*profile, true));
+    } catch (const std::exception &ex) {
+      EONC_LOG_WARNING("[Instanton] no reactant frequency along the path: {}",
+                       ex.what());
+    }
+  }
+
+  std::ofstream table(tableFile);
+  table << "# T_K T_c_K beads converged iterations U_N_eV negative_modes "
+           "ln_k_per_s k_per_s ln_k_htst_per_s barrier_effective_eV "
+           "ln_k_wkb_path_per_s\n";
+  returnFiles.push_back(tableFile);
+  const double logSecond = std::log(tunneling::kTimeUnitSeconds);
   std::vector<std::pair<std::string, double>> extras{
-      {"instanton_temperature_K", o.temperature},
       {"instanton_crossover_K", tc},
       {"barrier_classical", vSaddle - vReactant}};
   auto write = [&](RunStatus status) {
@@ -283,113 +358,231 @@ runRate(const Parameters &params, const std::shared_ptr<Potential> &pot,
     env.writeResultsDat(resultsFile);
   };
 
-  if (!(o.temperature < tc)) {
-    // The ring has collapsed onto the saddle. Above the crossover the
-    // rate is the parabolic barrier correction, which this job does not
-    // evaluate.
-    EONC_LOG_ERROR("[Instanton] {:.4g} K is at or above the crossover "
-                   "temperature {:.4g} K; the parabolic barrier correction "
-                   "applies and this job does not evaluate it",
-                   o.temperature, tc);
-    write(RunStatus::FAIL_POTENTIAL_FAILED);
-    return returnFiles;
-  }
-
-  tunneling::RateInstantonOptions ro;
-  ro.beads = o.beads;
-  ro.maxIterations = o.max_iterations;
-  ro.forceTolerance = o.force_tolerance;
-  tunneling::RateInstanton inst = tunneling::optimizeRateInstanton(
-      qSaddle, hSaddle, beta, {}, evaluate, ro);
-  EONC_LOG_INFO("[Instanton] ring U_N {:.6f} eV after {} iterations{}",
-                inst.ringPotential, inst.iterations,
-                inst.converged ? "" : " (not converged)");
-
-  bool rateOk = false;
-  if (inst.converged) {
-    // Bead Hessians on every stride-th bead of the ring, linear in
-    // between, wrapping from the last anchor back to bead 0.
-    const long stride = std::max<long>(1, o.hessian_stride);
-    const long N = o.beads;
-    std::map<long, MatrixXd> anchors;
-    auto anchor = [&](long j) -> const MatrixXd & {
-      auto it = anchors.find(j);
-      if (it == anchors.end()) {
-        it = anchors.emplace(j, hessianAt(inst.beads[static_cast<size_t>(j)]))
-                 .first;
-      }
-      return it->second;
-    };
-    auto beadHessian = [&](long j, const VectorXd &) -> MatrixXd {
-      const long lo = (j / stride) * stride;
-      if (j == lo) {
-        return anchor(lo);
-      }
-      const long hi = lo + stride < N ? lo + stride : 0;
-      const long span = (hi == 0 ? N : hi) - lo;
-      const double t = static_cast<double>(j - lo) / static_cast<double>(span);
-      return (1.0 - t) * anchor(lo) + t * anchor(hi);
-    };
-    try {
-      tunneling::instantonRate(inst, beadHessian, hReactant, vReactant, hSaddle,
-                               vSaddle, rigidModes);
-      rateOk = std::isfinite(inst.logRate) && inst.negativeModes == 1;
-      if (inst.negativeModes != 1) {
-        EONC_LOG_ERROR("[Instanton] the ring Hessian has {} negative modes, "
-                       "not one: the ring is not a first-order saddle of U_N",
-                       inst.negativeModes);
-      }
-    } catch (const std::runtime_error &ex) {
-      EONC_LOG_ERROR("[Instanton] {}", ex.what());
+  std::vector<VectorXd> ring;
+  std::vector<MatrixXd> ringHessians;
+  RunStatus status = RunStatus::GOOD;
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  for (size_t ti = 0; ti < temperatures.size(); ++ti) {
+    const double temperature = temperatures[ti];
+    const double beta = 1.0 / (tunneling::kBoltzmann * temperature);
+    const bool last = ti + 1 == temperatures.size();
+    if (!(temperature < tc)) {
+      // Above T_c the ring collapses onto the saddle and the rate is the
+      // classical one with a quantum prefactor; no instanton exists.
+      EONC_LOG_ERROR("[Instanton] {:.4g} K is at or above the crossover "
+                     "temperature {:.4g} K",
+                     temperature, tc);
+      table << temperature << ' ' << tc << ' ' << o.beads
+            << " 0 0 nan 0 nan nan nan nan nan\n";
+      status = RunStatus::FAIL_POTENTIAL_FAILED;
+      continue;
     }
-  }
+    tunneling::RateInstantonOptions ro;
+    ro.beads = o.beads;
+    ro.maxIterations = o.max_iterations;
+    ro.forceTolerance = o.force_tolerance;
+    ro.timeReversalSymmetric = o.time_reversal_symmetric;
 
-  // ln(k s): the rate itself underflows a double for deep tunnelling.
-  const double logSecond = std::log(tunneling::kTimeUnitSeconds);
-  Matter frame(reactant);
-  for (size_t j = 0; j < inst.beads.size(); ++j) {
-    mw.place(inst.beads[j], frame);
-    io::ConFrameMetadata meta;
-    meta.frame_index = static_cast<uint64_t>(j);
-    meta.energy = inst.energies[j];
-    meta.write_con_forces = false;
-    meta.scalars = {{"imaginary_time_fs", static_cast<double>(j) * inst.betaN *
-                                              tunneling::kHbar * kTimeUnitFs}};
-    if (j == 0) {
-      meta.scalars.push_back({"instanton_temperature_K", o.temperature});
-      meta.scalars.push_back({"instanton_crossover_K", tc});
-      meta.scalars.push_back(
-          {"instanton_converged", inst.converged ? 1.0 : 0.0});
+    std::vector<VectorXd> guess = ring;
+    std::vector<MatrixXd> seedHessians = ringHessians;
+    if (guess.empty() && profile) {
+      try {
+        guess = tunneling::ringFromPath(pathQ, pathV, beta * tunneling::kHbar,
+                                        o.beads);
+        EONC_LOG_INFO("[Instanton] ring seeded from {} by the period "
+                      "condition",
+                      o.initial_path);
+      } catch (const std::invalid_argument &ex) {
+        EONC_LOG_WARNING("[Instanton] {}; seeding from the saddle mode instead",
+                         ex.what());
+        guess.clear();
+      }
+    }
+    tunneling::RateInstanton inst;
+    if (guess.empty() && o.bead_ladder && o.beads >= 16) {
+      // Coarse to fine: a quarter of the beads, then half, then all.
+      long coarse = o.beads / 4;
+      coarse += coarse % 2;
+      std::vector<VectorXd> rung;
+      std::vector<MatrixXd> rungHessians;
+      for (long nb = coarse; nb < o.beads; nb *= 2) {
+        ro.beads = nb;
+        inst = tunneling::optimizeRateInstanton(qSaddle, hSaddle, beta, rung,
+                                                evaluate, ro, rungHessians);
+        EONC_LOG_INFO("[Instanton] ladder rung {} beads: U_N {:.6f} eV after "
+                      "{} iterations{}",
+                      nb, inst.ringPotential, inst.iterations,
+                      inst.converged ? "" : " (not converged)");
+        rung = inst.beads;
+        rungHessians = inst.hessians;
+        refineRing(rung, rungHessians);
+        if (static_cast<long>(rung.size()) > o.beads) {
+          rung.clear();
+          rungHessians.clear();
+        }
+      }
+      ro.beads = o.beads;
+      if (static_cast<long>(rung.size()) == o.beads) {
+        guess = rung;
+        seedHessians = rungHessians;
+      }
+    }
+    inst = tunneling::optimizeRateInstanton(qSaddle, hSaddle, beta, guess,
+                                            evaluate, ro, seedHessians);
+    EONC_LOG_INFO("[Instanton] {:.4g} K: ring U_N {:.6f} eV after {} "
+                  "iterations{}, lowest ring curvature {:.4g}",
+                  temperature, inst.ringPotential, inst.iterations,
+                  inst.converged ? "" : " (not converged)",
+                  inst.lowestEigenvalue);
+
+    bool rateOk = false;
+    if (inst.converged) {
+      const long N = o.beads;
+      const long half = N / 2;
+      const long stride = std::max<long>(1, o.hessian_stride);
+      std::map<long, MatrixXd> anchors;
+      auto anchor = [&](long j) -> const MatrixXd & {
+        auto it = anchors.find(j);
+        if (it == anchors.end()) {
+          it = anchors.emplace(j, hessianAt(inst.beads[static_cast<size_t>(j)]))
+                   .first;
+        }
+        return it->second;
+      };
+      // Finite differences on every stride-th bead of the half ring (bead j
+      // mirrors bead N - j), linear in between.
+      auto recomputed = [&](long j, const VectorXd &) -> MatrixXd {
+        const long m = j <= half ? j : N - j;
+        const long lo = (m / stride) * stride;
+        if (m == lo || lo + stride > half) {
+          return m == lo ? anchor(lo) : anchor(std::min(m, half));
+        }
+        const long hi = lo + stride;
+        const double t =
+            static_cast<double>(m - lo) / static_cast<double>(hi - lo);
+        return (1.0 - t) * anchor(lo) + t * anchor(hi);
+      };
+      auto updated = [&](long j, const VectorXd &) -> MatrixXd {
+        return inst.hessians[static_cast<size_t>(j)];
+      };
+      const tunneling::RingBeadHessian beadHessian =
+          o.hessian_final == "updated" ? tunneling::RingBeadHessian(updated)
+                                       : tunneling::RingBeadHessian(recomputed);
+      try {
+        tunneling::instantonRate(inst, beadHessian, hReactant, vReactant,
+                                 hSaddle, vSaddle, rigid);
+        rateOk = std::isfinite(inst.logRate) && inst.negativeModes == 1;
+        if (inst.negativeModes != 1) {
+          EONC_LOG_ERROR("[Instanton] the ring Hessian has {} negative modes, "
+                         "not one: the ring is not a first-order saddle of U_N",
+                         inst.negativeModes);
+        }
+      } catch (const std::runtime_error &ex) {
+        EONC_LOG_ERROR("[Instanton] {}", ex.what());
+      }
+    }
+    double wkbLog = nan;
+    if (profile && hwPath > 0.0) {
+      try {
+        wkbLog =
+            tunneling::wkbLogRateAlongPath(*profile, beta, hwPath) - logSecond;
+      } catch (const std::exception &ex) {
+        EONC_LOG_WARNING("[Instanton] no WKB rate along the path: {}",
+                         ex.what());
+      }
+    }
+    if (rateOk) {
+      EONC_LOG_INFO("[Instanton] {:.4g} K: ln(k s) = {:.4f}, harmonic TST "
+                    "{:.4f}, effective barrier {:.4f} eV{}",
+                    temperature, inst.logRate - logSecond,
+                    inst.classicalLogRate - logSecond, inst.effectiveBarrier,
+                    std::isfinite(wkbLog)
+                        ? ", WKB along the path " + std::to_string(wkbLog)
+                        : "");
+    }
+    table << std::setprecision(10) << temperature << ' ' << tc << ' ' << o.beads
+          << ' ';
+    table << (inst.converged ? 1 : 0) << ' ' << inst.iterations << ' '
+          << inst.ringPotential << ' ' << inst.negativeModes << ' ';
+    if (rateOk) {
+      table << inst.logRate - logSecond << ' ' << inst.rate << ' '
+            << inst.classicalLogRate - logSecond << ' '
+            << inst.effectiveBarrier;
+    } else {
+      table << "nan nan nan nan";
+    }
+    table << ' ' << wkbLog << '\n';
+
+    // The beads, one frame each, to instanton.con (the last temperature)
+    // and to a file per temperature when there are several.
+    std::vector<std::string> files{pathFile};
+    if (temperatures.size() > 1) {
+      std::ostringstream name;
+      name << "instanton_" << std::setprecision(6) << temperature << "K.con";
+      files.push_back(name.str());
+    }
+    Matter frame(reactant);
+    for (const auto &file : files) {
+      if (file == pathFile && !last) {
+        continue;
+      }
+      for (size_t j = 0; j < inst.beads.size(); ++j) {
+        mw.place(inst.beads[j], frame);
+        io::ConFrameMetadata meta;
+        meta.frame_index = static_cast<uint64_t>(j);
+        meta.energy = inst.energies[j];
+        meta.write_con_forces = false;
+        meta.scalars = {
+            {"imaginary_time_fs", static_cast<double>(j) * inst.betaN *
+                                      tunneling::kHbar * kTimeUnitFs}};
+        if (j == 0) {
+          meta.scalars.push_back({"instanton_temperature_K", temperature});
+          meta.scalars.push_back({"instanton_crossover_K", tc});
+          meta.scalars.push_back(
+              {"instanton_converged", inst.converged ? 1.0 : 0.0});
+          if (rateOk) {
+            meta.scalars.push_back(
+                {"rate_instanton_log", inst.logRate - logSecond});
+            meta.scalars.push_back(
+                {"barrier_effective_instanton", inst.effectiveBarrier});
+          }
+        }
+        if (!io::io_ok(frame.matter2con(file, j > 0, &meta))) {
+          throw std::runtime_error("instanton: cannot write " + file);
+        }
+      }
+      returnFiles.push_back(file);
+    }
+
+    ring = inst.beads;
+    ringHessians = inst.hessians;
+    if (last) {
+      extras.emplace_back("instanton_temperature_K", temperature);
+      extras.emplace_back("instanton_iterations",
+                          static_cast<double>(inst.iterations));
+      extras.emplace_back("instanton_converged", inst.converged ? 1.0 : 0.0);
+      extras.emplace_back("instanton_ring_potential", inst.ringPotential);
+      extras.emplace_back("instanton_bN", inst.bN);
+      if (std::isfinite(wkbLog)) {
+        extras.emplace_back("rate_wkb_path_log", wkbLog);
+      }
       if (rateOk) {
-        meta.scalars.push_back(
-            {"rate_instanton_log", inst.logRate - logSecond});
-        meta.scalars.push_back(
-            {"barrier_effective_instanton", inst.effectiveBarrier});
+        extras.emplace_back("rate_instanton", inst.rate);
+        extras.emplace_back("rate_instanton_log", inst.logRate - logSecond);
+        extras.emplace_back("rate_htst", inst.classicalRate);
+        extras.emplace_back("rate_htst_log", inst.classicalLogRate - logSecond);
+        extras.emplace_back("barrier_effective_instanton",
+                            inst.effectiveBarrier);
+        extras.emplace_back("instanton_negative_modes",
+                            static_cast<double>(inst.negativeModes));
+        extras.emplace_back("instanton_zero_mode", inst.zeroEigenvalue);
+      } else {
+        status = inst.converged ? RunStatus::FAIL_POTENTIAL_FAILED
+                                : RunStatus::FAIL_MAX_ITERATIONS;
       }
     }
-    if (!io::io_ok(frame.matter2con(pathFile, j > 0, &meta))) {
-      throw std::runtime_error("instanton: cannot write " + pathFile);
-    }
   }
-  returnFiles.push_back(pathFile);
-
-  extras.emplace_back("instanton_iterations",
-                      static_cast<double>(inst.iterations));
-  extras.emplace_back("instanton_ring_potential", inst.ringPotential);
-  extras.emplace_back("instanton_bN", inst.bN);
-  if (rateOk) {
-    extras.emplace_back("rate_instanton", inst.rate);
-    extras.emplace_back("rate_instanton_log", inst.logRate - logSecond);
-    extras.emplace_back("rate_htst", inst.classicalRate);
-    extras.emplace_back("rate_htst_log", inst.classicalLogRate - logSecond);
-    extras.emplace_back("barrier_effective_instanton", inst.effectiveBarrier);
-    extras.emplace_back("instanton_negative_modes",
-                        static_cast<double>(inst.negativeModes));
-    extras.emplace_back("instanton_zero_mode", inst.zeroEigenvalue);
-  }
-  write(rateOk ? RunStatus::GOOD
-               : (inst.converged ? RunStatus::FAIL_POTENTIAL_FAILED
-                                 : RunStatus::FAIL_MAX_ITERATIONS));
+  write(status);
   return returnFiles;
 }
 

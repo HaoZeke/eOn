@@ -310,10 +310,11 @@ int load_ini(INIReader &ini, Parameters &params) {
     // cutOffRy is the schema name. cutoff_ry and cpmd_cut_off_ry still load.
     ParametersLoadAccess::rgpot_options(params).cutoff_ry = ini.GetReal(
         sec, "cutOffRy",
-        ini.GetReal(sec, "cutoff_ry",
-                    ini.GetReal(sec, "cpmd_cut_off_ry",
-                                ParametersLoadAccess::rgpot_options(params)
-                                    .cutoff_ry)));
+        ini.GetReal(
+            sec, "cutoff_ry",
+            ini.GetReal(
+                sec, "cpmd_cut_off_ry",
+                ParametersLoadAccess::rgpot_options(params).cutoff_ry)));
     ParametersLoadAccess::rgpot_options(params).charge = ini.GetInteger(
         sec, "charge",
         ini.GetInteger(sec, "nwchem_charge",
@@ -436,9 +437,9 @@ int load_ini(INIReader &ini, Parameters &params) {
     // by either section. input_block from here is appended to the file.
     if (be == "cpmd" || be == "cpmdc" || be == "cpmdpot") {
       auto &rg = ParametersLoadAccess::rgpot_options(params);
-      rg.functional = ini.Get(
-          "cpmd", "functional",
-          ini.Get("cpmd", "cpmd_functional", rg.functional));
+      rg.functional =
+          ini.Get("cpmd", "functional",
+                  ini.Get("cpmd", "cpmd_functional", rg.functional));
       rg.cutoff_ry = ini.GetReal(
           "cpmd", "cutOffRy",
           ini.GetReal("cpmd", "cutoff_ry",
@@ -1184,6 +1185,16 @@ int load_ini(INIReader &ini, Parameters &params) {
   ParametersLoadAccess::neb_options(params).image_count =
       ini.GetInteger(neb_section, "images",
                      ParametersLoadAccess::neb_options(params).image_count);
+  ParametersLoadAccess::neb_options(params).solid_state.enabled =
+      ini.GetBoolean(
+          neb_section, "solid_state",
+          ParametersLoadAccess::neb_options(params).solid_state.enabled);
+  ParametersLoadAccess::neb_options(params).solid_state.weight =
+      ini.GetReal(neb_section, "solid_state_weight",
+                  ParametersLoadAccess::neb_options(params).solid_state.weight);
+  ParametersLoadAccess::neb_options(params).solid_state.pressure = ini.GetReal(
+      neb_section, "solid_state_pressure",
+      ParametersLoadAccess::neb_options(params).solid_state.pressure);
   ParametersLoadAccess::neb_options(params).max_iterations = ini.GetInteger(
       neb_section, "max_iterations",
       ParametersLoadAccess::optimizer_options(params).max_iterations);
