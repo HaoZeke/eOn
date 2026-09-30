@@ -5,7 +5,7 @@ myst:
     "keywords": "eOn instanton, tunnelling splitting, two-level system, WKB, ring polymer, instanton rate."
 ---
 
-# Tunnelling splittings
+# Tunnelling splittings and rates
 
 A two-level system (TLS) in a glass is a pair of adjacent minima that the
 structure tunnels between at about one kelvin. Its tunnelling splitting
@@ -125,7 +125,7 @@ a small fraction of {math}`k_B T` of each other. `instanton_symmetric = 0`
 flags a pair outside that window. The job still writes the path and the
 action, but no `tunnel_splitting_instanton`, and reports success: the flag
 says why. For such a pair, set `mode = rate`, give the saddle and a
-temperature below the crossover, and read the rate in the next sections.
+temperature below the crossover, and read the rate in the section below.
 
 ## Which path object
 
@@ -150,31 +150,33 @@ thermostatted ring per image. That sample is not an optimisation, and it
 does not belong in this job. A string of harmonically corrected rings is a
 different calculation again, and this page does not implement it.
 
-## The rate below the crossover
+## The instanton rate
 
-`mode = rate` reads the reactant and `saddle_filename` (default `saddle.con`).
-The instanton is a closed ring, a first-order saddle of the ring-polymer
-potential, with one negative eigenvalue and one zero eigenvalue that cycles
-the beads. {cite:t}`inst-richardsonRingpolymerMolecularDynamics2009` give
+`mode = rate` finds the ring-polymer instanton for the thermal rate out of
+the reactant through a first-order saddle, at a temperature below the
+crossover {math}`T_c = \hbar\omega_b / (2\pi k_B)`, with {math}`\omega_b`
+the imaginary frequency at the saddle (Richardson and Althorpe 2009;
+Richardson 2016). The instanton is a first-order saddle of the discretised
+Euclidean action on a closed path of {math}`N` beads, the formulation of
+Einarsdóttir et al. (2012) and Ásgeirsson, Arnaldsson and Jónsson (2018):
 
 ```{math}
-k Z_r = \frac{1}{\beta_N \hbar}
-\sqrt{\frac{B_N}{2\pi \beta_N \hbar^2}}
-\prod_k' \frac{1}{\beta_N \hbar |\omega_k|}
-\exp(-\beta_N U_N).
+U_N = \sum_j V(q_j) + \sum_j \frac{|q_{j+1} - q_j|^2}{2\beta_N^2\hbar^2},
+\qquad \beta_N = \beta / N, \qquad q_N = q_0,
 ```
 
-{math}`B_N` is the sum of squared steps around the ring, {math}`\omega_k^2`
-are the eigenvalues of the mass-weighted ring Hessian, and the prime leaves
-out the cyclic zero mode and the rigid translations and rotations.
-{math}`Z_r` is the harmonic ring-polymer partition function of the reactant.
-{math}`U_N` is the ring-polymer potential, the bead potentials plus the springs.
+and the rate is
 
-The crossover temperature is {math}`T_c = \hbar \omega_b / (2\pi k_B)`, with
-{math}`\omega_b` the imaginary frequency at the saddle. At or above {math}`T_c`
-the ring collapses onto the saddle. The rate there is a parabolic barrier
-correction, and classical transition-state theory is the one-bead limit
-of that correction. The job does not evaluate it: it stops and says so.
+```{math}
+k\,Z_r = \frac{1}{\beta_N\hbar}\sqrt{\frac{B_N}{2\pi\beta_N\hbar^2}}
+\;\prod_k{}' \frac{1}{\beta_N\hbar|\omega_k|}\; e^{-\beta_N U_N},
+```
+
+with {math}`B_N = \sum_j |q_{j+1} - q_j|^2`, {math}`\omega_k^2` the
+eigenvalues of the ring Hessian of {math}`U_N` without its zero mode (the
+ring's translation in imaginary time), and {math}`Z_r` the ring-polymer
+partition function of the harmonic reactant. Rigid-body modes drop out of
+both.
 
 ```{code-block} ini
 [Main]
@@ -184,47 +186,60 @@ job = instanton
 mode = rate
 reactant_filename = reactant.con
 saddle_filename = saddle.con
-temperature = 5
-beads = 256
-hessian_stride = 1
+; a band over the barrier seeds the ring and gives the WKB rate along it
+initial_path = neb.con
+beads = 64
+temperatures = 300, 250, 200, 150
+hessian_final = recompute
+hessian_stride = 4
 ```
 
-`temperature` is in kelvin. It must be positive and below {math}`T_c`. The
-default 0 means the temperature was not set, and `mode = rate` then refuses
-to run. `beads` defaults to 256, the same default as the splitting. A ring
-of 32 beads at 5 K does not resolve a stiff bond: the path integral starts
-to converge once the bead count exceeds {math}`\beta \hbar \omega` of the
-stiffest mode. `hessian_stride` of 1 takes a Hessian on every bead. A larger
-stride keeps a Hessian on every stride-th bead and interpolates linearly
-between those anchors. That interpolation is an approximation: the rate
-formula uses the Hessian of every bead.
+The search is Newton eigenvector following on the ring Hessian, block
+cyclic tridiagonal in the beads, with the bead blocks seeded from the
+saddle's Hessian and Bofill-updated from the gradient differences; each
+step costs one batch of {math}`N/2 + 1` force calls, the ring held
+symmetric under imaginary-time reversal. On the one-dimensional Eckart
+barrier this converges in 4 to 7 steps from either seed. The determinant,
+its inertia and the linear solves go through a block LU of the open chain
+plus a low-rank correction for the closure and the zero mode, so the
+{math}`Nf \times Nf` matrix is never formed; the cost is
+{math}`O(N f^3)` in {math}`f` degrees of freedom.
 
-With no atom fixed, the three translations are omitted on both sides. A
-rotation is omitted when it is a zero mode of the reactant Hessian, which a
-free cluster has and a crystal does not. A cluster in a large periodic cell
-is told apart by that Hessian, not by the periodic flag. The springs along
-those directions stay, so they cancel between the instanton and the reactant.
+The ring starts, in this order of preference, from the ring of the previous
+temperature (`temperatures` runs from the highest down, each ring seeding
+the next), from the path in `initial_path` mapped onto imaginary time by the
+period condition {math}`\oint ds / \sqrt{2(V(s) - E)} = \beta\hbar`, or from
+the saddle's unstable mode. `bead_ladder = true` converges a quarter of the
+beads first, then half, then all, when no path seeds the ring.
 
-`results.dat` reports the rate. The keys are:
+The prefactor needs a Hessian at every bead. `hessian_final = recompute`
+takes finite-difference Hessians on every `hessian_stride`-th bead of the
+half ring and interpolates linearly in between, at `beads / (2
+hessian_stride)` Hessians; `updated` keeps the Bofill-updated blocks the
+search ends with, at no cost and lower accuracy.
+
+Output, per temperature, is one row of `rate_instanton.dat` (T, {math}`T_c`,
+beads, convergence, {math}`U_N`, negative modes, {math}`\ln(k / \mathrm{s}^{-1})`,
+{math}`k`, harmonic TST, the effective barrier {math}`-k_B T \ln(2\pi\hbar\beta k)`,
+and {math}`\ln k` from the one-dimensional WKB integral along the path when a
+path was given), a frame per bead in `instanton.con` (the last temperature)
+and `instanton_<T>K.con` when several temperatures ran. `results.dat`
+carries the last temperature:
 
 | Key | Meaning |
 |---|---|
-| `rate_instanton` | {math}`k` in s^{-1} |
-| `rate_instanton_log` | {math}`\ln(k\,/\,\mathrm{s}^{-1})` |
-| `rate_htst_log` | classical harmonic transition-state theory, the same logarithm |
-| `instanton_crossover_K` | {math}`T_c`, K |
-| `instanton_negative_modes` | negative eigenvalues of the ring Hessian; a first-order saddle has 1 |
-| `instanton_zero_mode` | the eigenvalue left out |
+| `rate_instanton`, `rate_instanton_log` | {math}`k` in 1/s and {math}`\ln(k\,\mathrm{s})`; the rate itself underflows a double in deep tunnelling |
+| `rate_htst`, `rate_htst_log` | classical harmonic transition-state theory at the same T |
+| `rate_wkb_path_log` | the Kemble WKB rate along `initial_path` relative to the harmonic reactant well |
+| `barrier_effective_instanton` | {math}`-k_B T \ln(2\pi\hbar\beta k)`, eV |
+| `instanton_crossover_K`, `instanton_temperature_K` | {math}`T_c` and T |
+| `instanton_negative_modes`, `instanton_zero_mode` | one, and a number near zero, for a converged ring |
+| `instanton_ring_potential`, `instanton_bN` | {math}`U_N` in eV and {math}`B_N` in amu Å² |
 
-{cite:t}`inst-habershonRingpolymerMolecularDynamics2013` expect the sampled
-ring-polymer rate to lie within about a factor of two of the exact quantum
-rate between {math}`T_c` and {math}`T_c/2`. That bound compares the sampled
-rate with the exact rate. It is not a comparison of this instanton with a
-free-energy profile.
-
-The cubic metastable well, {math}`V = \omega_0^2 q^2/2 - g q^3/3`, is the
-check. Deep below the crossover its rate approaches the zero-temperature
-decay of {cite:t}`inst-caldeiraQuantumTunnellingDissipative1983`.
+A temperature at or above {math}`T_c` is reported and skipped: the ring
+collapses onto the saddle and classical transition-state theory with a
+quantum prefactor applies. A ring whose Hessian has a second negative mode
+is written but carries no rate.
 
 ## Checks
 
@@ -243,6 +258,30 @@ finite-difference Hamiltonian, converged to {math}`10^{-5}`.
 The instanton's error falls as the barrier deepens, the regime glass TLS sit
 in. The same cases tie the C++ path and splitting to an independent
 implementation of the discretisation to {math}`2 \times 10^{-3}`.
+
+For the rate, `The Eckart rate instanton matches the exact flux to its
+semiclassical error` compares {math}`k Z_r` through the symmetric Eckart
+barrier {math}`V_0 / \cosh^2(x/a)` ({math}`V_0 = 0.425` eV, {math}`a =
+0.734` amu^0.5 Å, {math}`T_c = 150` K) with the exact flux
+{math}`(2\pi\hbar)^{-1}\int P(E) e^{-\beta E} dE` from Eckart's transmission
+probability, at {math}`T = 0.5\,T_c` and {math}`0.35\,T_c`:
+
+| beads | instanton / exact |
+|---|---|
+| 64 | 0.94 to 0.96 |
+| 128 | 0.93 to 0.94 |
+| {math}`N \to \infty` (1/N² extrapolation) | 0.928 |
+
+In one dimension the instanton is the steepest-descent evaluation of the
+WKB thermal integral, so its limit shares the uniform WKB error; the Kemble
+integral along the path gives the same 0.928. `The rate instanton of a cubic
+well matches its decay rate` checks the metastable cubic well at
+{math}`\beta\hbar\omega_0 = 30` against the Caldeira and Leggett
+zero-temperature decay rate: 128 beads within 20 percent, 256 within 5, the
+extrapolation within 1. `The ring spectrum from the block chain matches the
+dense Hessian` ties the chain's determinant and inertia to a dense
+eigendecomposition, and `A rigid mode leaves the instanton rate unchanged`
+checks the rigid-mode bookkeeping.
 
 ## References
 
