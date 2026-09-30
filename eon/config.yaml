@@ -214,18 +214,6 @@ Nudged Elastic Band:
             kind: float
             default: 5.0
 
-        solid_state:
-            kind: boolean
-            default: false
-
-        solid_state_weight:
-            kind: float
-            default: 1.0
-
-        solid_state_pressure:
-            kind: float
-            default: 0.0
-
         climbing_image_method:
             kind: boolean
             default: true
@@ -1183,6 +1171,33 @@ Instanton:
         temperature:
             kind: float
             default: 0.0
+
+        # Mode rate: several temperatures in K, highest first, each ring
+        # seeding the next; empty means the single temperature above.
+        temperatures:
+            kind: string
+            default: ""
+
+        # Mode rate: bead Hessians for the prefactor. recompute takes a
+        # finite-difference Hessian on every hessian_stride-th bead of the
+        # half ring; updated keeps the Bofill-updated blocks of the search.
+        hessian_final:
+            kind: string
+            default: recompute
+            values:
+                - recompute
+                - updated
+
+        # Mode rate: converge with a quarter, then half, then all the beads.
+        bead_ladder:
+            kind: boolean
+            default: false
+
+        # Mode rate: hold the ring symmetric under imaginary-time reversal,
+        # so a batch evaluates N / 2 + 1 beads.
+        time_reversal_symmetric:
+            kind: boolean
+            default: true
 
 ################################################################################
 

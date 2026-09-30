@@ -179,23 +179,29 @@ void instantonSplitting(Instanton &inst, const BeadHessian &hessian,
                         const MatrixXd &hessStart, const MatrixXd &hessEnd);
 
 // Ring-polymer instanton for the thermal rate below the crossover
-// temperature (Richardson and Althorpe, J. Chem. Phys. 131, 214106 (2009)).
+// temperature (Richardson and Althorpe, J. Chem. Phys. 131, 214106 (2009);
+// Richardson, J. Chem. Phys. 144, 114106 (2016)). The instanton is a
+// first-order saddle of the discretised Euclidean action on a closed
+// Feynman path, the formulation Einarsdottir, Arnaldsson, Oskarsson and
+// Jonsson (2012) and Asgeirsson, Arnaldsson and Jonsson, J. Chem. Phys. 148,
+// 102334 (2018) climb to with a min-mode search.
 //
 // A closed ring of N beads in mass-weighted coordinates q, beta_N = beta / N,
 // has the potential
 //
 //   U_N = sum_j V(q_j) + sum_j |q_{j+1} - q_j|^2 / (2 beta_N^2 hbar^2),
 //
-// q_N = q_0. Below T_c = hbar omega_b / (2 pi kB), omega_b the imaginary
-// frequency at the saddle, the instanton is a first-order saddle of U_N:
-// one negative mode, and one zero mode that cycles the beads. The rate is
+// q_N = q_0, so S_E = beta_N hbar U_N. Below T_c = hbar omega_b / (2 pi kB),
+// omega_b the imaginary frequency at the saddle, the instanton is a
+// first-order saddle of U_N: one negative mode, and one zero mode that
+// cycles the beads in imaginary time. The rate is
 //
 //   k Z_r = (1 / (beta_N hbar)) sqrt(B_N / (2 pi beta_N hbar^2))
 //           prod'_k 1 / (beta_N hbar |omega_k|) exp(-beta_N U_N),
 //
-// B_N = sum_j |q_{j+1} - q_j|^2, omega_k^2 the eigenvalues of the
-// mass-weighted Hessian of U_N with the zero mode left out, and Z_r the
-// ring-polymer partition function of the harmonic reactant,
+// B_N = sum_j |q_{j+1} - q_j|^2, omega_k^2 the eigenvalues of the ring
+// Hessian of U_N with the zero mode left out, and Z_r the ring-polymer
+// partition function of the harmonic reactant,
 //
 //   Z_r = exp(-beta V_r) prod_{k=0}^{N-1} prod_m
 //         1 / (beta_N hbar sqrt(lambda_m + 4 sin^2(pi k / N) / (beta_N
@@ -203,6 +209,16 @@ void instantonSplitting(Instanton &inst, const BeadHessian &hessian,
 //
 // lambda_m the eigenvalues of the reactant's mass-weighted Hessian. Above
 // T_c the ring collapses onto the saddle and the formula no longer applies.
+//
+// The ring Hessian is block cyclic tridiagonal: bead blocks H_j + 2 c I on
+// the diagonal, -c I between neighbours and between the last bead and the
+// first, c = 1 / (beta_N hbar)^2. Its determinant, its inertia and its
+// linear solves go through a block LU of the open chain plus a low-rank
+// correction for the closure and the zero mode, O(N f^3) for f degrees of
+// freedom, so a ring never forms the dense N f by N f matrix. The saddle
+// search is Newton eigenvector following on that Hessian with the bead
+// blocks seeded from the saddle's Hessian and Bofill-updated from the
+// gradient differences, one batch of N potential calls per step.
 
 /// One unit of time, sqrt(amu Angstrom^2 / eV), in seconds.
 inline constexpr double kTimeUnitSeconds = 1.0180505717871193e-14;
@@ -211,31 +227,56 @@ inline constexpr double kTimeUnitSeconds = 1.0180505717871193e-14;
 /// saddle, in K; throws when the Hessian has no negative eigenvalue.
 double crossoverTemperature(const MatrixXd &hessSaddle);
 
+/// Spectrum of a closed ring's Hessian without forming it.
+struct RingSpectrum {
+  /// ln |det' J|: the product over every eigenvalue but the one along tau.
+  double logDetPrime = 0.0;
+  int signDetPrime = 1;
+  /// Eigenvalues below zero, the one along tau left out.
+  long negativeModes = 0;
+  /// tau . J tau, the eigenvalue the prime leaves out; small when the ring
+  /// is a converged instanton.
+  double zeroEigenvalue = 0.0;
+};
+
+/// The ring Hessian of bead Hessians `beadHessians` (d2V/dq2 at each of the
+/// N beads) and spring constant c, with the normalised direction `tau`
+/// (N beads) projected out through the determinant lemma
+/// det(J + tau tau^T) = det' J when J tau = 0.
+RingSpectrum ringSpectrum(const std::vector<MatrixXd> &beadHessians, double c,
+                          const std::vector<VectorXd> &tau);
+
 struct RateInstantonOptions {
   long beads = 32;              ///< N, beads on the ring
-  long maxIterations = 1000;    ///< translation steps
+  long maxIterations = 200;     ///< Newton steps
   double forceTolerance = 1e-3; ///< largest per-bead |dU_N/dq|,
                                 ///< eV / (amu^0.5 Angstrom)
-  long lanczosFirst = 30;       ///< Lanczos steps for the first minimum mode
-  long lanczosRestart = 6;      ///< Lanczos steps from the previous mode
-  double lanczosStep = 1e-4;    ///< finite-difference step, amu^0.5 Angstrom
-  double maxStep = 0.05;        ///< largest bead move per step,
+  double trustRadius = 0.1;     ///< largest bead move at the first step,
                                 ///< amu^0.5 Angstrom
-  long memory = 10;             ///< L-BFGS correction pairs
+  double maxTrustRadius = 0.5;  ///< the trust region never grows past this
+  bool updateHessians = true;   ///< Bofill-update the bead blocks
+  long lanczosSteps = 40;       ///< Lanczos steps for the lowest ring mode,
+                                ///< Hessian products only
+  /// Hold the ring invariant under imaginary-time reversal (bead j mirrors
+  /// bead N - j), so a batch evaluates N / 2 + 1 beads; N must be even.
+  bool timeReversalSymmetric = true;
 };
 
 struct RateInstanton {
   std::vector<VectorXd> beads;     ///< N beads, q_N = q_0 implied
   std::vector<double> energies;    ///< V at every bead, eV
+  std::vector<VectorXd> gradients; ///< dV/dq at every bead
+  std::vector<MatrixXd> hessians;  ///< bead Hessians as the search left them
   double beta = 0.0;               ///< 1 / (kB T), 1 / eV
   double betaN = 0.0;              ///< beta / N
   double temperature = 0.0;        ///< K
   double crossover = 0.0;          ///< T_c, K
   double ringPotential = 0.0;      ///< U_N, eV
   double bN = 0.0;                 ///< sum_j |q_{j+1} - q_j|^2, amu Angstrom^2
-  double negativeEigenvalue = 0.0; ///< of the ring Hessian, 1 / time^2
+  double lowestEigenvalue = 0.0;   ///< of the ring Hessian at the end
+  double negativeEigenvalue = 0.0; ///< of the ring Hessian in the rate
   double zeroEigenvalue = 0.0;     ///< the eigenvalue left out
-  long negativeModes = 0;          ///< eigenvalues below the zero mode
+  long negativeModes = 0; ///< eigenvalues below zero over the zero mode
   long iterations = 0;
   bool converged = false;
   double logRateTimesZr = 0.0; ///< ln(k Z_r), k in 1 / time
@@ -251,38 +292,67 @@ struct RateInstanton {
   double classicalLogRate = 0.0;
 };
 
-/// Finds the rate instanton at inverse temperature `beta` (1 / eV) by
-/// minimum-mode following on U_N. `guess` holds N beads, or is empty for a
-/// ring stretched along the saddle's unstable mode to where V has dropped by
-/// (1 - T / T_c) of the lower of the two barriers. `saddle` and `hessSaddle`
-/// are the mass-weighted saddle and its Hessian. Each step costs one batch of
-/// N potential calls plus one batch per Lanczos step.
+/// A starting ring from a path over the barrier (a band, mass-weighted, with
+/// V at every point): the classical periodic orbit in the inverted potential
+/// at the energy E whose period 2 int ds / sqrt(2 (V(s) - E)) is beta hbar,
+/// with the N beads spaced evenly in imaginary time. This is the ring a
+/// one-dimensional WKB treatment along the path implies, so the search
+/// starts at the target temperature instead of cooling from T_c. Throws
+/// when the period at the barrier top already exceeds beta hbar (T above
+/// T_c along the path) or when the path has no barrier.
+std::vector<VectorXd> ringFromPath(const std::vector<VectorXd> &path,
+                                   const std::vector<double> &energies,
+                                   double betaHbar, long beads);
+
+/// ln of the one-dimensional WKB thermal rate along the path relative to a
+/// harmonic reactant well, k in 1 / time: (1 / 2 pi hbar) int P(E) e^{-beta
+/// E} dE with Kemble's P = 1 / (1 + e^{2 theta}), theta the WKB action from
+/// the reactant side, divided by the reactant's harmonic partition function
+/// 1 / (2 sinh(beta hbar omega_r / 2)) with the transverse modes taken equal
+/// along the path.
+double wkbLogRateAlongPath(const Profile &profile, double beta,
+                           double hwReactant);
+
+/// Finds the rate instanton at inverse temperature `beta` (1 / eV) by Newton
+/// eigenvector following on U_N. `guess` holds N beads (from ringFromPath or
+/// a ring at a nearby temperature), or is empty for a ring stretched along
+/// the saddle's unstable mode to where V has dropped by (1 - T / T_c) of the
+/// lower of the two barriers. `saddle` and `hessSaddle` are the mass-weighted
+/// saddle and its Hessian; `beadHessians` seed the bead blocks (N of them),
+/// or empty for the saddle Hessian on every bead. Each step costs one batch
+/// of N potential calls.
 RateInstanton optimizeRateInstanton(const VectorXd &saddle,
                                     const MatrixXd &hessSaddle, double beta,
                                     std::vector<VectorXd> guess,
                                     const BatchPotential &potential,
-                                    const RateInstantonOptions &options);
+                                    const RateInstantonOptions &options,
+                                    std::vector<MatrixXd> beadHessians = {});
 
 /// The mass-weighted Hessian d2V/dq2 at ring bead j (0..N-1).
 using RingBeadHessian = std::function<MatrixXd(long j, const VectorXd &q)>;
 
 /// Fills the rate from the bead Hessians, the reactant minimum's Hessian and
 /// energy, and optionally the saddle's Hessian and energy for the classical
-/// comparison (pass an empty matrix to skip it). rigidModes is the count of
-/// rigid-body zero modes to omit: the translations, plus a rotation only when
-/// the reactant Hessian leaves it null (a free cluster has them, a crystal
-/// does not, and an atom held fixed has none). They leave the centroid
-/// factors, so the rotational and translational partition functions of
-/// reactant and instanton cancel. Up to denseLimit ring degrees of freedom
-/// the product is the dense eigenproduct, checked against the cyclic block
-/// determinant. Beyond that, and for a limit of 0, the block determinant is
-/// used and the eigenvalues nearest zero come from inverse iteration on that
-/// factorisation. A negative limit forces the dense product.
+/// comparison (pass an empty matrix to skip it). `rigidBasis` holds, one per
+/// column and orthonormal, the rigid-body zero modes every Hessian carries
+/// (six for a free cluster, three for a free periodic cell, none with atoms
+/// fixed); they leave the centroid factors of both the ring and the reactant,
+/// so the rotational and translational partition functions cancel, and stay
+/// as free modes at k > 0 on both sides. O(N f^3) through the block chain.
 void instantonRate(RateInstanton &inst, const RingBeadHessian &hessian,
                    const MatrixXd &hessReactant, double vReactant,
                    const MatrixXd &hessSaddle = MatrixXd(),
-                   double vSaddle = 0.0, long rigidModes = 0,
-                   long denseLimit = 4096);
+                   double vSaddle = 0.0,
+                   const MatrixXd &rigidBasis = MatrixXd());
+
+/// The same rate with the rigid modes given as a count: the `rigidModes`
+/// null vectors of the reactant Hessian (its eigenvectors nearest zero) stand
+/// in for the basis. `denseLimit` is accepted for callers written against a
+/// dense product and has no effect: the block chain is used at every size.
+void instantonRate(RateInstanton &inst, const RingBeadHessian &hessian,
+                   const MatrixXd &hessReactant, double vReactant,
+                   const MatrixXd &hessSaddle, double vSaddle, long rigidModes,
+                   long denseLimit = 0);
 
 /// log|det| of the cyclic block-tridiagonal ring Hessian. Each diag[j]
 /// already contains the bead Hessian plus 2 c I, and the neighbour coupling

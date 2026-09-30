@@ -610,16 +610,6 @@ struct neb_options_t {
     bool minimize{false};
     bool use_path_file{false};
   } endpoints;
-
-  /// Interior images relax a lower-triangular cell with the atoms.
-  /// doi:10.1063/1.3684549
-  struct solid_state_options_t {
-    bool enabled{false};
-    double weight{1.0};
-    /// Hydrostatic pressure in eV/Angstrom^3. Positive pressure favors a
-    /// smaller cell. Zero keeps the potential-energy band.
-    double pressure{0.0};
-  } solid_state;
 };
 
 // [Molecular Dynamics] //
@@ -813,6 +803,18 @@ struct instanton_options_t {
   // Mode "rate": the first-order saddle out of the reactant, and T in K.
   std::string saddle_filename{"saddle.con"};
   double temperature{0.0};
+  // Mode "rate": several temperatures, highest first; each ring seeds the
+  // next (sequential cooling). Empty means the single temperature above.
+  std::vector<double> temperatures;
+  // Mode "rate": bead Hessians for the rate prefactor. "recompute" takes a
+  // finite-difference Hessian on every hessian_stride-th bead of the half
+  // ring; "updated" keeps the Bofill-updated blocks the search ends with.
+  std::string hessian_final{"recompute"};
+  // Mode "rate": converge with a quarter, then half, then all of the beads.
+  bool bead_ladder{false};
+  // Mode "rate": hold the ring symmetric under imaginary-time reversal, so
+  // a batch evaluates N / 2 + 1 beads.
+  bool time_reversal_symmetric{true};
 };
 
 // [OH_TST] //

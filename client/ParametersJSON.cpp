@@ -183,11 +183,6 @@ json to_json(const Parameters &p) {
       {"opt_method",
        enum_to_json(ParametersLoadAccess::neb_options(p).opt_method)},
       {"converged_force", ParametersLoadAccess::neb_options(p).force_tolerance},
-      {"solid_state", ParametersLoadAccess::neb_options(p).solid_state.enabled},
-      {"solid_state_weight",
-       ParametersLoadAccess::neb_options(p).solid_state.weight},
-      {"solid_state_pressure",
-       ParametersLoadAccess::neb_options(p).solid_state.pressure},
   };
   j["Nudged Elastic Band"]["spring"] = {
       {"constant", ParametersLoadAccess::neb_options(p).spring.constant},
@@ -300,6 +295,10 @@ json to_json(const Parameters &p) {
         {"hessian_stride", o.hessian_stride},
         {"saddle_filename", o.saddle_filename},
         {"temperature", o.temperature},
+        {"temperatures", o.temperatures},
+        {"hessian_final", o.hessian_final},
+        {"bead_ladder", o.bead_ladder},
+        {"time_reversal_symmetric", o.time_reversal_symmetric},
     };
   }
 
@@ -515,12 +514,6 @@ void from_json(const json &j, Parameters &p) {
           s.at("opt_method"), ParametersLoadAccess::neb_options(p).opt_method);
     JSON_OPT(s, "converged_force",
              ParametersLoadAccess::neb_options(p).force_tolerance);
-    JSON_OPT(s, "solid_state",
-             ParametersLoadAccess::neb_options(p).solid_state.enabled);
-    JSON_OPT(s, "solid_state_weight",
-             ParametersLoadAccess::neb_options(p).solid_state.weight);
-    JSON_OPT(s, "solid_state_pressure",
-             ParametersLoadAccess::neb_options(p).solid_state.pressure);
     if (s.contains("spring")) {
       auto &sp = s.at("spring");
       JSON_OPT(sp, "constant",
