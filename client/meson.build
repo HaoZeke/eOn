@@ -1826,6 +1826,7 @@ if get_option('with_tests')
             'test_rgpot_pot',
             sources: [
                 'unit_tests/RgpotPotTest.cpp',
+                'unit_tests/CpmdMessageTest.cpp',
                 'thirdparty/catch2/catch_amalgamated.cpp',
             ],
             dependencies: test_deps,
