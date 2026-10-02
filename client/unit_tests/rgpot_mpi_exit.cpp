@@ -105,12 +105,12 @@ int main(int argc, char **argv) {
       std::exit(3);
     }
     if (mode == "single" || mode == "uneven") {
-      // H2, closed shell, at three bond lengths: the SCF converges in a
+      // N2, closed shell, at three bond lengths: the SCF converges in a
       // few iterations in a 6 A cell.
       const long n = mode == "single" ? 1 : 3;
-      const double bond[3] = {0.74, 0.76, 0.72};
+      const double bond[3] = {1.10, 1.12, 1.08};
       double R[3][6] = {};
-      int Z[3][2] = {{1, 1}, {1, 1}, {1, 1}};
+      int Z[3][2] = {{7, 7}, {7, 7}, {7, 7}};
       double F[3][6] = {};
       double U[3] = {};
       double box[9] = {6, 0, 0, 0, 6, 0, 0, 0, 6};
