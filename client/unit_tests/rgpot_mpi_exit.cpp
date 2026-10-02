@@ -12,6 +12,13 @@
 //           call does, and exits while rank 1 waits in the worker
 //           broadcast. The exit handler must abort the world; an
 //           MPI_Finalize there waits for rank 1 until the timeout.
+//   single: one structure through force() on two calculators. The
+//           engine agrees on errors across the world after every call,
+//           so both calculators must call it; a calculator left out
+//           holds the other in that agreement until the timeout.
+//   uneven: three structures through forceBatchOwned on two
+//           calculators, two owned by one and one by the other. Both
+//           calculators must make the same number of engine calls.
 
 #include "eon/Parameters.h"
 #include "eon/Potential.h"
@@ -19,6 +26,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <span>
 #include <string>
 
 namespace {
@@ -43,7 +51,8 @@ int main(int argc, char **argv) {
   if (argc != 2)
     return 2;
   const std::string mode = argv[1];
-  if (mode != "params" && mode != "fault" && mode != "abort")
+  if (mode != "params" && mode != "fault" && mode != "abort" &&
+      mode != "single" && mode != "uneven")
     return 2;
   if (!(env_nonempty("CPMDC_LIBRARY") || env_nonempty("RGPOT_CPMDC_ENGINE") ||
         env_nonempty("RGPOT_CPMD_ENGINE"))) {
@@ -90,6 +99,30 @@ int main(int argc, char **argv) {
       ::rgpot::abortMpiAtExit();
       std::cerr << "rank=" << rank << " abort requested\n";
       std::exit(3);
+    }
+    if (mode == "single" || mode == "uneven") {
+      const long n = mode == "single" ? 1 : 3;
+      double R[9] = {0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1, 0.0};
+      int Z[3] = {14, 14, 14};
+      double F[9] = {};
+      double U[3] = {};
+      double box[9] = {20, 0, 0, 0, 20, 0, 0, 0, 20};
+      if (mode == "single") {
+        double var = 0.0;
+        pot->force(std::span<const double>(R, 3), std::span<const int>(Z, 1),
+                   std::span<double>(F, 3), U, &var,
+                   std::span<const double>(box, 9));
+      } else {
+        const double *pos[3] = {R, R + 3, R + 6};
+        const int *nrs[3] = {Z, Z + 1, Z + 2};
+        double *frc[3] = {F, F + 3, F + 6};
+        const double *bx[3] = {box, box, box};
+        long owners[3] = {0, 1, 2};
+        pot->forceBatchOwned(n, 1, pos, nrs, frc, U, nullptr, bx, owners);
+      }
+      std::cerr << "rank=" << rank << " " << mode << " done E0=" << U[0]
+                << "\n";
+      return 0;
     }
     if (mode != "fault") {
       std::cerr << "rank=" << rank << " params constructed\n";
