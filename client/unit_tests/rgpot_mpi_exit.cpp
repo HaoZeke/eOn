@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
   // keeps each call to seconds.
   const bool scf = mode == "single" || mode == "uneven";
   eonc::ParametersLoadAccess::rgpot_options(params).cutoff_ry =
-      scf ? 20.0 : 70.0;
+      scf ? 30.0 : 70.0;
   eonc::ParametersLoadAccess::rgpot_options(params).charge = 0;
   eonc::ParametersLoadAccess::rgpot_options(params).multiplicity = 1;
   if (env_nonempty("CPMDC_LIBRARY"))
@@ -105,24 +105,33 @@ int main(int argc, char **argv) {
       std::exit(3);
     }
     if (mode == "single" || mode == "uneven") {
+      // H2, closed shell, at three bond lengths: the SCF converges in a
+      // few iterations in a 6 A cell.
       const long n = mode == "single" ? 1 : 3;
-      double R[9] = {0.0, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0, 0.1, 0.0};
-      int Z[3] = {14, 14, 14};
-      double F[9] = {};
+      const double bond[3] = {0.74, 0.76, 0.72};
+      double R[3][6] = {};
+      int Z[3][2] = {{1, 1}, {1, 1}, {1, 1}};
+      double F[3][6] = {};
       double U[3] = {};
       double box[9] = {6, 0, 0, 0, 6, 0, 0, 0, 6};
+      for (long j = 0; j < 3; j++) {
+        R[j][0] = 2.6;
+        R[j][1] = R[j][2] = 3.0;
+        R[j][3] = 2.6 + bond[j];
+        R[j][4] = R[j][5] = 3.0;
+      }
       if (mode == "single") {
         double var = 0.0;
-        pot->force(std::span<const double>(R, 3), std::span<const int>(Z, 1),
-                   std::span<double>(F, 3), U, &var,
-                   std::span<const double>(box, 9));
+        pot->force(std::span<const double>(R[0], 6),
+                   std::span<const int>(Z[0], 2), std::span<double>(F[0], 6), U,
+                   &var, std::span<const double>(box, 9));
       } else {
-        const double *pos[3] = {R, R + 3, R + 6};
-        const int *nrs[3] = {Z, Z + 1, Z + 2};
-        double *frc[3] = {F, F + 3, F + 6};
+        const double *pos[3] = {R[0], R[1], R[2]};
+        const int *nrs[3] = {Z[0], Z[1], Z[2]};
+        double *frc[3] = {F[0], F[1], F[2]};
         const double *bx[3] = {box, box, box};
         long owners[3] = {0, 1, 2};
-        pot->forceBatchOwned(n, 1, pos, nrs, frc, U, nullptr, bx, owners);
+        pot->forceBatchOwned(n, 2, pos, nrs, frc, U, nullptr, bx, owners);
       }
       std::cerr << "rank=" << rank << " " << mode << " done E0=" << U[0]
                 << "\n";
