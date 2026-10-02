@@ -80,7 +80,11 @@ int main(int argc, char **argv) {
       eonc::PotType::RGPOT;
   eonc::ParametersLoadAccess::rgpot_options(params).backend = "cpmdc";
   eonc::ParametersLoadAccess::rgpot_options(params).functional = "BLYP";
-  eonc::ParametersLoadAccess::rgpot_options(params).cutoff_ry = 70.0;
+  // single and uneven run real SCFs, so a small cell at a low cutoff
+  // keeps each call to seconds.
+  const bool scf = mode == "single" || mode == "uneven";
+  eonc::ParametersLoadAccess::rgpot_options(params).cutoff_ry =
+      scf ? 20.0 : 70.0;
   eonc::ParametersLoadAccess::rgpot_options(params).charge = 0;
   eonc::ParametersLoadAccess::rgpot_options(params).multiplicity = 1;
   if (env_nonempty("CPMDC_LIBRARY"))
@@ -106,7 +110,7 @@ int main(int argc, char **argv) {
       int Z[3] = {14, 14, 14};
       double F[9] = {};
       double U[3] = {};
-      double box[9] = {20, 0, 0, 0, 20, 0, 0, 0, 20};
+      double box[9] = {6, 0, 0, 0, 6, 0, 0, 0, 6};
       if (mode == "single") {
         double var = 0.0;
         pot->force(std::span<const double>(R, 3), std::span<const int>(Z, 1),

@@ -36,7 +36,12 @@ export OMPI_MCA_rmaps_base_oversubscribe=1
 exe_dir=$(CDPATH= cd -- "$(dirname "$EXE")" && pwd)
 preload_arg=()
 potso="$exe_dir/potentials/Rgpot/librgpot_pot.so"
-if [ -f "$potso" ]; then
+# Preload only when the loader would pick another librgpot_pot.so. A
+# preload the binary does not need corrupts the heap under some runtime
+# loaders (EESSI 2026.06) before main runs.
+resolved=$(ldd "$EXE" 2>/dev/null | awk '/librgpot_pot\.so/ {print $3; exit}')
+if [ -f "$potso" ] && [ -n "$resolved" ] &&
+  [ "$(readlink -f "$resolved")" != "$(readlink -f "$potso")" ]; then
   if [ -n "${LD_PRELOAD:-}" ]; then
     preload_arg=(-x "LD_PRELOAD=${potso}:${LD_PRELOAD}")
   else
