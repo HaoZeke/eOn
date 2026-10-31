@@ -17,7 +17,7 @@ The method and its references are on the [aKMC user guide page](project:../user_
 
 ```{figure} ../fig/akmc/akmc_cycle.png
 ---
-alt: One server call registers results, updates the process table, may take a KMC step, and makes new searches for eonclient
+alt: One server call registers results and updates the process table. Below the confidence target it makes new searches. At the target it cancels queued work and takes a KMC step.
 class: full-width
 align: center
 ---
@@ -27,9 +27,10 @@ Results are read one call after the searches run.
 
 Each call of `python -m eon.server` first registers the results of the searches made by the previous call.
 It adds new processes to the table of processes that leave the current state and updates the confidence that the table is complete.
-When the confidence reaches the target, the server takes a KMC step: it picks one process with a probability proportional to its rate and moves to that process's product state.
-Last, it makes new searches.
+While that confidence is below the target, the call makes new searches.
 With the local communicator used here, the same call starts `eonclient` for each search and waits for it to finish.
+When the confidence reaches the target, the call cancels queued work and takes a KMC step: it picks one process with a probability proportional to its rate and moves to that process's product state.
+It does not make new searches on that call.
 Each search displaces atoms near the least coordinated atom, climbs to a saddle point with the dimer method, minimizes on both sides of the saddle and computes the rate prefactor.
 
 ## Set up the run
@@ -160,7 +161,7 @@ Energy at the reactant, saddle and product of each process.
 
 Three processes have barriers between 0.601 and 0.620 eV and end 0.012 eV above the reactant.
 The other five have barriers between 0.985 and 0.989 eV and end about 0.78 eV above the reactant.
-Their rates are between {math}`1.8 \times 10^{-4}` and {math}`2.0 \times 10^{-4}` s⁻¹, against 571 to 987 s⁻¹ for the low barriers.
+Their rates run from 1.76922e-04 to 2.00307e-04 s⁻¹, against 571 to 987 s⁻¹ for the low barriers.
 
 ## The KMC step
 

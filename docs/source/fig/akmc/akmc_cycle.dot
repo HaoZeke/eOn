@@ -9,12 +9,13 @@ digraph akmc {
         fontname="Helvetica";
         register [label="register results\nfrom the last call"];
         table [label="update process table\nand confidence"];
-        step [label="KMC step:\npick a process by rate,\nadd the escape time"];
         make [label="make new\nprocess searches"];
+        cancel [label="cancel queued\nwork"];
+        step [label="KMC step:\npick a process by rate,\nadd the escape time"];
         register -> table;
-        table -> step [label="confidence\n>= target"];
         table -> make [label="below target"];
-        step -> make;
+        table -> cancel [label="confidence\n>= target"];
+        cancel -> step;
     }
 
     client [label="eonclient, one per search:\nsaddle search,\nminimize both sides,\nprefactor", fillcolor="#fdf1e0"];
