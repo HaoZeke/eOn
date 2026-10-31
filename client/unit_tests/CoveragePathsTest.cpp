@@ -1039,6 +1039,10 @@ TEST_CASE("short accelerated dynamics records a transition",
           "[job][tad][coverage]") {
   Workdir work;
   static_cast<void>(work);
+  // Pin the stream for the same reason as the replica buffer case below.
+  // Its thermal draws otherwise follow the last clock reseed and the shuffled
+  // case order, and some of them put two atoms on the singularity.
+  eonc::rng::random(42);
   Parameters base = ljParams();
   auto pot = eonc::helpers::sharePotential(
       eonc::helpers::makePotential(PotType::LJ, base));
