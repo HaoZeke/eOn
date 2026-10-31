@@ -427,6 +427,7 @@ TEST_CASE("geometry helpers and a resampled band stay finite",
 TEST_CASE("client displacement, masses, and mode files round-trip",
           "[helpers]") {
   Workdir work;
+  eonc::rng::random(42);
   Parameters params = ljParams();
   auto pot = eonc::helpers::sharePotential(
       eonc::helpers::makePotential(PotType::LJ, params));
@@ -951,6 +952,7 @@ TEST_CASE("dynamics basin and gradient-squared searches take one short step",
           "[job][dynamics][coverage]") {
   Workdir work;
   static_cast<void>(work);
+  eonc::rng::random(42);
   Parameters base = ljParams();
   auto pot = eonc::helpers::sharePotential(
       eonc::helpers::makePotential(PotType::LJ, base));
@@ -1489,6 +1491,7 @@ TEST_CASE("improved dimer batches the centre and the forward image",
 TEST_CASE("basin hopping writes a unique minimum from a random start",
           "[job][basin_hopping]") {
   Workdir work;
+  eonc::rng::random(42);
   std::filesystem::copy_file(work.dir() / "reactant.con",
                              work.dir() / "pos.con",
                              std::filesystem::copy_options::overwrite_existing);
@@ -2481,6 +2484,7 @@ TEST_CASE("an unknown displacement algorithm is rejected",
           "[job][basin_hopping]") {
   Workdir work;
   static_cast<void>(work);
+  eonc::rng::random(42);
   std::filesystem::copy_file(work.dir() / "reactant.con",
                              work.dir() / "pos.con",
                              std::filesystem::copy_options::overwrite_existing);
@@ -2628,6 +2632,7 @@ TEST_CASE("a rejected hop jumps and pushes the atoms apart",
           "[job][basin_hopping]") {
   Workdir work;
   static_cast<void>(work);
+  eonc::rng::random(42);
   std::filesystem::copy_file(work.dir() / "reactant.con",
                              work.dir() / "pos.con",
                              std::filesystem::copy_options::overwrite_existing);
@@ -3083,6 +3088,7 @@ TEST_CASE("a broken trajectory and an unknown metric are rejected",
           "[io][optim][metric]") {
   Workdir work;
   static_cast<void>(work);
+  eonc::rng::random(42);
   Parameters params = ljParams();
   auto pot = eonc::helpers::sharePotential(
       eonc::helpers::makePotential(PotType::LJ, params));
@@ -3255,6 +3261,7 @@ TEST_CASE("a dynamics search keeps the barrier after one step",
           "[dynamics][saddle][barrier]") {
   Workdir work;
   static_cast<void>(work);
+  eonc::rng::random(42);
   Parameters params = ljParams();
   auto pot = eonc::helpers::sharePotential(
       eonc::helpers::makePotential(PotType::LJ, params));
