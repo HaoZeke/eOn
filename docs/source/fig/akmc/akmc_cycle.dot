@@ -1,0 +1,23 @@
+// Render: dot -Tpng -Gdpi=150 akmc_cycle.dot -o akmc_cycle.png
+digraph akmc {
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fillcolor="#e8f4f4", fontname="Helvetica"];
+    edge [fontname="Helvetica", fontsize=10];
+
+    subgraph cluster_server {
+        label="one call of python -m eon.server";
+        fontname="Helvetica";
+        register [label="register results\nfrom the last call"];
+        table [label="update process table\nand confidence"];
+        step [label="KMC step:\npick a process by rate,\nadd the escape time"];
+        make [label="make new\nprocess searches"];
+        register -> table;
+        table -> step [label="confidence\n>= target"];
+        table -> make [label="below target"];
+        step -> make;
+    }
+
+    client [label="eonclient, one per search:\nsaddle search,\nminimize both sides,\nprefactor", fillcolor="#fdf1e0"];
+    make -> client [label="communicator"];
+    client -> register [label="results in jobs/,\nread on the next call", style=dashed];
+}
