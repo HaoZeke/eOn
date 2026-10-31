@@ -71,6 +71,9 @@ with this, we can then run a
 Saddle search job
 : to find a nearby saddle point.
 
+Instanton
+: which estimates a tunneling rate from a path between two minima.
+
 and they may do so by using
 
 Dimer
@@ -114,6 +117,9 @@ Debug
 : which lists extra output options
 
 ## Configuration
+
+`input_format`, `cell`, `pbc`, and `default_vacuum` select a foreign
+structure file and its fallback cell. See {doc}`structure_input`.
 
 ```{code-block} ini
 [Main]

@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eondocs.org/schema/rgpotpot.json",
+  "title": "RgpotPot",
+  "description": "config.ini [RgpotPot] section (RgpotPot). Keys, defaults, and allowed values.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "backend": {
+      "default": "nwchemc",
+      "description": "rgpot backend: 'nwchemc', 'cpmdc', 'metatomic', or 'xtb' (aliases: nwchem/cpmd/mta/gfn). metatomic/xtb dlopen libmetatomic_engine.so / libxtb_engine.so for packaging.",
+      "type": "string"
+    },
+    "basis": {
+      "default": "sto-3g",
+      "description": "Basis set for the NWChem backend.",
+      "type": "string"
+    },
+    "nwchem_basis": {
+      "default": "sto-3g",
+      "description": "Alias of basis, read when basis is absent.",
+      "type": "string"
+    },
+    "theory": {
+      "default": "scf",
+      "description": "Theory level for the NWChem backend.",
+      "type": "string"
+    },
+    "nwchem_theory": {
+      "default": "scf",
+      "description": "Alias of theory, read when theory is absent.",
+      "type": "string"
+    },
+    "scf_type": {
+      "default": "rhf",
+      "description": "SCF type for the NWChem backend.",
+      "type": "string"
+    },
+    "nwchem_scf_type": {
+      "default": "rhf",
+      "description": "Alias of scf_type, read when scf_type is absent.",
+      "type": "string"
+    },
+    "functional": {
+      "default": "BLYP",
+      "description": "XC functional for the CPMD backend. [cpmd] functional overrides this key when params_path is empty.",
+      "type": "string"
+    },
+    "cpmd_functional": {
+      "default": "BLYP",
+      "description": "Alias of functional, read when functional is absent.",
+      "type": "string"
+    },
+    "cutoff_ry": {
+      "default": 70.0,
+      "description": "Plane-wave cutoff (Ry) for the CPMD backend. [cpmd] cutOffRy overrides this key when params_path is empty.",
+      "type": "number"
+    },
+    "cutOffRy": {
+      "default": 70.0,
+      "description": "Alias of cutoff_ry that wins over it when both are set.",
+      "type": "number"
+    },
+    "cpmd_cut_off_ry": {
+      "default": 70.0,
+      "description": "Alias of cutoff_ry, read when cutOffRy and cutoff_ry are absent.",
+      "type": "number"
+    },
+    "charge": {
+      "default": 0,
+      "description": "Total charge.",
+      "type": "integer"
+    },
+    "nwchem_charge": {
+      "default": 0,
+      "description": "Alias of charge, read when charge is absent.",
+      "type": "integer"
+    },
+    "multiplicity": {
+      "default": 1,
+      "description": "Spin multiplicity.",
+      "type": "integer"
+    },
+    "nwchem_multiplicity": {
+      "default": 1,
+      "description": "Alias of multiplicity, read when multiplicity is absent.",
+      "type": "integer"
+    },
+    "engine_path": {
+      "default": "",
+      "description": "Engine .so path (libnwchemc / libcpmdc / libmetatomic_engine / libxtb_engine).",
+      "type": "string"
+    },
+    "engine_library": {
+      "default": "",
+      "description": "Alias for engine_path; used when engine_path is empty.",
+      "type": "string"
+    },
+    "model_path": {
+      "default": "",
+      "description": "Metatomic model path when backend=metatomic.",
+      "type": "string"
+    },
+    "task_name": {
+      "default": "omol",
+      "description": "UMA task head when backend=uma.",
+      "type": "string"
+    },
+    "device": {
+      "default": "cpu",
+      "description": "Metatomic device when backend=metatomic.",
+      "type": "string"
+    },
+    "length_unit": {
+      "default": "angstrom",
+      "description": "Metatomic length unit when backend=metatomic.",
+      "type": "string"
+    },
+    "extensions_directory": {
+      "default": "",
+      "description": "Metatomic extensions directory when backend=metatomic.",
+      "type": "string"
+    },
+    "check_consistency": {
+      "default": false,
+      "description": "Metatomic consistency checks when backend=metatomic.",
+      "type": "boolean"
+    },
+    "uncertainty_threshold": {
+      "default": -1.0,
+      "description": "Metatomic uncertainty threshold when backend=metatomic.",
+      "type": "number"
+    },
+    "torch_determinism_strict": {
+      "default": false,
+      "description": "Strict Torch determinism when backend=metatomic.",
+      "type": "boolean"
+    },
+    "paramset": {
+      "default": "GFN2xTB",
+      "description": "XTB paramset when backend=xtb.",
+      "enum": [
+        "GFNFF",
+        "GFN0xTB",
+        "GFN1xTB",
+        "GFN2xTB"
+      ],
+      "type": "string"
+    },
+    "xtb_paramset": {
+      "default": "GFN2xTB",
+      "description": "Alias of paramset, read when paramset is absent.",
+      "enum": [
+        "GFNFF",
+        "GFN0xTB",
+        "GFN1xTB",
+        "GFN2xTB"
+      ],
+      "type": "string"
+    },
+    "accuracy": {
+      "default": 1.0,
+      "description": "XTB accuracy when backend=xtb.",
+      "type": "number"
+    },
+    "xtb_accuracy": {
+      "default": 1.0,
+      "description": "Alias of accuracy, read when accuracy is absent.",
+      "type": "number"
+    },
+    "electronic_temperature": {
+      "default": 300.0,
+      "description": "XTB electronic temperature (K) when backend=xtb.",
+      "type": "number"
+    },
+    "xtb_electronic_temperature": {
+      "default": 300.0,
+      "description": "Alias of electronic_temperature, read when that key is absent.",
+      "type": "number"
+    },
+    "max_iterations": {
+      "default": 250,
+      "description": "XTB max iterations when backend=xtb.",
+      "type": "integer"
+    },
+    "xtb_max_iterations": {
+      "default": 250,
+      "description": "Alias of max_iterations, read when max_iterations is absent.",
+      "type": "integer"
+    },
+    "uhf": {
+      "default": 0,
+      "description": "XTB unpaired electrons when backend=xtb.",
+      "type": "integer"
+    },
+    "xtb_uhf": {
+      "default": 0,
+      "description": "Alias of uhf, read when uhf is absent.",
+      "type": "integer"
+    },
+    "xtb_charge": {
+      "default": 0.0,
+      "description": "XTB total charge when backend=xtb. An omitted key uses charge.",
+      "type": "number"
+    },
+    "engine_root": {
+      "default": "",
+      "description": "Engine installation root (NWCHEM_ROOT / CPMD_ROOT).",
+      "type": "string"
+    },
+    "title": {
+      "default": "",
+      "description": "Job title passed to the engine.",
+      "type": "string"
+    },
+    "memory_mb": {
+      "default": 0,
+      "description": "Engine memory limit in MB (0 uses the engine default).",
+      "type": "integer"
+    },
+    "scratch_dir": {
+      "default": "",
+      "description": "Engine scratch directory.",
+      "type": "string"
+    },
+    "input_block": {
+      "default": "",
+      "description": "Verbatim input block. For NWChem this is inputBlocks. For CPMD, [cpmd] input_block overrides this key and the text is appended to the message inputBlocks.",
+      "type": "string"
+    },
+    "permanent_dir": {
+      "default": "",
+      "description": "CPMD FILEPATH directory for RESTART files (backend=cpmdc).",
+      "type": "string"
+    },
+    "params_path": {
+      "default": "",
+      "description": "Path to a Cap'n Proto CPMDParams message. The file owns the CPMD method, including inputSections and inputBlocks, and the scalar keys are not written over it. input_block is appended to inputBlocks. engine_path, engine_root, scratch_dir, and permanent_dir still place the run.",
+      "type": "string"
+    },
+    "ranks_per_image": {
+      "default": 0,
+      "description": "Split the MPI world into groups of this many ranks, one CPMD session per group, and spread NEB images over the groups. 0 keeps one session on every rank.",
+      "type": "integer"
+    }
+  }
+}

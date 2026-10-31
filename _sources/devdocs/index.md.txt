@@ -19,12 +19,19 @@ Pull requests and documentation contributions are all highly appreciated.
 testing
 benchmarks
 parallel-potentials
+library-api
+in-process
+abi-surface
+relax-engine
+rgpot-migration
+porting_potentials
+hessian
 docbuild
 svn
 svn-migration
 tracking-changes
 release
-design/client
+design/client/index
 ```
 
 ```{toctree}

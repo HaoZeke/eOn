@@ -1,0 +1,404 @@
+<!-- Copyright 2020–2026 Rohit Goswami <rog32@hi.is>
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. -->
+<!-- HTML header for doxygen >= 1.17 (tested with 1.17.0 and 1.18.0) -->
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="generator" content="Doxygen 1.17.0"/>
+<title>eOn: /home/runner/work/eOn/eOn/include/eon/potentials/Rgpot/RgpotPot.h Source File</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="codefolding.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+const theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+mermaid.initialize({ startOnLoad: true, theme: theme });
+</script>
+<!-- Antics analytics -->
+<script defer src="https://antics-api.turtletech.us/antics.js"></script>
+<script>window.antics=window.antics||{event:function(){}};document.addEventListener("click",function(e){var a=e.target.closest("a");if(a&&a.hostname!==location.hostname)antics.event("Outbound Link",{url:a.href});});</script>
+<!-- doxyYoda owns presentation; stock doxygen.css is not linked (theme SCSS covers Doxygen classes). -->
+<link href="doxyYoda.min.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">
+/* doxyYoda theme boot: apply stored or OS preference before first paint */
+(function () {
+  try {
+    var stored = localStorage.getItem("doxyYoda-theme");
+    var root = document.documentElement;
+    if (stored === "dark") {
+      root.classList.add("dark");
+      root.classList.add("dark-mode");
+    } else if (stored === "light") {
+      root.classList.add("light");
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      root.classList.add("dark");
+      root.classList.add("dark-mode");
+    }
+  } catch (e) { /* private mode */ }
+})();
+</script>
+</head>
+<body>
+<div class="grid-contents">
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<nav class="title_area" aria-label="Project">
+<div class="title_area__start"></div>
+<div class="title_area__center">
+<span class="project_info">eOn 3.2.0</span>
+<span class="project_brief">Long-timescale dynamics: aKMC, NEB, parallel replica</span>
+</div>
+<div class="title_area__end">
+<button type="button" class="dark-mode-toggle" id="darkModeToggle" title="Toggle dark mode" aria-label="Toggle dark mode" aria-pressed="false">&#9790;</button>
+</div>
+</nav>
+<!-- end header part -->
+<script type="text/javascript">
+/* doxyYoda interactive: foldable fragments, copy buttons, dark-mode toggle */
+document.addEventListener("DOMContentLoaded", function () {
+  function prefersDark() {
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function isDarkMode() {
+    var root = document.documentElement;
+    if (root.classList.contains("dark") || root.classList.contains("dark-mode")) return true;
+    if (root.classList.contains("light")) return false;
+    return prefersDark();
+  }
+  // Optional folding: wrap .fragment in open <details class="code-details">.
+  // Skip fragments already inside details and native Doxygen .foldopen listings.
+  document.querySelectorAll(".fragment").forEach(function (frag) {
+    if (frag.closest("details.code-details")) return;
+    if (frag.querySelector(".foldopen")) return;
+    var details = document.createElement("details");
+    details.className = "code-details";
+    details.open = true;
+    var summary = document.createElement("summary");
+    summary.textContent = "Code";
+    frag.parentNode.insertBefore(details, frag);
+    details.appendChild(summary);
+    details.appendChild(frag);
+  });
+  // Copy-to-clipboard on div.fragment (themed .copy-btn only)
+  document.querySelectorAll("div.fragment").forEach(function (frag) {
+    if (frag.querySelector(".copy-btn")) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy-btn";
+    btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy code");
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var clone = frag.cloneNode(true);
+      var extra = clone.querySelector(".copy-btn");
+      if (extra) extra.remove();
+      var lines = clone.querySelectorAll(".line");
+      var text = lines.length
+        ? Array.prototype.map.call(lines, function (l) { return l.textContent; }).join("\n")
+        : clone.textContent;
+      var done = function () {
+        btn.textContent = "Copied!";
+        setTimeout(function () { btn.textContent = "Copy"; }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          /* ignore */
+        });
+      }
+    });
+    frag.appendChild(btn);
+  });
+  // Dark mode toggle
+  var toggle = document.getElementById("darkModeToggle");
+  if (toggle) {
+    function updateIcon() {
+      var dark = isDarkMode();
+      toggle.innerHTML = dark ? "&#9788;" : "&#9790;";
+      toggle.setAttribute("aria-pressed", dark ? "true" : "false");
+    }
+    updateIcon();
+    toggle.addEventListener("click", function () {
+      var root = document.documentElement;
+      var nextDark = !isDarkMode();
+      root.classList.toggle("dark", nextDark);
+      root.classList.toggle("dark-mode", nextDark);
+      root.classList.toggle("light", !nextDark);
+      try {
+        localStorage.setItem("doxyYoda-theme", nextDark ? "dark" : "light");
+      } catch (e) { /* private mode */ }
+      updateIcon();
+    });
+  }
+});
+</script>
+<!-- Generated by Doxygen 1.17.0 -->
+<script type="text/javascript">
+let searchBox = new SearchBox("searchBox", "search/",'.html');
+</script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', codefold.init);
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', () => {
+  initMenu('',true);
+  init_search();
+});
+</script>
+<div id="main-nav-mobile">
+<div class="sm sm-dox"><input id="main-menu-state" type="checkbox"/>
+<label class="main-menu-btn" for="main-menu-state">
+<span class="main-menu-btn-icon"></span> Toggle main menu visibility</label>
+<span id="searchBoxPos1" style="position:absolute;right:8px;top:8px;height:36px;"></span>
+</div>
+</div><!-- main-nav-mobile -->
+<div id="main-nav">
+  <ul class="sm sm-dox" id="main-menu">
+    <li id="searchBoxPos2" style="float:right">
+        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect" class="search-icon" onmouseover="return searchBox.OnSearchSelectShow()" onmouseout="return searchBox.OnSearchSelectHide()"><span class="search-icon-dropdown"></span></span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><div id="MSearchCloseImg" class="close-icon"></div></a>
+          </span>
+        </div>
+    </li>
+  </ul>
+</div><!-- main-nav -->
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded',() => { initNavTree('RgpotPot_8h_source.html','',''); });
+</script>
+<div id="container">
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">RgpotPot.h</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="RgpotPot_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">** This file is part of eOn.</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">**</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">** SPDX-License-Identifier: BSD-3-Clause</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="comment">**</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="comment">** Copyright (c) 2010--present, eOn Development Team</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="comment">** All rights reserved.</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">**</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment">** Repo:</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">** https://github.com/TheochemUI/eOn</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment">*/</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="preprocessor">#pragma once</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &quot;<a class="code" href="CalculatorGroupUse_8h.html">eon/CalculatorGroupUse.h</a>&quot;</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &quot;<a class="code" href="Potential_8h.html">eon/Potential.h</a>&quot;</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#include &quot;<a class="code" href="GroupSchedule_8h.html">eon/potentials/Rgpot/GroupSchedule.h</a>&quot;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;cstdint&gt;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;string&gt;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">class </span><a class="code hl_class" href="classRGPotEngine.html">RGPotEngine</a>;</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span></div>
+<div class="foldopen" id="foldopen00028" data-start="{" data-end="};">
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="classRgpotPot.html">   28</a></span><span class="keyword">class </span><a class="code hl_function" href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot</a> final : <span class="keyword">public</span> <a class="code hl_class" href="classeonc_1_1Potential.html">eonc::Potential</a> {</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>  <span class="keyword">explicit</span> <a class="code hl_function" href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot</a>(<span class="keyword">const</span> <a class="code hl_class" href="classeonc_1_1Parameters.html">eonc::Parameters</a> &amp;p);</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>  <a class="code hl_function" href="classRgpotPot.html#ab47130e2a40ebf25f43da66a190a8ae9">~RgpotPot</a>() <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a05f803143dd2bba1c0c8149061f88151">   33</a></span>  <a class="code hl_function" href="classRgpotPot.html#a05f803143dd2bba1c0c8149061f88151">RgpotPot</a>(<span class="keyword">const</span> <a class="code hl_function" href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot</a> &amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno"><a class="line" href="classRgpotPot.html#abfa480aca32515b12159fb1779cef757">   34</a></span>  <a class="code hl_function" href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot</a> &amp;<a class="code hl_function" href="classRgpotPot.html#abfa480aca32515b12159fb1779cef757">operator=</a>(<span class="keyword">const</span> <a class="code hl_function" href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot</a> &amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#ac6d4be4522b1487195716c2dcbd44e79">force</a>(<span class="keywordtype">long</span> N, <span class="keyword">const</span> <span class="keywordtype">double</span> *R, <span class="keyword">const</span> <span class="keywordtype">int</span> *atomicNrs, <span class="keywordtype">double</span> *F,</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>             <span class="keywordtype">double</span> *U, <span class="keywordtype">double</span> *variance, <span class="keyword">const</span> <span class="keywordtype">double</span> *box) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno"><a class="line" href="classRgpotPot.html#aa3807f25df4a13d2563d53aac59e63cd">   39</a></span>  [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="classRgpotPot.html#aa3807f25df4a13d2563d53aac59e63cd">isThreadSafe</a>() const noexcept<span class="keyword"> override </span>{ <span class="keywordflow">return</span> <span class="keyword">false</span>; }</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="classRgpotPot.html#acde3cf6eb2174f747609504d1d717d80">supportsBatchEvaluation</a>() const noexcept override;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#a6fee72a91f6354157274b33d3341d385">forceBatch</a>(<span class="keywordtype">long</span> nSystems, <span class="keywordtype">long</span> nAtoms, const <span class="keywordtype">double</span> *const *positions,</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>                  const <span class="keywordtype">int</span> *const *atomicNrs, <span class="keywordtype">double</span> *const *forces,</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>                  <span class="keywordtype">double</span> *energies, <span class="keywordtype">double</span> *variances,</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>                  const <span class="keywordtype">double</span> *const *boxes) override;</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#a674bf337af44b7f429fb39cc8aa38995">forceBatchOwned</a>(<span class="keywordtype">long</span> nSystems, <span class="keywordtype">long</span> nAtoms,</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>                       const <span class="keywordtype">double</span> *const *positions,</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>                       const <span class="keywordtype">int</span> *const *atomicNrs, <span class="keywordtype">double</span> *const *forces,</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>                       <span class="keywordtype">double</span> *energies, <span class="keywordtype">double</span> *variances,</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>                       const <span class="keywordtype">double</span> *const *boxes, const <span class="keywordtype">long</span> *owners) override;</div>
+<div class="foldopen" id="foldopen00060" data-start="{" data-end="}">
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a30439012a21f7aeae6a23c1cf66b1fc8">   60</a></span>  [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="classRgpotPot.html#a30439012a21f7aeae6a23c1cf66b1fc8">requiresIsolatedMoleculeLayout</a>() const noexcept<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordflow">return</span> <a class="code hl_variable" href="classRgpotPot.html#a36cfb3ad59f4bc1bd797a9ef8c033976">backend_</a> == <span class="stringliteral">&quot;nwchemc&quot;</span> || <a class="code hl_variable" href="classRgpotPot.html#a6d1660c1dbc93848d6059cc3403a5917">isolatedMolecule_</a>;</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  }</div>
+</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a983a98a576d9890e34930d3200927e04">   63</a></span>  [[nodiscard]] <span class="keyword">const</span> std::string &amp;<a class="code hl_function" href="classRgpotPot.html#a983a98a576d9890e34930d3200927e04">backend</a>() const noexcept { <span class="keywordflow">return</span> <a class="code hl_variable" href="classRgpotPot.html#a36cfb3ad59f4bc1bd797a9ef8c033976">backend_</a>; }</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>  [[nodiscard]] <span class="keywordtype">bool</span> <a class="code hl_function" href="classRgpotPot.html#a24ae909bada46d38e971f9818be0f178">engineAvailable</a>() <span class="keyword">const</span>;</div>
+<div class="foldopen" id="foldopen00067" data-start="{" data-end="}">
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a2270e463ddc286b5b79f16cda8460f97">   67</a></span>  [[nodiscard]] <span class="keyword">const</span> <a class="code hl_struct" href="structeonc_1_1CalculatorGroupUse.html">eonc::CalculatorGroupUse</a> &amp;<a class="code hl_function" href="classRgpotPot.html#a2270e463ddc286b5b79f16cda8460f97">groupUse</a>() const noexcept {</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="keywordflow">return</span> <a class="code hl_variable" href="classRgpotPot.html#ad975e68dfea4d5d839283791b70a46f6">use_</a>;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>  }</div>
+</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>  <span class="comment">// Under mpirun (an MPI build of rgpot with cpmdc) only world rank 0 runs</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>  <span class="comment">// eOn. It broadcasts each force request; the other ranks serve requests</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>  <span class="comment">// from the constructor until the driver sends a stop, then exit.</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>  [[noreturn]] <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#acab2b31e6271c7e676fa1ce814df2c49">serveWorker</a>();</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#aef513c1ddb8453c6841752b8294d309d">computeSingle</a>(<span class="keywordtype">long</span> N, <span class="keyword">const</span> <span class="keywordtype">double</span> *R, <span class="keyword">const</span> <span class="keywordtype">int</span> *atomicNrs, <span class="keywordtype">double</span> *F,</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>                     <span class="keywordtype">double</span> *U, <span class="keyword">const</span> <span class="keywordtype">double</span> *box, <span class="keywordtype">int</span> group);</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#aca43bbd6ee7721cb4ad2fbaee6d06420">computeBatch</a>(<span class="keywordtype">long</span> nSystems, <span class="keywordtype">long</span> nAtoms, <span class="keyword">const</span> <span class="keywordtype">double</span> *<span class="keyword">const</span> *positions,</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>                    <span class="keyword">const</span> <span class="keywordtype">int</span> *<span class="keyword">const</span> *atomicNrs, <span class="keywordtype">double</span> *<span class="keyword">const</span> *forces,</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>                    <span class="keywordtype">double</span> *energies, <span class="keyword">const</span> <span class="keywordtype">double</span> *<span class="keyword">const</span> *boxes,</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>                    <span class="keyword">const</span> std::int64_t *owners, <span class="keyword">const</span> std::int64_t *route);</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#ae6c65b972ba91b1c5b4512fc03474e04">sendStop</a>();</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#ac0c86f60fd32c3cc3dfa34d6b0973ac3">stopAndDrop</a>();</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#ae87ceb0b49847c3ae9e3d0773dc49478">releaseWorkersAtExit</a>();</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>  <span class="comment">// Collective over every rank: each group&#39;s first rank shares its busy</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>  <span class="comment">// seconds and system count.</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>  <span class="keywordtype">void</span> <a class="code hl_function" href="classRgpotPot.html#a906c9d78bb020e4651afa8922c064ca6">exchangeGroupUse</a>();</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>  <span class="keywordtype">bool</span> <a class="code hl_function" href="classRgpotPot.html#ac867425d3cd0489eb1390d239ee30727">evaluate</a>(<span class="keywordtype">long</span> N, <span class="keyword">const</span> <span class="keywordtype">double</span> *R, <span class="keyword">const</span> <span class="keywordtype">int</span> *atomicNrs, <span class="keywordtype">double</span> *F,</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>                <span class="keywordtype">double</span> *U, <span class="keyword">const</span> <span class="keywordtype">double</span> *box, std::string &amp;error);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a5dc28ce178c64749350e33931c191d34">   91</a></span>  std::unique_ptr&lt;RGPotEngine&gt; <a class="code hl_variable" href="classRgpotPot.html#a5dc28ce178c64749350e33931c191d34">impl_</a>;</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a36cfb3ad59f4bc1bd797a9ef8c033976">   92</a></span>  std::string <a class="code hl_variable" href="classRgpotPot.html#a36cfb3ad59f4bc1bd797a9ef8c033976">backend_</a>;</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a6d1660c1dbc93848d6059cc3403a5917">   93</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="classRgpotPot.html#a6d1660c1dbc93848d6059cc3403a5917">isolatedMolecule_</a>{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="classRgpotPot.html#aa510f91f12397e12b96ccde20b0a3e9a">   94</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="classRgpotPot.html#aa510f91f12397e12b96ccde20b0a3e9a">driver_</a>{<span class="keyword">true</span>};</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a79abcbb0876456ed0944f6b6446ba07f">   95</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="classRgpotPot.html#a79abcbb0876456ed0944f6b6446ba07f">stopped_</a>{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a8bcb7ba8f038e0c27f7464f7790121de">   96</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="classRgpotPot.html#a8bcb7ba8f038e0c27f7464f7790121de">dropped_</a>{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a98ce20269344bb0ad538f70c46b050b6">   97</a></span>  <span class="keywordtype">bool</span> <a class="code hl_variable" href="classRgpotPot.html#a98ce20269344bb0ad538f70c46b050b6">acked_</a>{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>  <span class="comment">// This rank&#39;s seconds inside engine calls and the systems it evaluated.</span></div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a67b32eeeed8ee2f090b5cb0112628c0a">   99</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classRgpotPot.html#a67b32eeeed8ee2f090b5cb0112628c0a">busy_</a>{0.0};</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a9dddb38e484330164f23d57b2d83d861">  100</a></span>  <span class="keywordtype">double</span> <a class="code hl_variable" href="classRgpotPot.html#a9dddb38e484330164f23d57b2d83d861">systemsDone_</a>{0.0};</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno"><a class="line" href="classRgpotPot.html#ad975e68dfea4d5d839283791b70a46f6">  101</a></span>  <a class="code hl_struct" href="structeonc_1_1CalculatorGroupUse.html">eonc::CalculatorGroupUse</a> <a class="code hl_variable" href="classRgpotPot.html#ad975e68dfea4d5d839283791b70a46f6">use_</a>;</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>  <span class="comment">// Driver only: which group evaluates which system.</span></div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno"><a class="line" href="classRgpotPot.html#a4525f8f90b21598144f3e753f79fbe39">  103</a></span>  std::unique_ptr&lt;eonc::GroupSchedule&gt; <a class="code hl_variable" href="classRgpotPot.html#a4525f8f90b21598144f3e753f79fbe39">schedule_</a>;</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>};</div>
+</div>
+<div class="ttc" id="aCalculatorGroupUse_8h_html"><div class="ttname"><a href="CalculatorGroupUse_8h.html">CalculatorGroupUse.h</a></div></div>
+<div class="ttc" id="aGroupSchedule_8h_html"><div class="ttname"><a href="GroupSchedule_8h.html">GroupSchedule.h</a></div></div>
+<div class="ttc" id="aPotential_8h_html"><div class="ttname"><a href="Potential_8h.html">Potential.h</a></div></div>
+<div class="ttc" id="aclassRGPotEngine_html"><div class="ttname"><a href="classRGPotEngine.html">RGPotEngine</a></div><div class="ttdoc">Opaque rgpot-backed engine (nwchemc / cpmdc / metatomic / uma / xtb).</div><div class="ttdef"><b>Definition</b> <a href="RGPotEngine_8h_source.html#l00057">RGPotEngine.h:57</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a05f803143dd2bba1c0c8149061f88151"><div class="ttname"><a href="classRgpotPot.html#a05f803143dd2bba1c0c8149061f88151">RgpotPot::RgpotPot</a></div><div class="ttdeci">RgpotPot(const RgpotPot &amp;)=delete</div></div>
+<div class="ttc" id="aclassRgpotPot_html_a0e61ce6dfd22a75d94fdfaf26ce0017c"><div class="ttname"><a href="classRgpotPot.html#a0e61ce6dfd22a75d94fdfaf26ce0017c">RgpotPot::RgpotPot</a></div><div class="ttdeci">RgpotPot(const eonc::Parameters &amp;p)</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00019">RgpotPot.cpp:19</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a2270e463ddc286b5b79f16cda8460f97"><div class="ttname"><a href="classRgpotPot.html#a2270e463ddc286b5b79f16cda8460f97">RgpotPot::groupUse</a></div><div class="ttdeci">const eonc::CalculatorGroupUse &amp; groupUse() const noexcept</div><div class="ttdoc">Calculator-group accounting on the driver.</div><div class="ttdef"><b>Definition</b> <a href="#l00067">RgpotPot.h:67</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a24ae909bada46d38e971f9818be0f178"><div class="ttname"><a href="classRgpotPot.html#a24ae909bada46d38e971f9818be0f178">RgpotPot::engineAvailable</a></div><div class="ttdeci">bool engineAvailable() const</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00139">RgpotPot.cpp:139</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a30439012a21f7aeae6a23c1cf66b1fc8"><div class="ttname"><a href="classRgpotPot.html#a30439012a21f7aeae6a23c1cf66b1fc8">RgpotPot::requiresIsolatedMoleculeLayout</a></div><div class="ttdeci">bool requiresIsolatedMoleculeLayout() const noexcept override</div><div class="ttdoc">Molecular tasks retain Cartesian coordinates across storage-cell faces.</div><div class="ttdef"><b>Definition</b> <a href="#l00060">RgpotPot.h:60</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a36cfb3ad59f4bc1bd797a9ef8c033976"><div class="ttname"><a href="classRgpotPot.html#a36cfb3ad59f4bc1bd797a9ef8c033976">RgpotPot::backend_</a></div><div class="ttdeci">std::string backend_</div><div class="ttdef"><b>Definition</b> <a href="#l00092">RgpotPot.h:92</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a4525f8f90b21598144f3e753f79fbe39"><div class="ttname"><a href="classRgpotPot.html#a4525f8f90b21598144f3e753f79fbe39">RgpotPot::schedule_</a></div><div class="ttdeci">std::unique_ptr&lt; eonc::GroupSchedule &gt; schedule_</div><div class="ttdef"><b>Definition</b> <a href="#l00103">RgpotPot.h:103</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a5dc28ce178c64749350e33931c191d34"><div class="ttname"><a href="classRgpotPot.html#a5dc28ce178c64749350e33931c191d34">RgpotPot::impl_</a></div><div class="ttdeci">std::unique_ptr&lt; RGPotEngine &gt; impl_</div><div class="ttdef"><b>Definition</b> <a href="#l00091">RgpotPot.h:91</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a674bf337af44b7f429fb39cc8aa38995"><div class="ttname"><a href="classRgpotPot.html#a674bf337af44b7f429fb39cc8aa38995">RgpotPot::forceBatchOwned</a></div><div class="ttdeci">void forceBatchOwned(long nSystems, long nAtoms, const double *const *positions, const int *const *atomicNrs, double *const *forces, double *energies, double *variances, const double *const *boxes, const long *owners) override</div><div class="ttdoc">owners[j] is system j&#39;s identity (a NEB image, a ring bead): it names the orbitals the engine starts ...</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00436">RgpotPot.cpp:436</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a67b32eeeed8ee2f090b5cb0112628c0a"><div class="ttname"><a href="classRgpotPot.html#a67b32eeeed8ee2f090b5cb0112628c0a">RgpotPot::busy_</a></div><div class="ttdeci">double busy_</div><div class="ttdef"><b>Definition</b> <a href="#l00099">RgpotPot.h:99</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a6d1660c1dbc93848d6059cc3403a5917"><div class="ttname"><a href="classRgpotPot.html#a6d1660c1dbc93848d6059cc3403a5917">RgpotPot::isolatedMolecule_</a></div><div class="ttdeci">bool isolatedMolecule_</div><div class="ttdef"><b>Definition</b> <a href="#l00093">RgpotPot.h:93</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a6fee72a91f6354157274b33d3341d385"><div class="ttname"><a href="classRgpotPot.html#a6fee72a91f6354157274b33d3341d385">RgpotPot::forceBatch</a></div><div class="ttdeci">void forceBatch(long nSystems, long nAtoms, const double *const *positions, const int *const *atomicNrs, double *const *forces, double *energies, double *variances, const double *const *boxes) override</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00427">RgpotPot.cpp:427</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a79abcbb0876456ed0944f6b6446ba07f"><div class="ttname"><a href="classRgpotPot.html#a79abcbb0876456ed0944f6b6446ba07f">RgpotPot::stopped_</a></div><div class="ttdeci">bool stopped_</div><div class="ttdef"><b>Definition</b> <a href="#l00095">RgpotPot.h:95</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a8bcb7ba8f038e0c27f7464f7790121de"><div class="ttname"><a href="classRgpotPot.html#a8bcb7ba8f038e0c27f7464f7790121de">RgpotPot::dropped_</a></div><div class="ttdeci">bool dropped_</div><div class="ttdef"><b>Definition</b> <a href="#l00096">RgpotPot.h:96</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a906c9d78bb020e4651afa8922c064ca6"><div class="ttname"><a href="classRgpotPot.html#a906c9d78bb020e4651afa8922c064ca6">RgpotPot::exchangeGroupUse</a></div><div class="ttdeci">void exchangeGroupUse()</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00163">RgpotPot.cpp:163</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a983a98a576d9890e34930d3200927e04"><div class="ttname"><a href="classRgpotPot.html#a983a98a576d9890e34930d3200927e04">RgpotPot::backend</a></div><div class="ttdeci">const std::string &amp; backend() const noexcept</div><div class="ttdef"><b>Definition</b> <a href="#l00063">RgpotPot.h:63</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a98ce20269344bb0ad538f70c46b050b6"><div class="ttname"><a href="classRgpotPot.html#a98ce20269344bb0ad538f70c46b050b6">RgpotPot::acked_</a></div><div class="ttdeci">bool acked_</div><div class="ttdef"><b>Definition</b> <a href="#l00097">RgpotPot.h:97</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_a9dddb38e484330164f23d57b2d83d861"><div class="ttname"><a href="classRgpotPot.html#a9dddb38e484330164f23d57b2d83d861">RgpotPot::systemsDone_</a></div><div class="ttdeci">double systemsDone_</div><div class="ttdef"><b>Definition</b> <a href="#l00100">RgpotPot.h:100</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_aa3807f25df4a13d2563d53aac59e63cd"><div class="ttname"><a href="classRgpotPot.html#aa3807f25df4a13d2563d53aac59e63cd">RgpotPot::isThreadSafe</a></div><div class="ttdeci">bool isThreadSafe() const noexcept override</div><div class="ttdoc">Whether this potential&#39;s force() can be called from multiple threads on the SAME instance.</div><div class="ttdef"><b>Definition</b> <a href="#l00039">RgpotPot.h:39</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_aa510f91f12397e12b96ccde20b0a3e9a"><div class="ttname"><a href="classRgpotPot.html#aa510f91f12397e12b96ccde20b0a3e9a">RgpotPot::driver_</a></div><div class="ttdeci">bool driver_</div><div class="ttdef"><b>Definition</b> <a href="#l00094">RgpotPot.h:94</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ab47130e2a40ebf25f43da66a190a8ae9"><div class="ttname"><a href="classRgpotPot.html#ab47130e2a40ebf25f43da66a190a8ae9">RgpotPot::~RgpotPot</a></div><div class="ttdeci">~RgpotPot() override</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00129">RgpotPot.cpp:129</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_abfa480aca32515b12159fb1779cef757"><div class="ttname"><a href="classRgpotPot.html#abfa480aca32515b12159fb1779cef757">RgpotPot::operator=</a></div><div class="ttdeci">RgpotPot &amp; operator=(const RgpotPot &amp;)=delete</div></div>
+<div class="ttc" id="aclassRgpotPot_html_ac0c86f60fd32c3cc3dfa34d6b0973ac3"><div class="ttname"><a href="classRgpotPot.html#ac0c86f60fd32c3cc3dfa34d6b0973ac3">RgpotPot::stopAndDrop</a></div><div class="ttdeci">void stopAndDrop()</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00177">RgpotPot.cpp:177</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ac6d4be4522b1487195716c2dcbd44e79"><div class="ttname"><a href="classRgpotPot.html#ac6d4be4522b1487195716c2dcbd44e79">RgpotPot::force</a></div><div class="ttdeci">void force(long N, const double *R, const int *atomicNrs, double *F, double *U, double *variance, const double *box) override</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00385">RgpotPot.cpp:385</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ac867425d3cd0489eb1390d239ee30727"><div class="ttname"><a href="classRgpotPot.html#ac867425d3cd0489eb1390d239ee30727">RgpotPot::evaluate</a></div><div class="ttdeci">bool evaluate(long N, const double *R, const int *atomicNrs, double *F, double *U, const double *box, std::string &amp;error)</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00255">RgpotPot.cpp:255</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_aca43bbd6ee7721cb4ad2fbaee6d06420"><div class="ttname"><a href="classRgpotPot.html#aca43bbd6ee7721cb4ad2fbaee6d06420">RgpotPot::computeBatch</a></div><div class="ttdeci">void computeBatch(long nSystems, long nAtoms, const double *const *positions, const int *const *atomicNrs, double *const *forces, double *energies, const double *const *boxes, const std::int64_t *owners, const std::int64_t *route)</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00282">RgpotPot.cpp:282</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_acab2b31e6271c7e676fa1ce814df2c49"><div class="ttname"><a href="classRgpotPot.html#acab2b31e6271c7e676fa1ce814df2c49">RgpotPot::serveWorker</a></div><div class="ttdeci">void serveWorker()</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00322">RgpotPot.cpp:322</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_acde3cf6eb2174f747609504d1d717d80"><div class="ttname"><a href="classRgpotPot.html#acde3cf6eb2174f747609504d1d717d80">RgpotPot::supportsBatchEvaluation</a></div><div class="ttdeci">bool supportsBatchEvaluation() const noexcept override</div><div class="ttdoc">With cpmdc calculator groups ([RgpotPot] ranks_per_image), a batch is spread over the groups by eonc:...</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00419">RgpotPot.cpp:419</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ad975e68dfea4d5d839283791b70a46f6"><div class="ttname"><a href="classRgpotPot.html#ad975e68dfea4d5d839283791b70a46f6">RgpotPot::use_</a></div><div class="ttdeci">eonc::CalculatorGroupUse use_</div><div class="ttdef"><b>Definition</b> <a href="#l00101">RgpotPot.h:101</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ae6c65b972ba91b1c5b4512fc03474e04"><div class="ttname"><a href="classRgpotPot.html#ae6c65b972ba91b1c5b4512fc03474e04">RgpotPot::sendStop</a></div><div class="ttdeci">void sendStop()</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00153">RgpotPot.cpp:153</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_ae87ceb0b49847c3ae9e3d0773dc49478"><div class="ttname"><a href="classRgpotPot.html#ae87ceb0b49847c3ae9e3d0773dc49478">RgpotPot::releaseWorkersAtExit</a></div><div class="ttdeci">void releaseWorkersAtExit()</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00204">RgpotPot.cpp:204</a></div></div>
+<div class="ttc" id="aclassRgpotPot_html_aef513c1ddb8453c6841752b8294d309d"><div class="ttname"><a href="classRgpotPot.html#aef513c1ddb8453c6841752b8294d309d">RgpotPot::computeSingle</a></div><div class="ttdeci">void computeSingle(long N, const double *R, const int *atomicNrs, double *F, double *U, const double *box, int group)</div><div class="ttdef"><b>Definition</b> <a href="RgpotPot_8cpp_source.html#l00266">RgpotPot.cpp:266</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Parameters_html"><div class="ttname"><a href="classeonc_1_1Parameters.html">eonc::Parameters</a></div><div class="ttdef"><b>Definition</b> <a href="Parameters_8h_source.html#l00035">Parameters.h:35</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Potential_html"><div class="ttname"><a href="classeonc_1_1Potential.html">eonc::Potential</a></div><div class="ttdef"><b>Definition</b> <a href="Potential_8h_source.html#l00045">Potential.h:45</a></div></div>
+<div class="ttc" id="astructeonc_1_1CalculatorGroupUse_html"><div class="ttname"><a href="structeonc_1_1CalculatorGroupUse.html">eonc::CalculatorGroupUse</a></div><div class="ttdoc">How a job used its calculator groups: the seconds each group spent inside engine calls,...</div><div class="ttdef"><b>Definition</b> <a href="CalculatorGroupUse_8h_source.html#l00028">CalculatorGroupUse.h:28</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+</div><!-- doc-content -->
+</div><!-- container -->
+<!-- Copyright 2020–2026 Rohit Goswami <rog32@hi.is>
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. -->
+<!-- HTML footer for doxygen >= 1.17 (tested with 1.17.0 and 1.18.0) -->
+<!-- Doxygen already closed #doc-content and #container before this template. -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a href="dir_2527c5cc2e6dc8ce970a4d420439d1d9.html">eon</a></li><li class="navelem"><a href="dir_858247b18a1611539d1f444885056636.html">potentials</a></li><li class="navelem"><a href="dir_8e2efe81fabcc8076d1c13ae42e54fa5.html">Rgpot</a></li><li class="navelem"><a href="RgpotPot_8h.html">RgpotPot.h</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.17.0 </li>
+  </ul>
+</div>
+<div class="doxyyoda-attrib" role="contentinfo">
+  <span class="doxyyoda-attrib__item">
+    <span>Generated by <a href="https://www.doxygen.org/index.html">Doxygen 1.17.0</a></span>
+  </span>
+  <span class="doxyyoda-attrib__item">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7,20H4V4h3V20z M14,20h-3V12h3V20z M21,20h-3V8h3V20z"/></svg>
+    <span>Analytics by <a href="https://antics.turtletech.us/" target="_blank" rel="noopener noreferrer">Antics</a></span>
+  </span>
+  <span class="doxyyoda-attrib__item">
+    <span>provided by</span>
+    <span class="doxyyoda-attrib__brand">
+      <svg xmlns="http://www.w3.org/2000/svg" width="1.4em" height="1.4em" viewBox="0 0 64 64" aria-hidden="true"><g fill-rule="evenodd"><ellipse cx="32" cy="11" fill="#80D25B" rx="7" ry="9"/><path fill="#80D25B" d="M20.3,46c0,0-3.2,9.9.3,13.8c3.5,3.9 6.1,3.4 6.1-6C26.8,44.3 20.3,46 20.3,46Z"/><path fill="#80D25B" d="M38.3,46c0,0-3.2,9.9.4,13.8c3.5,3.9 6.1,3.4 6.1-6C44.8,44.3 38.3,46 38.3,46Z" transform="matrix(-1 0 0 1 81.8 0)"/><path fill="#80D25B" d="M20.6,21.2c0,0-6.7-5.8-10.5-5.2C6.2,16.7 6,22.2 6,24c0,1.8 1.8,13.3 3.8,12.5c2-0.8 4-8.5 4-8.5c1.9,2.3 4.8,2.5 4.8,2.5L20.6,21.2Z"/><path fill="#80D25B" d="M57.6,21.2c0,0-6.6-5.8-10.5-5.2C43.2,16.7 43,22.2 43,24c0,1.8 1.8,13.3 3.8,12.5c2-0.8 4-8.5 4-8.5c1.9,2.3 4.8,2.5 4.8,2.5L57.6,21.2Z" transform="matrix(-1 0 0 1 100.623 0)"/><path fill="#BD7575" stroke="#595959" stroke-linecap="round" stroke-width="2" d="M32,53C40.8,53 48,44.5 48,34C48,23.5 46.7,17 32,17C17.3,17 16,23.5 16,34C16,44.5 23.2,53 32,53Z"/><polygon fill="#BD7575" stroke="#595959" stroke-linecap="round" stroke-width="2" points="32 22 38.9 26 38.9 34 32 38 25.1 34 25.1 26"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M30,8C28.9,8 28,8.9 28,10"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M36,8C34.9,8 34,8.9 34,10" transform="matrix(-1 0 0 1 70 0)"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M32.1,38.2L32.1,52.4M32,21.7L32,17M25.2,26L17.7,23.1M25.1,34.2L16.8,38.9"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M46.2,26L38.7,23.1" transform="matrix(-1 0 0 1 84.951 0)"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M47.1,34.2L38.8,38.9" transform="matrix(-1 0 0 1 85.891 0)"/></g></svg>
+      <a href="https://turtletech.us/" target="_blank" rel="noopener noreferrer">TurtleTech ehf</a>
+    </span>
+  </span>
+</div>
+</div><!-- close .grid-contents (opened in header.html) -->
+</body>
+</html>

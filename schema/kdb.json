@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://eondocs.org/schema/kdb.json",
+  "title": "KDB",
+  "description": "config.ini [KDB] section (KDBConfig). Keys, defaults, and allowed values.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "use_kdb": {
+      "default": false,
+      "type": "boolean"
+    },
+    "kdb_only": {
+      "default": false,
+      "description": "Only use KDB in an AKMC simulation, no random searches.",
+      "type": "boolean"
+    },
+    "remove_duplicates": {
+      "default": false,
+      "description": "KDB will not make duplicate suggestions. This can slow KDB querying, so it may be best to use this only for slow potentials (DFT, etc.).",
+      "type": "boolean"
+    },
+    "kdb_name": {
+      "default": "kdb.db",
+      "description": "Unused name kept so old ini files still parse. The catalog directory is Paths.kdb.",
+      "type": "string"
+    },
+    "kdb_nf": {
+      "default": 0.2,
+      "description": "Neighbor fudge, a fraction. The match tolerance is kdb_dc * (1 + kdb_nf) angstroms.",
+      "type": "number"
+    },
+    "kdb_dc": {
+      "default": 0.3,
+      "description": "Distance cutoff in angstroms. A stored reactant whose atoms sit farther than kdb_dc * (1 + kdb_nf) from the current state is not a match.",
+      "type": "number"
+    },
+    "kdb_mac": {
+      "default": 0.7,
+      "description": "Minimum absolute cosine between the stored mode and the reactant-to-saddle displacement. At or above this value the refine uses the stored mode. Below it, the refine uses the reactant-to-saddle vector.",
+      "type": "number"
+    }
+  }
+}

@@ -148,7 +148,7 @@ Schema/package layout may be cleaned up over time. The release rule is:
 | `pyeonclient` | `pyproject-pyeonclient.toml` | Wheel CI; optional `[models]` |
 | `eon-schema` | `packages/eon-schema/` | Independent `0.y.z`; vendored SSoT; see package `PUBLISHING.md` |
 
-Detail: [`packages/eon-schema/PUBLISHING.md`](../../../packages/eon-schema/PUBLISHING.md).
+Detail: [`packages/eon-schema/PUBLISHING.md`](https://github.com/TheochemUI/eOn/blob/develop/packages/eon-schema/PUBLISHING.md).
 
 Monorepo developer docs (package map, CI matrix) can expand later under
 `docs/source/devdocs/` without changing this fat/split release contract.
@@ -207,7 +207,7 @@ Before invoking `cog bump`, verify:
 - [ ] PyPI dry-run considered: `python3 -m build && twine check dist/*` on a
   clean tree (optional but recommended before first-ever PyPI cut).
 - [ ] **Incomplete prior release reconciled** — see
-  [§ Incomplete / stuck releases](#incomplete--stuck-releases). Reconcile
+  {ref}`§ Incomplete / stuck releases <incomplete-stuck-releases>`. Reconcile
   `vN.M.P` (finalize or supersede) before a new semver if the GH asset, PyPI,
   or feedstock is still unfinished.
 - [ ] **Downstream integration test passes** (blocking for metatomic consumers).
@@ -272,6 +272,7 @@ Defined in `cog.toml`:
 `cog.toml` sets `disable_changelog = true` (towncrier owns `CHANGELOG.md`) and
 `branch_whitelist = ["main"]` so `cog bump` refuses non-main branches.
 
+(post-bump-actions)=
 ## 3. Post-bump actions
 
 1. Inspect the release commit:
@@ -320,8 +321,9 @@ Defined in `cog.toml`:
    - [ ] PyPI shows `eon-akmc==X.Y.Z` (stable only; check
      `https://pypi.org/project/eon-akmc/X.Y.Z/`) **or** document intentional skip
      for this cut
-   - [ ] Then proceed to [§4 conda-forge](#4-conda-forge-feedstock-bump)
+   - [ ] Then proceed to {ref}`§4 conda-forge <conda-forge-feedstock-bump>`
 
+(conda-forge-feedstock-bump)=
 ## 4. conda-forge feedstock bump
 
 Once the GitHub release is published (asset URL resolves), update
@@ -365,6 +367,7 @@ Checklist:
 - [ ] CI matrix green
 ```
 
+(incomplete-stuck-releases)=
 ## 5. Incomplete / stuck releases
 
 eOn has had cuts where **version / tag / CHANGELOG / release-notes exist** but
@@ -429,7 +432,7 @@ Feedstock: open/update PR only for the version you want conda-forge to publish
    lacked fragments at `N.M.P` time if they still lack a changelog voice).
 3. Add `docs/source/releases/v<NEW>/` pages; link from `releases/index.md`.
 4. On `main`: `cog bump --version <NEW>` (or `--auto` / `--patch` / `--minor`).
-5. Complete [§3](#3-post-bump-actions) and [§4](#4-conda-forge-feedstock-bump)
+5. Complete {ref}`§3 <post-bump-actions>` and {ref}`§4 <conda-forge-feedstock-bump>`
    for **NEW** only.
 6. Optionally still attach `eon-vN.M.P.tar.xz` to the old GH release for
    reproducibility; do not double-publish conflicting PyPI/conda builds.
@@ -474,27 +477,20 @@ git tag -s -a v<X.Y.Z> -m "Release v<X.Y.Z>
 git archive --format=tar v<X.Y.Z> | xz -9 > eon-v<X.Y.Z>.tar.xz
 ```
 
-Then [§3](#3-post-bump-actions) push and channel completion.
+Then {ref}`§3 <post-bump-actions>` push and channel completion.
 
 ## 8. API / Doxygen documentation check
 
-rgpot maintains `docs/source/Doxyfile_*.cfg` and integrates Doxygen output into
-the Sphinx site. **eOn does not yet include an equivalent in-tree Doxygen pipeline**
-for the C++ `client/` tree; Python API docs use Sphinx autodoc/autodoc2 in the
-existing `docs/` build (`ci_docs.yml` / `docs/source/devdocs/docbuild.md`).
+Python API docs stay on Sphinx autodoc/autodoc2. The C++ `client/` tree is
+a sibling doxyYoda HTML site at `/api-cpp/` (`docs/source/Doxyfile_doxyyoda.cfg`,
+`pixi run -e docs install-doxyhtml`, wired in `ci_docs.yml`).
 
 **Release check (current policy):**
 
 - [ ] Sphinx docs build is green on `main` (`ci_docs.yml` or local
   `pixi r -e docs …` / project-documented doc target).
+- [ ] `docs/build/html/api-cpp/index.html` exists after `install-doxyhtml`.
 - [ ] Curated release notes exist under `docs/source/releases/vX.Y.Z/`.
-- [ ] No broken “run doxygen” step is required for a cut.
-
-**Deferred (explicit non-goal until a dedicated docs PR):** full Doxygen +
-doxyrest/breathe wiring for `client/**/*.h` analogous to rgpot. Track as
-follow-up; do not block semver cuts solely on Doxygen absence. When added,
-extend this section with the generate command and wire it into `ci_docs.yml`
-plus this checklist.
 
 ## 9. Paper tags
 

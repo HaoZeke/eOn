@@ -1,0 +1,1406 @@
+<!-- Copyright 2020–2026 Rohit Goswami <rog32@hi.is>
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. -->
+<!-- HTML header for doxygen >= 1.17 (tested with 1.17.0 and 1.18.0) -->
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="generator" content="Doxygen 1.17.0"/>
+<title>eOn: eonc::BasinHoppingJob Class Reference</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="codefolding.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+const theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default';
+mermaid.initialize({ startOnLoad: true, theme: theme });
+</script>
+<!-- Antics analytics -->
+<script defer src="https://antics-api.turtletech.us/antics.js"></script>
+<script>window.antics=window.antics||{event:function(){}};document.addEventListener("click",function(e){var a=e.target.closest("a");if(a&&a.hostname!==location.hostname)antics.event("Outbound Link",{url:a.href});});</script>
+<!-- doxyYoda owns presentation; stock doxygen.css is not linked (theme SCSS covers Doxygen classes). -->
+<link href="doxyYoda.min.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">
+/* doxyYoda theme boot: apply stored or OS preference before first paint */
+(function () {
+  try {
+    var stored = localStorage.getItem("doxyYoda-theme");
+    var root = document.documentElement;
+    if (stored === "dark") {
+      root.classList.add("dark");
+      root.classList.add("dark-mode");
+    } else if (stored === "light") {
+      root.classList.add("light");
+    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      root.classList.add("dark");
+      root.classList.add("dark-mode");
+    }
+  } catch (e) { /* private mode */ }
+})();
+</script>
+</head>
+<body>
+<div class="grid-contents">
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<nav class="title_area" aria-label="Project">
+<div class="title_area__start"></div>
+<div class="title_area__center">
+<span class="project_info">eOn 3.2.0</span>
+<span class="project_brief">Long-timescale dynamics: aKMC, NEB, parallel replica</span>
+</div>
+<div class="title_area__end">
+<button type="button" class="dark-mode-toggle" id="darkModeToggle" title="Toggle dark mode" aria-label="Toggle dark mode" aria-pressed="false">&#9790;</button>
+</div>
+</nav>
+<!-- end header part -->
+<script type="text/javascript">
+/* doxyYoda interactive: foldable fragments, copy buttons, dark-mode toggle */
+document.addEventListener("DOMContentLoaded", function () {
+  function prefersDark() {
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  function isDarkMode() {
+    var root = document.documentElement;
+    if (root.classList.contains("dark") || root.classList.contains("dark-mode")) return true;
+    if (root.classList.contains("light")) return false;
+    return prefersDark();
+  }
+  // Optional folding: wrap .fragment in open <details class="code-details">.
+  // Skip fragments already inside details and native Doxygen .foldopen listings.
+  document.querySelectorAll(".fragment").forEach(function (frag) {
+    if (frag.closest("details.code-details")) return;
+    if (frag.querySelector(".foldopen")) return;
+    var details = document.createElement("details");
+    details.className = "code-details";
+    details.open = true;
+    var summary = document.createElement("summary");
+    summary.textContent = "Code";
+    frag.parentNode.insertBefore(details, frag);
+    details.appendChild(summary);
+    details.appendChild(frag);
+  });
+  // Copy-to-clipboard on div.fragment (themed .copy-btn only)
+  document.querySelectorAll("div.fragment").forEach(function (frag) {
+    if (frag.querySelector(".copy-btn")) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copy-btn";
+    btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy code");
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      var clone = frag.cloneNode(true);
+      var extra = clone.querySelector(".copy-btn");
+      if (extra) extra.remove();
+      var lines = clone.querySelectorAll(".line");
+      var text = lines.length
+        ? Array.prototype.map.call(lines, function (l) { return l.textContent; }).join("\n")
+        : clone.textContent;
+      var done = function () {
+        btn.textContent = "Copied!";
+        setTimeout(function () { btn.textContent = "Copy"; }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          /* ignore */
+        });
+      }
+    });
+    frag.appendChild(btn);
+  });
+  // Dark mode toggle
+  var toggle = document.getElementById("darkModeToggle");
+  if (toggle) {
+    function updateIcon() {
+      var dark = isDarkMode();
+      toggle.innerHTML = dark ? "&#9788;" : "&#9790;";
+      toggle.setAttribute("aria-pressed", dark ? "true" : "false");
+    }
+    updateIcon();
+    toggle.addEventListener("click", function () {
+      var root = document.documentElement;
+      var nextDark = !isDarkMode();
+      root.classList.toggle("dark", nextDark);
+      root.classList.toggle("dark-mode", nextDark);
+      root.classList.toggle("light", !nextDark);
+      try {
+        localStorage.setItem("doxyYoda-theme", nextDark ? "dark" : "light");
+      } catch (e) { /* private mode */ }
+      updateIcon();
+    });
+  }
+});
+</script>
+<!-- Generated by Doxygen 1.17.0 -->
+<script type="text/javascript">
+let searchBox = new SearchBox("searchBox", "search/",'.html');
+</script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', codefold.init);
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', () => {
+  initMenu('',true);
+  init_search();
+});
+</script>
+<div id="main-nav-mobile">
+<div class="sm sm-dox"><input id="main-menu-state" type="checkbox"/>
+<label class="main-menu-btn" for="main-menu-state">
+<span class="main-menu-btn-icon"></span> Toggle main menu visibility</label>
+<span id="searchBoxPos1" style="position:absolute;right:8px;top:8px;height:36px;"></span>
+</div>
+</div><!-- main-nav-mobile -->
+<div id="main-nav">
+  <ul class="sm sm-dox" id="main-menu">
+    <li id="searchBoxPos2" style="float:right">
+        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <span id="MSearchSelect" class="search-icon" onmouseover="return searchBox.OnSearchSelectShow()" onmouseout="return searchBox.OnSearchSelectHide()"><span class="search-icon-dropdown"></span></span>
+          <input type="text" id="MSearchField" value="" placeholder="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><div id="MSearchCloseImg" class="close-icon"></div></a>
+          </span>
+        </div>
+    </li>
+  </ul>
+</div><!-- main-nav -->
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded',() => { initNavTree('classeonc_1_1BasinHoppingJob.html','','classeonc_1_1BasinHoppingJob-members'); });
+</script>
+<div id="container">
+<div id="doc-content">
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Loading...</div>
+<div class="SRStatus" id="Searching">Searching...</div>
+<div class="SRStatus" id="NoMatches">No Matches</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="header">
+  <div class="headertitle"><div class="title">eonc::BasinHoppingJob Class Reference</div></div>
+</div><!--header-->
+<div class="contents">
+
+<p><code>#include &lt;<a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>&gt;</code></p>
+<div id="dynsection-0" onclick="return dynsection.toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;"><span class="dynarrow"><span class="arrowhead closed"></span></span>Inheritance diagram for eonc::BasinHoppingJob:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+ <div class="center">
+  <img src="classeonc_1_1BasinHoppingJob.png" usemap="#eonc_3A_3ABasinHoppingJob_map" alt=""/>
+  <map id="eonc_3A_3ABasinHoppingJob_map" name="eonc_3A_3ABasinHoppingJob_map">
+<area href="classeonc_1_1Job.html" title="Declaration of job class." alt="eonc::Job" shape="rect" coords="0,0,145,24"/>
+  </map>
+</div></div>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-methods" class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:ab5668790052b989f6a166143d01ab70c" id="r_ab5668790052b989f6a166143d01ab70c"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#ab5668790052b989f6a166143d01ab70c">BasinHoppingJob</a> (std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt; parameters, <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &amp;rt)</td></tr>
+<tr class="memitem:ad3452a37d3201774d37dc6ab0485391c" id="r_ad3452a37d3201774d37dc6ab0485391c"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="#ad3452a37d3201774d37dc6ab0485391c">~BasinHoppingJob</a> (void)=default</td></tr>
+<tr class="memitem:ae6c747778a927bbce63a5a062008c3a9" id="r_ae6c747778a927bbce63a5a062008c3a9"><td class="memItemLeft">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight"><a class="el" href="#ae6c747778a927bbce63a5a062008c3a9">run</a> (void) override</td></tr>
+<tr class="memdesc:ae6c747778a927bbce63a5a062008c3a9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual run; used solely for dynamic dispatch.  <br /></td></tr>
+<tr class="inherit_header pub_methods_classeonc_1_1Job"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classeonc_1_1Job')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Public Member Functions inherited from <a class="el" href="classeonc_1_1Job.html">eonc::Job</a></td></tr>
+<tr class="memitem:a2106aabb046a746647151b5e46180631 inherit pub_methods_classeonc_1_1Job" id="r_a2106aabb046a746647151b5e46180631"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a2106aabb046a746647151b5e46180631">adoptRuntime</a> (std::unique_ptr&lt; <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &gt; rt)</td></tr>
+<tr class="memdesc:a2106aabb046a746647151b5e46180631 inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Take ownership of a <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a> previously passed as <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a>&amp;.  <br /></td></tr>
+<tr class="memitem:a048903796c5d81f4425e1392e1bcea8d inherit pub_methods_classeonc_1_1Job" id="r_a048903796c5d81f4425e1392e1bcea8d"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a048903796c5d81f4425e1392e1bcea8d">Job</a> (std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt; parameters, <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &amp;rt)</td></tr>
+<tr class="memdesc:a048903796c5d81f4425e1392e1bcea8d inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Borrow: caller keeps <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a> alive (CLI stack / Python Session).  <br /></td></tr>
+<tr class="memitem:a2481fd95219c1c47a79e44e34d482207 inherit pub_methods_classeonc_1_1Job" id="r_a2481fd95219c1c47a79e44e34d482207"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a2481fd95219c1c47a79e44e34d482207">Job</a> (std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt; parameters, std::unique_ptr&lt; <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &gt; rt)</td></tr>
+<tr class="memdesc:a2481fd95219c1c47a79e44e34d482207 inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Own a <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a> (one-shot makeJob / rvalue).  <br /></td></tr>
+<tr class="memitem:a4e0abe180a33539a0e8d264775f34a42 inherit pub_methods_classeonc_1_1Job" id="r_a4e0abe180a33539a0e8d264775f34a42"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a4e0abe180a33539a0e8d264775f34a42">Job</a> (std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt; parameters)</td></tr>
+<tr class="memdesc:a4e0abe180a33539a0e8d264775f34a42 inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Own a default-constructed <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a>.  <br /></td></tr>
+<tr class="memitem:a7a1103c1eb84772e3bf681e5e53104a6 inherit pub_methods_classeonc_1_1Job" id="r_a7a1103c1eb84772e3bf681e5e53104a6"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a7a1103c1eb84772e3bf681e5e53104a6">Job</a> (std::shared_ptr&lt; <a class="el" href="classeonc_1_1Potential.html">Potential</a> &gt; potPassed, const <a class="el" href="classParameters.html">Parameters</a> &amp;parameters)</td></tr>
+<tr class="memitem:a4ba6ee96636fdbc95059c67a10900ea7 inherit pub_methods_classeonc_1_1Job" id="r_a4ba6ee96636fdbc95059c67a10900ea7"><td class="memItemLeft">virtual&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a4ba6ee96636fdbc95059c67a10900ea7">~Job</a> ()=default</td></tr>
+<tr class="memitem:a6a8f2fa4c5209bee4d243fec7b9db59e inherit pub_methods_classeonc_1_1Job" id="r_a6a8f2fa4c5209bee4d243fec7b9db59e"><td class="memItemLeft"><a class="el" href="namespaceeonc.html#adebcdc96c8ae2e669e84843e070fc379">JobType</a>&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a6a8f2fa4c5209bee4d243fec7b9db59e">getType</a> ()</td></tr>
+<tr class="memitem:a03a40b0e3f078b9e284220c71567e644 inherit pub_methods_classeonc_1_1Job" id="r_a03a40b0e3f078b9e284220c71567e644"><td class="memItemLeft"><a class="el" href="classeonc_1_1PotRegistry.html">PotRegistry</a> &amp;&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a03a40b0e3f078b9e284220c71567e644">pots</a> () noexcept</td></tr>
+<tr class="memitem:a38797bdd6ab6331a21e1ebbdd4cc7e4a inherit pub_methods_classeonc_1_1Job" id="r_a38797bdd6ab6331a21e1ebbdd4cc7e4a"><td class="memItemLeft">size_t&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a38797bdd6ab6331a21e1ebbdd4cc7e4a">potRegistryForceCalls</a> () const noexcept</td></tr>
+<tr class="memdesc:a38797bdd6ab6331a21e1ebbdd4cc7e4a inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Force calls charged to pot's registry.  <br /></td></tr>
+<tr class="memitem:acdb29769b15353b093288278a05bff3c inherit pub_methods_classeonc_1_1Job" id="r_acdb29769b15353b093288278a05bff3c"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#acdb29769b15353b093288278a05bff3c">releasePotential</a> ()</td></tr>
+<tr class="memdesc:acdb29769b15353b093288278a05bff3c inherit pub_methods_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drop the <a class="el" href="classeonc_1_1Potential.html">Potential</a> so on_destroyed is recorded before <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a> dies.  <br /></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pub-static-methods" class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:a9a6db305ae167803d115e6d44f9b60b3" id="r_a9a6db305ae167803d115e6d44f9b60b3"><td class="memItemLeft">static double&#160;</td><td class="memItemRight"><a class="el" href="#a9a6db305ae167803d115e6d44f9b60b3">metropolisProbability</a> (double de, double kB, double temperature)</td></tr>
+<tr class="memdesc:a9a6db305ae167803d115e6d44f9b60b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Metropolis weight for energy change <span class="tt">de</span>.  <br /></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pri-methods" class="groupheader"><a id="pri-methods" name="pri-methods"></a>
+Private Member Functions</h2></td></tr>
+<tr class="memitem:a502243193a61bc4e03ab14d8bf9bb398" id="r_a502243193a61bc4e03ab14d8bf9bb398"><td class="memItemLeft">VectorXd&#160;</td><td class="memItemRight"><a class="el" href="#a502243193a61bc4e03ab14d8bf9bb398">calculateDistanceFromCenter</a> (<a class="el" href="classMatter.html">Matter</a> *matter)</td></tr>
+<tr class="memitem:a6ee5d133b8d1837a09b081ac34f5af91" id="r_a6ee5d133b8d1837a09b081ac34f5af91"><td class="memItemLeft"><a class="el" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a>&#160;</td><td class="memItemRight"><a class="el" href="#a6ee5d133b8d1837a09b081ac34f5af91">displaceRandom</a> (double maxDisplacement)</td></tr>
+<tr class="memitem:a5c82c571e51387a2dcda3c06093e6879" id="r_a5c82c571e51387a2dcda3c06093e6879"><td class="memItemLeft">void&#160;</td><td class="memItemRight"><a class="el" href="#a5c82c571e51387a2dcda3c06093e6879">randomSwap</a> (<a class="el" href="classMatter.html">Matter</a> *matter)</td></tr>
+<tr class="memitem:a5530883c3ea1e8e60ace5853087bbb74" id="r_a5530883c3ea1e8e60ace5853087bbb74"><td class="memItemLeft">std::vector&lt; long &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a5530883c3ea1e8e60ace5853087bbb74">getElements</a> (<a class="el" href="classMatter.html">Matter</a> *matter)</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-pri-attribs" class="groupheader"><a id="pri-attribs" name="pri-attribs"></a>
+Private Attributes</h2></td></tr>
+<tr class="memitem:a551be7e96004ae71b0499dc3bc549a89" id="r_a551be7e96004ae71b0499dc3bc549a89"><td class="memItemLeft">std::shared_ptr&lt; <a class="el" href="classMatter.html">Matter</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a551be7e96004ae71b0499dc3bc549a89">current</a></td></tr>
+<tr class="memitem:aa0e62dde00fe1ac919aab9f721a781d3" id="r_aa0e62dde00fe1ac919aab9f721a781d3"><td class="memItemLeft">std::shared_ptr&lt; <a class="el" href="classMatter.html">Matter</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a></td></tr>
+<tr class="memitem:a13d63bd9b9939bdff9514b0cf903e032" id="r_a13d63bd9b9939bdff9514b0cf903e032"><td class="memItemLeft">std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a></td></tr>
+<tr class="memitem:a31eb21055c9cc5604596b17ceaf016a7" id="r_a31eb21055c9cc5604596b17ceaf016a7"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a31eb21055c9cc5604596b17ceaf016a7">jump_count</a> {0}</td></tr>
+<tr class="memitem:a8ecd36e3338d9a83d897ae978e103f15" id="r_a8ecd36e3338d9a83d897ae978e103f15"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#a8ecd36e3338d9a83d897ae978e103f15">disp_count</a> {0}</td></tr>
+<tr class="memitem:ae69e6d8732b5a0d091a6372952ff0274" id="r_ae69e6d8732b5a0d091a6372952ff0274"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a> {0}</td></tr>
+<tr class="memitem:abc4180961f7361cf98263d0498d6cc2c" id="r_abc4180961f7361cf98263d0498d6cc2c"><td class="memItemLeft">int&#160;</td><td class="memItemRight"><a class="el" href="#abc4180961f7361cf98263d0498d6cc2c">fcalls</a> {0}</td></tr>
+<tr class="memitem:a30a108f5f8e090b439f4fb0b9bc804ae" id="r_a30a108f5f8e090b439f4fb0b9bc804ae"><td class="memItemLeft">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classMatter.html">Matter</a> &gt; &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a30a108f5f8e090b439f4fb0b9bc804ae">uniqueStructures</a></td></tr>
+<tr class="memitem:a815945f9e9ac581b9a166ca9ab0e9d3e" id="r_a815945f9e9ac581b9a166ca9ab0e9d3e"><td class="memItemLeft">std::vector&lt; double &gt;&#160;</td><td class="memItemRight"><a class="el" href="#a815945f9e9ac581b9a166ca9ab0e9d3e">uniqueEnergies</a></td></tr>
+<tr class="memitem:a9823e2678e850d4b9ae86cb77ff85a31" id="r_a9823e2678e850d4b9ae86cb77ff85a31"><td class="memItemLeft"><a class="el" href="structeonc_1_1log_1_1Scoped.html">eonc::log::Scoped</a>&#160;</td><td class="memItemRight"><a class="el" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-friends" class="groupheader"><a id="friends" name="friends"></a>
+Friends</h2></td></tr>
+<tr class="memitem:a6ccf325b7b9bc00cf53d3d4e47654afc" id="r_a6ccf325b7b9bc00cf53d3d4e47654afc"><td class="memItemLeft">class&#160;</td><td class="memItemRight"><a class="el" href="#a6ccf325b7b9bc00cf53d3d4e47654afc">BasinHoppingDisplaceAccess</a></td></tr>
+<tr class="memitem:a12cb4c508bbdd42929fe34d40823a621" id="r_a12cb4c508bbdd42929fe34d40823a621"><td class="memItemLeft">struct&#160;</td><td class="memItemRight"><a class="el" href="#a12cb4c508bbdd42929fe34d40823a621">BasinHoppingElementsTest</a></td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 id="header-inherited" class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pro_methods_classeonc_1_1Job"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classeonc_1_1Job')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Protected Member Functions inherited from <a class="el" href="classeonc_1_1Job.html">eonc::Job</a></td></tr>
+<tr class="memitem:a40423b75b9614f0fc81797a5d817948d inherit pro_methods_classeonc_1_1Job" id="r_a40423b75b9614f0fc81797a5d817948d"><td class="memItemLeft">&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a40423b75b9614f0fc81797a5d817948d">Job</a> (std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt; parameters, <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &amp;rt, <a class="el" href="structeonc_1_1Job_1_1ExclusivePotential.html">ExclusivePotential</a>)</td></tr>
+<tr class="inherit_header pro_attribs_classeonc_1_1Job"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classeonc_1_1Job')"><span class="dynarrow"><span class="arrowhead closed"></span></span>Protected Attributes inherited from <a class="el" href="classeonc_1_1Job.html">eonc::Job</a></td></tr>
+<tr class="memitem:a90e97e92096c7c2ea7dec3d9c49f485f inherit pro_attribs_classeonc_1_1Job" id="r_a90e97e92096c7c2ea7dec3d9c49f485f"><td class="memItemLeft"><a class="el" href="namespaceeonc.html#adebcdc96c8ae2e669e84843e070fc379">JobType</a>&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a90e97e92096c7c2ea7dec3d9c49f485f">jtype</a></td></tr>
+<tr class="memitem:a9f0bfab75a98f383ba58f1c592fd2500 inherit pro_attribs_classeonc_1_1Job" id="r_a9f0bfab75a98f383ba58f1c592fd2500"><td class="memItemLeft"><a class="el" href="classParameters.html">Parameters</a>&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a></td></tr>
+<tr class="memitem:a79f4bf70ec1c7e3e08a0a5c0ff5ee965 inherit pro_attribs_classeonc_1_1Job" id="r_a79f4bf70ec1c7e3e08a0a5c0ff5ee965"><td class="memItemLeft">std::unique_ptr&lt; <a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a79f4bf70ec1c7e3e08a0a5c0ff5ee965">owned_runtime_</a></td></tr>
+<tr class="memdesc:a79f4bf70ec1c7e3e08a0a5c0ff5ee965 inherit pro_attribs_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Non-null when this <a class="el" href="classeonc_1_1Job.html" title="Declaration of job class.">Job</a> owns the composition root (one-shot makeJob).  <br /></td></tr>
+<tr class="memitem:add247a8d4ae4bb5e59ec85ecfcf1bd37 inherit pro_attribs_classeonc_1_1Job" id="r_add247a8d4ae4bb5e59ec85ecfcf1bd37"><td class="memItemLeft"><a class="el" href="classeonc_1_1Runtime.html">Runtime</a> *&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#add247a8d4ae4bb5e59ec85ecfcf1bd37">runtime_</a></td></tr>
+<tr class="memdesc:add247a8d4ae4bb5e59ec85ecfcf1bd37 inherit pro_attribs_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Always valid: either owned_runtime_.get() or a caller-owned <a class="el" href="classeonc_1_1Runtime.html" title="Move-only composition root for process resources (dlopen loaders and the potential registry).">Runtime</a>.  <br /></td></tr>
+<tr class="memitem:ae11b351685b8b2ca364f1877636328ca inherit pro_attribs_classeonc_1_1Job" id="r_ae11b351685b8b2ca364f1877636328ca"><td class="memItemLeft">std::unique_ptr&lt; <a class="el" href="classeonc_1_1Potential.html">Potential</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#ae11b351685b8b2ca364f1877636328ca">ownedPot</a></td></tr>
+<tr class="memdesc:ae11b351685b8b2ca364f1877636328ca inherit pro_attribs_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Exclusive until a multi-owner job promotes it in the public constructor.  <br /></td></tr>
+<tr class="memitem:a948da0de6ec2575bd6ac975fedaad0c9 inherit pro_attribs_classeonc_1_1Job" id="r_a948da0de6ec2575bd6ac975fedaad0c9"><td class="memItemLeft">std::shared_ptr&lt; <a class="el" href="classeonc_1_1Potential.html">Potential</a> &gt;&#160;</td><td class="memItemRight"><a class="el" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a></td></tr>
+<tr class="memdesc:a948da0de6ec2575bd6ac975fedaad0c9 inherit pro_attribs_classeonc_1_1Job"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set when one <a class="el" href="classeonc_1_1Potential.html">Potential</a> is shared across Matters, images, or a caller.  <br /></td></tr>
+</table>
+<a name="details" id="details"></a><h2 id="header-details" class="groupheader">Detailed Description</h2>
+<div class="textblock">
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00022">22</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+</div><a name="doc-constructors" id="doc-constructors"></a><h2 id="header-doc-constructors" class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="ab5668790052b989f6a166143d01ab70c" name="ab5668790052b989f6a166143d01ab70c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5668790052b989f6a166143d01ab70c">&#9670;&#160;</a></span>BasinHoppingJob()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">eonc::BasinHoppingJob::BasinHoppingJob </td>
+          <td>(</td>
+          <td class="paramtype">std::unique_ptr&lt; <a class="el" href="classParameters.html">Parameters</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>parameters</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classeonc_1_1Runtime.html">Runtime</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>rt</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel inline">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00024">24</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   25</span>      : <a class="code hl_function" href="classeonc_1_1Job.html#a40423b75b9614f0fc81797a5d817948d">Job</a>(std::move(parameters), rt),</div>
+<div class="line"><span class="lineno">   26</span>        <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>{std::make_shared&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>)},</div>
+<div class="line"><span class="lineno">   27</span>        <a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>{std::make_shared&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>)}, <a class="code hl_variable" href="#abc4180961f7361cf98263d0498d6cc2c">fcalls</a>{0} {}</div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a551be7e96004ae71b0499dc3bc549a89"><div class="ttname"><a href="#a551be7e96004ae71b0499dc3bc549a89">eonc::BasinHoppingJob::current</a></div><div class="ttdeci">std::shared_ptr&lt; Matter &gt; current</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00041">BasinHoppingJob.h:41</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_aa0e62dde00fe1ac919aab9f721a781d3"><div class="ttname"><a href="#aa0e62dde00fe1ac919aab9f721a781d3">eonc::BasinHoppingJob::trial</a></div><div class="ttdeci">std::shared_ptr&lt; Matter &gt; trial</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00042">BasinHoppingJob.h:42</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_abc4180961f7361cf98263d0498d6cc2c"><div class="ttname"><a href="#abc4180961f7361cf98263d0498d6cc2c">eonc::BasinHoppingJob::fcalls</a></div><div class="ttdeci">int fcalls</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00049">BasinHoppingJob.h:49</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Job_html_a40423b75b9614f0fc81797a5d817948d"><div class="ttname"><a href="classeonc_1_1Job.html#a40423b75b9614f0fc81797a5d817948d">eonc::Job::Job</a></div><div class="ttdeci">Job(std::unique_ptr&lt; Parameters &gt; parameters, Runtime &amp;rt, ExclusivePotential)</div><div class="ttdef"><b>Definition</b> <a href="Job_8h_source.html#l00071">Job.h:71</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Job_html_a948da0de6ec2575bd6ac975fedaad0c9"><div class="ttname"><a href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">eonc::Job::pot</a></div><div class="ttdeci">std::shared_ptr&lt; Potential &gt; pot</div><div class="ttdoc">Set when one Potential is shared across Matters, images, or a caller.</div><div class="ttdef"><b>Definition</b> <a href="Job_8h_source.html#l00066">Job.h:66</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Job_html_a9f0bfab75a98f383ba58f1c592fd2500"><div class="ttname"><a href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">eonc::Job::params</a></div><div class="ttdeci">Parameters params</div><div class="ttdef"><b>Definition</b> <a href="Job_8h_source.html#l00058">Job.h:58</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ad3452a37d3201774d37dc6ab0485391c" name="ad3452a37d3201774d37dc6ab0485391c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3452a37d3201774d37dc6ab0485391c">&#9670;&#160;</a></span>~BasinHoppingJob()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">eonc::BasinHoppingJob::~BasinHoppingJob </td>
+          <td>(</td>
+          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel default">default</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a name="doc-func-members" id="doc-func-members"></a><h2 id="header-doc-func-members" class="groupheader">Member Function Documentation</h2>
+<a id="a502243193a61bc4e03ab14d8bf9bb398" name="a502243193a61bc4e03ab14d8bf9bb398"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a502243193a61bc4e03ab14d8bf9bb398">&#9670;&#160;</a></span>calculateDistanceFromCenter()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">VectorXd eonc::BasinHoppingJob::calculateDistanceFromCenter </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatter.html">Matter</a> *</td>          <td class="paramname"><span class="paramname"><em>matter</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00480">480</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  480</span>                                                                    {</div>
+<div class="line"><span class="lineno">  481</span>  <a class="code hl_typedef" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> pos = matter-&gt;<a class="code hl_function" href="classMatter.html#a2472b3c954d101c0810da69ed442b244">getPositions</a>();</div>
+<div class="line"><span class="lineno">  482</span>  Vector3d cen(0, 0, 0);</div>
+<div class="line"><span class="lineno">  483</span>  <span class="keywordtype">int</span> num = matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>();</div>
+<div class="line"><span class="lineno">  484</span> </div>
+<div class="line"><span class="lineno">  485</span>  cen = pos.colwise().sum() / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(num);</div>
+<div class="line"><span class="lineno">  486</span> </div>
+<div class="line"><span class="lineno">  487</span>  VectorXd dist(num);</div>
+<div class="line"><span class="lineno">  488</span> </div>
+<div class="line"><span class="lineno">  489</span>  <span class="keywordflow">for</span> (<span class="keywordtype">int</span> n = 0; n &lt; num; n++) {</div>
+<div class="line"><span class="lineno">  490</span>    pos.row(n) -= cen;</div>
+<div class="line"><span class="lineno">  491</span>    dist(n) = pos.row(n).norm();</div>
+<div class="line"><span class="lineno">  492</span>  }</div>
+<div class="line"><span class="lineno">  493</span> </div>
+<div class="line"><span class="lineno">  494</span>  <span class="keywordflow">return</span> dist;</div>
+<div class="line"><span class="lineno">  495</span>}</div>
+<div class="ttc" id="aEigen_8h_html_aea209ab15a3a73f26fa44267131921dd"><div class="ttname"><a href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a></div><div class="ttdeci">Eigen::Matrix&lt; double, Eigen::Dynamic, 3, eOnStorageOrder &gt; AtomMatrix</div><div class="ttdef"><b>Definition</b> <a href="Eigen_8h_source.html#l00037">Eigen.h:37</a></div></div>
+<div class="ttc" id="aclassMatter_html_a2472b3c954d101c0810da69ed442b244"><div class="ttname"><a href="classMatter.html#a2472b3c954d101c0810da69ed442b244">Matter::getPositions</a></div><div class="ttdeci">const AtomMatrix &amp; getPositions() const</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00375">Matter.cpp:375</a></div></div>
+<div class="ttc" id="aclassMatter_html_a5b678e80aa584c41d54e221d04bb729e"><div class="ttname"><a href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">Matter::numberOfAtoms</a></div><div class="ttdeci">long int numberOfAtoms() const</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00340">Matter.cpp:340</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a6ee5d133b8d1837a09b081ac34f5af91" name="a6ee5d133b8d1837a09b081ac34f5af91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ee5d133b8d1837a09b081ac34f5af91">&#9670;&#160;</a></span>displaceRandom()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> eonc::BasinHoppingJob::displaceRandom </td>
+          <td>(</td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>maxDisplacement</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00334">334</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  334</span>                                                                 {</div>
+<div class="line"><span class="lineno">  335</span>  <a class="code hl_variable" href="#a8ecd36e3338d9a83d897ae978e103f15">disp_count</a>++;</div>
+<div class="line"><span class="lineno">  336</span>  <span class="comment">// Create a random displacement</span></div>
+<div class="line"><span class="lineno">  337</span>  <a class="code hl_typedef" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> displacement;</div>
+<div class="line"><span class="lineno">  338</span>  displacement.resize(<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;numberOfAtoms(), 3);</div>
+<div class="line"><span class="lineno">  339</span>  displacement.setZero();</div>
+<div class="line"><span class="lineno">  340</span>  VectorXd distvec = <a class="code hl_function" href="#a502243193a61bc4e03ab14d8bf9bb398">calculateDistanceFromCenter</a>(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>.get());</div>
+<div class="line"><span class="lineno">  341</span>  <span class="comment">// Coincident atoms share a zero radius. Dividing by it writes NaN and</span></div>
+<div class="line"><span class="lineno">  342</span>  <span class="comment">// the hop cannot leave the center. Those atoms are the outer shell, so</span></div>
+<div class="line"><span class="lineno">  343</span>  <span class="comment">// the step stays the unscaled displacement.</span></div>
+<div class="line"><span class="lineno">  344</span>  <span class="keyword">const</span> <span class="keywordtype">double</span> radius = distvec.size() &gt; 0 ? distvec.maxCoeff() : 0.0;</div>
+<div class="line"><span class="lineno">  345</span>  <span class="keywordtype">int</span> num = <a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;numberOfAtoms();</div>
+<div class="line"><span class="lineno">  346</span>  <span class="keywordtype">int</span> m = 0;</div>
+<div class="line"><span class="lineno">  347</span>  <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().single_atom_displace) {</div>
+<div class="line"><span class="lineno">  348</span>    m = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, <a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;numberOfAtoms() - 1);</div>
+<div class="line"><span class="lineno">  349</span>    num = m + 1;</div>
+<div class="line"><span class="lineno">  350</span>  }</div>
+<div class="line"><span class="lineno">  351</span> </div>
+<div class="line"><span class="lineno">  352</span>  <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = m; i &lt; num; i++) {</div>
+<div class="line"><span class="lineno">  353</span>    <span class="keywordtype">double</span> dist = distvec(i);</div>
+<div class="line"><span class="lineno">  354</span>    <span class="keywordtype">double</span> disp = 0.0; <span class="comment">// displacement size, possibly scaled</span></div>
+<div class="line"><span class="lineno">  355</span> </div>
+<div class="line"><span class="lineno">  356</span>    <span class="keywordflow">if</span> (!<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;getFixed(i)) {</div>
+<div class="line"><span class="lineno">  357</span>      <span class="keyword">const</span> std::string &amp;algorithm =</div>
+<div class="line"><span class="lineno">  358</span>          <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement_algorithm;</div>
+<div class="line"><span class="lineno">  359</span>      <span class="keywordflow">if</span> (algorithm == <span class="stringliteral">&quot;standard&quot;</span>) {</div>
+<div class="line"><span class="lineno">  360</span>        disp = curDisplacement;</div>
+<div class="line"><span class="lineno">  361</span>      }</div>
+<div class="line"><span class="lineno">  362</span>      <span class="comment">// scale displacement linearly with the particle radius</span></div>
+<div class="line"><span class="lineno">  363</span>      <span class="keywordflow">else</span> <span class="keywordflow">if</span> (algorithm == <span class="stringliteral">&quot;linear&quot;</span>) {</div>
+<div class="line"><span class="lineno">  364</span>        disp =</div>
+<div class="line"><span class="lineno">  365</span>            radius == 0.0 ? curDisplacement : curDisplacement * (dist / radius);</div>
+<div class="line"><span class="lineno">  366</span>      }</div>
+<div class="line"><span class="lineno">  367</span>      <span class="comment">// scale displacement quadratically with the particle radius</span></div>
+<div class="line"><span class="lineno">  368</span>      <span class="keywordflow">else</span> <span class="keywordflow">if</span> (algorithm == <span class="stringliteral">&quot;quadratic&quot;</span>) {</div>
+<div class="line"><span class="lineno">  369</span>        <span class="keywordflow">if</span> (radius == 0.0) {</div>
+<div class="line"><span class="lineno">  370</span>          disp = curDisplacement;</div>
+<div class="line"><span class="lineno">  371</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  372</span>          <span class="keyword">const</span> <span class="keywordtype">double</span> scale = dist / radius;</div>
+<div class="line"><span class="lineno">  373</span>          disp = curDisplacement * scale * scale;</div>
+<div class="line"><span class="lineno">  374</span>        }</div>
+<div class="line"><span class="lineno">  375</span>      } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  376</span>        <span class="keywordflow">if</span> (quill::Logger *trace = <a class="code hl_function" href="namespaceeonc_1_1log.html#aad1a942f68ca20cc5bc1d7601b4cf816">eonc::log::traceback</a>()) {</div>
+<div class="line"><span class="lineno">  377</span>          <a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a> = trace;</div>
+<div class="line"><span class="lineno">  378</span>          QUILL_LOG_CRITICAL(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Unknown displacement_algorithm\n&quot;</span>);</div>
+<div class="line"><span class="lineno">  379</span>        }</div>
+<div class="line"><span class="lineno">  380</span>        <span class="keywordflow">throw</span> std::invalid_argument(</div>
+<div class="line"><span class="lineno">  381</span>            std::format(<span class="stringliteral">&quot;[Basin Hopping] unknown displacement_algorithm: {}&quot;</span>,</div>
+<div class="line"><span class="lineno">  382</span>                        <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement_algorithm));</div>
+<div class="line"><span class="lineno">  383</span>      }</div>
+<div class="line"><span class="lineno">  384</span>      <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = 0; j &lt; 3; j++) {</div>
+<div class="line"><span class="lineno">  385</span>        <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement_distribution ==</div>
+<div class="line"><span class="lineno">  386</span>            <span class="stringliteral">&quot;uniform&quot;</span>) {</div>
+<div class="line"><span class="lineno">  387</span>          displacement(i, j) = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a699a6770b311d7f44a437f4f915bad69">eonc::rng::randomDouble</a>(2 * disp) - disp;</div>
+<div class="line"><span class="lineno">  388</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement_distribution ==</div>
+<div class="line"><span class="lineno">  389</span>                   <span class="stringliteral">&quot;gaussian&quot;</span>) {</div>
+<div class="line"><span class="lineno">  390</span>          displacement(i, j) = <a class="code hl_function" href="namespaceeonc_1_1rng.html#acec44c143227d3b4957ed2c919a551c3">eonc::rng::gaussRandom</a>(0.0, disp);</div>
+<div class="line"><span class="lineno">  391</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  392</span>          <span class="keywordflow">if</span> (quill::Logger *trace = <a class="code hl_function" href="namespaceeonc_1_1log.html#aad1a942f68ca20cc5bc1d7601b4cf816">eonc::log::traceback</a>()) {</div>
+<div class="line"><span class="lineno">  393</span>            <a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a> = trace;</div>
+<div class="line"><span class="lineno">  394</span>            QUILL_LOG_CRITICAL(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Unknown displacement_distribution\n&quot;</span>);</div>
+<div class="line"><span class="lineno">  395</span>          }</div>
+<div class="line"><span class="lineno">  396</span>          <span class="keywordflow">throw</span> std::invalid_argument(std::format(</div>
+<div class="line"><span class="lineno">  397</span>              <span class="stringliteral">&quot;[Basin Hopping] unknown displacement_distribution: {}&quot;</span>,</div>
+<div class="line"><span class="lineno">  398</span>              <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement_distribution));</div>
+<div class="line"><span class="lineno">  399</span>        }</div>
+<div class="line"><span class="lineno">  400</span>      }</div>
+<div class="line"><span class="lineno">  401</span>    }</div>
+<div class="line"><span class="lineno">  402</span>  }</div>
+<div class="line"><span class="lineno">  403</span>  <span class="keywordflow">return</span> displacement;</div>
+<div class="line"><span class="lineno">  404</span>}</div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a502243193a61bc4e03ab14d8bf9bb398"><div class="ttname"><a href="#a502243193a61bc4e03ab14d8bf9bb398">eonc::BasinHoppingJob::calculateDistanceFromCenter</a></div><div class="ttdeci">VectorXd calculateDistanceFromCenter(Matter *matter)</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8cpp_source.html#l00480">BasinHoppingJob.cpp:480</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a8ecd36e3338d9a83d897ae978e103f15"><div class="ttname"><a href="#a8ecd36e3338d9a83d897ae978e103f15">eonc::BasinHoppingJob::disp_count</a></div><div class="ttdeci">int disp_count</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00047">BasinHoppingJob.h:47</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a9823e2678e850d4b9ae86cb77ff85a31"><div class="ttname"><a href="#a9823e2678e850d4b9ae86cb77ff85a31">eonc::BasinHoppingJob::log</a></div><div class="ttdeci">eonc::log::Scoped log</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00053">BasinHoppingJob.h:53</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1log_html_aad1a942f68ca20cc5bc1d7601b4cf816"><div class="ttname"><a href="namespaceeonc_1_1log.html#aad1a942f68ca20cc5bc1d7601b4cf816">eonc::log::traceback</a></div><div class="ttdeci">quill::Logger * traceback() noexcept</div><div class="ttdoc">Get or create the &quot;_traceback&quot; logger for traceback logging.</div><div class="ttdef"><b>Definition</b> <a href="EonLogger_8h_source.html#l00155">EonLogger.h:155</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1rng_html_a5e8caf65ab4c88babd709b38d410927c"><div class="ttname"><a href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a></div><div class="ttdeci">long randomInt(int lower, int upper)</div><div class="ttdef"><b>Definition</b> <a href="RandomNumbers_8cpp_source.html#l00086">RandomNumbers.cpp:86</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1rng_html_a699a6770b311d7f44a437f4f915bad69"><div class="ttname"><a href="namespaceeonc_1_1rng.html#a699a6770b311d7f44a437f4f915bad69">eonc::rng::randomDouble</a></div><div class="ttdeci">double randomDouble()</div><div class="ttdef"><b>Definition</b> <a href="RandomNumbers_8cpp_source.html#l00072">RandomNumbers.cpp:72</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1rng_html_acec44c143227d3b4957ed2c919a551c3"><div class="ttname"><a href="namespaceeonc_1_1rng.html#acec44c143227d3b4957ed2c919a551c3">eonc::rng::gaussRandom</a></div><div class="ttdeci">double gaussRandom(double avg, double std)</div><div class="ttdef"><b>Definition</b> <a href="RandomNumbers_8cpp_source.html#l00090">RandomNumbers.cpp:90</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a5530883c3ea1e8e60ace5853087bbb74" name="a5530883c3ea1e8e60ace5853087bbb74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5530883c3ea1e8e60ace5853087bbb74">&#9670;&#160;</a></span>getElements()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; long &gt; eonc::BasinHoppingJob::getElements </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatter.html">Matter</a> *</td>          <td class="paramname"><span class="paramname"><em>matter</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00456">456</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  456</span>                                                           {</div>
+<div class="line"><span class="lineno">  457</span>  <span class="comment">// Z is 0..118. A 118-slot table stores 118 one past the end.</span></div>
+<div class="line"><span class="lineno">  458</span>  <span class="keyword">constexpr</span> <span class="keywordtype">int</span> kElementSlots = 119;</div>
+<div class="line"><span class="lineno">  459</span>  std::array&lt;int, kElementSlots&gt; allElements{};</div>
+<div class="line"><span class="lineno">  460</span>  std::vector&lt;long&gt; elements;</div>
+<div class="line"><span class="lineno">  461</span> </div>
+<div class="line"><span class="lineno">  462</span>  <span class="keywordflow">for</span> (<span class="keywordtype">long</span> y = 0; y &lt; matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>(); ++y) {</div>
+<div class="line"><span class="lineno">  463</span>    <span class="keywordflow">if</span> (!matter-&gt;<a class="code hl_function" href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">getFixed</a>(y)) {</div>
+<div class="line"><span class="lineno">  464</span>      <span class="keyword">const</span> <span class="keywordtype">long</span> z = matter-&gt;<a class="code hl_function" href="classMatter.html#ac150b53306181b32c020549ff4686903">getAtomicNr</a>(y);</div>
+<div class="line"><span class="lineno">  465</span>      <span class="keywordflow">if</span> (z &gt;= 0 &amp;&amp; z &lt; kElementSlots) {</div>
+<div class="line"><span class="lineno">  466</span>        allElements[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(z)] = 1;</div>
+<div class="line"><span class="lineno">  467</span>      }</div>
+<div class="line"><span class="lineno">  468</span>    }</div>
+<div class="line"><span class="lineno">  469</span>  }</div>
+<div class="line"><span class="lineno">  470</span> </div>
+<div class="line"><span class="lineno">  471</span>  <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; kElementSlots; ++i) {</div>
+<div class="line"><span class="lineno">  472</span>    <span class="keywordflow">if</span> (allElements[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(i)] != 0) {</div>
+<div class="line"><span class="lineno">  473</span>      elements.push_back(i);</div>
+<div class="line"><span class="lineno">  474</span>    }</div>
+<div class="line"><span class="lineno">  475</span>  }</div>
+<div class="line"><span class="lineno">  476</span> </div>
+<div class="line"><span class="lineno">  477</span>  <span class="keywordflow">return</span> elements;</div>
+<div class="line"><span class="lineno">  478</span>}</div>
+<div class="ttc" id="aclassMatter_html_ac150b53306181b32c020549ff4686903"><div class="ttname"><a href="classMatter.html#ac150b53306181b32c020549ff4686903">Matter::getAtomicNr</a></div><div class="ttdeci">long getAtomicNr(long int atom) const</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00562">Matter.cpp:562</a></div></div>
+<div class="ttc" id="aclassMatter_html_aeccfa311325cb6f4fb520cf071fef679"><div class="ttname"><a href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">Matter::getFixed</a></div><div class="ttdeci">int getFixed(long int atom) const</div><div class="ttdoc">1 if every Cartesian axis of the atom is fixed, else 0.</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00572">Matter.cpp:572</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a9a6db305ae167803d115e6d44f9b60b3" name="a9a6db305ae167803d115e6d44f9b60b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9a6db305ae167803d115e6d44f9b60b3">&#9670;&#160;</a></span>metropolisProbability()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double eonc::BasinHoppingJob::metropolisProbability </td>
+          <td>(</td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>de</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>kB</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>temperature</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel static">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Metropolis weight for energy change <span class="tt">de</span>. </p>
+<p>Divides by <span class="tt">kB * temperature</span> only for an uphill hop when both are positive. Non-positive temperature or <span class="tt">kB</span> refuses that hop. </p>
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00323">323</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  324</span>                                                                  {</div>
+<div class="line"><span class="lineno">  325</span>  <span class="keywordflow">if</span> (!(de &gt; 0.0)) {</div>
+<div class="line"><span class="lineno">  326</span>    <span class="keywordflow">return</span> 1.0;</div>
+<div class="line"><span class="lineno">  327</span>  }</div>
+<div class="line"><span class="lineno">  328</span>  <span class="keywordflow">if</span> (!(temperature &gt; 0.0) || !(kB &gt; 0.0)) {</div>
+<div class="line"><span class="lineno">  329</span>    <span class="keywordflow">return</span> 0.0;</div>
+<div class="line"><span class="lineno">  330</span>  }</div>
+<div class="line"><span class="lineno">  331</span>  <span class="keywordflow">return</span> std::exp(-de / (kB * temperature));</div>
+<div class="line"><span class="lineno">  332</span>}</div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a5c82c571e51387a2dcda3c06093e6879" name="a5c82c571e51387a2dcda3c06093e6879"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c82c571e51387a2dcda3c06093e6879">&#9670;&#160;</a></span>randomSwap()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void eonc::BasinHoppingJob::randomSwap </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatter.html">Matter</a> *</td>          <td class="paramname"><span class="paramname"><em>matter</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00406">406</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  406</span>                                               {</div>
+<div class="line"><span class="lineno">  407</span>  <a class="code hl_variable" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a>++;</div>
+<div class="line"><span class="lineno">  408</span>  std::vector&lt;long&gt; Elements;</div>
+<div class="line"><span class="lineno">  409</span>  Elements = <a class="code hl_function" href="#a5530883c3ea1e8e60ace5853087bbb74">getElements</a>(matter);</div>
+<div class="line"><span class="lineno">  410</span> </div>
+<div class="line"><span class="lineno">  411</span>  <span class="keywordtype">long</span> ela;</div>
+<div class="line"><span class="lineno">  412</span>  <span class="keywordtype">long</span> elb;</div>
+<div class="line"><span class="lineno">  413</span>  <span class="keywordtype">long</span> ia = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, Elements.size() - 1);</div>
+<div class="line"><span class="lineno">  414</span>  ela = Elements.at(ia);</div>
+<div class="line"><span class="lineno">  415</span>  Elements.erase(Elements.begin() + ia);</div>
+<div class="line"><span class="lineno">  416</span> </div>
+<div class="line"><span class="lineno">  417</span>  <span class="keywordtype">long</span> ib = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, Elements.size() - 1);</div>
+<div class="line"><span class="lineno">  418</span>  elb = Elements.at(ib);</div>
+<div class="line"><span class="lineno">  419</span> </div>
+<div class="line"><span class="lineno">  420</span>  <span class="keywordtype">int</span> changera = 0;</div>
+<div class="line"><span class="lineno">  421</span>  <span class="keywordtype">int</span> changerb = 0;</div>
+<div class="line"><span class="lineno">  422</span> </div>
+<div class="line"><span class="lineno">  423</span>  changera = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>() - 1);</div>
+<div class="line"><span class="lineno">  424</span>  <span class="keywordtype">int</span> guard = 0;</div>
+<div class="line"><span class="lineno">  425</span>  <span class="keywordflow">while</span> ((matter-&gt;<a class="code hl_function" href="classMatter.html#ac150b53306181b32c020549ff4686903">getAtomicNr</a>(changera) != ela || matter-&gt;<a class="code hl_function" href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">getFixed</a>(changera)) &amp;&amp;</div>
+<div class="line"><span class="lineno">  426</span>         guard &lt; 10000) {</div>
+<div class="line"><span class="lineno">  427</span>    changera = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>() - 1);</div>
+<div class="line"><span class="lineno">  428</span>    guard++;</div>
+<div class="line"><span class="lineno">  429</span>  }</div>
+<div class="line"><span class="lineno">  430</span>  changerb = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>() - 1);</div>
+<div class="line"><span class="lineno">  431</span>  guard = 0;</div>
+<div class="line"><span class="lineno">  432</span>  <span class="keywordflow">while</span> ((matter-&gt;<a class="code hl_function" href="classMatter.html#ac150b53306181b32c020549ff4686903">getAtomicNr</a>(changerb) != elb || matter-&gt;<a class="code hl_function" href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">getFixed</a>(changerb) ||</div>
+<div class="line"><span class="lineno">  433</span>          changerb == changera) &amp;&amp;</div>
+<div class="line"><span class="lineno">  434</span>         guard &lt; 10000) {</div>
+<div class="line"><span class="lineno">  435</span>    changerb = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a5e8caf65ab4c88babd709b38d410927c">eonc::rng::randomInt</a>(0, matter-&gt;<a class="code hl_function" href="classMatter.html#a5b678e80aa584c41d54e221d04bb729e">numberOfAtoms</a>() - 1);</div>
+<div class="line"><span class="lineno">  436</span>    guard++;</div>
+<div class="line"><span class="lineno">  437</span>  }</div>
+<div class="line"><span class="lineno">  438</span>  <span class="keywordflow">if</span> (matter-&gt;<a class="code hl_function" href="classMatter.html#ac150b53306181b32c020549ff4686903">getAtomicNr</a>(changera) != ela || matter-&gt;<a class="code hl_function" href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">getFixed</a>(changera) ||</div>
+<div class="line"><span class="lineno">  439</span>      matter-&gt;<a class="code hl_function" href="classMatter.html#ac150b53306181b32c020549ff4686903">getAtomicNr</a>(changerb) != elb || matter-&gt;<a class="code hl_function" href="classMatter.html#aeccfa311325cb6f4fb520cf071fef679">getFixed</a>(changerb)) {</div>
+<div class="line"><span class="lineno">  440</span>    <span class="keywordflow">return</span>;</div>
+<div class="line"><span class="lineno">  441</span>  }</div>
+<div class="line"><span class="lineno">  442</span> </div>
+<div class="line"><span class="lineno">  443</span>  <span class="keywordtype">double</span> posax = matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changera, 0);</div>
+<div class="line"><span class="lineno">  444</span>  <span class="keywordtype">double</span> posay = matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changera, 1);</div>
+<div class="line"><span class="lineno">  445</span>  <span class="keywordtype">double</span> posaz = matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changera, 2);</div>
+<div class="line"><span class="lineno">  446</span> </div>
+<div class="line"><span class="lineno">  447</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changera, 0, matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changerb, 0));</div>
+<div class="line"><span class="lineno">  448</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changera, 1, matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changerb, 1));</div>
+<div class="line"><span class="lineno">  449</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changera, 2, matter-&gt;<a class="code hl_function" href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">getPosition</a>(changerb, 2));</div>
+<div class="line"><span class="lineno">  450</span> </div>
+<div class="line"><span class="lineno">  451</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changerb, 0, posax);</div>
+<div class="line"><span class="lineno">  452</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changerb, 1, posay);</div>
+<div class="line"><span class="lineno">  453</span>  matter-&gt;<a class="code hl_function" href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">setPosition</a>(changerb, 2, posaz);</div>
+<div class="line"><span class="lineno">  454</span>}</div>
+<div class="ttc" id="aclassMatter_html_a2117651cc14a71ffd5043b7600e58667"><div class="ttname"><a href="classMatter.html#a2117651cc14a71ffd5043b7600e58667">Matter::setPosition</a></div><div class="ttdeci">void setPosition(long int atom, int axis, double position)</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00357">Matter.cpp:357</a></div></div>
+<div class="ttc" id="aclassMatter_html_a7f144fbf8ad4db76f016494b182c731b"><div class="ttname"><a href="classMatter.html#a7f144fbf8ad4db76f016494b182c731b">Matter::getPosition</a></div><div class="ttdeci">double getPosition(long int atom, int axis) const</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00351">Matter.cpp:351</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a5530883c3ea1e8e60ace5853087bbb74"><div class="ttname"><a href="#a5530883c3ea1e8e60ace5853087bbb74">eonc::BasinHoppingJob::getElements</a></div><div class="ttdeci">std::vector&lt; long &gt; getElements(Matter *matter)</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8cpp_source.html#l00456">BasinHoppingJob.cpp:456</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_ae69e6d8732b5a0d091a6372952ff0274"><div class="ttname"><a href="#ae69e6d8732b5a0d091a6372952ff0274">eonc::BasinHoppingJob::swap_count</a></div><div class="ttdeci">int swap_count</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00048">BasinHoppingJob.h:48</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ae6c747778a927bbce63a5a062008c3a9" name="ae6c747778a927bbce63a5a062008c3a9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6c747778a927bbce63a5a062008c3a9">&#9670;&#160;</a></span>run()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::string &gt; eonc::BasinHoppingJob::run </td>
+          <td>(</td>
+          <td class="paramtype">void</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel override">override</span><span class="mlabel virtual">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Virtual run; used solely for dynamic dispatch. </p>
+
+<p>Implements <a class="el" href="classeonc_1_1Job.html#ac23db10c6a90d5c6cc8a3a49d7b0dace">eonc::Job</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8cpp_source.html#l00032">32</a> of file <a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   32</span>                                          {</div>
+<div class="line"><span class="lineno">   33</span>  <span class="keywordtype">bool</span> swapMove;</div>
+<div class="line"><span class="lineno">   34</span>  <span class="keywordtype">double</span> swap_accept = 0.0;</div>
+<div class="line"><span class="lineno">   35</span>  <a class="code hl_variable" href="#a31eb21055c9cc5604596b17ceaf016a7">jump_count</a> = 0; <span class="comment">// count of jump movies</span></div>
+<div class="line"><span class="lineno">   36</span>  <a class="code hl_variable" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a> = 0; <span class="comment">// count of swap moves</span></div>
+<div class="line"><span class="lineno">   37</span>  <a class="code hl_variable" href="#a8ecd36e3338d9a83d897ae978e103f15">disp_count</a> = 0; <span class="comment">// count of displacement moves</span></div>
+<div class="line"><span class="lineno">   38</span>  <span class="comment">// Quench tail may not run when stop_energy breaks first.</span></div>
+<div class="line"><span class="lineno">   39</span>  <span class="keywordtype">int</span> quench_displacements = 0;</div>
+<div class="line"><span class="lineno">   40</span>  <span class="keywordtype">int</span> consecutive_rejected_trials = 0;</div>
+<div class="line"><span class="lineno">   41</span>  <span class="keywordtype">double</span> totalAccept = 0.0;</div>
+<div class="line"><span class="lineno">   42</span>  std::unique_ptr&lt;Matter&gt; minTrial = std::make_unique&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>);</div>
+<div class="line"><span class="lineno">   43</span>  std::unique_ptr&lt;Matter&gt; swapTrial = std::make_unique&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>);</div>
+<div class="line"><span class="lineno">   44</span> </div>
+<div class="line"><span class="lineno">   45</span>  std::string conFilename =</div>
+<div class="line"><span class="lineno">   46</span>      <a class="code hl_function" href="namespaceeonc_1_1helpers.html#a561b68f975ecb734266063b428d6f2f2">eonc::helpers::getRelevantFile</a>(<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.main_options().conFilename);</div>
+<div class="line"><span class="lineno">   47</span>  <span class="keywordflow">if</span> (!<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;con2matter(conFilename))) {</div>
+<div class="line"><span class="lineno">   48</span>    QUILL_LOG_CRITICAL(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to load {}&quot;</span>, conFilename);</div>
+<div class="line"><span class="lineno">   49</span>    <span class="keywordflow">throw</span> std::runtime_error(<span class="stringliteral">&quot;failed to load &quot;</span> + conFilename);</div>
+<div class="line"><span class="lineno">   50</span>  }</div>
+<div class="line"><span class="lineno">   51</span> </div>
+<div class="line"><span class="lineno">   52</span>  <span class="comment">// Sanity Check</span></div>
+<div class="line"><span class="lineno">   53</span>  std::vector&lt;long&gt; Elements;</div>
+<div class="line"><span class="lineno">   54</span>  Elements = <a class="code hl_function" href="#a5530883c3ea1e8e60ace5853087bbb74">getElements</a>(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>.get());</div>
+<div class="line"><span class="lineno">   55</span>  <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().swap_probability &gt; 0 &amp;&amp;</div>
+<div class="line"><span class="lineno">   56</span>      Elements.size() == 1) {</div>
+<div class="line"><span class="lineno">   57</span>    <a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a> = <a class="code hl_function" href="namespaceeonc_1_1log.html#aad1a942f68ca20cc5bc1d7601b4cf816">eonc::log::traceback</a>();</div>
+<div class="line"><span class="lineno">   58</span>    QUILL_LOG_CRITICAL(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>,</div>
+<div class="line"><span class="lineno">   59</span>                       <span class="stringliteral">&quot;error: [Basin Hopping] swap move probability must be &quot;</span></div>
+<div class="line"><span class="lineno">   60</span>                       <span class="stringliteral">&quot;zero if there is only one element type\n&quot;</span>);</div>
+<div class="line"><span class="lineno">   61</span>    <span class="keywordflow">throw</span> std::invalid_argument(</div>
+<div class="line"><span class="lineno">   62</span>        <span class="stringliteral">&quot;[Basin Hopping] swap_probability must be zero with one element type&quot;</span>);</div>
+<div class="line"><span class="lineno">   63</span>  }</div>
+<div class="line"><span class="lineno">   64</span> </div>
+<div class="line"><span class="lineno">   65</span>  <span class="keywordtype">double</span> randomProb =</div>
+<div class="line"><span class="lineno">   66</span>      <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().initial_random_structure_probability;</div>
+<div class="line"><span class="lineno">   67</span>  <span class="keywordflow">if</span> (randomProb &gt; 0.0) {</div>
+<div class="line"><span class="lineno">   68</span>    QUILL_LOG_DEBUG(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;generating random structure with probability {:.4f}&quot;</span>,</div>
+<div class="line"><span class="lineno">   69</span>                    randomProb);</div>
+<div class="line"><span class="lineno">   70</span>  }</div>
+<div class="line"><span class="lineno">   71</span>  <span class="keywordtype">double</span> u = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a4f610303ae45757f71160f0664b09b9b">eonc::rng::random</a>();</div>
+<div class="line"><span class="lineno">   72</span>  <span class="keywordflow">if</span> (u &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().initial_random_structure_probability) {</div>
+<div class="line"><span class="lineno">   73</span>    <a class="code hl_typedef" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> randomPositions = <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getPositionsFree();</div>
+<div class="line"><span class="lineno">   74</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;numberOfFreeAtoms(); i++) {</div>
+<div class="line"><span class="lineno">   75</span>      <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = 0; j &lt; 3; j++) {</div>
+<div class="line"><span class="lineno">   76</span>        randomPositions(i, j) = <a class="code hl_function" href="namespaceeonc_1_1rng.html#a4f610303ae45757f71160f0664b09b9b">eonc::rng::random</a>();</div>
+<div class="line"><span class="lineno">   77</span>      }</div>
+<div class="line"><span class="lineno">   78</span>    }</div>
+<div class="line"><span class="lineno">   79</span>    randomPositions *= <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getCell();</div>
+<div class="line"><span class="lineno">   80</span>    <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;setPositionsFree(randomPositions);</div>
+<div class="line"><span class="lineno">   81</span> </div>
+<div class="line"><span class="lineno">   82</span>    <a class="code hl_function" href="namespaceeonc_1_1geometry.html#a5024acd9efebda5023bb6723d0b92219">eonc::geometry::pushApart</a>(</div>
+<div class="line"><span class="lineno">   83</span>        <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().push_apart_distance);</div>
+<div class="line"><span class="lineno">   84</span>  }</div>
+<div class="line"><span class="lineno">   85</span> </div>
+<div class="line"><span class="lineno">   86</span>  *<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a> = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">   87</span>  *minTrial = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">   88</span> </div>
+<div class="line"><span class="lineno">   89</span>  <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;relax(<span class="keyword">true</span>);</div>
+<div class="line"><span class="lineno">   90</span> </div>
+<div class="line"><span class="lineno">   91</span>  <span class="keywordtype">double</span> currentEnergy = <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getPotentialEnergy();</div>
+<div class="line"><span class="lineno">   92</span>  <span class="keywordtype">double</span> minimumEnergy = currentEnergy;</div>
+<div class="line"><span class="lineno">   93</span> </div>
+<div class="line"><span class="lineno">   94</span>  <span class="keyword">auto</span> minimumEnergyStructure = std::make_shared&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>);</div>
+<div class="line"><span class="lineno">   95</span>  *minimumEnergyStructure = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">   96</span>  <span class="keywordtype">int</span> nsteps = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps +</div>
+<div class="line"><span class="lineno">   97</span>               <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().quenching_steps;</div>
+<div class="line"><span class="lineno">   98</span> </div>
+<div class="line"><span class="lineno">   99</span>  QUILL_LOG_DEBUG(</div>
+<div class="line"><span class="lineno">  100</span>      <a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;[Basin Hopping] {:4s} {:12s} {:12s} {:12s} {:4s} {:5s} {:5s}&quot;</span>,</div>
+<div class="line"><span class="lineno">  101</span>      <span class="stringliteral">&quot;step&quot;</span>, <span class="stringliteral">&quot;current&quot;</span>, <span class="stringliteral">&quot;trial&quot;</span>, <span class="stringliteral">&quot;global min&quot;</span>, <span class="stringliteral">&quot;fc&quot;</span>, <span class="stringliteral">&quot;ar&quot;</span>, <span class="stringliteral">&quot;md&quot;</span>);</div>
+<div class="line"><span class="lineno">  102</span>  QUILL_LOG_DEBUG(</div>
+<div class="line"><span class="lineno">  103</span>      <a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;[Basin Hopping] {:4s} {:12s} {:12s} {:12s} {:4s} {:5s} {:5s}&quot;</span>,</div>
+<div class="line"><span class="lineno">  104</span>      <span class="stringliteral">&quot;----&quot;</span>, <span class="stringliteral">&quot;-------&quot;</span>, <span class="stringliteral">&quot;-----&quot;</span>, <span class="stringliteral">&quot;----------&quot;</span>, <span class="stringliteral">&quot;--&quot;</span>, <span class="stringliteral">&quot;--&quot;</span>, <span class="stringliteral">&quot;--&quot;</span>);</div>
+<div class="line"><span class="lineno">  105</span> </div>
+<div class="line"><span class="lineno">  106</span>  <span class="keywordtype">int</span> recentAccept = 0;</div>
+<div class="line"><span class="lineno">  107</span>  <span class="keywordtype">double</span> curDisplacement = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().displacement;</div>
+<div class="line"><span class="lineno">  108</span> </div>
+<div class="line"><span class="lineno">  109</span>  <span class="keywordflow">for</span> (<span class="keywordtype">int</span> step = 0; step &lt; nsteps; step++) {</div>
+<div class="line"><span class="lineno">  110</span> </div>
+<div class="line"><span class="lineno">  111</span>    <span class="comment">// Swap or displace</span></div>
+<div class="line"><span class="lineno">  112</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="namespaceeonc_1_1rng.html#a699a6770b311d7f44a437f4f915bad69">eonc::rng::randomDouble</a>(1.0) &lt;</div>
+<div class="line"><span class="lineno">  113</span>            <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().swap_probability &amp;&amp;</div>
+<div class="line"><span class="lineno">  114</span>        step &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps) {</div>
+<div class="line"><span class="lineno">  115</span>      *swapTrial = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">  116</span>      <a class="code hl_function" href="#a5c82c571e51387a2dcda3c06093e6879">randomSwap</a>(swapTrial.get());</div>
+<div class="line"><span class="lineno">  117</span>      swapMove = <span class="keyword">true</span>;</div>
+<div class="line"><span class="lineno">  118</span>      *minTrial = *swapTrial;</div>
+<div class="line"><span class="lineno">  119</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  120</span>      <a class="code hl_typedef" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> displacement;</div>
+<div class="line"><span class="lineno">  121</span>      displacement = <a class="code hl_function" href="#a6ee5d133b8d1837a09b081ac34f5af91">displaceRandom</a>(curDisplacement);</div>
+<div class="line"><span class="lineno">  122</span>      <span class="keywordflow">if</span> (step &gt;= <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps) {</div>
+<div class="line"><span class="lineno">  123</span>        quench_displacements++;</div>
+<div class="line"><span class="lineno">  124</span>      }</div>
+<div class="line"><span class="lineno">  125</span> </div>
+<div class="line"><span class="lineno">  126</span>      <a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;setPositions(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getPositions() + displacement);</div>
+<div class="line"><span class="lineno">  127</span>      swapMove = <span class="keyword">false</span>;</div>
+<div class="line"><span class="lineno">  128</span>      <a class="code hl_function" href="namespaceeonc_1_1geometry.html#a5024acd9efebda5023bb6723d0b92219">eonc::geometry::pushApart</a>(</div>
+<div class="line"><span class="lineno">  129</span>          <a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().push_apart_distance);</div>
+<div class="line"><span class="lineno">  130</span> </div>
+<div class="line"><span class="lineno">  131</span>      *minTrial = *<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>;</div>
+<div class="line"><span class="lineno">  132</span>    }</div>
+<div class="line"><span class="lineno">  133</span> </div>
+<div class="line"><span class="lineno">  134</span>    <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.debug_options().write_movies) {</div>
+<div class="line"><span class="lineno">  135</span>      <span class="keywordflow">if</span> (!<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>-&gt;matter2con(<span class="stringliteral">&quot;trials&quot;</span>, <span class="keyword">true</span>))) {</div>
+<div class="line"><span class="lineno">  136</span>        QUILL_LOG_WARNING(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to append trials movie frame&quot;</span>);</div>
+<div class="line"><span class="lineno">  137</span>      }</div>
+<div class="line"><span class="lineno">  138</span>    }</div>
+<div class="line"><span class="lineno">  139</span> </div>
+<div class="line"><span class="lineno">  140</span>    minTrial-&gt;relax(<span class="keyword">true</span>);</div>
+<div class="line"><span class="lineno">  141</span> </div>
+<div class="line"><span class="lineno">  142</span>    <span class="keywordtype">double</span> deltaE = minTrial-&gt;getPotentialEnergy() - currentEnergy;</div>
+<div class="line"><span class="lineno">  143</span>    <span class="keywordtype">double</span> p = 0.0;</div>
+<div class="line"><span class="lineno">  144</span>    <span class="keywordflow">if</span> (step &gt;= <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps) {</div>
+<div class="line"><span class="lineno">  145</span>      <span class="keywordflow">if</span> (deltaE &lt;= 0.0) {</div>
+<div class="line"><span class="lineno">  146</span>        p = 1.0;</div>
+<div class="line"><span class="lineno">  147</span>      }</div>
+<div class="line"><span class="lineno">  148</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  149</span>      <span class="comment">// Divide only for an uphill hop at positive temperature.</span></div>
+<div class="line"><span class="lineno">  150</span>      p = <a class="code hl_function" href="#a9a6db305ae167803d115e6d44f9b60b3">metropolisProbability</a>(deltaE, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.constants().kB,</div>
+<div class="line"><span class="lineno">  151</span>                                <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.main_options().temperature);</div>
+<div class="line"><span class="lineno">  152</span>    }</div>
+<div class="line"><span class="lineno">  153</span> </div>
+<div class="line"><span class="lineno">  154</span>    <span class="keywordtype">bool</span> accepted = <span class="keyword">false</span>;</div>
+<div class="line"><span class="lineno">  155</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="namespaceeonc_1_1rng.html#a699a6770b311d7f44a437f4f915bad69">eonc::rng::randomDouble</a>(1.0) &lt; p) {</div>
+<div class="line"><span class="lineno">  156</span>      accepted = <span class="keyword">true</span>;</div>
+<div class="line"><span class="lineno">  157</span>      <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().significant_structure) {</div>
+<div class="line"><span class="lineno">  158</span>        *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a> = *minTrial;</div>
+<div class="line"><span class="lineno">  159</span>      } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (swapMove) {</div>
+<div class="line"><span class="lineno">  160</span>        *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a> = *swapTrial;</div>
+<div class="line"><span class="lineno">  161</span>      } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  162</span>        *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a> = *<a class="code hl_variable" href="#aa0e62dde00fe1ac919aab9f721a781d3">trial</a>;</div>
+<div class="line"><span class="lineno">  163</span>      }</div>
+<div class="line"><span class="lineno">  164</span>      <span class="keywordflow">if</span> (swapMove) {</div>
+<div class="line"><span class="lineno">  165</span>        swap_accept += 1;</div>
+<div class="line"><span class="lineno">  166</span>      }</div>
+<div class="line"><span class="lineno">  167</span>      <span class="keywordflow">if</span> (step &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps) {</div>
+<div class="line"><span class="lineno">  168</span>        totalAccept += 1;</div>
+<div class="line"><span class="lineno">  169</span>        recentAccept += 1;</div>
+<div class="line"><span class="lineno">  170</span>      }</div>
+<div class="line"><span class="lineno">  171</span> </div>
+<div class="line"><span class="lineno">  172</span>      currentEnergy = minTrial-&gt;getPotentialEnergy();</div>
+<div class="line"><span class="lineno">  173</span> </div>
+<div class="line"><span class="lineno">  174</span>      <span class="keywordflow">if</span> (currentEnergy &lt; minimumEnergy) {</div>
+<div class="line"><span class="lineno">  175</span>        minimumEnergy = currentEnergy;</div>
+<div class="line"><span class="lineno">  176</span>        *minimumEnergyStructure = *minTrial;</div>
+<div class="line"><span class="lineno">  177</span>        <span class="keywordflow">if</span> (!<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(minimumEnergyStructure-&gt;matter2con(<span class="stringliteral">&quot;min.con&quot;</span>))) {</div>
+<div class="line"><span class="lineno">  178</span>          QUILL_LOG_WARNING(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to write min.con&quot;</span>);</div>
+<div class="line"><span class="lineno">  179</span>        }</div>
+<div class="line"><span class="lineno">  180</span>      }</div>
+<div class="line"><span class="lineno">  181</span> </div>
+<div class="line"><span class="lineno">  182</span>      <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().write_unique) {</div>
+<div class="line"><span class="lineno">  183</span>        <span class="keywordtype">bool</span> newStructure = <span class="keyword">true</span>;</div>
+<div class="line"><span class="lineno">  184</span>        <span class="keywordflow">for</span> (<span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> i = 0; i &lt; <a class="code hl_variable" href="#a815945f9e9ac581b9a166ca9ab0e9d3e">uniqueEnergies</a>.size(); i++) {</div>
+<div class="line"><span class="lineno">  185</span>          <span class="comment">// if minTrial has a different energy or a different structure</span></div>
+<div class="line"><span class="lineno">  186</span>          <span class="comment">// it is new, otherwise it is old</span></div>
+<div class="line"><span class="lineno">  187</span>          <span class="keywordflow">if</span> (std::fabs(currentEnergy - <a class="code hl_variable" href="#a815945f9e9ac581b9a166ca9ab0e9d3e">uniqueEnergies</a>[i]) &lt;</div>
+<div class="line"><span class="lineno">  188</span>              <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.structure_comparison_options().energy_difference) {</div>
+<div class="line"><span class="lineno">  189</span>            Matter probe = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">  190</span>            <span class="keywordflow">if</span> (probe.<a class="code hl_function" href="classMatter.html#a378c2c524ece31a55ca15c213390a9b7">compare</a>(*<a class="code hl_variable" href="#a30a108f5f8e090b439f4fb0b9bc804ae">uniqueStructures</a>[i],</div>
+<div class="line"><span class="lineno">  191</span>                              <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.structure_comparison_options()</div>
+<div class="line"><span class="lineno">  192</span>                                  .indistinguishable_atoms)) {</div>
+<div class="line"><span class="lineno">  193</span>              newStructure = <span class="keyword">false</span>;</div>
+<div class="line"><span class="lineno">  194</span>            }</div>
+<div class="line"><span class="lineno">  195</span>          }</div>
+<div class="line"><span class="lineno">  196</span>        }</div>
+<div class="line"><span class="lineno">  197</span> </div>
+<div class="line"><span class="lineno">  198</span>        <span class="keywordflow">if</span> (newStructure) {</div>
+<div class="line"><span class="lineno">  199</span>          <a class="code hl_variable" href="#a815945f9e9ac581b9a166ca9ab0e9d3e">uniqueEnergies</a>.push_back(currentEnergy);</div>
+<div class="line"><span class="lineno">  200</span>          <span class="keyword">auto</span> currentCopy = std::make_shared&lt;Matter&gt;(<a class="code hl_variable" href="classeonc_1_1Job.html#a948da0de6ec2575bd6ac975fedaad0c9">pot</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>);</div>
+<div class="line"><span class="lineno">  201</span>          *currentCopy = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">  202</span>          <a class="code hl_variable" href="#a30a108f5f8e090b439f4fb0b9bc804ae">uniqueStructures</a>.push_back(currentCopy);</div>
+<div class="line"><span class="lineno">  203</span> </div>
+<div class="line"><span class="lineno">  204</span>          <span class="keywordtype">char</span> fname[128];</div>
+<div class="line"><span class="lineno">  205</span>          snprintf(fname, 128, <span class="stringliteral">&quot;min_%.5i.con&quot;</span>, step + 1);</div>
+<div class="line"><span class="lineno">  206</span>          <span class="keywordflow">if</span> (!<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;matter2con(fname))) {</div>
+<div class="line"><span class="lineno">  207</span>            QUILL_LOG_WARNING(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to write {}&quot;</span>, fname);</div>
+<div class="line"><span class="lineno">  208</span>          }</div>
+<div class="line"><span class="lineno">  209</span>          <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>.push_back(fname);</div>
+<div class="line"><span class="lineno">  210</span> </div>
+<div class="line"><span class="lineno">  211</span>          snprintf(fname, 128, <span class="stringliteral">&quot;energy_%.5i.dat&quot;</span>, step + 1);</div>
+<div class="line"><span class="lineno">  212</span>          <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>.push_back(fname);</div>
+<div class="line"><span class="lineno">  213</span>          {</div>
+<div class="line"><span class="lineno">  214</span>            std::ofstream fh(fname);</div>
+<div class="line"><span class="lineno">  215</span>            <span class="keywordflow">if</span> (fh)</div>
+<div class="line"><span class="lineno">  216</span>              fh &lt;&lt; std::format(<span class="stringliteral">&quot;{:.10e}\n&quot;</span>, currentEnergy);</div>
+<div class="line"><span class="lineno">  217</span>          }</div>
+<div class="line"><span class="lineno">  218</span>        }</div>
+<div class="line"><span class="lineno">  219</span>      }</div>
+<div class="line"><span class="lineno">  220</span> </div>
+<div class="line"><span class="lineno">  221</span>      consecutive_rejected_trials = 0; <span class="comment">// STC: I think this should go here.</span></div>
+<div class="line"><span class="lineno">  222</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  223</span>      consecutive_rejected_trials++;</div>
+<div class="line"><span class="lineno">  224</span>    }</div>
+<div class="line"><span class="lineno">  225</span> </div>
+<div class="line"><span class="lineno">  226</span>    <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.debug_options().write_movies) {</div>
+<div class="line"><span class="lineno">  227</span>      <span class="keywordflow">if</span> (!<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(minTrial-&gt;matter2con(<span class="stringliteral">&quot;movie&quot;</span>, <span class="keyword">true</span>))) {</div>
+<div class="line"><span class="lineno">  228</span>        QUILL_LOG_WARNING(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to append basin-hopping movie frame&quot;</span>);</div>
+<div class="line"><span class="lineno">  229</span>      }</div>
+<div class="line"><span class="lineno">  230</span>    }</div>
+<div class="line"><span class="lineno">  231</span> </div>
+<div class="line"><span class="lineno">  232</span>    <span class="keywordflow">if</span> (minimumEnergy &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().stop_energy) {</div>
+<div class="line"><span class="lineno">  233</span>      <span class="keywordflow">break</span>;</div>
+<div class="line"><span class="lineno">  234</span>    }</div>
+<div class="line"><span class="lineno">  235</span> </div>
+<div class="line"><span class="lineno">  236</span>    <span class="keywordflow">if</span> (consecutive_rejected_trials ==</div>
+<div class="line"><span class="lineno">  237</span>            <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().jump_max &amp;&amp;</div>
+<div class="line"><span class="lineno">  238</span>        step &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps) {</div>
+<div class="line"><span class="lineno">  239</span>      consecutive_rejected_trials = 0;</div>
+<div class="line"><span class="lineno">  240</span>      <a class="code hl_typedef" href="Eigen_8h.html#aea209ab15a3a73f26fa44267131921dd">AtomMatrix</a> jump;</div>
+<div class="line"><span class="lineno">  241</span>      <span class="keywordflow">for</span> (<span class="keywordtype">int</span> j = 0; j &lt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().jump_steps; j++) {</div>
+<div class="line"><span class="lineno">  242</span>        <a class="code hl_variable" href="#a31eb21055c9cc5604596b17ceaf016a7">jump_count</a>++;</div>
+<div class="line"><span class="lineno">  243</span>        jump = <a class="code hl_function" href="#a6ee5d133b8d1837a09b081ac34f5af91">displaceRandom</a>(curDisplacement);</div>
+<div class="line"><span class="lineno">  244</span>        <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;setPositions(<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getPositions() + jump);</div>
+<div class="line"><span class="lineno">  245</span>        <span class="comment">// Only a minimized jump is a basin. The raw geometry must not become</span></div>
+<div class="line"><span class="lineno">  246</span>        <span class="comment">// the Metropolis reference or the stored global minimum.</span></div>
+<div class="line"><span class="lineno">  247</span>        <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().significant_structure) {</div>
+<div class="line"><span class="lineno">  248</span>          <a class="code hl_function" href="namespaceeonc_1_1geometry.html#a5024acd9efebda5023bb6723d0b92219">eonc::geometry::pushApart</a>(</div>
+<div class="line"><span class="lineno">  249</span>              <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().push_apart_distance);</div>
+<div class="line"><span class="lineno">  250</span>          <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;relax(<span class="keyword">true</span>);</div>
+<div class="line"><span class="lineno">  251</span>          currentEnergy = <a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>-&gt;getPotentialEnergy();</div>
+<div class="line"><span class="lineno">  252</span>          <span class="keywordflow">if</span> (currentEnergy &lt; minimumEnergy) {</div>
+<div class="line"><span class="lineno">  253</span>            minimumEnergy = currentEnergy;</div>
+<div class="line"><span class="lineno">  254</span>            *minimumEnergyStructure = *<a class="code hl_variable" href="#a551be7e96004ae71b0499dc3bc549a89">current</a>;</div>
+<div class="line"><span class="lineno">  255</span>          }</div>
+<div class="line"><span class="lineno">  256</span>        }</div>
+<div class="line"><span class="lineno">  257</span>      }</div>
+<div class="line"><span class="lineno">  258</span>    }</div>
+<div class="line"><span class="lineno">  259</span> </div>
+<div class="line"><span class="lineno">  260</span>    <span class="keywordtype">int</span> nadjust = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().adjust_period;</div>
+<div class="line"><span class="lineno">  261</span>    <span class="keywordtype">double</span> adjustFraction = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().adjust_fraction;</div>
+<div class="line"><span class="lineno">  262</span>    <span class="comment">// A zero period is not an interval; the modulo would divide by zero.</span></div>
+<div class="line"><span class="lineno">  263</span>    <span class="keywordflow">if</span> (nadjust != 0 &amp;&amp; (step + 1) % nadjust == 0 &amp;&amp;</div>
+<div class="line"><span class="lineno">  264</span>        <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().adjust_displacement) {</div>
+<div class="line"><span class="lineno">  265</span>      <span class="keywordtype">double</span> recentRatio =</div>
+<div class="line"><span class="lineno">  266</span>          <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(recentAccept) / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(nadjust);</div>
+<div class="line"><span class="lineno">  267</span>      <span class="keywordflow">if</span> (recentRatio &gt; <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().target_ratio) {</div>
+<div class="line"><span class="lineno">  268</span>        curDisplacement *= 1.0 + adjustFraction;</div>
+<div class="line"><span class="lineno">  269</span>      } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  270</span>        curDisplacement *= 1.0 - adjustFraction;</div>
+<div class="line"><span class="lineno">  271</span>      }</div>
+<div class="line"><span class="lineno">  272</span> </div>
+<div class="line"><span class="lineno">  273</span>      recentAccept = 0;</div>
+<div class="line"><span class="lineno">  274</span>    }</div>
+<div class="line"><span class="lineno">  275</span>  }</div>
+<div class="line"><span class="lineno">  276</span>  <span class="comment">/* Save Results */</span></div>
+<div class="line"><span class="lineno">  277</span> </div>
+<div class="line"><span class="lineno">  278</span>  std::string resultsFilename(<span class="stringliteral">&quot;results.dat&quot;</span>);</div>
+<div class="line"><span class="lineno">  279</span> </div>
+<div class="line"><span class="lineno">  280</span>  <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.debug_options().write_movies) {</div>
+<div class="line"><span class="lineno">  281</span>    std::string movieFilename(<span class="stringliteral">&quot;movie.con&quot;</span>);</div>
+<div class="line"><span class="lineno">  282</span>    <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>.push_back(movieFilename);</div>
+<div class="line"><span class="lineno">  283</span>  }</div>
+<div class="line"><span class="lineno">  284</span> </div>
+<div class="line"><span class="lineno">  285</span>  {</div>
+<div class="line"><span class="lineno">  286</span>    <span class="keyword">auto</span> env = <a class="code hl_function" href="structeonc_1_1JobResultEnvelope.html#adcc250879257d0fb4823bb0c799a3510">JobResultEnvelope::fromMinimization</a>(</div>
+<div class="line"><span class="lineno">  287</span>        <a class="code hl_enumvalue" href="namespaceeonc.html#a848a1af56249f0cafd872ca8b59fc459a45802158e78dd9584161629098018fe8">RunStatus::GOOD</a>, <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.potential_options().potential,</div>
+<div class="line"><span class="lineno">  288</span>        <a class="code hl_function" href="classeonc_1_1Job.html#a03a40b0e3f078b9e284220c71567e644">pots</a>().total_force_calls(), <span class="keyword">true</span>, minimumEnergy);</div>
+<div class="line"><span class="lineno">  289</span>    env.provenance = <a class="code hl_function" href="namespaceeonc.html#aa67d050aa179f681c8792139d0b2fed8">provenanceForJob</a>(<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>);</div>
+<div class="line"><span class="lineno">  290</span>    env.job_type = <span class="stringliteral">&quot;basin_hopping&quot;</span>;</div>
+<div class="line"><span class="lineno">  291</span>    env.random_seed = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.main_options().randomSeed;</div>
+<div class="line"><span class="lineno">  292</span>    env.extras.emplace_back(<span class="stringliteral">&quot;minimum_energy&quot;</span>, minimumEnergy);</div>
+<div class="line"><span class="lineno">  293</span>    <span class="keyword">const</span> <span class="keywordtype">double</span> nsteps_ratio = <a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().steps;</div>
+<div class="line"><span class="lineno">  294</span>    env.extras.emplace_back(<span class="stringliteral">&quot;acceptance_ratio&quot;</span>,</div>
+<div class="line"><span class="lineno">  295</span>                            nsteps_ratio ? totalAccept / nsteps_ratio : 0.0);</div>
+<div class="line"><span class="lineno">  296</span>    <span class="keywordflow">if</span> (<a class="code hl_variable" href="classeonc_1_1Job.html#a9f0bfab75a98f383ba58f1c592fd2500">params</a>.basin_hopping_options().swap_probability &gt; 0) {</div>
+<div class="line"><span class="lineno">  297</span>      env.extras.emplace_back(</div>
+<div class="line"><span class="lineno">  298</span>          <span class="stringliteral">&quot;swap_acceptance_ratio&quot;</span>,</div>
+<div class="line"><span class="lineno">  299</span>          <a class="code hl_variable" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a> ? swap_accept / <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(<a class="code hl_variable" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a>) : 0.0);</div>
+<div class="line"><span class="lineno">  300</span>    }</div>
+<div class="line"><span class="lineno">  301</span>    env.extras.emplace_back(</div>
+<div class="line"><span class="lineno">  302</span>        <span class="stringliteral">&quot;total_normal_displacement_steps&quot;</span>,</div>
+<div class="line"><span class="lineno">  303</span>        <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(<a class="code hl_variable" href="#a8ecd36e3338d9a83d897ae978e103f15">disp_count</a> - <a class="code hl_variable" href="#a31eb21055c9cc5604596b17ceaf016a7">jump_count</a> - quench_displacements));</div>
+<div class="line"><span class="lineno">  304</span>    env.extras.emplace_back(<span class="stringliteral">&quot;total_jump_steps&quot;</span>,</div>
+<div class="line"><span class="lineno">  305</span>                            <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(<a class="code hl_variable" href="#a31eb21055c9cc5604596b17ceaf016a7">jump_count</a>));</div>
+<div class="line"><span class="lineno">  306</span>    env.extras.emplace_back(<span class="stringliteral">&quot;total_swap_steps&quot;</span>,</div>
+<div class="line"><span class="lineno">  307</span>                            <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(<a class="code hl_variable" href="#ae69e6d8732b5a0d091a6372952ff0274">swap_count</a>));</div>
+<div class="line"><span class="lineno">  308</span>    env.writeResultsDat(resultsFilename);</div>
+<div class="line"><span class="lineno">  309</span>    <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>.push_back(resultsFilename);</div>
+<div class="line"><span class="lineno">  310</span>  }</div>
+<div class="line"><span class="lineno">  311</span> </div>
+<div class="line"><span class="lineno">  312</span>  std::string productFilename(<span class="stringliteral">&quot;min.con&quot;</span>);</div>
+<div class="line"><span class="lineno">  313</span>  <span class="keywordflow">if</span> (<a class="code hl_function" href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a>(minimumEnergyStructure-&gt;matter2con(productFilename))) {</div>
+<div class="line"><span class="lineno">  314</span>    <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>.push_back(productFilename);</div>
+<div class="line"><span class="lineno">  315</span>  } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  316</span>    QUILL_LOG_ERROR(<a class="code hl_variable" href="#a9823e2678e850d4b9ae86cb77ff85a31">log</a>, <span class="stringliteral">&quot;Failed to write {}&quot;</span>, productFilename);</div>
+<div class="line"><span class="lineno">  317</span>  }</div>
+<div class="line"><span class="lineno">  318</span> </div>
+<div class="line"><span class="lineno">  319</span>  <span class="comment">// minTrial and swapTrial automatically cleaned up by unique_ptr</span></div>
+<div class="line"><span class="lineno">  320</span>  <span class="keywordflow">return</span> <a class="code hl_variable" href="#a13d63bd9b9939bdff9514b0cf903e032">returnFiles</a>;</div>
+<div class="line"><span class="lineno">  321</span>}</div>
+<div class="ttc" id="aclassMatter_html_a378c2c524ece31a55ca15c213390a9b7"><div class="ttname"><a href="classMatter.html#a378c2c524ece31a55ca15c213390a9b7">Matter::compare</a></div><div class="ttdeci">bool compare(const Matter &amp;matter, bool indistinguishable=false)</div><div class="ttdef"><b>Definition</b> <a href="Matter_8cpp_source.html#l00251">Matter.cpp:251</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a13d63bd9b9939bdff9514b0cf903e032"><div class="ttname"><a href="#a13d63bd9b9939bdff9514b0cf903e032">eonc::BasinHoppingJob::returnFiles</a></div><div class="ttdeci">std::vector&lt; std::string &gt; returnFiles</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00045">BasinHoppingJob.h:45</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a30a108f5f8e090b439f4fb0b9bc804ae"><div class="ttname"><a href="#a30a108f5f8e090b439f4fb0b9bc804ae">eonc::BasinHoppingJob::uniqueStructures</a></div><div class="ttdeci">std::vector&lt; std::shared_ptr&lt; Matter &gt; &gt; uniqueStructures</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00051">BasinHoppingJob.h:51</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a31eb21055c9cc5604596b17ceaf016a7"><div class="ttname"><a href="#a31eb21055c9cc5604596b17ceaf016a7">eonc::BasinHoppingJob::jump_count</a></div><div class="ttdeci">int jump_count</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00046">BasinHoppingJob.h:46</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a5c82c571e51387a2dcda3c06093e6879"><div class="ttname"><a href="#a5c82c571e51387a2dcda3c06093e6879">eonc::BasinHoppingJob::randomSwap</a></div><div class="ttdeci">void randomSwap(Matter *matter)</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8cpp_source.html#l00406">BasinHoppingJob.cpp:406</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a6ee5d133b8d1837a09b081ac34f5af91"><div class="ttname"><a href="#a6ee5d133b8d1837a09b081ac34f5af91">eonc::BasinHoppingJob::displaceRandom</a></div><div class="ttdeci">AtomMatrix displaceRandom(double maxDisplacement)</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8cpp_source.html#l00334">BasinHoppingJob.cpp:334</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a815945f9e9ac581b9a166ca9ab0e9d3e"><div class="ttname"><a href="#a815945f9e9ac581b9a166ca9ab0e9d3e">eonc::BasinHoppingJob::uniqueEnergies</a></div><div class="ttdeci">std::vector&lt; double &gt; uniqueEnergies</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8h_source.html#l00052">BasinHoppingJob.h:52</a></div></div>
+<div class="ttc" id="aclasseonc_1_1BasinHoppingJob_html_a9a6db305ae167803d115e6d44f9b60b3"><div class="ttname"><a href="#a9a6db305ae167803d115e6d44f9b60b3">eonc::BasinHoppingJob::metropolisProbability</a></div><div class="ttdeci">static double metropolisProbability(double de, double kB, double temperature)</div><div class="ttdoc">Metropolis weight for energy change de.</div><div class="ttdef"><b>Definition</b> <a href="BasinHoppingJob_8cpp_source.html#l00323">BasinHoppingJob.cpp:323</a></div></div>
+<div class="ttc" id="aclasseonc_1_1Job_html_a03a40b0e3f078b9e284220c71567e644"><div class="ttname"><a href="classeonc_1_1Job.html#a03a40b0e3f078b9e284220c71567e644">eonc::Job::pots</a></div><div class="ttdeci">PotRegistry &amp; pots() noexcept</div><div class="ttdef"><b>Definition</b> <a href="Job_8h_source.html#l00109">Job.h:109</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1geometry_html_a5024acd9efebda5023bb6723d0b92219"><div class="ttname"><a href="namespaceeonc_1_1geometry.html#a5024acd9efebda5023bb6723d0b92219">eonc::geometry::pushApart</a></div><div class="ttdeci">void pushApart(std::shared_ptr&lt; Matter &gt; m1, double minDistance)</div><div class="ttdef"><b>Definition</b> <a href="GeometryAnalysis_8cpp_source.html#l00512">GeometryAnalysis.cpp:512</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1helpers_html_a561b68f975ecb734266063b428d6f2f2"><div class="ttname"><a href="namespaceeonc_1_1helpers.html#a561b68f975ecb734266063b428d6f2f2">eonc::helpers::getRelevantFile</a></div><div class="ttdeci">std::string getRelevantFile(std::string filename)</div><div class="ttdef"><b>Definition</b> <a href="HelperFunctions_8cpp_source.html#l00123">HelperFunctions.cpp:123</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1io_html_af66b2723d892a4095754f9b0354b4f78"><div class="ttname"><a href="namespaceeonc_1_1io.html#af66b2723d892a4095754f9b0354b4f78">eonc::io::io_ok</a></div><div class="ttdeci">constexpr bool io_ok(IoStatus s) noexcept</div><div class="ttdef"><b>Definition</b> <a href="ConFileIO_8h_source.html#l00038">ConFileIO.h:38</a></div></div>
+<div class="ttc" id="anamespaceeonc_1_1rng_html_a4f610303ae45757f71160f0664b09b9b"><div class="ttname"><a href="namespaceeonc_1_1rng.html#a4f610303ae45757f71160f0664b09b9b">eonc::rng::random</a></div><div class="ttdeci">double random(long newSeed=0)</div><div class="ttdef"><b>Definition</b> <a href="RandomNumbers_8cpp_source.html#l00029">RandomNumbers.cpp:29</a></div></div>
+<div class="ttc" id="anamespaceeonc_html_a848a1af56249f0cafd872ca8b59fc459a45802158e78dd9584161629098018fe8"><div class="ttname"><a href="namespaceeonc.html#a848a1af56249f0cafd872ca8b59fc459a45802158e78dd9584161629098018fe8">eonc::RunStatus::GOOD</a></div><div class="ttdeci">@ GOOD</div><div class="ttdef"><b>Definition</b> <a href="BaseStructures_8h_source.html#l00117">BaseStructures.h:117</a></div></div>
+<div class="ttc" id="anamespaceeonc_html_aa67d050aa179f681c8792139d0b2fed8"><div class="ttname"><a href="namespaceeonc.html#aa67d050aa179f681c8792139d0b2fed8">eonc::provenanceForJob</a></div><div class="ttdeci">JobResultProvenance provenanceForJob(const Parameters &amp;params)</div><div class="ttdoc">Optimizer backend, engine identity, rgpot pin, and xts ABI from a job.</div><div class="ttdef"><b>Definition</b> <a href="JobResultProvenance_8cpp_source.html#l00038">JobResultProvenance.cpp:38</a></div></div>
+<div class="ttc" id="astructeonc_1_1JobResultEnvelope_html_adcc250879257d0fb4823bb0c799a3510"><div class="ttname"><a href="structeonc_1_1JobResultEnvelope.html#adcc250879257d0fb4823bb0c799a3510">eonc::JobResultEnvelope::fromMinimization</a></div><div class="ttdeci">static JobResultEnvelope fromMinimization(RunStatus status, PotType pot, std::uint64_t fcalls, bool hasE, double energy)</div><div class="ttdef"><b>Definition</b> <a href="JobResult_8h_source.html#l00251">JobResult.h:251</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a name="doc-related-members" id="doc-related-members"></a><h2 id="header-doc-related-members" class="groupheader">Friends And Related Symbol Documentation</h2>
+<a id="a6ccf325b7b9bc00cf53d3d4e47654afc" name="a6ccf325b7b9bc00cf53d3d4e47654afc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ccf325b7b9bc00cf53d3d4e47654afc">&#9670;&#160;</a></span>BasinHoppingDisplaceAccess</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">friend class BasinHoppingDisplaceAccess</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel friend">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00037">37</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="a12cb4c508bbdd42929fe34d40823a621" name="a12cb4c508bbdd42929fe34d40823a621"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a12cb4c508bbdd42929fe34d40823a621">&#9670;&#160;</a></span>BasinHoppingElementsTest</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">friend struct BasinHoppingElementsTest</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel friend">friend</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00044">44</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a name="doc-variable-members" id="doc-variable-members"></a><h2 id="header-doc-variable-members" class="groupheader">Member Data Documentation</h2>
+<a id="a551be7e96004ae71b0499dc3bc549a89" name="a551be7e96004ae71b0499dc3bc549a89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a551be7e96004ae71b0499dc3bc549a89">&#9670;&#160;</a></span>current</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;<a class="el" href="classMatter.html">Matter</a>&gt; eonc::BasinHoppingJob::current</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00041">41</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="a8ecd36e3338d9a83d897ae978e103f15" name="a8ecd36e3338d9a83d897ae978e103f15"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ecd36e3338d9a83d897ae978e103f15">&#9670;&#160;</a></span>disp_count</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int eonc::BasinHoppingJob::disp_count {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00047">47</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   47</span>{0}; <span class="comment">// count of displacement moves</span></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="abc4180961f7361cf98263d0498d6cc2c" name="abc4180961f7361cf98263d0498d6cc2c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc4180961f7361cf98263d0498d6cc2c">&#9670;&#160;</a></span>fcalls</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int eonc::BasinHoppingJob::fcalls {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00049">49</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   49</span>{0};</div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a31eb21055c9cc5604596b17ceaf016a7" name="a31eb21055c9cc5604596b17ceaf016a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31eb21055c9cc5604596b17ceaf016a7">&#9670;&#160;</a></span>jump_count</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int eonc::BasinHoppingJob::jump_count {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00046">46</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   46</span>{0}; <span class="comment">// count of jump moves</span></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a9823e2678e850d4b9ae86cb77ff85a31" name="a9823e2678e850d4b9ae86cb77ff85a31"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9823e2678e850d4b9ae86cb77ff85a31">&#9670;&#160;</a></span>log</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structeonc_1_1log_1_1Scoped.html">eonc::log::Scoped</a> eonc::BasinHoppingJob::log</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00053">53</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="a13d63bd9b9939bdff9514b0cf903e032" name="a13d63bd9b9939bdff9514b0cf903e032"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a13d63bd9b9939bdff9514b0cf903e032">&#9670;&#160;</a></span>returnFiles</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::string&gt; eonc::BasinHoppingJob::returnFiles</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00045">45</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="ae69e6d8732b5a0d091a6372952ff0274" name="ae69e6d8732b5a0d091a6372952ff0274"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae69e6d8732b5a0d091a6372952ff0274">&#9670;&#160;</a></span>swap_count</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int eonc::BasinHoppingJob::swap_count {0}</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00048">48</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   48</span>{0}; <span class="comment">// count of swap moves</span></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="aa0e62dde00fe1ac919aab9f721a781d3" name="aa0e62dde00fe1ac919aab9f721a781d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0e62dde00fe1ac919aab9f721a781d3">&#9670;&#160;</a></span>trial</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt;<a class="el" href="classMatter.html">Matter</a>&gt; eonc::BasinHoppingJob::trial</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00042">42</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="a815945f9e9ac581b9a166ca9ab0e9d3e" name="a815945f9e9ac581b9a166ca9ab0e9d3e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a815945f9e9ac581b9a166ca9ab0e9d3e">&#9670;&#160;</a></span>uniqueEnergies</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;double&gt; eonc::BasinHoppingJob::uniqueEnergies</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00052">52</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<a id="a30a108f5f8e090b439f4fb0b9bc804ae" name="a30a108f5f8e090b439f4fb0b9bc804ae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30a108f5f8e090b439f4fb0b9bc804ae">&#9670;&#160;</a></span>uniqueStructures</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::shared_ptr&lt;<a class="el" href="classMatter.html">Matter</a>&gt; &gt; eonc::BasinHoppingJob::uniqueStructures</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel private">private</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="BasinHoppingJob_8h_source.html#l00051">51</a> of file <a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a>.</p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>/home/runner/work/eOn/eOn/include/eon/<a class="el" href="BasinHoppingJob_8h_source.html">BasinHoppingJob.h</a></li>
+<li>/home/runner/work/eOn/eOn/client/<a class="el" href="BasinHoppingJob_8cpp_source.html">BasinHoppingJob.cpp</a></li>
+</ul>
+</div><!-- contents -->
+</div><!-- doc-content -->
+<div id="page-nav" class="page-nav-panel">
+<div id="page-nav-resize-handle"></div>
+<div id="page-nav-tree">
+<div id="page-nav-contents">
+</div><!-- page-nav-contents -->
+</div><!-- page-nav-tree -->
+</div><!-- page-nav -->
+</div><!-- container -->
+<!-- Copyright 2020–2026 Rohit Goswami <rog32@hi.is>
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+     http://www.apache.org/licenses/LICENSE-2.0
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. -->
+<!-- HTML footer for doxygen >= 1.17 (tested with 1.17.0 and 1.18.0) -->
+<!-- Doxygen already closed #doc-content and #container before this template. -->
+<!-- start footer part -->
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="navelem"><a href="namespaceeonc.html">eonc</a></li><li class="navelem"><a href="classeonc_1_1BasinHoppingJob.html">BasinHoppingJob</a></li>
+    <li class="footer">Generated by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.17.0 </li>
+  </ul>
+</div>
+<div class="doxyyoda-attrib" role="contentinfo">
+  <span class="doxyyoda-attrib__item">
+    <span>Generated by <a href="https://www.doxygen.org/index.html">Doxygen 1.17.0</a></span>
+  </span>
+  <span class="doxyyoda-attrib__item">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7,20H4V4h3V20z M14,20h-3V12h3V20z M21,20h-3V8h3V20z"/></svg>
+    <span>Analytics by <a href="https://antics.turtletech.us/" target="_blank" rel="noopener noreferrer">Antics</a></span>
+  </span>
+  <span class="doxyyoda-attrib__item">
+    <span>provided by</span>
+    <span class="doxyyoda-attrib__brand">
+      <svg xmlns="http://www.w3.org/2000/svg" width="1.4em" height="1.4em" viewBox="0 0 64 64" aria-hidden="true"><g fill-rule="evenodd"><ellipse cx="32" cy="11" fill="#80D25B" rx="7" ry="9"/><path fill="#80D25B" d="M20.3,46c0,0-3.2,9.9.3,13.8c3.5,3.9 6.1,3.4 6.1-6C26.8,44.3 20.3,46 20.3,46Z"/><path fill="#80D25B" d="M38.3,46c0,0-3.2,9.9.4,13.8c3.5,3.9 6.1,3.4 6.1-6C44.8,44.3 38.3,46 38.3,46Z" transform="matrix(-1 0 0 1 81.8 0)"/><path fill="#80D25B" d="M20.6,21.2c0,0-6.7-5.8-10.5-5.2C6.2,16.7 6,22.2 6,24c0,1.8 1.8,13.3 3.8,12.5c2-0.8 4-8.5 4-8.5c1.9,2.3 4.8,2.5 4.8,2.5L20.6,21.2Z"/><path fill="#80D25B" d="M57.6,21.2c0,0-6.6-5.8-10.5-5.2C43.2,16.7 43,22.2 43,24c0,1.8 1.8,13.3 3.8,12.5c2-0.8 4-8.5 4-8.5c1.9,2.3 4.8,2.5 4.8,2.5L57.6,21.2Z" transform="matrix(-1 0 0 1 100.623 0)"/><path fill="#BD7575" stroke="#595959" stroke-linecap="round" stroke-width="2" d="M32,53C40.8,53 48,44.5 48,34C48,23.5 46.7,17 32,17C17.3,17 16,23.5 16,34C16,44.5 23.2,53 32,53Z"/><polygon fill="#BD7575" stroke="#595959" stroke-linecap="round" stroke-width="2" points="32 22 38.9 26 38.9 34 32 38 25.1 34 25.1 26"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M30,8C28.9,8 28,8.9 28,10"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M36,8C34.9,8 34,8.9 34,10" transform="matrix(-1 0 0 1 70 0)"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M32.1,38.2L32.1,52.4M32,21.7L32,17M25.2,26L17.7,23.1M25.1,34.2L16.8,38.9"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M46.2,26L38.7,23.1" transform="matrix(-1 0 0 1 84.951 0)"/><path stroke="#595959" stroke-linecap="round" stroke-width="2" d="M47.1,34.2L38.8,38.9" transform="matrix(-1 0 0 1 85.891 0)"/></g></svg>
+      <a href="https://turtletech.us/" target="_blank" rel="noopener noreferrer">TurtleTech ehf</a>
+    </span>
+  </span>
+</div>
+</div><!-- close .grid-contents (opened in header.html) -->
+</body>
+</html>
