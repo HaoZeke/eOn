@@ -13,6 +13,7 @@ settings = {
     "Main": {
         "job": "akmc",
         "temperature": 300,
+        "random_seed": 1024,
     },
     "Potential": {
         "potential": "morse_pt",
