@@ -432,6 +432,30 @@ RingPolymer::RingPolymer(long nAtoms, std::vector<double> masses,
   f_.assign(static_cast<size_t>(nBeads_), VectorXd::Zero(nDof_));
   qnm_.assign(static_cast<size_t>(nBeads_), VectorXd::Zero(nDof_));
   pnm_.assign(static_cast<size_t>(nBeads_), VectorXd::Zero(nDof_));
+  auto cacheRotation = [&](double h, std::vector<double> &c,
+                           std::vector<double> &s) {
+    c.assign(static_cast<size_t>(nBeads_), 1.0);
+    s.assign(static_cast<size_t>(nBeads_), 0.0);
+    for (long k = 1; k < nBeads_; ++k) {
+      const double angle = omegaK_[k] * h;
+      c[static_cast<size_t>(k)] = std::cos(angle);
+      s[static_cast<size_t>(k)] = std::sin(angle);
+    }
+  };
+  cacheRotation(0.5 * opt_.dt, rotCHalf_, rotSHalf_);
+  cacheRotation(opt_.dt, rotCFull_, rotSFull_);
+  posBuf_.resize(static_cast<size_t>(nBeads_));
+  nrsBuf_.resize(static_cast<size_t>(nBeads_));
+  frcBuf_.resize(static_cast<size_t>(nBeads_));
+  boxBuf_.resize(static_cast<size_t>(nBeads_));
+  energyBuf_.resize(static_cast<size_t>(nBeads_));
+  varianceBuf_.resize(static_cast<size_t>(nBeads_));
+  ownerBuf_.resize(static_cast<size_t>(nBeads_));
+  std::iota(ownerBuf_.begin(), ownerBuf_.end(), 0L);
+  centroid_ = VectorXd::Zero(nDof_);
+  // Beads in the first half, normal modes in the second. The transform
+  // reads one and writes the other.
+  modeWork_.assign(static_cast<size_t>(2 * nBeads_), 0.0);
   if (opt_.thermostat == Thermostat::Piglet) {
     initGle();
   }
@@ -466,6 +490,8 @@ void RingPolymer::initGle() {
                                          mode.propagate.transpose());
     mode.noise = factorCovariance(cov);
     mode.extended = MatrixXd::Zero(file.dim, nFree_);
+    mode.noiseDraw = MatrixXd::Zero(file.dim, nFree_);
+    mode.accum = MatrixXd::Zero(file.dim, nFree_);
     gle_[static_cast<size_t>(k - 1)] = std::move(mode);
   }
 }
@@ -541,12 +567,22 @@ void RingPolymer::setHyperplane(const VectorXd &normal,
 }
 
 double RingPolymer::gauss() {
+  // Box-Muller yields a pair. Keeping the sine sample halves the log/cos
+  // work on the PIGLET noise, which draws one gaussian per matrix entry.
+  if (haveGaussSpare_) {
+    haveGaussSpare_ = false;
+    return gaussSpare_;
+  }
   rng_ = rng_ * 6364136223846793005ULL + 1ULL;
   const double u1 =
       std::max((rng_ >> 11) * (1.0 / 9007199254740992.0), 1.0e-16);
   rng_ = rng_ * 6364136223846793005ULL + 1ULL;
   const double u2 = (rng_ >> 11) * (1.0 / 9007199254740992.0);
-  return std::sqrt(-2.0 * std::log(u1)) * std::cos(2.0 * kPi * u2);
+  const double mag = std::sqrt(-2.0 * std::log(u1));
+  const double ang = 2.0 * kPi * u2;
+  gaussSpare_ = mag * std::sin(ang);
+  haveGaussSpare_ = true;
+  return mag * std::cos(ang);
 }
 
 void RingPolymer::thermalMomenta() {
@@ -587,53 +623,120 @@ void RingPolymer::thermalMomenta() {
   haveForces_ = false;
 }
 
+namespace {
+
+// y[k] = sum_j x[j] * M(k, j). M is row-major n by n.
+void modesOfBeads(const double *__restrict M, const double *__restrict x,
+                  double *__restrict y, long n) {
+  for (long k = 0; k < n; ++k) {
+    const double *row = M + k * n;
+    double sum = 0.0;
+    for (long j = 0; j < n; ++j) {
+      sum += x[j] * row[j];
+    }
+    y[k] = sum;
+  }
+}
+
+// y[j] = sum_k x[k] * M(k, j).
+void beadsOfModes(const double *__restrict M, const double *__restrict x,
+                  double *__restrict y, long n) {
+  for (long j = 0; j < n; ++j) {
+    y[j] = 0.0;
+  }
+  for (long k = 0; k < n; ++k) {
+    const double xk = x[k];
+    const double *row = M + k * n;
+    for (long j = 0; j < n; ++j) {
+      y[j] += xk * row[j];
+    }
+  }
+}
+
+} // namespace
+
+void RingPolymer::transformTo(const std::vector<VectorXd> &src,
+                              std::vector<VectorXd> &dst, bool freeOnly) const {
+  // Mode k of coordinate a is sum_j src_j(a) * modes(k, j). modes_ is
+  // row-major, so row k is contiguous.
+  const double *M = modes_.data();
+  const long nb = nBeads_;
+  auto one = [&](long a) {
+    double *bead = modeWork_.data();
+    double *mode = bead + nb;
+    for (long j = 0; j < nb; ++j) {
+      bead[j] = src[static_cast<size_t>(j)][a];
+    }
+    modesOfBeads(M, bead, mode, nb);
+    for (long k = 0; k < nb; ++k) {
+      dst[static_cast<size_t>(k)][a] = mode[k];
+    }
+  };
+  if (freeOnly) {
+    for (long a : freeIndex_) {
+      one(a);
+    }
+  } else {
+    for (long a = 0; a < nDof_; ++a) {
+      one(a);
+    }
+  }
+}
+
+void RingPolymer::transformFrom(const std::vector<VectorXd> &src,
+                                std::vector<VectorXd> &dst,
+                                bool freeOnly) const {
+  const double *M = modes_.data();
+  const long nb = nBeads_;
+  auto one = [&](long a) {
+    double *bead = modeWork_.data();
+    double *mode = bead + nb;
+    for (long k = 0; k < nb; ++k) {
+      mode[k] = src[static_cast<size_t>(k)][a];
+    }
+    beadsOfModes(M, mode, bead, nb);
+    for (long j = 0; j < nb; ++j) {
+      dst[static_cast<size_t>(j)][a] = bead[j];
+    }
+  };
+  if (freeOnly) {
+    for (long a : freeIndex_) {
+      one(a);
+    }
+  } else {
+    for (long a = 0; a < nDof_; ++a) {
+      one(a);
+    }
+  }
+}
+
 void RingPolymer::toNormal(const std::vector<VectorXd> &src,
                            std::vector<VectorXd> &dst) const {
-  MatrixXd packed(nDof_, nBeads_);
-  for (long j = 0; j < nBeads_; ++j) {
-    packed.col(j) = src[static_cast<size_t>(j)];
-  }
-  const MatrixXd out = packed * modes_.transpose();
-  for (long k = 0; k < nBeads_; ++k) {
-    dst[static_cast<size_t>(k)] = out.col(k);
-  }
+  transformTo(src, dst, true);
 }
 
 void RingPolymer::fromNormal(const std::vector<VectorXd> &src,
                              std::vector<VectorXd> &dst) const {
-  MatrixXd packed(nDof_, nBeads_);
-  for (long k = 0; k < nBeads_; ++k) {
-    packed.col(k) = src[static_cast<size_t>(k)];
-  }
-  const MatrixXd out = packed * modes_;
-  for (long j = 0; j < nBeads_; ++j) {
-    dst[static_cast<size_t>(j)] = out.col(j);
-  }
+  transformFrom(src, dst, true);
 }
 
 void RingPolymer::forces(Potential &pot, const double *box) {
-  double zeroBox[9] = {};
-  const double *cell = box != nullptr ? box : zeroBox;
-  std::vector<const double *> pos(static_cast<size_t>(nBeads_));
-  std::vector<const int *> nrs(static_cast<size_t>(nBeads_));
-  std::vector<double *> frc(static_cast<size_t>(nBeads_));
-  std::vector<const double *> boxes(static_cast<size_t>(nBeads_), cell);
+  const double *cell = box != nullptr ? box : zeroBox_;
   for (long bead = 0; bead < nBeads_; ++bead) {
-    pos[static_cast<size_t>(bead)] = q_[static_cast<size_t>(bead)].data();
-    nrs[static_cast<size_t>(bead)] = atomicNumbers_.data();
-    frc[static_cast<size_t>(bead)] = f_[static_cast<size_t>(bead)].data();
+    posBuf_[static_cast<size_t>(bead)] = q_[static_cast<size_t>(bead)].data();
+    nrsBuf_[static_cast<size_t>(bead)] = atomicNumbers_.data();
+    frcBuf_[static_cast<size_t>(bead)] = f_[static_cast<size_t>(bead)].data();
+    boxBuf_[static_cast<size_t>(bead)] = cell;
   }
-  std::vector<double> energies(static_cast<size_t>(nBeads_), 0.0);
-  std::vector<double> variances(static_cast<size_t>(nBeads_), 0.0);
+  std::fill(energyBuf_.begin(), energyBuf_.end(), 0.0);
+  std::fill(varianceBuf_.begin(), varianceBuf_.end(), 0.0);
   // The bead index is each system's identity across steps: a potential
   // that spreads the ring over calculators keeps a bead on one calculator,
   // and one that stores per-system state (cpmdc orbitals) keeps it with
   // the bead.
-  std::vector<long> owners(static_cast<size_t>(nBeads_));
-  std::iota(owners.begin(), owners.end(), 0L);
-  pot.forceBatchOwned(nBeads_, nAtoms_, pos.data(), nrs.data(), frc.data(),
-                      energies.data(), variances.data(), boxes.data(),
-                      owners.data());
+  pot.forceBatchOwned(nBeads_, nAtoms_, posBuf_.data(), nrsBuf_.data(),
+                      frcBuf_.data(), energyBuf_.data(), varianceBuf_.data(),
+                      boxBuf_.data(), ownerBuf_.data());
   ++batches_;
   for (long bead = 0; bead < nBeads_; ++bead) {
     for (long a = 0; a < nDof_; ++a) {
@@ -645,13 +748,17 @@ void RingPolymer::forces(Potential &pot, const double *box) {
   haveForces_ = true;
 }
 
-VectorXd RingPolymer::centroid() const {
-  VectorXd c = VectorXd::Zero(nDof_);
+void RingPolymer::fillCentroid() const {
+  centroid_.setZero();
   for (long bead = 0; bead < nBeads_; ++bead) {
-    c += q_[static_cast<size_t>(bead)];
+    centroid_ += q_[static_cast<size_t>(bead)];
   }
-  c /= static_cast<double>(nBeads_);
-  return c;
+  centroid_ /= static_cast<double>(nBeads_);
+}
+
+VectorXd RingPolymer::centroid() const {
+  fillCentroid();
+  return centroid_;
 }
 
 VectorXd RingPolymer::centroidVelocity() const {
@@ -674,11 +781,11 @@ double RingPolymer::kineticCv() const {
   if (!haveForces_) {
     return k;
   }
-  const VectorXd c = centroid();
+  fillCentroid();
   double virial = 0.0;
   for (long bead = 0; bead < nBeads_; ++bead) {
     for (long a : freeIndex_) {
-      virial += (q_[static_cast<size_t>(bead)][a] - c[a]) *
+      virial += (q_[static_cast<size_t>(bead)][a] - centroid_[a]) *
                 f_[static_cast<size_t>(bead)][a];
     }
   }
@@ -721,13 +828,14 @@ void RingPolymer::thermostat(double h) {
         mode.extended(0, col) = pnm_[static_cast<size_t>(k)][a] /
                                 std::sqrt(mass_[static_cast<size_t>(a)]);
       }
-      MatrixXd noise(mode.extended.rows(), mode.extended.cols());
-      for (long r = 0; r < noise.rows(); ++r) {
-        for (long c = 0; c < noise.cols(); ++c) {
-          noise(r, c) = gauss();
+      for (long r = 0; r < mode.noiseDraw.rows(); ++r) {
+        for (long c = 0; c < mode.noiseDraw.cols(); ++c) {
+          mode.noiseDraw(r, c) = gauss();
         }
       }
-      mode.extended = mode.propagate * mode.extended + mode.noise * noise;
+      mode.accum.noalias() = mode.propagate * mode.extended;
+      mode.accum.noalias() += mode.noise * mode.noiseDraw;
+      mode.extended = mode.accum;
       for (long col = 0; col < nFree_; ++col) {
         const long a = freeIndex_[static_cast<size_t>(col)];
         pnm_[static_cast<size_t>(k)][a] =
@@ -763,25 +871,39 @@ void RingPolymer::kick(double h, bool dropParallel) {
   }
 }
 
-void RingPolymer::propagate(double h) {
-  toNormal(q_, qnm_);
-  toNormal(p_, pnm_);
+void RingPolymer::rotateNormal(double h) {
+  const bool half = h == 0.5 * opt_.dt;
+  const bool full = h == opt_.dt;
+  const std::vector<double> &cs = half ? rotCHalf_ : rotCFull_;
+  const std::vector<double> &sn = half ? rotSHalf_ : rotSFull_;
   for (long a : freeIndex_) {
     const double m = mass_[static_cast<size_t>(a)];
     qnm_[0][a] += pnm_[0][a] / m * h;
     for (long k = 1; k < nBeads_; ++k) {
       const double omega = omegaK_[k];
-      const double c = std::cos(omega * h);
-      const double s = std::sin(omega * h);
+      const double c = (half || full) ? cs[static_cast<size_t>(k)]
+                                      : std::cos(omega * h);
+      const double s = (half || full) ? sn[static_cast<size_t>(k)]
+                                      : std::sin(omega * h);
       const double pk = pnm_[static_cast<size_t>(k)][a];
       const double qk = qnm_[static_cast<size_t>(k)][a];
       pnm_[static_cast<size_t>(k)][a] = c * pk - m * omega * s * qk;
       qnm_[static_cast<size_t>(k)][a] = c * qk + s * pk / (omega * m);
     }
   }
+}
+
+void RingPolymer::propagateRepeated(double h, int repeats) {
+  toNormal(q_, qnm_);
+  toNormal(p_, pnm_);
+  for (int rep = 0; rep < repeats; ++rep) {
+    rotateNormal(h);
+  }
   fromNormal(qnm_, q_);
   fromNormal(pnm_, p_);
 }
+
+void RingPolymer::propagate(double h) { propagateRepeated(h, 1); }
 
 // The centroid mode is the bead sum over sqrt(P), so a change d of that
 // mode moves every bead by d / sqrt(P) and leaves the other modes alone.
@@ -839,8 +961,9 @@ void RingPolymer::step(Potential &pot, const double *box, bool record) {
   }
   kick(half, true);
   projectMomentum();
-  propagate(half);
-  propagate(half);
+  // Two half-steps of the exact free ring. Nothing is evaluated between
+  // them, so both rotations run on the same normal-mode vectors.
+  propagateRepeated(half, 2);
   projectPosition();
   forces(pot, box);
   if (record) {

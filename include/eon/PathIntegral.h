@@ -131,12 +131,20 @@ private:
   void thermostat(double h);
   void kick(double h, bool dropParallel);
   void propagate(double h);
+  /// `repeats` exact free-ring steps of length h, one normal-mode transform.
+  void propagateRepeated(double h, int repeats);
+  void rotateNormal(double h);
   void projectPosition();
   void projectMomentum();
+  void fillCentroid() const;
   void toNormal(const std::vector<VectorXd> &src,
                 std::vector<VectorXd> &dst) const;
   void fromNormal(const std::vector<VectorXd> &src,
                   std::vector<VectorXd> &dst) const;
+  void transformTo(const std::vector<VectorXd> &src, std::vector<VectorXd> &dst,
+                   bool freeOnly) const;
+  void transformFrom(const std::vector<VectorXd> &src,
+                     std::vector<VectorXd> &dst, bool freeOnly) const;
   double gauss();
   void initGle();
 
@@ -167,10 +175,29 @@ private:
     MatrixXd propagate;
     MatrixXd noise;
     MatrixXd extended;
+    MatrixXd noiseDraw;
+    MatrixXd accum;
   };
   std::vector<ModeGle> gle_;
+  /// cos(omega_k h), sin(omega_k h) for h = dt/2 and h = dt.
+  std::vector<double> rotCHalf_;
+  std::vector<double> rotSHalf_;
+  std::vector<double> rotCFull_;
+  std::vector<double> rotSFull_;
+  std::vector<const double *> posBuf_;
+  std::vector<const int *> nrsBuf_;
+  std::vector<double *> frcBuf_;
+  std::vector<const double *> boxBuf_;
+  std::vector<double> energyBuf_;
+  std::vector<double> varianceBuf_;
+  std::vector<long> ownerBuf_;
+  double zeroBox_[9]{};
+  mutable VectorXd centroid_;
+  mutable std::vector<double> modeWork_;
 
   std::uint64_t rng_;
+  bool haveGaussSpare_{false};
+  double gaussSpare_{0.0};
   long batches_{0};
   long recorded_{0};
   double kineticSum_{0.0};
