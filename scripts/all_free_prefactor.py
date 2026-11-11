@@ -52,6 +52,12 @@ def write_config(dest: Path, all_free: bool) -> None:
                 "filter_scheme = fraction",
                 "filter_fraction = 0.90",
                 "",
+                "[Structure Comparison]",
+                "check_rotation = true",
+                "",
+                "[Hessian]",
+                "zero_freq_value = 1e-5",
+                "",
             ]
         )
     )
