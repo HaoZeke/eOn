@@ -216,8 +216,8 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   min2->setPeriodic(false);
   int zeroMass = eonc::Prefactor::getPrefactors(
       params, min1.get(), saddle.get(), min2.get(), unused1, unused2, full);
-  // A zero mass still returns a spectrum. That spectrum is not index 1.
-  REQUIRE(zeroMass == eonc::Prefactor::SADDLE_ORDER);
+  // A zero mass is rejected before the Hessian is built.
+  REQUIRE(zeroMass == eonc::Prefactor::ZERO_MASS);
   for (long atom = 0; atom < min1->numberOfAtoms(); ++atom) {
     min1->setMass(atom, 1.0);
     saddle->setMass(atom, 1.0);
@@ -239,7 +239,8 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   ParametersLoadAccess::prefactor_options(params).within_radius = 0.2;
   VectorXi farPairs = eonc::Prefactor::movedAtoms(
       params, min1.get(), saddle.get(), min2.get());
-  REQUIRE(farPairs.size() >= 0);
+  // within_radius 0.2 still keeps every atom of this 13-atom cluster.
+  REQUIRE(farPairs.size() == 13);
   ParametersLoadAccess::prefactor_options(params).within_radius = 3.3;
 
   if (auto *logger = eonc::log::get()) {
@@ -267,7 +268,7 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
       params, min1.get(), saddle.get(), min2.get(), clusterPref, clusterBack,
       full);
   // Fixing one atom leaves a spectrum whose negative-mode count is not 1.
-  REQUIRE(fixedStatus == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(fixedStatus == eonc::Prefactor::FIXED_ATOM);
 }
 
 TEST_CASE("zero cut drops modes at or below the threshold", "[prefactor]") {
@@ -372,40 +373,40 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
 
   ParametersLoadAccess::structure_comparison_options(params).check_rotation =
       false;
-  // The magnitude cut is skipped, so the extra negatives fail the index.
+  // The magnitude cut is skipped, so the minimum keeps a negative mode.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::MINIMUM_ORDER);
 
   ParametersLoadAccess::structure_comparison_options(params).check_rotation =
       true;
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
-  // A cut of 3 removes the reaction mode. The spectra are not a saddle.
+  // A cut of 3 removes different counts from the three spectra.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::SPECTRUM_LENGTH);
 
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
-  // The product geometry is the saddle, so that endpoint has a negative mode.
+  // The product geometry is the saddle, so that minimum has a negative mode.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          saddle.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::MINIMUM_ORDER);
 
   AtomMatrix broken = saddle->getPositions();
   broken(0, 0) = 1.0e300;
   saddle->setPositions(broken);
-  // The potential still returns a spectrum. The negative-mode count is not 1.
+  // The huge saddle coordinate makes the three spectra different lengths.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::SPECTRUM_LENGTH);
   saddle->con2matter(std::string("saddle.con"));
   broken = min2->getPositions();
   broken(0, 0) = 1.0e300;
   min2->setPositions(broken);
-  // The product coordinate is huge and the spectrum is not index 1.
+  // The huge product coordinate makes the three spectra different lengths.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::SPECTRUM_LENGTH);
   min2->con2matter(std::string("product.con"));
 
   ParametersLoadAccess::main_options(params).quiet = true;
@@ -414,7 +415,7 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   min2->setPositions(broken);
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SADDLE_ORDER);
+          eonc::Prefactor::SPECTRUM_LENGTH);
   min2->con2matter(std::string("product.con"));
   ParametersLoadAccess::main_options(params).quiet = false;
 
@@ -486,13 +487,15 @@ Coordinates of Component 1
   ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.0;
   VectorXi pct_stop = eonc::Prefactor::movedAtomsPct(
       params, min1.get(), saddle.get(), min2.get());
-  REQUIRE(pct_stop.size() >= 0);
+  // A zero fraction keeps no atom.
+  REQUIRE(pct_stop.size() == 0);
   auto identical = std::make_shared<Matter>(pot, params);
   *identical = *saddle;
   ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.5;
   VectorXi pct_zero = eonc::Prefactor::movedAtomsPct(
       params, identical.get(), saddle.get(), identical.get());
-  REQUIRE(pct_zero.size() >= 0);
+  // Identical endpoints leave one representative of the 13.
+  REQUIRE(pct_zero.size() == 12);
 
   min1->setFixed(0, true);
   ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.99;
@@ -529,8 +532,6 @@ TEST_CASE("a thrown fallback logger still returns the saddle status",
   VectorXi atoms = eonc::Prefactor::allFreeAtoms(min1.get());
   double pref1 = 0.0;
   double pref2 = 0.0;
-  eonc::log::detail::fail_fallback_logger.store(true,
-                                                std::memory_order_relaxed);
   int status = eonc::Prefactor::getPrefactors(
       params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
   int missing = eonc::Prefactor::getPrefactors(
@@ -577,8 +578,6 @@ TEST_CASE("a thrown fallback logger still returns the saddle status",
   int hugeProduct = eonc::Prefactor::getPrefactors(
       params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
   min2->con2matter(std::string("product.con"));
-  eonc::log::detail::fail_fallback_logger.store(false,
-                                                std::memory_order_relaxed);
   if (auto *logger = eonc::log::get()) {
     logger->set_log_level(quill::LogLevel::TraceL3);
   }
@@ -605,17 +604,17 @@ TEST_CASE("a thrown fallback logger still returns the saddle status",
   REQUIRE(missingBare == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(noAtoms == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(badIndex == eonc::Prefactor::POTENTIAL_FAILED);
-  REQUIRE(keptNegatives == eonc::Prefactor::SADDLE_ORDER);
-  REQUIRE(broadCut == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(keptNegatives == eonc::Prefactor::MINIMUM_ORDER);
+  REQUIRE(broadCut == eonc::Prefactor::SPECTRUM_LENGTH);
   REQUIRE(magnitude == eonc::Prefactor::OK);
   REQUIRE(far.size() == 0);
   REQUIRE(near.size() > 0);
-  REQUIRE(hugeSaddle == eonc::Prefactor::SADDLE_ORDER);
-  REQUIRE(hugeProduct == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(hugeSaddle == eonc::Prefactor::SPECTRUM_LENGTH);
+  REQUIRE(hugeProduct == eonc::Prefactor::SPECTRUM_LENGTH);
   REQUIRE(tracedEmpty == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(tracedBad == eonc::Prefactor::POTENTIAL_FAILED);
-  REQUIRE(tracedNeg == eonc::Prefactor::SADDLE_ORDER);
-  REQUIRE(tracedHuge == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(tracedNeg == eonc::Prefactor::MINIMUM_ORDER);
+  REQUIRE(tracedHuge == eonc::Prefactor::SPECTRUM_LENGTH);
 }
 
 TEST_CASE("logging does not change a prefactor status", "[prefactor]") {
@@ -677,25 +676,25 @@ Coordinates of Component 1
     ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
     int broad = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(broad == eonc::Prefactor::SADDLE_ORDER);
+    REQUIRE(broad == eonc::Prefactor::SPECTRUM_LENGTH);
     restore();
     ParametersLoadAccess::structure_comparison_options(params).check_rotation =
         false;
     int minNeg = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(minNeg == eonc::Prefactor::SADDLE_ORDER);
+    REQUIRE(minNeg == eonc::Prefactor::MINIMUM_ORDER);
     restore();
     AtomMatrix huge = saddle->getPositions();
     huge(0, 0) = 1.0e300;
     saddle->setPositions(huge);
     int saddleNeg = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(saddleNeg == eonc::Prefactor::SADDLE_ORDER);
+    REQUIRE(saddleNeg == eonc::Prefactor::SPECTRUM_LENGTH);
     restore();
     *min2 = *saddle;
     int productNeg = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(productNeg == eonc::Prefactor::SADDLE_ORDER);
+    REQUIRE(productNeg == eonc::Prefactor::MINIMUM_ORDER);
     restore();
     ParametersLoadAccess::hessian_options(params).write_modes = false;
     int magnitude = eonc::Prefactor::getPrefactors(
@@ -720,7 +719,7 @@ Coordinates of Component 1
     }
     int zeroMass = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(zeroMass == eonc::Prefactor::SADDLE_ORDER);
+    REQUIRE(zeroMass == eonc::Prefactor::ZERO_MASS);
     for (long atom = 0; atom < min1->numberOfAtoms(); ++atom) {
       min1->setMass(atom, 1.0);
       saddle->setMass(atom, 1.0);
@@ -745,10 +744,6 @@ Coordinates of Component 1
   statuses();
   logger->set_log_level(quill::LogLevel::TraceL3);
   statuses();
-  eonc::log::detail::fail_fallback_logger.store(true, std::memory_order_relaxed);
-  statuses();
-  eonc::log::detail::fail_fallback_logger.store(false,
-                                                std::memory_order_relaxed);
   logger->set_log_level(quill::LogLevel::None);
 }
 

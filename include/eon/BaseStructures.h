@@ -118,8 +118,16 @@ enum class RunStatus {
   GOOD = 0,
   FAIL_MAX_ITERATIONS,
   FAIL_POTENTIAL_FAILED,
-  // The Hessian was built. The negative-mode count is not one saddle mode.
-  FAIL_SADDLE_ORDER
+  // The saddle spectrum does not have exactly one negative mode.
+  FAIL_SADDLE_ORDER,
+  // A minimum spectrum has a negative mode.
+  FAIL_MINIMUM_ORDER,
+  // An atom in the Hessian list has zero mass.
+  FAIL_ZERO_MASS,
+  // An atom in the Hessian list is fixed.
+  FAIL_FIXED_ATOM,
+  // The three spectra do not have one common length.
+  FAIL_SPECTRUM_LENGTH
 };
 
 // Dimer rotation / softest-mode estimation backend (Leng et al. JCP 2013 LOR,

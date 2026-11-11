@@ -24,8 +24,16 @@ namespace Prefactor {
 inline constexpr int OK = 0;
 // The potential or the Hessian did not return a usable spectrum.
 inline constexpr int POTENTIAL_FAILED = -1;
-// The spectrum is usable and is not a first-order saddle.
+// The saddle spectrum does not have exactly one negative mode.
 inline constexpr int SADDLE_ORDER = -2;
+// A minimum spectrum has a negative mode.
+inline constexpr int MINIMUM_ORDER = -3;
+// An atom in the rate list has zero mass.
+inline constexpr int ZERO_MASS = -4;
+// An atom in the rate list is fixed.
+inline constexpr int FIXED_ATOM = -5;
+// The three spectra do not share one length.
+inline constexpr int SPECTRUM_LENGTH = -6;
 inline constexpr std::string_view RATE_HTST{"htst"};
 inline constexpr std::string_view RATE_QQHTST{"qqhtst"};
 inline constexpr std::string_view FILTER_CUTOFF{"cutoff"};

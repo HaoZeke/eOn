@@ -92,8 +92,7 @@ std::vector<std::string> PrefactorJob::run() {
     atoms = eonc::Prefactor::movedAtoms(params, reactant.get(), saddle.get(),
                                         product.get());
   }
-  const bool saddleOrder = prefStatus == Prefactor::SADDLE_ORDER;
-  bool failed = saddleOrder || (prefStatus != Prefactor::OK) || (atoms.rows() == 0);
+  bool failed = (prefStatus != Prefactor::OK) || (atoms.rows() == 0);
 
   if (!failed) {
     if (params.prefactor_options().configuration ==
@@ -122,9 +121,22 @@ std::vector<std::string> PrefactorJob::run() {
 
   std::ofstream outFreq(freq_file, std::ios::binary);
 
-  const RunStatus runStatus = !failed ? RunStatus::GOOD
-                                : saddleOrder ? RunStatus::FAIL_SADDLE_ORDER
-                                              : RunStatus::FAIL_POTENTIAL_FAILED;
+  RunStatus runStatus = RunStatus::GOOD;
+  if (failed) {
+    if (prefStatus == Prefactor::SADDLE_ORDER) {
+      runStatus = RunStatus::FAIL_SADDLE_ORDER;
+    } else if (prefStatus == Prefactor::MINIMUM_ORDER) {
+      runStatus = RunStatus::FAIL_MINIMUM_ORDER;
+    } else if (prefStatus == Prefactor::ZERO_MASS) {
+      runStatus = RunStatus::FAIL_ZERO_MASS;
+    } else if (prefStatus == Prefactor::FIXED_ATOM) {
+      runStatus = RunStatus::FAIL_FIXED_ATOM;
+    } else if (prefStatus == Prefactor::SPECTRUM_LENGTH) {
+      runStatus = RunStatus::FAIL_SPECTRUM_LENGTH;
+    } else {
+      runStatus = RunStatus::FAIL_POTENTIAL_FAILED;
+    }
+  }
   auto env = JobResultEnvelope::fromMinimization(
       runStatus,
       params.potential_options().potential, pots().total_force_calls(), false,

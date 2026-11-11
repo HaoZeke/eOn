@@ -145,6 +145,22 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     EONC_LOG_ERROR("[Prefactor] no moved atoms");
     return -1;
   }
+  for (int a = 0; a < atoms.size(); ++a) {
+    const int atom = atoms(a);
+    if (atom < 0 || atom >= min1->numberOfAtoms() ||
+        atom >= saddle->numberOfAtoms() || atom >= min2->numberOfAtoms()) {
+      continue;
+    }
+    if (!(min1->getMass(atom) > 0.0) || !(saddle->getMass(atom) > 0.0) ||
+        !(min2->getMass(atom) > 0.0)) {
+      EONC_LOG_ERROR("[Prefactor] zero mass");
+      return ZERO_MASS;
+    }
+    if (min1->getFixed(atom) || saddle->getFixed(atom) || min2->getFixed(atom)) {
+      EONC_LOG_ERROR("[Prefactor] fixed atom");
+      return FIXED_ATOM;
+    }
+  }
 
   // calculate min1 frequencies
   Hessian hessian(parameters, min1);
@@ -187,9 +203,8 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     if (!parameters.main_options().quiet) {
       EONC_LOG_ERROR("[Prefactor] Bad prefactor: Hessian sizes do not match");
     }
-    // The potential returned the three spectra. Their lengths differ after
-    // the zero cut, so this is not a potential failure.
-    return SADDLE_ORDER;
+    // The potential returned three spectra. Their lengths differ.
+    return SPECTRUM_LENGTH;
   }
 
   logFreqs(min1Freqs, "minimum 1");
@@ -209,7 +224,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
   }
   if (numNegFreq != 0) {
     EONC_LOG_DEBUG("[Prefactor] Error: {} negative modes at min1", numNegFreq);
-    return SADDLE_ORDER;
+    return MINIMUM_ORDER;
   }
 
   numNegFreq = 0;
@@ -231,7 +246,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
   }
   if (numNegFreq != 0) {
     EONC_LOG_DEBUG("Error: {} negative modes at min2", numNegFreq);
-    return SADDLE_ORDER;
+    return MINIMUM_ORDER;
   }
 
   // calculate the prefactors
