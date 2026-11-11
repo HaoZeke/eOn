@@ -18,7 +18,7 @@ int main() {
   ::setenv("QUILL_LOG_LEVEL", "not-a-level", 1);
   eonc::Parameters params;
   try {
-    auto pot = eonc::makePotential(eonc::PotType::UNKNOWN, params);
+    auto pot = eonc::helpers::makePotential(eonc::PotType::UNKNOWN, params);
     if (pot) {
       std::cerr << "unknown potential was constructed\n";
       return 1;
