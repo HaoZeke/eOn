@@ -48,7 +48,7 @@ The one-sided quotient uses only the forward sample.
 
 $$H_{ij} \approx -\frac{-F_j(x+2 h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2 h e_i)}{12 h}$$
 
-Fourth order is the stencil in the display above. A one-sided step of 0.01 Å left an
+Those weights are the fourth-order stencil. A one-sided step of 0.01 Å left an
 \(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
 term as well.
 The same `fd_scheme = fourth` value selects that stencil for Lanczos and
@@ -178,8 +178,10 @@ With `[Hessian] write_modes = true` (the default), `modes.con` stores one frame
 per eigenvalue, lowest first. Each frame is the input structure with the mode
 in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
 of eigenvector \(q\), scaled to unit norm, and zero on atoms
-outside the mobile set. The frame metadata carries `mode_eigenvalue` in
-eV/(Å² amu), `hbar_omega` in eV and `wavenumber` in cm⁻¹. hbar_omega and wavenumber are negative for an imaginary mode. Any readcon reader gets the mode as an
+outside the mobile set. Metadata records `mode_eigenvalue` in
+eV/(Å² amu). `hbar_omega` is in eV. `wavenumber` is in cm⁻¹.
+An imaginary mode makes `hbar_omega` and `wavenumber` negative.
+Any readcon reader gets the mode as an
 N x 3 array beside the positions:
 
 ```{code-block} python
