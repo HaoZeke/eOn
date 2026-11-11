@@ -423,18 +423,20 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   AtomMatrix broken = saddle->getPositions();
   broken(0, 0) = 1.0e300;
   saddle->setPositions(broken);
-  // The huge saddle coordinate makes the three spectra different lengths.
+  // Eigenvectors stay, so the lengths match. The minimum still
+  // has an extra negative mode.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SPECTRUM_LENGTH);
+          eonc::Prefactor::MINIMUM_ORDER);
   saddle->con2matter(std::string("saddle.con"));
   broken = min2->getPositions();
   broken(0, 0) = 1.0e300;
   min2->setPositions(broken);
-  // The huge product coordinate makes the three spectra different lengths.
+  // The minimum still carries an extra negative mode, so the
+  // product coordinate is not reached as a length error.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SPECTRUM_LENGTH);
+          eonc::Prefactor::MINIMUM_ORDER);
   min2->con2matter(std::string("product.con"));
 
   ParametersLoadAccess::main_options(params).quiet = true;
@@ -443,7 +445,7 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   min2->setPositions(broken);
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SPECTRUM_LENGTH);
+          eonc::Prefactor::MINIMUM_ORDER);
   min2->con2matter(std::string("product.con"));
   ParametersLoadAccess::main_options(params).quiet = false;
 
@@ -720,7 +722,9 @@ Coordinates of Component 1
     saddle->setPositions(huge);
     int saddleNeg = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(saddleNeg == eonc::Prefactor::SPECTRUM_LENGTH);
+    // Eigenvectors stay, so the lengths match. The minimum still
+    // has an extra negative mode.
+    REQUIRE(saddleNeg == eonc::Prefactor::MINIMUM_ORDER);
     restore();
     *min2 = *saddle;
     int productNeg = eonc::Prefactor::getPrefactors(
