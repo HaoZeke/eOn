@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
+#include "eon/Hessian.h"
 #include "eon/Prefactor.h"
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
@@ -108,15 +109,16 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   auto pot = min1->getPotential();
   auto saddle = std::make_shared<Matter>(pot, params);
   auto min2 = std::make_shared<Matter>(pot, params);
-  *saddle = *min1;
-  *min2 = *min1;
-  AtomMatrix pos = saddle->getPositions();
-  pos.row(2) += Eigen::RowVector3d(0.0, 0.8, 0.0);
-  saddle->setPositions(pos);
+  saddle->con2matter(std::string("saddle.con"));
+  min2->con2matter(std::string("product.con"));
   ParametersLoadAccess::prefactor_options(params).filter_scheme =
       eonc::Prefactor::FILTER_FRACTION;
   ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.05;
   ParametersLoadAccess::prefactor_options(params).within_radius = 0.0;
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation = true;
+  // The LJ13 fixture is not a converged minimum. Its extra negatives sit
+  // below 0.5 while the reaction mode does not, so the cut leaves index 1.
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
   ParametersLoadAccess::prefactor_options(params).all_free_atoms = false;
   VectorXi partial = eonc::Prefactor::rateAtoms(params, min1.get(),
                                                 saddle.get(), min2.get());
@@ -138,10 +140,48 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(partial.size() < min1->numberOfFreeAtoms());
   REQUIRE(full.size() == min1->numberOfFreeAtoms());
   REQUIRE(full.size() > partial.size());
-  REQUIRE(partialStatus == fullStatus);
-  if (partialStatus == 0 && fullStatus == 0) {
-    REQUIRE(fullPref != partialPref);
+  REQUIRE(partialStatus != 0);
+  REQUIRE(fullStatus == 0);
+  REQUIRE(fullPref > 0.0);
+  REQUIRE(fullBack > 0.0);
+  REQUIRE(fullPref != fullBack);
+}
+
+TEST_CASE("zero cut drops modes at or below the threshold", "[prefactor]") {
+  auto [matter, params] = makeLJCluster();
+  const double cut = 1.0e-5;
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = cut;
+  const int n3 = 3 * matter->numberOfAtoms();
+  VectorXd freqs(n3);
+  freqs.setConstant(0.2);
+  const double dropped_values[] = {-1.0e-6, 4.0e-6, -9.0e-7};
+  freqs(0) = dropped_values[0];
+  freqs(1) = dropped_values[1];
+  freqs(2) = dropped_values[2];
+  freqs(3) = -0.4;
+  Hessian hessian(params, matter.get());
+  VectorXd kept = hessian.removeZeroFreqs(freqs);
+  REQUIRE(kept.size() == n3 - 3);
+  REQUIRE(kept(0) == -0.4);
+  std::vector<double> dropped;
+  for (int i = 0; i < freqs.size(); ++i) {
+    if (std::abs(freqs(i)) <= cut) {
+      dropped.push_back(freqs(i));
+    }
+    bool survived = false;
+    for (int j = 0; j < kept.size(); ++j) {
+      if (kept(j) == freqs(i)) {
+        survived = true;
+      }
+    }
+    if (std::abs(freqs(i)) <= cut) {
+      REQUIRE_FALSE(survived);
+    }
   }
+  REQUIRE(dropped.size() == 3);
+  REQUIRE(dropped[0] == dropped_values[0]);
+  REQUIRE(dropped[1] == dropped_values[1]);
+  REQUIRE(dropped[2] == dropped_values[2]);
 }
 
 TEST_CASE("allFreeAtoms drops fixed rows", "[prefactor]") {
