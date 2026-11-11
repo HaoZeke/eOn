@@ -17,6 +17,8 @@
 #include "quill/Logger.h"
 #include "quill/sinks/ConsoleSink.h"
 #include "quill/sinks/FileSink.h"
+#include "quill/sinks/NullSink.h"
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -238,7 +240,35 @@ get_file(std::string_view name, std::string_view filename,
 struct Scoped {
   [[no_unique_address]] quill::Logger *logger{nullptr};
 
-  Scoped() noexcept : logger(get()) {}
+  Scoped() noexcept : logger(get()) {
+    if (logger) {
+      return;
+    }
+    // get() stays null after a bad QUILL_LOG_LEVEL. Member logs still
+    // need an object, and that object must not be registered as combi.
+    const char *saved = std::getenv("QUILL_LOG_LEVEL");
+    std::string copy = saved ? saved : "";
+    if (saved) {
+      ::unsetenv("QUILL_LOG_LEVEL");
+    }
+    try {
+      quill::Backend::start();
+    } catch (...) {
+    }
+    try {
+      auto sink = quill::Frontend::create_or_get_sink<quill::NullSink>(
+          "scoped_null_sink");
+      logger = quill::Frontend::create_or_get_logger(
+          "scoped_null", std::move(sink),
+          quill::PatternFormatterOptions{"%(message)"},
+          quill::ClockSourceType::System);
+    } catch (...) {
+      logger = nullptr;
+    }
+    if (!copy.empty()) {
+      ::setenv("QUILL_LOG_LEVEL", copy.c_str(), 1);
+    }
+  }
 
   // Implicit conversion to Logger* for seamless use with QUILL_LOG_* macros
   operator quill::Logger *() const noexcept { return logger; }
