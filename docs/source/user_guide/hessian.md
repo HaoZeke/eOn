@@ -48,7 +48,7 @@ The one-sided quotient uses only the forward sample.
 
 $$H_{ij} \approx -\frac{-F_j(x+2 h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2 h e_i)}{12 h}$$
 
-The formula above is the default stencil. A one-sided step of 0.01 Å left an
+Fourth order is the stencil in the display above. A one-sided step of 0.01 Å left an
 \(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
 term as well.
 The same `fd_scheme = fourth` value selects that stencil for Lanczos and
@@ -69,9 +69,8 @@ positions. `0`, or any non-finite value, means the range is unknown and
 coloring stays off. One column is then built per coordinate.
 
 An interaction cutoff is not this distance. A pair potential is zero past
-its cutoff, so the range equals the cutoff. An atom-centred many-body
-potential (embedded-atom method, Gupta, Stillinger-Weber, Tersoff) is zero only past twice
-the cutoff. The density at one atom depends on every neighbour inside the cutoff. A flexible water model lacks a
+its cutoff, so the range equals the cutoff. Embedded-atom, Gupta, Stillinger-Weber and Tersoff potentials are atom centred.
+Each potential is zero only past twice the cutoff. The density at one atom depends on every neighbour inside the cutoff. A flexible water model lacks a
 hard intramolecular extent, so a cutoff on the oxygen-oxygen interaction
 leaves the blocks nonzero past every fixed distance. A message-passing
 model is zero past `n_layers` times the edge cutoff, and only when that
@@ -180,8 +179,7 @@ per eigenvalue, lowest first. Each frame is the input structure with the mode
 in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
 of eigenvector \(q\), scaled to unit norm, and zero on atoms
 outside the mobile set. The frame metadata carries `mode_eigenvalue` in
-eV/(Å² amu), `hbar_omega` in eV and `wavenumber` in cm⁻¹. The last two are
-Those two values are negative for an imaginary mode. Any readcon reader gets the mode as an
+eV/(Å² amu), `hbar_omega` in eV and `wavenumber` in cm⁻¹. hbar_omega and wavenumber are negative for an imaginary mode. Any readcon reader gets the mode as an
 N x 3 array beside the positions:
 
 ```{code-block} python

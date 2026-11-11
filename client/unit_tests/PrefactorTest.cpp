@@ -747,4 +747,45 @@ Coordinates of Component 1
   logger->set_log_level(quill::LogLevel::None);
 }
 
+TEST_CASE("one image with zero mass or a fixed atom is rejected", "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  saddle->con2matter(std::string("saddle.con"));
+  min2->con2matter(std::string("product.con"));
+  VectorXi atoms = eonc::Prefactor::allFreeAtoms(min1.get());
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  auto restore = [&]() {
+    for (long atom = 0; atom < min1->numberOfAtoms(); ++atom) {
+      min1->setMass(atom, 1.0);
+      saddle->setMass(atom, 1.0);
+      min2->setMass(atom, 1.0);
+      min1->setFixed(atom, false);
+      saddle->setFixed(atom, false);
+      min2->setFixed(atom, false);
+    }
+  };
+  saddle->setMass(0, 0.0);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         min2.get(), pref1, pref2, atoms) ==
+          eonc::Prefactor::ZERO_MASS);
+  restore();
+  min2->setMass(0, 0.0);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         min2.get(), pref1, pref2, atoms) ==
+          eonc::Prefactor::ZERO_MASS);
+  restore();
+  saddle->setFixed(0, true);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         min2.get(), pref1, pref2, atoms) ==
+          eonc::Prefactor::FIXED_ATOM);
+  restore();
+  min2->setFixed(0, true);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         min2.get(), pref1, pref2, atoms) ==
+          eonc::Prefactor::FIXED_ATOM);
+}
+
 } /* namespace tests */
