@@ -40,6 +40,24 @@ inline FdScheme parseFdScheme(std::string_view scheme) {
   return FdScheme::OneSided;
 }
 
+/// Boltzmann constant in eV/K. Eigenvalues of the mass-weighted Hessian
+/// are in eV/(Å^2 amu), so kT/λ is in Å^2 amu.
+inline constexpr double kBoltzmannEvPerKelvin = 8.617333262145e-5;
+
+/// Thermal amplitude q_T = sqrt(kT/λ) in the mass-weighted coordinate.
+/// q_T has units Å amu^{1/2}. It is not a Cartesian length and it is not
+/// built from a frequency in Hz. The Cartesian step along a unit
+/// mass-weighted eigenvector component v_i is q_T * v_i / sqrt(m_i).
+inline double thermalMassWeightedAmplitude(double lambda, double temperatureK) {
+  return std::sqrt((kBoltzmannEvPerKelvin * temperatureK) / lambda);
+}
+
+/// Cartesian length (Å) of a mass-weighted displacement q (Å amu^{1/2})
+/// on one atom of mass `massAmu` when that atom carries the whole mode.
+inline double cartesianFromMassWeighted(double q, double massAmu) {
+  return q / std::sqrt(massAmu);
+}
+
 /// Step for an assembled Hessian.
 /// ``Main.finite_difference`` is the optimizer step and defaults to 0.01 Å.
 /// A one-sided difference at that length biased a soft eigenvalue by 40

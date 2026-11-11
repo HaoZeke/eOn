@@ -1689,6 +1689,78 @@ TEST_CASE_METHOD(HessianScratch,
   REQUIRE(eonc::parseFdScheme(params.hessian_options().fd_scheme) ==
           eonc::FdScheme::Central);
 }
+
+namespace {
+// E = (1/2) k x^2 on one atom. The mass-weighted eigenvalue is k/m.
+class HarmonicSpring final : public eonc::Potential {
+public:
+  HarmonicSpring(const Parameters &params, double k)
+      : eonc::Potential(PotType::LJ, params), k_(k) {}
+  void force(long nAtoms, const double *positions, const int *atomicNrs,
+             double *forces, double *energy, double *variance,
+             const double *box) override {
+    (void)atomicNrs;
+    (void)box;
+    for (long i = 0; i < 3 * nAtoms; ++i) {
+      forces[i] = 0.0;
+    }
+    const double x = positions[0];
+    forces[0] = -k_ * x;
+    *energy = 0.5 * k_ * x * x;
+    *variance = 0.0;
+  }
+
+private:
+  double k_;
+};
+} // namespace
+
+TEST_CASE_METHOD(HessianScratch,
+                 "thermal amplitude is sqrt(kT/lambda) in mass-weighted units",
+                 "[hessian][thermal]") {
+  constexpr double kSpring = 0.2; // eV/A^2
+  constexpr double mass = 63.546; // amu
+  constexpr double temperature = 220.0;
+  const double lambda = kSpring / mass; // eV/(A^2 amu)
+  const double qT = eonc::thermalMassWeightedAmplitude(lambda, temperature);
+  const double halfkT = 0.5 * eonc::kBoltzmannEvPerKelvin * temperature;
+  const double harmonicRise = 0.5 * lambda * qT * qT;
+  REQUIRE(std::abs(harmonicRise - halfkT) / halfkT < 1e-6);
+
+  // Reading q_T as a Cartesian angstrom, or lambda as a frequency in Hz,
+  // misses this identity. The Hz stand-in is smaller than lambda by 1e13.
+  const double hzStandIn = 1.0e13;
+  const double wrongRise = 0.5 * lambda *
+                           eonc::thermalMassWeightedAmplitude(hzStandIn, temperature) *
+                           eonc::thermalMassWeightedAmplitude(hzStandIn, temperature);
+  REQUIRE(std::abs(wrongRise - halfkT) / halfkT > 0.5);
+
+  const double x = eonc::cartesianFromMassWeighted(qT, mass);
+  REQUIRE(std::abs(0.5 * kSpring * x * x - halfkT) / halfkT < 1e-6);
+  REQUIRE(x < 0.5);
+
+  Parameters params;
+  ParametersLoadAccess::main_options(params).removeNetForce = false;
+  auto pot = std::make_shared<HarmonicSpring>(params, kSpring);
+  Matter matter(pot, params);
+  matter.resize(1);
+  matter.setAtomicNr(0, 1);
+  matter.setMass(0, mass);
+  AtomMatrix pos(1, 3);
+  pos.setZero();
+  matter.setPositions(pos);
+  matter.setCell(Matrix3d::Identity() * 40.0);
+  matter.setPeriodic(false);
+  const double base = matter.getPotentialEnergy();
+  pos(0, 0) = x;
+  matter.setPositions(pos);
+  const double scanned = matter.getPotentialEnergy() - base;
+  REQUIRE(std::abs(scanned - halfkT) / halfkT < 1e-6);
+  pos(0, 0) = -x;
+  matter.setPositions(pos);
+  const double scannedMinus = matter.getPotentialEnergy() - base;
+  REQUIRE(std::abs(scannedMinus - halfkT) / halfkT < 1e-6);
+}
 } // namespace tests
 
 namespace tests {
