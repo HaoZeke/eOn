@@ -207,7 +207,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
   }
   if (numNegFreq != 0) {
     EONC_LOG_DEBUG("[Prefactor] Error: {} negative modes at min1", numNegFreq);
-    return -1;
+    return SADDLE_ORDER;
   }
 
   numNegFreq = 0;
@@ -218,7 +218,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
   }
   if (numNegFreq != 1) {
     EONC_LOG_DEBUG("Error: {} negative modes at saddle", numNegFreq);
-    return -1;
+    return SADDLE_ORDER;
   }
 
   numNegFreq = 0;
@@ -229,7 +229,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
   }
   if (numNegFreq != 0) {
     EONC_LOG_DEBUG("Error: {} negative modes at min2", numNegFreq);
-    return -1;
+    return SADDLE_ORDER;
   }
 
   // calculate the prefactors

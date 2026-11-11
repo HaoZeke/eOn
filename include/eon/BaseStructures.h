@@ -114,7 +114,13 @@ enum class OptType {
 
 enum class NEBInit { LINEAR, IDPP, IDPP_COLLECTIVE, SIDPP, SIDPP_ZBL, FILE };
 
-enum class RunStatus { GOOD = 0, FAIL_MAX_ITERATIONS, FAIL_POTENTIAL_FAILED };
+enum class RunStatus {
+  GOOD = 0,
+  FAIL_MAX_ITERATIONS,
+  FAIL_POTENTIAL_FAILED,
+  // The Hessian was built. The negative-mode count is not one saddle mode.
+  FAIL_SADDLE_ORDER
+};
 
 // Dimer rotation / softest-mode estimation backend (Leng et al. JCP 2013 LOR,
 // classical constrained rotation, or FD min-mode Lanczos/Davidson).

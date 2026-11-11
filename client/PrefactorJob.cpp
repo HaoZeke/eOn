@@ -92,7 +92,8 @@ std::vector<std::string> PrefactorJob::run() {
     atoms = eonc::Prefactor::movedAtoms(params, reactant.get(), saddle.get(),
                                         product.get());
   }
-  bool failed = (prefStatus == -1) || (atoms.rows() == 0);
+  const bool saddleOrder = prefStatus == Prefactor::SADDLE_ORDER;
+  bool failed = saddleOrder || (prefStatus != Prefactor::OK) || (atoms.rows() == 0);
 
   if (!failed) {
     if (params.prefactor_options().configuration ==
@@ -121,8 +122,11 @@ std::vector<std::string> PrefactorJob::run() {
 
   std::ofstream outFreq(freq_file, std::ios::binary);
 
+  const RunStatus runStatus = !failed ? RunStatus::GOOD
+                                : saddleOrder ? RunStatus::FAIL_SADDLE_ORDER
+                                              : RunStatus::FAIL_POTENTIAL_FAILED;
   auto env = JobResultEnvelope::fromMinimization(
-      failed ? RunStatus::FAIL_POTENTIAL_FAILED : RunStatus::GOOD,
+      runStatus,
       params.potential_options().potential, pots().total_force_calls(), false,
       0.0);
   env.provenance = provenanceForJob(params);

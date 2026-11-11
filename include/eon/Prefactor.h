@@ -21,6 +21,11 @@
 namespace eonc {
 
 namespace Prefactor {
+inline constexpr int OK = 0;
+// The potential or the Hessian did not return a usable spectrum.
+inline constexpr int POTENTIAL_FAILED = -1;
+// The spectrum is usable and is not a first-order saddle.
+inline constexpr int SADDLE_ORDER = -2;
 inline constexpr std::string_view RATE_HTST{"htst"};
 inline constexpr std::string_view RATE_QQHTST{"qqhtst"};
 inline constexpr std::string_view FILTER_CUTOFF{"cutoff"};
