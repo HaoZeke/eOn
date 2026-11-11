@@ -379,8 +379,10 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   ParametersLoadAccess::structure_comparison_options(params).check_rotation =
       true;
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
+  // A cut of 3 removes the reaction mode. The spectra are not a saddle.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
-                                         min2.get(), pref1, pref2, full) == -1);
+                                         min2.get(), pref1, pref2, full) ==
+          eonc::Prefactor::SADDLE_ORDER);
 
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
   // The product geometry is the saddle, so that endpoint has a negative mode.
@@ -391,14 +393,18 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   AtomMatrix broken = saddle->getPositions();
   broken(0, 0) = 1.0e300;
   saddle->setPositions(broken);
+  // The potential still returns a spectrum. The negative-mode count is not 1.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
-                                         min2.get(), pref1, pref2, full) == -1);
+                                         min2.get(), pref1, pref2, full) ==
+          eonc::Prefactor::SADDLE_ORDER);
   saddle->con2matter(std::string("saddle.con"));
   broken = min2->getPositions();
   broken(0, 0) = 1.0e300;
   min2->setPositions(broken);
+  // The product coordinate is huge and the spectrum is not index 1.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
-                                         min2.get(), pref1, pref2, full) == -1);
+                                         min2.get(), pref1, pref2, full) ==
+          eonc::Prefactor::SADDLE_ORDER);
   min2->con2matter(std::string("product.con"));
 
   ParametersLoadAccess::main_options(params).quiet = true;
@@ -406,7 +412,8 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   broken(0, 0) = 1.0e300;
   min2->setPositions(broken);
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
-                                         min2.get(), pref1, pref2, full) == -1);
+                                         min2.get(), pref1, pref2, full) ==
+          eonc::Prefactor::SADDLE_ORDER);
   min2->con2matter(std::string("product.con"));
   ParametersLoadAccess::main_options(params).quiet = false;
 

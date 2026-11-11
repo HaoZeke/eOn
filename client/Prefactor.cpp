@@ -187,7 +187,9 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     if (!parameters.main_options().quiet) {
       EONC_LOG_ERROR("[Prefactor] Bad prefactor: Hessian sizes do not match");
     }
-    return -1;
+    // The potential returned the three spectra. Their lengths differ after
+    // the zero cut, so this is not a potential failure.
+    return SADDLE_ORDER;
   }
 
   logFreqs(min1Freqs, "minimum 1");
