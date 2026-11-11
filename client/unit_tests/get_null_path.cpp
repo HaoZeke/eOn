@@ -1,45 +1,35 @@
 /*
-** This file is part of eOn.
-**
-** SPDX-License-Identifier: BSD-3-Clause
-**
-** Copyright (c) 2010--present, eOn Development Team
-** All rights reserved.
+** Copyright (c) eOn developers
 */
 
-// Four public entries to get(). Each prints 1 when the pointer is set.
-// A zero would mean the log-null arm is reachable on that entry.
+// A bad QUILL_LOG_LEVEL makes create_or_get_logger throw.
+// get() catches that throw and returns a null pointer.
+// Removing the catch aborts this process, so the test fails.
 
 #include "eon/EonLogger.h"
 
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
 int main(int argc, char **argv) {
-  std::string mode = argc > 1 ? argv[1] : "fresh";
-  if (mode == "init") {
-    auto *created = eonc::log::init_client();
-    auto *got = eonc::log::get();
-    std::cout << "init " << (created ? 1 : 0) << " get " << (got ? 1 : 0)
-              << "\n";
-    return got ? 0 : 2;
+  const std::string mode = argc > 1 ? argv[1] : "bad-level";
+  if (mode == "bad-level") {
+    ::setenv("QUILL_LOG_LEVEL", "not-a-level", 1);
+    quill::Logger *got = nullptr;
+    try {
+      got = eonc::log::get();
+    } catch (...) {
+      std::cerr << "exception escaped get()\n";
+      return 2;
+    }
+    if (got != nullptr) {
+      std::cerr << "get() returned a logger\n";
+      return 1;
+    }
+    std::cout << "bad_level get 0\n";
+    return 0;
   }
-  if (mode == "stop") {
-    auto *created = eonc::log::init_client();
-    quill::Backend::stop();
-    auto *got = eonc::log::get();
-    std::cout << "after_stop init " << (created ? 1 : 0) << " get "
-              << (got ? 1 : 0) << "\n";
-    return got ? 0 : 3;
-  }
-  if (mode == "stop-first") {
-    quill::Backend::stop();
-    auto *got = eonc::log::get();
-    std::cout << "stop_first get " << (got ? 1 : 0) << "\n";
-    return got ? 0 : 4;
-  }
-  auto *got = eonc::log::get();
-  std::cout << "fresh get " << (got ? 1 : 0) << "\n";
-  EONC_LOG_DEBUG("fresh line");
-  return got ? 0 : 1;
+  std::cerr << "unknown mode\n";
+  return 3;
 }

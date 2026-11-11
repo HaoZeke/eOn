@@ -2306,6 +2306,16 @@ if get_option('with_tests')
         )
     endif
 endif
+# A bad QUILL_LOG_LEVEL reaches the catch in get().
+get_null_path = executable(
+    'get_null_path',
+    'unit_tests/get_null_path.cpp',
+    include_directories: _incdirs,
+    dependencies: _exe_deps,
+    link_with: _linkto,
+)
+test('get_null_bad_level', get_null_path, args: ['bad-level'], suite: ['eon'])
+
 # ------------------------ Tests
 
 if get_option('with_tests')
