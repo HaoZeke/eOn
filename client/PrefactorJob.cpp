@@ -18,6 +18,7 @@
 #include "eon/Matter.h"
 #include "eon/PotRegistry.h"
 #include "eon/Potential.h"
+#include "eon/FiniteDifference.h"
 #include "eon/Prefactor.h"
 
 #include <cmath>
@@ -128,6 +129,11 @@ std::vector<std::string> PrefactorJob::run() {
   env.job_type = "prefactor";
   env.tags.emplace_back("good", failed ? "false" : "true");
   env.extras.emplace_back("force_calls", static_cast<double>(env.force_calls));
+  const double hessianStep =
+      hessianFiniteDifference(params.main_options().finiteDifference);
+  env.extras.emplace_back("hessian_step_angstrom", hessianStep);
+  env.tags.emplace_back("hessian_fd_scheme",
+                        params.hessian_options().fd_scheme);
   if (!failed) {
     env.extras.emplace_back("prefactor_reactant_to_product", pref1);
     env.extras.emplace_back("prefactor_product_to_reactant", pref2);
