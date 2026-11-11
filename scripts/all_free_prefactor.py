@@ -149,8 +149,27 @@ def main() -> int:
     print(f"all_free_atoms {full['atoms']}")
     same = filtered["forward"] == full["forward"] and filtered["reverse"] == full["reverse"]
     print(f"prefactors_match {str(same).lower()}")
+    quill = args.work / "all_free" / "client_quill.log"
+    dropped = []
+    if quill.is_file():
+        for line in quill.read_text(errors="replace").splitlines():
+            if "dropped " in line and " mode " in line:
+                value = float(line.rsplit("mode ", 1)[1].strip())
+                where = line.split("dropped ", 1)[1].split(" mode ", 1)[0]
+                dropped.append((where, value))
+                print(f"dropped_mode {where} {value:.12e}")
+    print(f"dropped_count {len(dropped)}")
+    # A kept reaction mode is far below zero. A dropped mode is at most the
+    # zero threshold written into the job config.
+    threshold = 1.0e-5
+    bad_drop = [value for _, value in dropped if abs(value) > threshold]
+    saddle_drops = [value for where, value in dropped if where == "saddle"]
+    print(f"dropped_bad {len(bad_drop)}")
+    print(f"dropped_saddle {len(saddle_drops)}")
     print(f"end_time {clock()}")
-    return 1 if same else 0
+    if same or bad_drop or len(saddle_drops) < 3:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

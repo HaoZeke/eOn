@@ -68,9 +68,19 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     return -1;
   }
   // remove zero modes
-  if (parameters.structure_comparison_options().check_rotation) {
-    min1Freqs = hessian.removeZeroFreqs(min1Freqs);
-  }
+  const double zeroCut = parameters.hessian_options().zero_freq_value;
+  auto dropZeros = [&](const VectorXd &in, const char *where) {
+    if (!parameters.structure_comparison_options().check_rotation) {
+      return in;
+    }
+    for (int i = 0; i < in.size(); ++i) {
+      if (std::abs(in(i)) <= zeroCut) {
+        EONC_LOG_DEBUG("[Prefactor] dropped {} mode {}", where, in(i));
+      }
+    }
+    return hessian.removeZeroFreqs(in);
+  };
+  min1Freqs = dropZeros(min1Freqs, "minimum 1");
 
   // calculate saddle frequencies
   saddleFreqs = hessian.getFreqs(saddle, atoms);
@@ -78,10 +88,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     EONC_LOG_ERROR("[Prefactor] Bad hessian: saddle");
     return -1;
   }
-  // remove zero modes
-  if (parameters.structure_comparison_options().check_rotation) {
-    saddleFreqs = hessian.removeZeroFreqs(saddleFreqs);
-  }
+  saddleFreqs = dropZeros(saddleFreqs, "saddle");
 
   // calculate min2 frequencies
   min2Freqs = hessian.getFreqs(min2, atoms);
@@ -91,10 +98,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     }
     return -1;
   }
-  // remove zero modes
-  if (parameters.structure_comparison_options().check_rotation) {
-    min2Freqs = hessian.removeZeroFreqs(min2Freqs);
-  }
+  min2Freqs = dropZeros(min2Freqs, "minimum 2");
 
   // Both minima must match the saddle Hessian length.
   if ((min1Freqs.size() != saddleFreqs.size()) ||
