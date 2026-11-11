@@ -519,8 +519,11 @@ Splitting bandSplitting(const std::vector<std::shared_ptr<Matter>> &band,
 namespace {
 
 /// Ring coordinates up to which the Newton step takes the dense spectrum
-/// and a dense solve; beyond, the block chain and Lanczos.
-constexpr long kDenseRing = 4096;
+/// and a dense solve. Past this the block chain is used: a dense
+/// eigen-decomposition is O((N f)^3) and was the cost of every Newton
+/// iteration on the LJ13 rate. One-dimensional rings do not use this
+/// cutoff; their spectrum is the tridiagonal one.
+constexpr long kDenseRing = 160;
 
 /// Lanczos steps a large ring's Newton view grows to at most; the basis
 /// holds that many ring vectors.
@@ -1568,6 +1571,219 @@ std::vector<MatrixXd> ringDiagonal(const std::vector<MatrixXd> &physical,
   return diag;
 }
 
+// The same matrix applyDiagonal multiplies by, written in place. Column
+// (bead b, coordinate t) is diag[b]'s column t, with -c on each neighbour's
+// coordinate t: the product of a unit vector, with no temporary bead vectors.
+void assembleDiagonal(ColMajorXd &big, const std::vector<MatrixXd> &diag,
+                      double c, bool closed) {
+  const long n = static_cast<long>(diag.size());
+  const long f = diag.front().rows();
+  big.setZero(n * f, n * f);
+  for (long b = 0; b < n; ++b) {
+    big.block(b * f, b * f, f, f) = diag[static_cast<size_t>(b)];
+  }
+  for (long b = 0; b < n; ++b) {
+    auto couple = [&](long dst) {
+      for (long t = 0; t < f; ++t) {
+        big(dst * f + t, b * f + t) -= c;
+      }
+    };
+    if (b > 0 || closed) {
+      couple((b + n - 1) % n);
+    }
+    if (b + 1 < n || closed) {
+      couple((b + 1) % n);
+    }
+  }
+}
+
+// Open tridiagonal: a[i] x_{i-1} + b[i] x_i + c[i] x_{i+1} = r[i], a[0] and
+// c[n-1] unused.
+bool thomasSolve(const std::vector<double> &a, const std::vector<double> &b,
+                 const std::vector<double> &c, const std::vector<double> &r,
+                 std::vector<double> &x) {
+  const long n = static_cast<long>(b.size());
+  x.assign(static_cast<size_t>(n), 0.0);
+  std::vector<double> cp(static_cast<size_t>(n)), dp(static_cast<size_t>(n));
+  if (!(b[0] != 0.0)) {
+    return false;
+  }
+  cp[0] = c[0] / b[0];
+  dp[0] = r[0] / b[0];
+  for (long i = 1; i < n; ++i) {
+    const double den = b[static_cast<size_t>(i)] -
+                       a[static_cast<size_t>(i)] * cp[static_cast<size_t>(i - 1)];
+    if (!(den != 0.0)) {
+      return false;
+    }
+    cp[static_cast<size_t>(i)] =
+        (i + 1 < n ? c[static_cast<size_t>(i)] : 0.0) / den;
+    dp[static_cast<size_t>(i)] =
+        (r[static_cast<size_t>(i)] -
+         a[static_cast<size_t>(i)] * dp[static_cast<size_t>(i - 1)]) /
+        den;
+  }
+  x[static_cast<size_t>(n - 1)] = dp[static_cast<size_t>(n - 1)];
+  for (long i = n - 2; i >= 0; --i) {
+    x[static_cast<size_t>(i)] =
+        dp[static_cast<size_t>(i)] -
+        cp[static_cast<size_t>(i)] * x[static_cast<size_t>(i + 1)];
+  }
+  return true;
+}
+
+// Closed ring: a[0] multiplies x[n-1] in row 0, c[n-1] multiplies x[0] in
+// the last row. Sherman-Morrison on the open factorisation.
+bool cyclicSolve(const std::vector<double> &a, const std::vector<double> &b,
+                 const std::vector<double> &c, const std::vector<double> &r,
+                 std::vector<double> &x) {
+  const long n = static_cast<long>(b.size());
+  const double gamma = -b[0];
+  if (!(gamma != 0.0)) {
+    return false;
+  }
+  std::vector<double> bb = b;
+  bb[0] = b[0] - gamma;
+  bb[static_cast<size_t>(n - 1)] =
+      b[static_cast<size_t>(n - 1)] - a[0] * c[static_cast<size_t>(n - 1)] / gamma;
+  std::vector<double> u;
+  if (!thomasSolve(a, bb, c, r, u)) {
+    return false;
+  }
+  std::vector<double> rhs(static_cast<size_t>(n), 0.0);
+  rhs[0] = gamma;
+  rhs[static_cast<size_t>(n - 1)] = c[static_cast<size_t>(n - 1)];
+  std::vector<double> z;
+  if (!thomasSolve(a, bb, c, rhs, z)) {
+    return false;
+  }
+  const double fact = (u[0] + a[0] * u[static_cast<size_t>(n - 1)] / gamma) /
+                      (1.0 + z[0] + a[0] * z[static_cast<size_t>(n - 1)] / gamma);
+  x.resize(static_cast<size_t>(n));
+  for (long i = 0; i < n; ++i) {
+    x[static_cast<size_t>(i)] = u[static_cast<size_t>(i)] - fact * z[static_cast<size_t>(i)];
+  }
+  return std::isfinite(fact);
+}
+
+// f == 1: every eigenvalue of the (cyclic) tridiagonal ring, and the
+// eigenvectors the Newton climb actually uses.
+std::vector<RingMode> exactScalarModes(const std::vector<MatrixXd> &diag,
+                                       double c, bool closed) {
+  const long n = static_cast<long>(diag.size());
+  ColMajorXd big;
+  assembleDiagonal(big, diag, c, closed);
+  const Eigen::SelfAdjointEigenSolver<ColMajorXd> es(
+      big, Eigen::EigenvaluesOnly);
+  const VectorXd &lam = es.eigenvalues();
+  const double scale = std::max(1.0, std::abs(c));
+  const double keep = 1e-4 * scale;
+  std::vector<long> want;
+  want.reserve(16);
+  for (long i = 0; i < n; ++i) {
+    if (lam(i) <= keep) {
+      want.push_back(i);
+    }
+  }
+  if (want.empty()) {
+    want.push_back(0);
+  }
+  std::vector<double> d(static_cast<size_t>(n));
+  std::vector<double> sub(static_cast<size_t>(n), closed ? -c : 0.0);
+  std::vector<double> sup(static_cast<size_t>(n), closed ? -c : 0.0);
+  for (long j = 0; j < n; ++j) {
+    d[static_cast<size_t>(j)] = diag[static_cast<size_t>(j)](0, 0);
+    if (!closed) {
+      sub[static_cast<size_t>(j)] = j > 0 ? -c : 0.0;
+      sup[static_cast<size_t>(j)] = j + 1 < n ? -c : 0.0;
+    }
+  }
+  auto apply = [&](const std::vector<double> &v, std::vector<double> &out) {
+    for (long j = 0; j < n; ++j) {
+      double y = d[static_cast<size_t>(j)] * v[static_cast<size_t>(j)];
+      if (j > 0 || closed) {
+        y -= c * v[static_cast<size_t>((j + n - 1) % n)];
+      }
+      if (j + 1 < n || closed) {
+        y -= c * v[static_cast<size_t>((j + 1) % n)];
+      }
+      out[static_cast<size_t>(j)] = y;
+    }
+  };
+  std::vector<std::vector<double>> found;
+  std::vector<RingMode> modes;
+  modes.reserve(want.size());
+  for (long idx : want) {
+    const double theta = lam(idx);
+    const double delta = 1e-10 * std::max(1.0, std::abs(theta));
+    std::vector<double> diagShift = d;
+    for (double &dj : diagShift) {
+      dj -= theta - delta;
+    }
+    std::vector<double> v(static_cast<size_t>(n)), w;
+    for (long j = 0; j < n; ++j) {
+      v[static_cast<size_t>(j)] = std::sin(0.17 * static_cast<double>(j + 1) +
+                                          0.3 * static_cast<double>(idx));
+    }
+    for (int it = 0; it < 12; ++it) {
+      for (const auto &prev : found) {
+        double p = 0.0;
+        for (long j = 0; j < n; ++j) {
+          p += v[static_cast<size_t>(j)] * prev[static_cast<size_t>(j)];
+        }
+        for (long j = 0; j < n; ++j) {
+          v[static_cast<size_t>(j)] -= p * prev[static_cast<size_t>(j)];
+        }
+      }
+      const bool ok = closed ? cyclicSolve(sub, diagShift, sup, v, w)
+                             : thomasSolve(sub, diagShift, sup, v, w);
+      if (!ok) {
+        break;
+      }
+      double nrm = 0.0;
+      for (double x : w) {
+        nrm += x * x;
+      }
+      nrm = std::sqrt(nrm);
+      if (!(nrm > 0.0)) {
+        break;
+      }
+      for (long j = 0; j < n; ++j) {
+        v[static_cast<size_t>(j)] = w[static_cast<size_t>(j)] / nrm;
+      }
+    }
+    double vn = 0.0;
+    for (double x : v) {
+      vn += x * x;
+    }
+    vn = std::sqrt(vn);
+    if (vn > 0.0) {
+      for (double &x : v) {
+        x /= vn;
+      }
+    }
+    found.push_back(v);
+    std::vector<double> applied(static_cast<size_t>(n));
+    apply(v, applied);
+    double residual = 0.0;
+    for (long j = 0; j < n; ++j) {
+      const double e =
+          applied[static_cast<size_t>(j)] - theta * v[static_cast<size_t>(j)];
+      residual += e * e;
+    }
+    RingMode mode;
+    mode.theta = theta;
+    mode.residual = std::sqrt(residual);
+    mode.vector.resize(static_cast<size_t>(n));
+    for (long j = 0; j < n; ++j) {
+      mode.vector[static_cast<size_t>(j)] =
+          VectorXd::Constant(1, v[static_cast<size_t>(j)]);
+    }
+    modes.push_back(std::move(mode));
+  }
+  return modes;
+}
+
 // (diag - c neighbours) v for the closed ring or the open half chain.
 std::vector<VectorXd> applyDiagonal(const std::vector<MatrixXd> &diag, double c,
                                     bool closed,
@@ -1682,6 +1898,40 @@ MatrixXd fdPhysicalHessian(const VectorXd &q, const BatchPotential &potential,
         (2.0 * eps);
   }
   return (0.5 * (h + h.transpose())).eval();
+}
+
+// One coordinate: the same central difference as fdPhysicalHessian, one
+// batch for every bead instead of a batch per bead.
+void fdScalarHessians(std::vector<MatrixXd> &physical,
+                      const std::vector<VectorXd> &x,
+                      const BatchPotential &potential, double eps) {
+  const long n = static_cast<long>(x.size());
+  std::vector<VectorXd> pts(static_cast<size_t>(2 * n));
+  for (long j = 0; j < n; ++j) {
+    VectorXd qp = x[static_cast<size_t>(j)];
+    VectorXd qm = qp;
+    qp(0) += eps;
+    qm(0) -= eps;
+    pts[static_cast<size_t>(2 * j)] = std::move(qp);
+    pts[static_cast<size_t>(2 * j + 1)] = std::move(qm);
+  }
+  std::vector<double> v;
+  std::vector<VectorXd> g;
+  potential(pts, v, g);
+  if (static_cast<long>(g.size()) != 2 * n) {
+    throw std::runtime_error(
+        "rate instanton: the Hessian sample returned the wrong count");
+  }
+  for (long j = 0; j < n; ++j) {
+    const double h00 = (g[static_cast<size_t>(2 * j)](0) -
+                        g[static_cast<size_t>(2 * j + 1)](0)) /
+                       (2.0 * eps);
+    MatrixXd &block = physical[static_cast<size_t>(j)];
+    if (block.rows() != 1 || block.cols() != 1) {
+      block.resize(1, 1);
+    }
+    block(0, 0) = h00;
+  }
 }
 
 // Bofill mix of Powell's symmetric Broyden and SR1. H is d2V/dq2.
@@ -1934,12 +2184,30 @@ VectorXd chainIndexOneStep(const std::vector<RingMode> &ritz,
   }
   if (!solved && dim <= kDenseRing) {
     // A small ring is cheap to solve densely when the chain cannot.
+    // The matrix is the block chain plus the rank-one flips. Filling it
+    // matches applyShifted on each unit vector: diagonal blocks, -spring
+    // on the neighbour coordinates, then (kappa * u_col) * u on each column.
     const long n = static_cast<long>(grad.size());
-    ColMajorXd jt = ColMajorXd::Zero(dim, dim);
-    for (long col = 0; col < dim; ++col) {
-      std::vector<VectorXd> e(static_cast<size_t>(n), VectorXd::Zero(f));
-      e[static_cast<size_t>(col / f)](col % f) = 1.0;
-      jt.col(col) = packBeads(applyShifted(e));
+    ColMajorXd jt(dim, dim);
+    assembleDiagonal(jt, diag, spring, closed);
+    std::vector<double> u(static_cast<size_t>(dim));
+    for (size_t i = 0; i < extras.size(); ++i) {
+      for (long j = 0; j < n; ++j) {
+        for (long a = 0; a < f; ++a) {
+          u[static_cast<size_t>(j * f + a)] =
+              extras[i][static_cast<size_t>(j)](a);
+        }
+      }
+      const double kappa = kappas[i];
+      for (long col = 0; col < dim; ++col) {
+        const double w = kappa * u[static_cast<size_t>(col)];
+        if (w == 0.0) {
+          continue;
+        }
+        for (long row = 0; row < dim; ++row) {
+          jt(row, col) += w * u[static_cast<size_t>(row)];
+        }
+      }
     }
     const Eigen::PartialPivLU<ColMajorXd> lu(jt);
     const VectorXd x = lu.solve(packBeads(rhs));
@@ -2344,16 +2612,18 @@ NewtonOut newtonInstanton(std::vector<VectorXd> guess, double c,
       return applyDiagonal(v.diag, c, !half, vec);
     };
     const long dim = static_cast<long>(x.size()) * f;
-    if (dim <= kDenseRing) {
+    if (f == 1) {
+      // The ring is tridiagonal. A dense eigen-decomposition of every
+      // Newton step is what made the 600-bead cubic well time out under
+      // emulation; the eigenvalues of that tridiagonal, and inverse
+      // iteration for the few modes the climb uses, are the same spectrum.
+      v.ritz = exactScalarModes(v.diag, c, !half);
+    } else if (dim <= kDenseRing) {
       // A small ring takes its whole spectrum densely: every negative
       // curvature in every symmetry sector, exactly.
       const long nb = static_cast<long>(x.size());
-      ColMajorXd big = ColMajorXd::Zero(dim, dim);
-      for (long col = 0; col < dim; ++col) {
-        std::vector<VectorXd> e(static_cast<size_t>(nb), VectorXd::Zero(f));
-        e[static_cast<size_t>(col / f)](col % f) = 1.0;
-        big.col(col) = packBeads(apply(e));
-      }
+      ColMajorXd big(dim, dim);
+      assembleDiagonal(big, v.diag, c, !half);
       const ColMajorXd sym = 0.5 * (big + big.transpose());
       const Eigen::SelfAdjointEigenSolver<ColMajorXd> es(sym);
       v.ritz.clear();
@@ -2551,9 +2821,7 @@ NewtonOut newtonInstanton(std::vector<VectorXd> guess, double c,
     }
     if (f == 1) {
       const double eps = options.lanczosStep > 0.0 ? options.lanczosStep : 1e-4;
-      for (size_t j = 0; j < x.size(); ++j) {
-        physical[j] = fdPhysicalHessian(x[j], potential, eps);
-      }
+      fdScalarHessians(physical, x, potential, eps);
     }
     const View v = viewOf(cur);
     EONC_LOG_DEBUG("[Instanton] Newton {}: U_N {:.10g} eV, largest residual "
