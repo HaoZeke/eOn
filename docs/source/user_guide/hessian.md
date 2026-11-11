@@ -44,21 +44,23 @@ one-sided truncation that biased a soft eigenvalue by 40 percent.
 The one-sided quotient uses only the forward sample.
 
 **fourth**: this scheme evaluates the force about 4M times
-(aliases `fourth_order` and `central4`). The weights are:
+(aliases `fourth_order` and `central4`). The force weights are:
 
 $$H_{ij} \approx -\frac{-F_j(x+2 h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2 h e_i)}{12 h}$$
 
-Those weights are the fourth-order stencil. A one-sided step of 0.01 Å left an
-\(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
-term as well.
-The same `fd_scheme = fourth` value selects that stencil for Lanczos and
-Davidson Hessian-vector products. `one_sided` and `central` leave those
-products on the forward difference. The rgsaddle min-mode
-(`min_mode_method = xtsci`) takes forward differences for `one_sided` and
-central differences for `central` and `fourth`; see {doc}`optimizer`. Dimer
-rotation, conjugate gradients, and limited-memory quasi-Newton keep their own real steps. Complex-step differentiation needs a holomorphic potential, and a cutoff breaks that. The assembled matrix is symmetrized
-\((H+H^T)/2\) before diagonalization. Mass-weighting uses
-\(\tilde H_{ij} = H_{ij}/\sqrt{m_i m_j}\).
+The force weights above are the fourth-order stencil.
+A one-sided force step of 0.01 Å left an
+\(O(h)\) bias of 40 percent on a soft mode.
+The fourth-order force stencil cancels the \(O(h^2)\) term as well.
+
+The force stencil `fd_scheme = fourth` also selects Lanczos and
+Davidson Hessian-vector products.
+`one_sided` and `central` leave those force products on the forward difference.
+The rgsaddle min-mode (`min_mode_method = xtsci`) takes forward differences for `one_sided` and central differences for `central` and `fourth`; see {doc}`optimizer`.
+Dimer rotation, conjugate gradients, and limited-memory quasi-Newton keep their own real steps.
+Complex-step differentiation needs a holomorphic potential, and a cutoff breaks that.
+The assembled matrix is symmetrized \((H+H^T)/2\) before diagonalization.
+Mass-weighting uses \(\tilde H_{ij} = H_{ij}/\sqrt{m_i m_j}\).
 
 ### Hessian-range coloring
 
@@ -175,14 +177,16 @@ none. The job still drops a different count, and it logs a warning.
 The run continues after that warning.
 
 With `[Hessian] write_modes = true` (the default), `modes.con` stores one frame
-per eigenvalue, lowest first. Each frame is the input structure with the mode
-in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
-of eigenvector \(q\), scaled to unit norm, and zero on atoms
-outside the mobile set. Metadata records `mode_eigenvalue` in
-eV/(Å² amu). `hbar_omega` is in eV. `wavenumber` is in cm⁻¹.
+per eigenvalue, lowest first.
+Each frame stores the input structure.
+The mode occupies the `displacements` section of that frame.
+The Cartesian displacement is \(x = q/\sqrt{m}\) for eigenvector \(q\).
+The displacement has unit norm, and atoms outside the mobile set stay at zero.
+Frame metadata records `mode_eigenvalue` in eV/(Å² amu).
+`hbar_omega` is in eV.
+`wavenumber` is in cm⁻¹.
 An imaginary mode makes `hbar_omega` and `wavenumber` negative.
-Any readcon reader gets the mode as an
-N x 3 array beside the positions:
+A readcon reader gets that mode as an N x 3 array beside the positions:
 
 ```{code-block} python
 import readcon
