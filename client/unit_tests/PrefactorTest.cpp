@@ -146,6 +146,53 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(fullBack > 0.0);
   REQUIRE(fullPref != fullBack);
 
+  double unused1 = 0.0;
+  double unused2 = 0.0;
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), nullptr, min2.get(),
+                                         unused1, unused2, full) == -1);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(), nullptr,
+                                         unused1, unused2, full) == -1);
+  ParametersLoadAccess::prefactor_options(params).rate = "neither";
+  int unknownRate = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), unused1, unused2, full);
+  REQUIRE((unknownRate == 0 || unknownRate == -1));
+  ParametersLoadAccess::prefactor_options(params).rate =
+      std::string(eonc::Prefactor::RATE_HTST);
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
+  int noModes = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), unused1, unused2, full);
+  REQUIRE((noModes == 0 || noModes == -1));
+  ParametersLoadAccess::hessian_options(params).write_modes = true;
+  for (long atom = 0; atom < min1->numberOfAtoms(); ++atom) {
+    min1->setMass(atom, 0.0);
+    saddle->setMass(atom, 0.0);
+    min2->setMass(atom, 0.0);
+  }
+  min1->setPeriodic(false);
+  saddle->setPeriodic(false);
+  min2->setPeriodic(false);
+  int zeroMass = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), unused1, unused2, full);
+  REQUIRE((zeroMass == 0 || zeroMass == -1));
+  for (long atom = 0; atom < min1->numberOfAtoms(); ++atom) {
+    min1->setMass(atom, 1.0);
+    saddle->setMass(atom, 1.0);
+    min2->setMass(atom, 1.0);
+  }
+  min1->setPeriodic(true);
+  saddle->setPeriodic(true);
+  min2->setPeriodic(true);
+  // Reactant sits on the saddle, so only the product side clears the cut.
+  *min1 = *saddle;
+  ParametersLoadAccess::prefactor_options(params).min_displacement = 0.01;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 50.0;
+  saddle->setFixed(1, true);
+  VectorXi secondSide = eonc::Prefactor::movedAtoms(
+      params, min1.get(), saddle.get(), min2.get());
+  REQUIRE(secondSide.size() > 0);
+  min1->con2matter(std::string("reactant.con"));
+  saddle->setFixed(1, false);
+
   if (auto *logger = eonc::log::get()) {
     logger->set_log_level(quill::LogLevel::None);
     int silent = eonc::Prefactor::getPrefactors(

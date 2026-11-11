@@ -29,28 +29,28 @@ atomic coordinates) is used for:
 eOn computes the Hessian numerically with a selectable finite-difference scheme
 on the **mobile** (displaced) atoms: non-fixed atoms in `pos.con`, optionally
 restricted by `[Hessian] phva_atoms` (comma-separated indices, or `All`). That
-list is the hybrid/PHVA-class *active set*: atoms moved in FD. The remaining
+list is the partial Hessian vibrational analysis (PHVA) active set: atoms moved in the finite-difference step. The remaining
 atoms stay frozen (Li & Jensen, *Theor. Chem. Acc.* **107**, 211, 2002).
 
 Step size is `Main.finite_difference`, and the assembled Hessian caps it at
 \(10^{-3}\,\text{Å}\). The optimizer default of \(0.01\,\text{Å}\) is a
 one-sided truncation that biased a soft eigenvalue by 40 percent.
 
-### FD schemes (`[Hessian] fd_scheme`)
+### Finite-difference schemes
 
-**central** (default) — central difference, \(\sim 2M\) force evaluations:
+**central** (default): central difference, about 2M force evaluations:
 
-$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x - h e_i)}{2h}$$
+$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x - h e_i)}{2 h}$$
 
-**one_sided** — forward difference, \(\sim M\) force evaluations for
+**one_sided**: forward difference, about M force evaluations for
 \(M = 3 N_\text{mobile}\) active DOF (plus one base gradient):
 
 $$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x)}{h}$$
 
-**fourth** — fourth-order central difference, \(\sim 4M\) force evaluations
+**fourth**: fourth-order central difference, about 4M force evaluations
 (aliases `fourth_order` and `central4`):
 
-$$H_{ij} \approx -\frac{-F_j(x+2h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2h e_i)}{12h}$$
+$$H_{ij} \approx -\frac{-F_j(x+2 h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2 h e_i)}{12 h}$$
 
 Central differences are the default. A one-sided step of 0.01 Å left an
 \(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
@@ -60,8 +60,7 @@ Davidson Hessian-vector products. `one_sided` and `central` leave those
 products on the forward difference. The rgsaddle min-mode
 (`min_mode_method = xtsci`) takes forward differences for `one_sided` and
 central differences for `central` and `fourth`; see {doc}`optimizer`. Dimer
-rotation, conjugate gradients, and LBFGS keep their own real steps. Complex-step is not a scheme: cutoffs and
-external potentials are not holomorphic. The assembled matrix is symmetrized
+rotation, conjugate gradients, and limited-memory quasi-Newton keep their own real steps. Complex-step differentiation needs a holomorphic potential, and a cutoff breaks that. The assembled matrix is symmetrized
 \((H+H^T)/2\) before diagonalization. Mass-weighting uses
 \(\tilde H_{ij} = H_{ij}/\sqrt{m_i m_j}\).
 
@@ -75,16 +74,16 @@ coloring stays off. One column is then built per coordinate.
 
 An interaction cutoff is not this distance. A pair potential is zero past
 its cutoff, so the range equals the cutoff. An atom-centred many-body
-potential (EAM, Gupta, Stillinger-Weber, Tersoff) is zero only past twice
+potential (embedded-atom method, Gupta, Stillinger-Weber, Tersoff) is zero only past twice
 the cutoff, because the density or the bond order at an atom depends on
-every neighbour inside the cutoff. A flexible water model does not have a
+every neighbour inside the cutoff. A flexible water model lacks a
 hard intramolecular extent, so a cutoff on the oxygen-oxygen interaction
-does not make the blocks zero past any fixed distance. A message-passing
+leaves the blocks nonzero past every fixed distance. A message-passing
 model is zero past `n_layers` times the edge cutoff, and only when that
 layer count is part of the kernel.
 
-Coloring is opt-in. `RgpotAdapter` reads `HessianRangeOf<Kernel>` and does
-not look at `config().cutoff`. A kernel with a cutoff field and no
+Coloring is opt-in. `RgpotAdapter` reads `HessianRangeOf<Kernel>` and
+ignores `config().cutoff`. A kernel with a cutoff field and no
 specialization stays at 0. The specialization returns the cutoff for a
 pair kernel, twice the cutoff for an atom-centred many-body kernel, the
 cutoff plus twice a hard intramolecular extent for a site model, or
@@ -115,14 +114,14 @@ embedding cutoff at 1 Å. The central scheme takes 49 force calls total
 and 43 once colored at `2 r_c`. The fourth-order scheme takes 97
 and 85. Coloring at `r_c` takes 19 and 37. The colored matrix matches
 the per-column matrix to `1e-8`. The short-range matrix misses by
-0.1875 against max `|H|` 1.041667, and an off-axis entry reaches
+0.1875 against max `|H|` 1.041667, and an entry off the diagonal reaches
 0.541. The same central numbers hold with `remove_net_force` on and
 one atom fixed, which is the path that still colors.
 Catch2 `Opted-in kernels match the serial matrix at the declared range`
 runs each opted-in kernel on its own zig-zag. The colored matrix matches
 the per-column matrix exactly in these runs. A block past the interaction
 cutoff is nonzero for every many-body kernel, and every block past the
-declared range is 0. ZBL is a pair kernel, so that past-cutoff window is
+declared range is 0. The Ziegler-Biersack-Littmark potential is a pair kernel, so that past-cutoff window is
 empty. Its nearest-neighbour block at 1.5 Å is nonzero and every block
 past `cut_global` is 0. The per-kernel call counts and the short-range
 errors are in the developer page {doc}`/devdocs/hessian`.
@@ -178,10 +177,10 @@ matrix (ColMajor eigen solve in the client).
 The job drops each eigenvalue at or below `zero_freq_value` (default
 `1e-6`). A free cluster has 6 of those eigenvalues, a linear cluster has
 5, a periodic cell has 3, and a structure with any fully fixed atom has
-none. The job still drops a different count, and it logs a warning. It
-does not stop for that warning.
+none. The job still drops a different count, and it logs a warning.
+The run continues after that warning.
 
-With `[Hessian] write_modes = true` (the default), `modes.con` holds one frame
+With `[Hessian] write_modes = true` (the default), `modes.con` stores one frame
 per eigenvalue, lowest first. Each frame is the input structure with the mode
 in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
 of the mass-weighted eigenvector \(q\), scaled to unit norm, and zero on atoms
@@ -197,7 +196,7 @@ for frame in readcon.read_con("modes.con"):
     print(frame.metadata["wavenumber"], frame.disp.shape)
 ```
 
-## Free/fixed versus active (PHVA)
+## Free atoms, fixed atoms, and the active set
 
 **free/fixed** on `pos.con` / `Matter` is the optimizer mask: which atoms may
 move during geometry steps. Under an active-volume setup that set can be large
