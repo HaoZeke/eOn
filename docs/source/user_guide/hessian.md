@@ -32,27 +32,29 @@ restricted by `[Hessian] phva_atoms` (comma-separated indices, or `All`). That
 list is the hybrid/PHVA-class *active set*: atoms moved in FD. The remaining
 atoms stay frozen (Li & Jensen, *Theor. Chem. Acc.* **107**, 211, 2002).
 
-Step size is `Main.finite_difference` (historically also called finite-difference
-displacement; default \(0.01\,\text{Å}\)).
+Step size is `Main.finite_difference`, and the assembled Hessian caps it at
+\(10^{-3}\,\text{Å}\). The optimizer default of \(0.01\,\text{Å}\) is a
+one-sided truncation that biased a soft eigenvalue by 40 percent.
 
 ### FD schemes (`[Hessian] fd_scheme`)
 
-**one_sided** (default) — forward difference, \(\sim M\) force evaluations for
+**central** (default) — central difference, \(\sim 2M\) force evaluations:
+
+$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x - h e_i)}{2h}$$
+
+**one_sided** — forward difference, \(\sim M\) force evaluations for
 \(M = 3 N_\text{mobile}\) active DOF (plus one base gradient):
 
 $$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x)}{h}$$
-
-**central** — central difference, \(\sim 2M\) force evaluations:
-
-$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x - h e_i)}{2h}$$
 
 **fourth** — fourth-order central difference, \(\sim 4M\) force evaluations
 (aliases `fourth_order` and `central4`):
 
 $$H_{ij} \approx -\frac{-F_j(x+2h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2h e_i)}{12h}$$
 
-One-sided is preferred for classical EAM AKMC cost; central reduces \(O(h)\) bias
-when validating prefactors. Fourth-order cancels the \(O(h^2)\) term as well.
+Central differences are the default. A one-sided step of 0.01 Å left an
+\(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
+term as well.
 The same `fd_scheme = fourth` value selects that stencil for Lanczos and
 Davidson Hessian-vector products. `one_sided` and `central` leave those
 products on the forward difference. The rgsaddle min-mode

@@ -542,11 +542,11 @@ struct prefactor_options_t {
 struct hessian_options_t {
   std::string phva_atoms{"All"};
   double zero_freq_value{1e-6};
-  // FD scheme: "one_sided" (default), "central", or "fourth"
+  // FD scheme: "central" (default), "one_sided", or "fourth"
   // (aliases fourth_order, central4). Fourth-order is real central
   // differences for this Hessian and for Lanczos/Davidson products.
-  // Step size is Main.finite_difference (dx).
-  std::string fd_scheme{"one_sided"};
+  // The assembled step is Main.finite_difference, capped at 1e-3 Å.
+  std::string fd_scheme{"central"};
   // If true and checkpoint_path is set, resume FD columns from checkpoint.
   bool resume{false};
   // Column checkpoint file (e.g. hessian.ckpt). Cleared on successful finish.

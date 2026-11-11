@@ -206,7 +206,8 @@ TEST_CASE_METHOD(HessianScratch,
   // Hessian.cpp one_sided) so resume continues cols 2..5 then symmetrizes.
   {
     Matter matterTemp(*matter);
-    const double dr = params.main_options().finiteDifference;
+    const double dr =
+        eonc::hessianFiniteDifference(params.main_options().finiteDifference);
     const int nAtoms = matter->numberOfAtoms();
     const int size = 6;
     AtomMatrix pos = matter->getPositions();
@@ -1590,6 +1591,104 @@ TEST_CASE_METHOD(HessianScratch, "Final Hessian retains every binary64 entry",
     }
   }
 }
+
+namespace {
+// E = (1/2) k d^2 + (1/24) c d^4, d = x0 - x1 - 1.
+// A one-sided step of 0.01 Å misses the quartic curvature by well over 1%.
+class QuarticPair final : public eonc::Potential {
+public:
+  explicit QuarticPair(const Parameters &params)
+      : eonc::Potential(PotType::LJ, params) {}
+  void force(long nAtoms, const double *positions, const int *atomicNrs,
+             double *forces, double *energy, double *variance,
+             const double *box) override {
+    (void)atomicNrs;
+    (void)box;
+    for (long i = 0; i < 3 * nAtoms; ++i) {
+      forces[i] = 0.0;
+    }
+    const double d = positions[0] - positions[3] - 1.0;
+    const double f = -(k_ * d + (c_ * d * d * d) / 6.0);
+    forces[0] = f;
+    forces[3] = -f;
+    *energy = 0.5 * k_ * d * d + (c_ * d * d * d * d) / 24.0;
+    *variance = 0.0;
+  }
+
+private:
+  double k_ = 0.2;
+  double c_ = 3000.0;
+};
+
+MatrixXd pairHessian(Matter &matter, double dr, bool central) {
+  const int n = 2;
+  AtomMatrix pos = matter.getPositions();
+  AtomMatrix force0 = matter.getForces();
+  MatrixXd H = MatrixXd::Zero(6, 6);
+  for (int i = 0; i < 6; ++i) {
+    AtomMatrix disp = AtomMatrix::Zero(n, 3);
+    disp(i / 3, i % 3) = dr;
+    matter.setPositions(pos + disp);
+    AtomMatrix fp = matter.getForces();
+    AtomMatrix fm = force0;
+    double denom = dr;
+    if (central) {
+      matter.setPositions(pos - disp);
+      fm = matter.getForces();
+      denom = 2.0 * dr;
+    }
+    for (int j = 0; j < 6; ++j) {
+      const double slope = (fp(j / 3, j % 3) - fm(j / 3, j % 3)) / denom;
+      H(i, j) = -slope;
+    }
+  }
+  matter.setPositions(pos);
+  return 0.5 * (H + H.transpose());
+}
+
+double relativeEigenvalue(const MatrixXd &H) {
+  using ColMajor =
+      Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor>;
+  const ColMajor copy = H;
+  Eigen::SelfAdjointEigenSolver<ColMajor> solver(copy);
+  return solver.eigenvalues()(5);
+}
+} // namespace
+
+TEST_CASE_METHOD(HessianScratch,
+                 "default Hessian step matches a fine central difference",
+                 "[hessian][fd-step]") {
+  Parameters params;
+  ParametersLoadAccess::main_options(params).removeNetForce = false;
+  auto pot = std::make_shared<QuarticPair>(params);
+  Matter matter(pot, params);
+  matter.resize(2);
+  matter.setAtomicNr(0, 1);
+  matter.setAtomicNr(1, 1);
+  matter.setMass(0, 1.0);
+  matter.setMass(1, 1.0);
+  AtomMatrix pos(2, 3);
+  pos.setZero();
+  pos(0, 0) = 1.0;
+  matter.setPositions(pos);
+  matter.setCell(Matrix3d::Identity() * 40.0);
+  matter.setPeriodic(false);
+
+  const double reference = relativeEigenvalue(pairHessian(matter, 1e-5, true));
+  const double coarse =
+      relativeEigenvalue(pairHessian(matter, 0.01, false));
+  REQUIRE(std::abs(coarse - reference) / std::abs(reference) > 0.01);
+
+  VectorXi atoms(2);
+  atoms << 0, 1;
+  Hessian hessian(params, &matter);
+  const MatrixXd built = hessian.getHessian(&matter, atoms);
+  const double lambda = relativeEigenvalue(built);
+  REQUIRE(std::abs(lambda - reference) / std::abs(reference) < 0.01);
+  REQUIRE(eonc::hessianFiniteDifference(0.01) == 1e-3);
+  REQUIRE(eonc::parseFdScheme(params.hessian_options().fd_scheme) ==
+          eonc::FdScheme::Central);
+}
 } // namespace tests
 
 namespace tests {
@@ -1620,6 +1719,7 @@ TEST_CASE_METHOD(HessianScratch,
   Parameters params;
   ParametersLoadAccess::potential_options(params).potential = PotType::LJ;
   ParametersLoadAccess::hessian_options(params).fd_scheme = "one_sided";
+  ParametersLoadAccess::main_options(params).finiteDifference = 1e-4;
   ParametersLoadAccess::hessian_options(params).checkpoint_path =
       "context.ckpt";
   auto lj = eonc::helpers::sharePotential(

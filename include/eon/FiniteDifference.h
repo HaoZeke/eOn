@@ -14,6 +14,7 @@
 #include "Eigen.h"
 
 #include <cctype>
+#include <cmath>
 #include <string>
 #include <string_view>
 
@@ -37,6 +38,19 @@ inline FdScheme parseFdScheme(std::string_view scheme) {
     return FdScheme::Fourth;
   }
   return FdScheme::OneSided;
+}
+
+/// Step for an assembled Hessian.
+/// ``Main.finite_difference`` is the optimizer step and defaults to 0.01 Å.
+/// A one-sided difference at that length biased a soft eigenvalue by 40
+/// percent. The assembled Hessian uses the requested step, and never a step
+/// above 1e-3 Å.
+inline double hessianFiniteDifference(double requested) {
+  if (!(requested > 0.0) || !std::isfinite(requested)) {
+    return requested;
+  }
+  constexpr double kMaxHessianStep = 1e-3;
+  return requested > kMaxHessianStep ? kMaxHessianStep : requested;
 }
 
 /// Derivative of a sampled force map along one real step of length ``dr``.

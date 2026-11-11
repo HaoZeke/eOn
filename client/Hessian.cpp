@@ -359,7 +359,7 @@ bool Hessian::calculate() {
     }
   }
 
-  double dr = parameters.main_options().finiteDifference;
+  double dr = hessianFiniteDifference(parameters.main_options().finiteDifference);
   if (!(dr > 0.0) || !std::isfinite(dr)) {
     QUILL_LOG_ERROR(log, "[Hessian] invalid finiteDifference dr={}\n", dr);
     return false;
