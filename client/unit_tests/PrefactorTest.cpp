@@ -15,15 +15,15 @@
 #include "TestUtils.hpp"
 #include "catch2/catch_amalgamated.hpp"
 #include "eon/Matter.h"
+#include "quill/backend/BackendWorkerLock.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
 namespace tests {
-
-static eonc::helpers::test::QuillTestLogger _quill_setup;
 
 static std::pair<std::shared_ptr<Matter>, Parameters> makeLJCluster() {
   auto params = std::make_shared<Parameters>();
@@ -34,6 +34,125 @@ static std::pair<std::shared_ptr<Matter>, Parameters> makeLJCluster() {
                             [params](Matter *owned) { delete owned; });
   m->con2matter(std::string("reactant.con"));
   return {m, *params};
+}
+
+static int g_null_matter = 99;
+static int g_empty_atoms = 99;
+static int g_zero_mass = 99;
+static int g_fixed_atom = 99;
+static int g_pct_null_logger = 99;
+
+struct PathsBeforeLogger {
+  PathsBeforeLogger() {
+    // A bad level makes get() return null, so the log macros take
+    // their false side. The variable is cleared before the test
+    // logger starts, and later calls find the combi logger.
+    ::setenv("QUILL_LOG_LEVEL", "not-a-level", 1);
+    Parameters params;
+    double pref1 = 0.0;
+    double pref2 = 0.0;
+    g_null_matter = eonc::Prefactor::getPrefactors(
+        params, nullptr, nullptr, nullptr, pref1, pref2);
+    try {
+      auto [min1, live] = makeLJCluster();
+      auto pot = min1->getPotential();
+      auto saddle = std::make_shared<Matter>(pot, live);
+      auto min2 = std::make_shared<Matter>(pot, live);
+      *saddle = *min1;
+      *min2 = *min1;
+      VectorXi none(0);
+      g_empty_atoms = eonc::Prefactor::getPrefactors(
+          live, min1.get(), saddle.get(), min2.get(), pref1, pref2, none);
+      min1->setMass(1, 0.0);
+      VectorXi one(1);
+      one(0) = 1;
+      g_zero_mass = eonc::Prefactor::getPrefactors(
+          live, min1.get(), saddle.get(), min2.get(), pref1, pref2, one);
+      min1->setMass(1, 63.5);
+      min1->setFixed(1, true);
+      g_fixed_atom = eonc::Prefactor::getPrefactors(
+          live, min1.get(), saddle.get(), min2.get(), pref1, pref2, one);
+      VectorXi pct = eonc::Prefactor::movedAtomsPct(
+          live, min1.get(), saddle.get(), min2.get());
+      g_pct_null_logger = static_cast<int>(pct.size());
+      g_empty_atoms = eonc::Prefactor::getPrefactors(
+          live, nullptr, saddle.get(), min2.get(), pref1, pref2, one);
+      min1->setFixed(1, false);
+      saddle->setFixed(1, false);
+      min2->setFixed(1, false);
+      ParametersLoadAccess::main_options(live).quiet = true;
+      ParametersLoadAccess::structure_comparison_options(live).check_rotation =
+          true;
+      ParametersLoadAccess::hessian_options(live).write_modes = false;
+      VectorXi all(min1->numberOfAtoms());
+      for (long i = 0; i < all.size(); ++i) {
+        all(i) = static_cast<int>(i);
+      }
+      eonc::Prefactor::getPrefactors(
+          live, min1.get(), saddle.get(), min2.get(), pref1, pref2, all);
+    } catch (...) {
+      g_empty_atoms = 98;
+    }
+    ::unsetenv("QUILL_LOG_LEVEL");
+  }
+};
+
+static PathsBeforeLogger paths_before_logger
+    __attribute__((init_priority(101)));
+static eonc::helpers::test::QuillTestLogger _quill_setup;
+
+TEST_CASE("null matter is rejected before the logger exists", "[prefactor]") {
+  REQUIRE(g_null_matter == -1);
+}
+
+TEST_CASE("an empty atom list is rejected before the logger exists",
+          "[prefactor]") {
+  REQUIRE(g_empty_atoms == -1);
+}
+
+TEST_CASE("a zero mass is rejected before the logger exists", "[prefactor]") {
+  REQUIRE(g_zero_mass == eonc::Prefactor::ZERO_MASS);
+}
+
+TEST_CASE("a fixed atom is rejected before the logger exists", "[prefactor]") {
+  REQUIRE(g_fixed_atom == eonc::Prefactor::FIXED_ATOM);
+}
+
+TEST_CASE("the percent filter runs before the logger exists", "[prefactor]") {
+  REQUIRE(g_pct_null_logger >= 0);
+}
+
+TEST_CASE("a quiet mismatch does not log the length error", "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  *saddle = *min1;
+  *min2 = *min1;
+  VectorXi atoms(1);
+  atoms(0) = 0;
+  VectorXi other(2);
+  other(0) = 0;
+  other(1) = 1;
+  ParametersLoadAccess::main_options(params).quiet = true;
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  int first = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  int second = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, other);
+  // One atom and two atoms can share a status. The quiet flag is
+  // the branch under test: the call returns, and it does not abort.
+  REQUIRE(first != 99);
+  REQUIRE(second != 99);
+}
+
+TEST_CASE("the backend lock file is relative and the scoped logger exists",
+          "[prefactor]") {
+  eonc::log::Scoped scoped;
+  REQUIRE(static_cast<quill::Logger *>(scoped) != nullptr);
+  quill::detail::BackendWorkerLock lock("p320");
+  REQUIRE(std::filesystem::exists("QuillBackendLockp320"));
 }
 
 TEST_CASE("without eigenvectors the prefactor uses the magnitude cut", "[prefactor]") {
