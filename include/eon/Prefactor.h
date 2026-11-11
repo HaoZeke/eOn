@@ -26,8 +26,13 @@ inline constexpr std::string_view RATE_QQHTST{"qqhtst"};
 inline constexpr std::string_view FILTER_CUTOFF{"cutoff"};
 inline constexpr std::string_view FILTER_FRACTION{"fraction"};
 
+VectorXi rateAtoms(const Parameters &parameters, Matter *min1, Matter *saddle,
+                   Matter *min2);
 int getPrefactors(const Parameters &parameters, Matter *min1, Matter *saddle,
                   Matter *min2, double &pref1, double &pref2);
+int getPrefactors(const Parameters &parameters, Matter *min1, Matter *saddle,
+                  Matter *min2, double &pref1, double &pref2,
+                  const VectorXi &atoms);
 VectorXi movedAtoms(const Parameters &parameters, Matter *min1, Matter *saddle,
                     Matter *min2);
 VectorXi movedAtomsPct(const Parameters &parameters, Matter *min1,

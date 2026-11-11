@@ -47,9 +47,15 @@ std::vector<std::string> PrefactorJob::run() {
     EONC_LOG_CRITICAL("Failed to load reactant/saddle/product for prefactor");
     throw std::runtime_error("failed to load prefactor geometries");
   }
+  // Read the free-atom flag before the product. The list below is the
+  // one getPrefactors multiplies. A later frequency dump may reload one
+  // configuration, and that reload must not choose the rate.
+  VectorXi rateAtoms = eonc::Prefactor::rateAtoms(
+      params, reactant.get(), saddle.get(), product.get());
   double pref1 = 0.0, pref2 = 0.0;
   const int prefStatus = eonc::Prefactor::getPrefactors(
-      params, reactant.get(), saddle.get(), product.get(), pref1, pref2);
+      params, reactant.get(), saddle.get(), product.get(), pref1, pref2,
+      rateAtoms);
 
   VectorXi atoms;
   if (params.prefactor_options().all_free_atoms) {

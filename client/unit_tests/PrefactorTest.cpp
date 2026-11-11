@@ -102,6 +102,48 @@ TEST_CASE("movedAtomsPct pulls in neighbors inside the radius", "[prefactor]") {
   REQUIRE(moved.size() > 1);
 }
 
+TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
+          "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  *saddle = *min1;
+  *min2 = *min1;
+  AtomMatrix pos = saddle->getPositions();
+  pos.row(2) += Eigen::RowVector3d(0.0, 0.8, 0.0);
+  saddle->setPositions(pos);
+  ParametersLoadAccess::prefactor_options(params).filter_scheme =
+      eonc::Prefactor::FILTER_FRACTION;
+  ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.05;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 0.0;
+  ParametersLoadAccess::prefactor_options(params).all_free_atoms = false;
+  VectorXi partial = eonc::Prefactor::rateAtoms(params, min1.get(),
+                                                saddle.get(), min2.get());
+  ParametersLoadAccess::prefactor_options(params).all_free_atoms = true;
+  VectorXi full = eonc::Prefactor::rateAtoms(params, min1.get(), saddle.get(),
+                                             min2.get());
+  double partialPref = 0.0;
+  double partialBack = 0.0;
+  double fullPref = 0.0;
+  double fullBack = 0.0;
+  ParametersLoadAccess::prefactor_options(params).all_free_atoms = false;
+  int partialStatus = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), partialPref, partialBack,
+      partial);
+  ParametersLoadAccess::prefactor_options(params).all_free_atoms = true;
+  int fullStatus = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), fullPref, fullBack, full);
+  REQUIRE(partial.size() > 0);
+  REQUIRE(partial.size() < min1->numberOfFreeAtoms());
+  REQUIRE(full.size() == min1->numberOfFreeAtoms());
+  REQUIRE(full.size() > partial.size());
+  REQUIRE(partialStatus == fullStatus);
+  if (partialStatus == 0 && fullStatus == 0) {
+    REQUIRE(fullPref != partialPref);
+  }
+}
+
 TEST_CASE("allFreeAtoms drops fixed rows", "[prefactor]") {
   auto [matter, params] = makeLJCluster();
   static_cast<void>(params);

@@ -21,6 +21,20 @@
 
 namespace eonc {
 
+VectorXi eonc::Prefactor::rateAtoms(const Parameters &parameters, Matter *min1,
+                                     Matter *saddle, Matter *min2) {
+  // The free-atom flag selects the product. The displacement filter is
+  // the fallback when that flag is false.
+  if (parameters.prefactor_options().all_free_atoms) {
+    return allFreeAtoms(min1);
+  }
+  if (parameters.prefactor_options().filter_scheme ==
+      eonc::Prefactor::FILTER_FRACTION) {
+    return movedAtomsPct(parameters, min1, saddle, min2);
+  }
+  return movedAtoms(parameters, min1, saddle, min2);
+}
+
 int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
                                    Matter *saddle, Matter *min2, double &pref1,
                                    double &pref2) {
@@ -28,17 +42,18 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     EONC_LOG_ERROR("[Prefactor] null Matter");
     return -1;
   }
-  VectorXd min1Freqs, saddleFreqs, min2Freqs;
+  return getPrefactors(parameters, min1, saddle, min2, pref1, pref2,
+                       rateAtoms(parameters, min1, saddle, min2));
+}
 
-  // determine which atoms moved in the process
-  VectorXi atoms;
-
-  if (parameters.prefactor_options().filter_scheme ==
-      eonc::Prefactor::FILTER_FRACTION) {
-    atoms = movedAtomsPct(parameters, min1, saddle, min2);
-  } else {
-    atoms = movedAtoms(parameters, min1, saddle, min2);
+int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
+                                   Matter *saddle, Matter *min2, double &pref1,
+                                   double &pref2, const VectorXi &atoms) {
+  if (!min1 || !saddle || !min2) {
+    EONC_LOG_ERROR("[Prefactor] null Matter");
+    return -1;
   }
+  VectorXd min1Freqs, saddleFreqs, min2Freqs;
 
   if (atoms.size() == 0) {
     EONC_LOG_ERROR("[Prefactor] no moved atoms");
