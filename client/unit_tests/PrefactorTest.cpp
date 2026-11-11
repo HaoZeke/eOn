@@ -74,6 +74,10 @@ TEST_CASE("without eigenvectors the prefactor uses the magnitude cut", "[prefact
   VectorXd freqs = hessian.getFreqs(min1.get(), atoms);
   REQUIRE(freqs.size() > 0);
   REQUIRE(hessian.getModes().rows() == 0);
+  // haveModes starts with rows == freqs.size(). This call takes the
+  // false side of that comparison. gcov may book the count on the
+  // next source line.
+  REQUIRE(hessian.getModes().rows() != freqs.size());
   double pref1 = 0.0;
   double pref2 = 0.0;
   // Eigenvectors are absent, so rigidModesRemoved uses the magnitude cut.
@@ -417,9 +421,23 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   ParametersLoadAccess::hessian_options(params).write_modes = false;
   // No eigenvectors, so the 0.5 cut clears the reactant. The product
   // geometry is the saddle, and that image keeps a negative mode.
+  // The log statement runs once with the level closed and once open,
+  // so both sides of should_log_statement are taken.
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+  }
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          saddle.get(), pref1, pref2, full) ==
           eonc::Prefactor::MINIMUM_ORDER);
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::TraceL3);
+  }
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         saddle.get(), pref1, pref2, full) ==
+          eonc::Prefactor::MINIMUM_ORDER);
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+  }
   ParametersLoadAccess::hessian_options(params).write_modes = true;
 
   AtomMatrix broken = saddle->getPositions();
