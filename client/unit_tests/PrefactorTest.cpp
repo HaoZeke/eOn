@@ -10,7 +10,6 @@
 ** https://github.com/TheochemUI/eOn
 */
 
-#include "eon/FiniteDifference.h"
 #include "eon/Hessian.h"
 #include "eon/Prefactor.h"
 #include "TestUtils.hpp"
@@ -35,25 +34,6 @@ static std::pair<std::shared_ptr<Matter>, Parameters> makeLJCluster() {
                             [params](Matter *owned) { delete owned; });
   m->con2matter(std::string("reactant.con"));
   return {m, *params};
-}
-
-TEST_CASE("the logged soft mode stays under the conditioning floor",
-          "[prefactor]") {
-  // diffusion/5/6731651123961377170 client log:
-  // dropped saddle mode 7.571959181695015e-07 overlap 3.574183784076393e-05
-  // The logged overlap is the square root of the squared overlap.
-  const double logged = 7.571959181695015e-07;
-  const double overlap = 3.574183784076393e-05;
-  const double overlap2 = overlap * overlap;
-  // The 1e-6 request drops this mode. The floor does not.
-  REQUIRE(std::abs(logged) <= 1e-6);
-  REQUIRE(overlap2 < 0.5);
-  REQUIRE(eonc::keepVibrationalMode(logged, overlap2, 0.02, 771));
-  // diffusion/4/2045009418749124428 second saddle mode, about -2.1e-5.
-  // It is above the floor, so two negative modes stay two.
-  REQUIRE(eonc::keepVibrationalMode(-2.1e-5, 0.0, 0.02, 771));
-  REQUIRE_FALSE(eonc::keepVibrationalMode(1.0e-18, 0.0, 0.02, 771));
-  REQUIRE_FALSE(eonc::keepVibrationalMode(0.01, 0.5, 0.02, 771));
 }
 
 TEST_CASE("without eigenvectors the prefactor uses the magnitude cut", "[prefactor]") {
