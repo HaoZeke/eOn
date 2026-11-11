@@ -2,7 +2,7 @@
 myst:
   html_meta:
     "description": "Guide to Hessian matrix calculation in eOn for vibrational analysis and hTST rate prefactors."
-    "keywords": "eOn Hessian, vibrational analysis, prefactor, harmonic transition state theory, hTST"
+    "keywords": "eOn Hessian, vibrational analysis, prefactor, hTST"
 ---
 
 # Hessian
@@ -19,7 +19,7 @@ atomic coordinates) is used for:
   give squared vibrational frequencies. Positive eigenvalues correspond to stable
   modes; negative eigenvalues indicate saddle point character.
 - **hTST prefactors**: The harmonic transition state theory rate constant
-  requires the product of frequencies at the minimum and saddle point
+  requires the product of those frequencies at the minimum and at the saddle
   (see [prefactor](project:prefactor.md)).
 - **Saddle verification**: A first-order saddle point has exactly one negative
   Hessian eigenvalue.
@@ -38,14 +38,11 @@ one-sided truncation that biased a soft eigenvalue by 40 percent.
 
 ### Finite-difference schemes
 
-**central** (default): central difference, about 2M force evaluations:
-
-$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x - h e_i)}{2 h}$$
+**central** (default): central difference, about 2M force evaluations. Subtract the backward force from the forward force and divide by twice the step.
 
 **one_sided**: forward difference, about M force evaluations for
-\(M = 3 N_\text{mobile}\) active DOF (plus one base gradient):
-
-$$H_{ij} \approx -\frac{F_j(x + h e_i) - F_j(x)}{h}$$
+\(M = 3 N_\text{mobile}\) active degrees of freedom, plus one base gradient.
+The one-sided quotient uses only the forward sample.
 
 **fourth**: fourth-order central difference, about 4M force evaluations
 (aliases `fourth_order` and `central4`):
@@ -85,9 +82,9 @@ layer count is part of the kernel.
 Coloring is opt-in. `RgpotAdapter` reads `HessianRangeOf<Kernel>` and
 ignores `config().cutoff`. A kernel with a cutoff field and no
 specialization stays at 0. The specialization returns the cutoff for a
-pair kernel, twice the cutoff for an atom-centred many-body kernel, the
+pair kernel, twice the cutoff for that class of kernel, the
 cutoff plus twice a hard intramolecular extent for a site model, or
-`n_layers` times the edge cutoff for message passing. Fe-He is the
+the layer count times each edge cutoff for message passing. Fe-He is the
 exception: its range is the larger of its pair cutoffs and twice its
 largest density cutoff. Anything that is not exactly derivable returns 0.
 A potential that is not an rgpot kernel opts in the same way, by
@@ -112,19 +109,19 @@ to `1e-8`. Catch2 `Embedding-chain coloring matches serial only at twice
 the cutoff` is a planar zig-zag of eight atoms, bond 0.75 Å, with the
 embedding cutoff at 1 Å. The central scheme takes 49 force calls total
 and 43 once colored at `2 r_c`. The fourth-order scheme takes 97
-and 85. Coloring at `r_c` takes 19 and 37. The colored matrix matches
-the per-column matrix to `1e-8`. The short-range matrix misses by
+and 85. Coloring at `r_c` takes 19 and 37. Coloring reproduces
+the serial matrix to `1e-8`. The short-range matrix misses by
 0.1875 against max `|H|` 1.041667, and an entry off the diagonal reaches
 0.541. The same central numbers hold with `remove_net_force` on and
 one atom fixed, which is the path that still colors.
 Catch2 `Opted-in kernels match the serial matrix at the declared range`
-runs each opted-in kernel on its own zig-zag. The colored matrix matches
-the per-column matrix exactly in these runs. A block past the interaction
+runs each opted-in kernel on its own zig-zag. Those two matrices agree
+exactly in these runs. A block past the interaction
 cutoff is nonzero for every many-body kernel, and every block past the
 declared range is 0. The Ziegler-Biersack-Littmark potential is a pair kernel, so that past-cutoff window is
 empty. Its nearest-neighbour block at 1.5 Å is nonzero and every block
 past `cut_global` is 0. The per-kernel call counts and the short-range
-errors are in the developer page {doc}`/devdocs/hessian`.
+errors are listed under {doc}`/devdocs/hessian`.
 Catch2 `Coloring falls back when every mobile atom needs its own color`
 is four atoms inside a 20 Å Lennard-Jones cutoff, and the same cluster
 with a batching spring of range 30 Å. Both need four colors. Both take
@@ -183,7 +180,7 @@ The run continues after that warning.
 With `[Hessian] write_modes = true` (the default), `modes.con` stores one frame
 per eigenvalue, lowest first. Each frame is the input structure with the mode
 in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
-of the mass-weighted eigenvector \(q\), scaled to unit norm, and zero on atoms
+of eigenvector \(q\), scaled to unit norm, and zero on atoms
 outside the mobile set. The frame metadata carries `mode_eigenvalue` in
 eV/(Å² amu), `hbar_omega` in eV and `wavenumber` in cm⁻¹. The last two are
 negative for an imaginary mode. Any readcon reader gets the mode as an

@@ -98,7 +98,7 @@ struct QuillTestLogger {
           "combi", std::move(null_sink),
           quill::PatternFormatterOptions{"%(message)"},
           quill::ClockSourceType::System);
-      logger->set_log_level(quill::LogLevel::TraceL3);
+      logger->set_log_level(quill::LogLevel::None);
     } catch (...) {
     }
   }

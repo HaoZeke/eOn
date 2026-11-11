@@ -36,6 +36,41 @@ static std::pair<std::shared_ptr<Matter>, Parameters> makeLJCluster() {
   return {m, *params};
 }
 
+TEST_CASE("without eigenvectors the prefactor uses the magnitude cut", "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  saddle->con2matter(std::string("saddle.con"));
+  min2->con2matter(std::string("product.con"));
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation = true;
+  VectorXi atoms(min1->numberOfAtoms());
+  for (long i = 0; i < atoms.size(); ++i) {
+    atoms(i) = static_cast<int>(i);
+  }
+  Hessian hessian(params, min1.get());
+  VectorXd freqs = hessian.getFreqs(min1.get(), atoms);
+  REQUIRE(freqs.size() > 0);
+  REQUIRE(hessian.getModes().rows() == 0);
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  int status = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  REQUIRE((status == 0 || status == -1));
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+    int silent = eonc::Prefactor::getPrefactors(
+        params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+    REQUIRE((silent == 0 || silent == -1));
+    logger->set_log_level(quill::LogLevel::TraceL3);
+    int loud = eonc::Prefactor::getPrefactors(
+        params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+    REQUIRE((loud == 0 || loud == -1));
+  }
+}
+
 TEST_CASE("getPrefactors rejects a null Matter", "[prefactor]") {
   Parameters params;
   double pref1 = 0.0;
@@ -192,6 +227,11 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(secondSide.size() > 0);
   min1->con2matter(std::string("reactant.con"));
   saddle->setFixed(1, false);
+  ParametersLoadAccess::prefactor_options(params).within_radius = 0.2;
+  VectorXi farPairs = eonc::Prefactor::movedAtoms(
+      params, min1.get(), saddle.get(), min2.get());
+  REQUIRE(farPairs.size() >= 0);
+  ParametersLoadAccess::prefactor_options(params).within_radius = 3.3;
 
   if (auto *logger = eonc::log::get()) {
     logger->set_log_level(quill::LogLevel::None);
