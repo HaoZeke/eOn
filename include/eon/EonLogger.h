@@ -34,6 +34,10 @@ inline constexpr std::string_view kDefaultLoggerName{"combi"};
 inline constexpr std::string_view kTracebackLoggerName{"_traceback"};
 /// Idle sleep of the client's logging backend thread.
 inline constexpr std::chrono::milliseconds kBackendSleep{1};
+/// Test seam. Production leaves this false. When set, get() asks quill to
+/// create the fallback logger, quill throws because that logger already
+/// exists, and get() returns null. Callers keep running.
+inline std::atomic<bool> fail_fallback_logger{false};
 } // namespace detail
 
 /// \brief Start the client backend and the combi / traceback loggers once.
@@ -142,6 +146,26 @@ inline constexpr std::chrono::milliseconds kBackendSleep{1};
   if (fallback)
     cached_logger.store(fallback, std::memory_order_relaxed);
   return fallback;
+}
+
+/// Logger used by EONC_LOG_*. Production returns get(). The test seam asks
+/// quill to create the fallback logger, quill throws because the name is
+/// already registered, and the macro sees a null logger and continues.
+[[nodiscard]] inline quill::Logger *get_for_macro() noexcept {
+  if (!detail::fail_fallback_logger.load(std::memory_order_relaxed)) {
+    return get();
+  }
+  try {
+    auto console_sink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>(
+        "fallback_console");
+    quill::Frontend::create_logger(
+        std::string(detail::kDefaultLoggerName), std::move(console_sink),
+        quill::PatternFormatterOptions{"%(message)"},
+        quill::ClockSourceType::System);
+  } catch (...) {
+    return nullptr;
+  }
+  return nullptr;
 }
 
 /// \brief Get or create the "_traceback" logger for traceback logging.
@@ -303,37 +327,37 @@ struct FileScoped {
 ///   EONC_LOG_DEBUG("value: {}", x);
 #define EONC_LOG_TRACE(...)                                                    \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_TRACE_L1(l, __VA_ARGS__));                         \
     }                                                                          \
   } while (0)
 #define EONC_LOG_DEBUG(...)                                                    \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_DEBUG(l, __VA_ARGS__));                            \
     }                                                                          \
   } while (0)
 #define EONC_LOG_INFO(...)                                                     \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_INFO(l, __VA_ARGS__));                             \
     }                                                                          \
   } while (0)
 #define EONC_LOG_WARNING(...)                                                  \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_WARNING(l, __VA_ARGS__));                          \
     }                                                                          \
   } while (0)
 #define EONC_LOG_ERROR(...)                                                    \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_ERROR(l, __VA_ARGS__));                            \
     }                                                                          \
   } while (0)
 #define EONC_LOG_CRITICAL(...)                                                 \
   do {                                                                         \
-    if (auto *l = eonc::log::get()) {                                          \
+    if (auto *l = eonc::log::get_for_macro()) {                                \
       EONC_EXPAND(QUILL_LOG_CRITICAL(l, __VA_ARGS__));                         \
     }                                                                          \
   } while (0)
