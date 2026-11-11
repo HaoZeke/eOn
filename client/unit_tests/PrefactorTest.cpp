@@ -145,6 +145,31 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(fullPref > 0.0);
   REQUIRE(fullBack > 0.0);
   REQUIRE(fullPref != fullBack);
+
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+    int silent = eonc::Prefactor::getPrefactors(
+        params, min1.get(), saddle.get(), min2.get(), fullPref, fullBack, full);
+    REQUIRE(silent == 0);
+    logger->set_log_level(quill::LogLevel::TraceL3);
+  }
+
+  min1->setPeriodic(false);
+  saddle->setPeriodic(false);
+  min2->setPeriodic(false);
+  double clusterPref = 0.0;
+  double clusterBack = 0.0;
+  int clusterStatus = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), clusterPref, clusterBack,
+      full);
+  REQUIRE((clusterStatus == 0 || clusterStatus == -1));
+  min1->setFixed(0, true);
+  saddle->setFixed(0, true);
+  min2->setFixed(0, true);
+  int fixedStatus = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), clusterPref, clusterBack,
+      full);
+  REQUIRE((fixedStatus == 0 || fixedStatus == -1));
 }
 
 TEST_CASE("zero cut drops modes at or below the threshold", "[prefactor]") {
@@ -367,6 +392,17 @@ Coordinates of Component 1
   VectorXi partial = eonc::Prefactor::movedAtomsPct(params, min1.get(),
                                                     saddle.get(), min2.get());
   REQUIRE(partial.size() > 0);
+
+  double again1 = 0.0;
+  double again2 = 0.0;
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+    REQUIRE(eonc::Prefactor::getPrefactors(params, nullptr, nullptr, nullptr,
+                                           again1, again2) == -1);
+    logger->set_log_level(quill::LogLevel::TraceL3);
+    REQUIRE(eonc::Prefactor::getPrefactors(params, nullptr, nullptr, nullptr,
+                                           again1, again2) == -1);
+  }
 }
 
 } /* namespace tests */

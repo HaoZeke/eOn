@@ -94,10 +94,11 @@ struct QuillTestLogger {
     try {
       auto null_sink = quill::Frontend::create_or_get_sink<quill::NullSink>(
           "null_test_sink");
-      quill::Frontend::create_or_get_logger(
+      auto *logger = quill::Frontend::create_or_get_logger(
           "combi", std::move(null_sink),
           quill::PatternFormatterOptions{"%(message)"},
           quill::ClockSourceType::System);
+      logger->set_log_level(quill::LogLevel::TraceL3);
     } catch (...) {
     }
   }

@@ -21,6 +21,92 @@
 
 namespace eonc {
 
+namespace {
+
+VectorXd rigidModesRemoved(Hessian &hessian, Matter *matter,
+                           const VectorXi &atoms, const VectorXd &freqs,
+                           const Parameters &parameters, const char *where) {
+  const double zeroCut = parameters.hessian_options().zero_freq_value;
+  const MatrixXd &modes = hessian.getModes();
+  const bool haveModes = modes.rows() == freqs.size() &&
+                         modes.cols() == freqs.size() && atoms.size() * 3 == freqs.size();
+  bool anyFixed = false;
+  for (int i = 0; i < matter->numberOfAtoms(); ++i) {
+    if (matter->getFixed(i)) {
+      anyFixed = true;
+      break;
+    }
+  }
+  if (!haveModes || anyFixed) {
+    for (int i = 0; i < freqs.size(); ++i) {
+      if (std::abs(freqs(i)) <= zeroCut) {
+        EONC_LOG_DEBUG("[Prefactor] dropped {} mode {}", where, freqs(i));
+      }
+    }
+    return hessian.removeZeroFreqs(freqs);
+  }
+
+  const int n = static_cast<int>(freqs.size());
+  std::vector<VectorXd> rigid;
+  for (int dir = 0; dir < 3; ++dir) {
+    VectorXd translation = VectorXd::Zero(n);
+    for (int a = 0; a < atoms.size(); ++a) {
+      translation(3 * a + dir) = std::sqrt(matter->getMass(atoms(a)));
+    }
+    const double norm = translation.norm();
+    if (norm > 0.0) {
+      rigid.push_back(translation / norm);
+    }
+  }
+  if (!matter->getPeriodic()) {
+    Vector3d com = Vector3d::Zero();
+    double massSum = 0.0;
+    const AtomMatrix positions = matter->getPositions();
+    for (int a = 0; a < atoms.size(); ++a) {
+      const double mass = matter->getMass(atoms(a));
+      com += mass * positions.row(atoms(a)).transpose();
+      massSum += mass;
+    }
+    if (massSum > 0.0) {
+      com /= massSum;
+    }
+    for (int dir = 0; dir < 3; ++dir) {
+      const Vector3d axis = Vector3d::Unit(dir);
+      VectorXd rotation = VectorXd::Zero(n);
+      for (int a = 0; a < atoms.size(); ++a) {
+        const Vector3d rel = positions.row(atoms(a)).transpose() - com;
+        const Vector3d velocity = axis.cross(rel);
+        rotation.segment(3 * a, 3) =
+            std::sqrt(matter->getMass(atoms(a))) * velocity;
+      }
+      const double norm = rotation.norm();
+      if (norm > 1e-8) {
+        rigid.push_back(rotation / norm);
+      }
+    }
+  }
+
+  VectorXd kept(n);
+  int nKept = 0;
+  for (int i = 0; i < n; ++i) {
+    double projected = 0.0;
+    const VectorXd mode = modes.col(i);
+    for (const VectorXd &basis : rigid) {
+      const double overlap = mode.dot(basis);
+      projected += overlap * overlap;
+    }
+    if (projected >= 0.5 || std::abs(freqs(i)) <= zeroCut) {
+      EONC_LOG_DEBUG("[Prefactor] dropped {} mode {} overlap {}", where,
+                     freqs(i), std::sqrt(projected));
+      continue;
+    }
+    kept(nKept++) = freqs(i);
+  }
+  return kept.head(nKept);
+}
+
+} // namespace
+
 VectorXi eonc::Prefactor::rateAtoms(const Parameters &parameters, Matter *min1,
                                      Matter *saddle, Matter *min2) {
   // The free-atom flag selects the product. The displacement filter is
@@ -68,19 +154,14 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     return -1;
   }
   // remove zero modes
-  const double zeroCut = parameters.hessian_options().zero_freq_value;
-  auto dropZeros = [&](const VectorXd &in, const char *where) {
+  auto dropZeros = [&](Matter *structure, const VectorXd &in,
+                       const char *where) {
     if (!parameters.structure_comparison_options().check_rotation) {
       return in;
     }
-    for (int i = 0; i < in.size(); ++i) {
-      if (std::abs(in(i)) <= zeroCut) {
-        EONC_LOG_DEBUG("[Prefactor] dropped {} mode {}", where, in(i));
-      }
-    }
-    return hessian.removeZeroFreqs(in);
+    return rigidModesRemoved(hessian, structure, atoms, in, parameters, where);
   };
-  min1Freqs = dropZeros(min1Freqs, "minimum 1");
+  min1Freqs = dropZeros(min1, min1Freqs, "minimum 1");
 
   // calculate saddle frequencies
   saddleFreqs = hessian.getFreqs(saddle, atoms);
@@ -88,7 +169,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     EONC_LOG_ERROR("[Prefactor] Bad hessian: saddle");
     return -1;
   }
-  saddleFreqs = dropZeros(saddleFreqs, "saddle");
+  saddleFreqs = dropZeros(saddle, saddleFreqs, "saddle");
 
   // calculate min2 frequencies
   min2Freqs = hessian.getFreqs(min2, atoms);
@@ -98,7 +179,7 @@ int eonc::Prefactor::getPrefactors(const Parameters &parameters, Matter *min1,
     }
     return -1;
   }
-  min2Freqs = dropZeros(min2Freqs, "minimum 2");
+  min2Freqs = dropZeros(min2, min2Freqs, "minimum 2");
 
   // Both minima must match the saddle Hessian length.
   if ((min1Freqs.size() != saddleFreqs.size()) ||
