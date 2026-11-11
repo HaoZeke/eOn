@@ -117,16 +117,16 @@ before-all = """
   . /root/.cargo/env
   command -v cbindgen || cargo install cbindgen
   if ! pkg-config --exists quill 2>/dev/null; then
-    rm -rf /tmp/quill-src /tmp/quill-build
-    curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v13.1.0.tar.gz
-    mkdir -p /tmp/quill-src && tar -xzf /tmp/quill.tgz -C /tmp/quill-src --strip-components=1
-    cmake -S /tmp/quill-src -B /tmp/quill-build \
+    rm -rf quill-src quill-build
+    curl -fsSL -o quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v13.1.0.tar.gz
+    mkdir -p quill-src && tar -xzf quill.tgz -C quill-src --strip-components=1
+    cmake -S quill-src -B quill-build \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
       -DQUILL_BUILD_TESTS=OFF \
       -DQUILL_BUILD_EXAMPLES=OFF
-    cmake --build /tmp/quill-build -j$(nproc)
-    cmake --install /tmp/quill-build
+    cmake --build quill-build -j$(nproc)
+    cmake --install quill-build
   fi
 """
 environment = { PATH = "/root/.cargo/bin:$PATH", CARGO_HOME = "/root/.cargo", PKG_CONFIG_PATH = "/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH", CMAKE_PREFIX_PATH = "/usr/local" }

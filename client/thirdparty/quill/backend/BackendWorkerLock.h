@@ -18,7 +18,7 @@
 
   #include <windows.h>
 #elif defined(__ANDROID__)
-// No lock support on Android (no /tmp)
+// No lock support on Android
 #else
   #ifndef QUILL_MODULE
     #include <cerrno>
@@ -53,7 +53,7 @@ namespace detail
  * flock() on a lock file in the working directory. The kernel automatically releases the lock when the
  * process exits, even on kill -9, so no stale locks are left behind.
  *
- * Disabled on Android, which lacks /tmp.
+ * Disabled on Android.
  */
 class BackendWorkerLock
 {
