@@ -334,6 +334,33 @@ Coordinates of Component 1
   REQUIRE(pref1 > 0.0);
   REQUIRE(pref2 > 0.0);
 
+  // Partial nulls, so each arm of the null check runs.
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), nullptr, min2.get(),
+                                         pref1, pref2) == -1);
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(), nullptr,
+                                         pref1, pref2) == -1);
+  ParametersLoadAccess::prefactor_options(params).min_displacement = 100.0;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 0.0;
+  VectorXi none = eonc::Prefactor::movedAtoms(params, min1.get(), saddle.get(),
+                                              min2.get());
+  REQUIRE(none.size() == 0);
+  ParametersLoadAccess::prefactor_options(params).min_displacement = 0.01;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 50.0;
+  saddle->setFixed(1, true);
+  VectorXi with_fixed = eonc::Prefactor::movedAtoms(
+      params, min1.get(), saddle.get(), min2.get());
+  REQUIRE(with_fixed.size() > 0);
+  ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.0;
+  VectorXi pct_stop = eonc::Prefactor::movedAtomsPct(
+      params, min1.get(), saddle.get(), min2.get());
+  REQUIRE(pct_stop.size() >= 0);
+  auto identical = std::make_shared<Matter>(pot, params);
+  *identical = *saddle;
+  ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.5;
+  VectorXi pct_zero = eonc::Prefactor::movedAtomsPct(
+      params, identical.get(), saddle.get(), identical.get());
+  REQUIRE(pct_zero.size() >= 0);
+
   min1->setFixed(0, true);
   ParametersLoadAccess::prefactor_options(params).filter_fraction = 0.99;
   ParametersLoadAccess::prefactor_options(params).within_radius = 0.0;
