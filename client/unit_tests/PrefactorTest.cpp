@@ -414,10 +414,13 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
           eonc::Prefactor::MINIMUM_ORDER);
 
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
-  // The product geometry is the saddle, so that minimum has a negative mode.
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
+  // No eigenvectors, so the 0.5 cut clears the reactant. The product
+  // geometry is the saddle, and that image keeps a negative mode.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          saddle.get(), pref1, pref2, full) ==
           eonc::Prefactor::MINIMUM_ORDER);
+  ParametersLoadAccess::hessian_options(params).write_modes = true;
 
   AtomMatrix broken = saddle->getPositions();
   broken(0, 0) = 1.0e300;
