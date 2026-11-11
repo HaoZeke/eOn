@@ -434,8 +434,8 @@ if not quill_dep.found()
     )
 endif
 if not quill_dep.found()
-    # No installed quill: build the one subprojects/quill.wrap pins, inside
-    # the version range pixi.toml allows.
+    # No installed quill: build the 13.1.0 pin in subprojects/quill.wrap.
+    # pixi.toml requires that same version.
     quill_dep = dependency(
         'quill',
         fallback: ['quill', 'quill_dep'],
@@ -2315,6 +2315,15 @@ get_null_path = executable(
     link_with: _linkto,
 )
 test('get_null_bad_level', get_null_path, args: ['bad-level'], suite: ['eon'])
+# Unknown potential, bad QUILL_LOG_LEVEL: flush_log must not run on null.
+potential_null_flush = executable(
+    'potential_null_flush',
+    'unit_tests/potential_null_flush.cpp',
+    include_directories: _incdirs,
+    dependencies: _exe_deps,
+    link_with: _linkto,
+)
+test('potential_null_flush', potential_null_flush, suite: ['eon'])
 
 # ------------------------ Tests
 

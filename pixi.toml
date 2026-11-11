@@ -34,7 +34,7 @@ pkg-config = ">=0.29.2,<0.30"
 fortran-compiler = ">=1.10.0,<2"
 pyyaml = "*"
 sccache = "*"
-quill = ">=11.0.2,<12"
+quill = "==13.1.0"
 rust = ">=1.88"
 # Direct RGPOT (non-Windows) links rgpot's NWChem/CPMD frontends, which need
 # Cap'n Proto. Windows builds leave that arm off.

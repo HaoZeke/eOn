@@ -373,10 +373,12 @@ VectorXi eonc::Prefactor::movedAtomsPct(const Parameters &parameters,
   VectorXd diff(nAtoms);
   diff.setConstant(0.0);
 
-  QUILL_LOG_DEBUG(
-      eonc::log::get(),
-      "[Prefactor] including all atoms that make up {:.3f}% of the motion",
-      parameters.prefactor_options().filter_fraction * 100);
+  if (auto *logger = eonc::log::get()) {
+    QUILL_LOG_DEBUG(
+        logger,
+        "[Prefactor] including all atoms that make up {:.3f}% of the motion",
+        parameters.prefactor_options().filter_fraction * 100);
+  }
   double sum = 0.0;
   int mini = 0;
   for (int i = 0; i < nAtoms; i++) {

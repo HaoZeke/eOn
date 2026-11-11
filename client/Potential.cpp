@@ -540,7 +540,9 @@ std::unique_ptr<Potential> makePotential(PotType ptype,
   default:
     EONC_LOG_ERROR("No known potential could be constructed from {}",
                    magic_enum::enum_name(ptype));
-    eonc::log::get()->flush_log();
+    if (auto *logger = eonc::log::get()) {
+      logger->flush_log();
+    }
     throw std::runtime_error("Terminating");
     break;
   }

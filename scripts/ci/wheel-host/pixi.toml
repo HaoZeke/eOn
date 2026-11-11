@@ -17,6 +17,6 @@ capnproto = ">=1.0,<2"
 # find_library probes never see FortranRuntime. The Windows test job
 # uses the 19.1.7 pin from the main lock.
 flang = ">=19.1.7,<20"
-quill = ">=11.0.2,<12"
+quill = "==13.1.0"
 # The umbrella staticlib needs rustc >= 1.88 (readcon-core is edition 2024).
 rust = ">=1.88"

@@ -118,7 +118,7 @@ before-all = """
   command -v cbindgen || cargo install cbindgen
   if ! pkg-config --exists quill 2>/dev/null; then
     rm -rf /tmp/quill-src /tmp/quill-build
-    curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v11.0.2.tar.gz
+    curl -fsSL -o /tmp/quill.tgz https://github.com/odygrd/quill/archive/refs/tags/v13.1.0.tar.gz
     mkdir -p /tmp/quill-src && tar -xzf /tmp/quill.tgz -C /tmp/quill-src --strip-components=1
     cmake -S /tmp/quill-src -B /tmp/quill-build \
       -DCMAKE_BUILD_TYPE=Release \
