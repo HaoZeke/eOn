@@ -12,8 +12,7 @@ The Hessian job is part of eOn
 The older description of that client is Chill et al.
 {cite:t}`hess-chillEONSoftwareLong2014`.
 
-The Hessian matrix (second derivative of the potential energy with respect to
-atomic coordinates) is used for:
+The Hessian matrix is the second derivative of the energy. The job uses it for:
 
 - **Vibrational frequency analysis**: Eigenvalues of the mass-weighted Hessian
   give squared vibrational frequencies. Positive eigenvalues correspond to stable
@@ -44,12 +43,12 @@ one-sided truncation that biased a soft eigenvalue by 40 percent.
 \(M = 3 N_\text{mobile}\) active degrees of freedom, plus one base gradient.
 The one-sided quotient uses only the forward sample.
 
-**fourth**: fourth-order central difference, about 4M force evaluations
-(aliases `fourth_order` and `central4`):
+**fourth**: this scheme evaluates the force about 4M times
+(aliases `fourth_order` and `central4`). The weights are:
 
 $$H_{ij} \approx -\frac{-F_j(x+2 h e_i)+8F_j(x+h e_i)-8F_j(x-h e_i)+F_j(x-2 h e_i)}{12 h}$$
 
-Central differences are the default. A one-sided step of 0.01 Å left an
+The formula above is the default stencil. A one-sided step of 0.01 Å left an
 \(O(h)\) bias of 40 percent on a soft mode. Fourth-order cancels the \(O(h^2)\)
 term as well.
 The same `fd_scheme = fourth` value selects that stencil for Lanczos and
@@ -72,8 +71,7 @@ coloring stays off. One column is then built per coordinate.
 An interaction cutoff is not this distance. A pair potential is zero past
 its cutoff, so the range equals the cutoff. An atom-centred many-body
 potential (embedded-atom method, Gupta, Stillinger-Weber, Tersoff) is zero only past twice
-the cutoff, because the density or the bond order at an atom depends on
-every neighbour inside the cutoff. A flexible water model lacks a
+the cutoff. The density at one atom depends on every neighbour inside the cutoff. A flexible water model lacks a
 hard intramolecular extent, so a cutoff on the oxygen-oxygen interaction
 leaves the blocks nonzero past every fixed distance. A message-passing
 model is zero past `n_layers` times the edge cutoff, and only when that
@@ -183,7 +181,7 @@ in its `displacements` section: the Cartesian displacement \(x = q/\sqrt{m}\)
 of eigenvector \(q\), scaled to unit norm, and zero on atoms
 outside the mobile set. The frame metadata carries `mode_eigenvalue` in
 eV/(Å² amu), `hbar_omega` in eV and `wavenumber` in cm⁻¹. The last two are
-negative for an imaginary mode. Any readcon reader gets the mode as an
+Those two values are negative for an imaginary mode. Any readcon reader gets the mode as an
 N x 3 array beside the positions:
 
 ```{code-block} python

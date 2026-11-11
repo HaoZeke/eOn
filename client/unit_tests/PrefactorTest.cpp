@@ -534,11 +534,87 @@ TEST_CASE("a thrown fallback logger still returns the saddle status",
       params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
   int missing = eonc::Prefactor::getPrefactors(
       params, nullptr, nullptr, nullptr, pref1, pref2, atoms);
+  int missingBare = eonc::Prefactor::getPrefactors(
+      params, nullptr, nullptr, nullptr, pref1, pref2);
+  VectorXi none(0);
+  int noAtoms = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, none);
+  VectorXi bad(1);
+  bad(0) = 100000;
+  int badIndex = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, bad);
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      false;
+  int keptNegatives = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      true;
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
+  int broadCut = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
+  int magnitude = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  ParametersLoadAccess::prefactor_options(params).min_displacement = 100.0;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 0.0;
+  VectorXi far = eonc::Prefactor::movedAtoms(params, min1.get(), saddle.get(),
+                                            min2.get());
+  ParametersLoadAccess::prefactor_options(params).min_displacement = 0.01;
+  ParametersLoadAccess::prefactor_options(params).within_radius = 3.3;
+  VectorXi near = eonc::Prefactor::movedAtoms(params, min1.get(), saddle.get(),
+                                             min2.get());
+  AtomMatrix huge = saddle->getPositions();
+  huge(0, 0) = 1.0e300;
+  saddle->setPositions(huge);
+  int hugeSaddle = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  saddle->con2matter(std::string("saddle.con"));
+  huge = min2->getPositions();
+  huge(0, 0) = 1.0e300;
+  min2->setPositions(huge);
+  int hugeProduct = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  min2->con2matter(std::string("product.con"));
   eonc::log::detail::fail_fallback_logger.store(false,
                                                 std::memory_order_relaxed);
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::TraceL3);
+  }
+  int tracedEmpty = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, none);
+  int tracedBad = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, bad);
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      false;
+  int tracedNeg = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      true;
+  saddle->setPositions(huge);
+  int tracedHuge = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  saddle->con2matter(std::string("saddle.con"));
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+  }
   REQUIRE(status == eonc::Prefactor::OK);
   REQUIRE(pref1 > 0.0);
   REQUIRE(missing == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(missingBare == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(noAtoms == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(badIndex == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(keptNegatives == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(broadCut == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(magnitude == eonc::Prefactor::OK);
+  REQUIRE(far.size() == 0);
+  REQUIRE(near.size() > 0);
+  REQUIRE(hugeSaddle == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(hugeProduct == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(tracedEmpty == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(tracedBad == eonc::Prefactor::POTENTIAL_FAILED);
+  REQUIRE(tracedNeg == eonc::Prefactor::SADDLE_ORDER);
+  REQUIRE(tracedHuge == eonc::Prefactor::SADDLE_ORDER);
 }
 
 } /* namespace tests */
