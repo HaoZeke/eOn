@@ -1,4 +1,4 @@
-# Copyright (c) eOn Development Team
+# Copyright (c) eOn developers
 # SPDX-License-Identifier: BSD-3-Clause
 """Compare a filtered prefactor with the all-free-atom prefactor.
 
