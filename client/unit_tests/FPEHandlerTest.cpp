@@ -32,6 +32,28 @@
 //
 // Also covers SafeMath guards that keep application code off the trap path.
 
+#if defined(__unix__) && defined(FE_DIVBYZERO)
+// Hosts that cannot arm IEEE traps (QEMU user-mode aarch64: feenableexcept
+// returns -1 and an FPCR msr of IOE|DZE|OFE reads back as 0) must not fail
+// the trap-mask assertions below.
+static bool fpeTrapsAvailable() {
+  const int rc = feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  const int armed = fegetexcept();
+  bool bits = (armed & (FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW)) != 0;
+#if defined(__aarch64__)
+  std::uint64_t fpcr = 0;
+  asm volatile("mrs %0, fpcr" : "=r"(fpcr));
+  constexpr std::uint64_t kTrapEnables = (1ull << 8) | (1ull << 9) | (1ull << 10);
+  if ((fpcr & kTrapEnables) == 0)
+    bits = false;
+#endif
+  fedisableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  feclearexcept(FE_ALL_EXCEPT);
+  return rc != -1 && bits;
+}
+#endif
+
+
 TEST_CASE("Windows continue MxCsr sets exception masks and clears sticky flags",
           "[fpe]") {
   // Fault-time word: ZE sticky, IM/ZM/OM unmasked, DM/UM/PM masked, RZ mode.
@@ -50,6 +72,9 @@ TEST_CASE("enableFPE then divide-by-zero continues once (no re-trap storm)",
 #if defined(__APPLE__) && defined(__aarch64__)
   SKIP("Apple Silicon raises SIGILL for FE traps, not SIGFPE");
 #else
+  if (!fpeTrapsAvailable()) {
+    SKIP("FP traps unavailable: feenableexcept returned -1 or trap bits read back as 0");
+  }
   eonc::enableFPE();
 
   volatile double num = 1.0;
@@ -161,6 +186,9 @@ TEST_CASE("disableFPE demotes traps after enableFPE (worker path)",
   REQUIRE(std::isinf(r));
   feclearexcept(FE_ALL_EXCEPT);
 #elif defined(__unix__)
+  if (!fpeTrapsAvailable()) {
+    SKIP("FP traps unavailable: feenableexcept returned -1 or trap bits read back as 0");
+  }
   eonc::enableFPE();
 #if defined(FE_DIVBYZERO)
   REQUIRE((fegetexcept() & FE_DIVBYZERO) != 0);
@@ -185,6 +213,9 @@ TEST_CASE("FPEHandler::eat_fpe demotes traps for external pot scopes",
 #if defined(_WIN32) || !defined(__unix__)
   SKIP("eat_fpe / feholdexcept path exercised on unix");
 #else
+  if (!fpeTrapsAvailable()) {
+    SKIP("FP traps unavailable: feenableexcept returned -1 or trap bits read back as 0");
+  }
   eonc::enableFPE();
   {
     eonc::FPEHandler fpeh;
@@ -205,6 +236,9 @@ TEST_CASE("FPEGuard restores traps when the guarded call throws", "[fpe]") {
 #if defined(_WIN32) || !defined(__unix__)
   SKIP("FPEGuard / feholdexcept path exercised on unix");
 #else
+  if (!fpeTrapsAvailable()) {
+    SKIP("FP traps unavailable: feenableexcept returned -1 or trap bits read back as 0");
+  }
   eonc::enableFPE();
 #if defined(FE_DIVBYZERO)
   REQUIRE((fegetexcept() & FE_DIVBYZERO) != 0);
