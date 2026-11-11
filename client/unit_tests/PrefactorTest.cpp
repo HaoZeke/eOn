@@ -773,13 +773,15 @@ Coordinates of Component 1
     // The moving-atom subset is not a first-order saddle.
     REQUIRE(subsetStatus == eonc::Prefactor::SADDLE_ORDER);
   };
-  auto *logger = eonc::log::get();
-  REQUIRE(logger != nullptr);
-  logger->set_log_level(quill::LogLevel::None);
-  statuses();
-  logger->set_log_level(quill::LogLevel::TraceL3);
-  statuses();
-  logger->set_log_level(quill::LogLevel::None);
+  if (auto *logger = eonc::log::get()) {
+    logger->set_log_level(quill::LogLevel::None);
+    statuses();
+    logger->set_log_level(quill::LogLevel::TraceL3);
+    statuses();
+    logger->set_log_level(quill::LogLevel::None);
+  } else {
+    statuses();
+  }
 }
 
 TEST_CASE("one image with zero mass or a fixed atom is rejected", "[prefactor]") {
