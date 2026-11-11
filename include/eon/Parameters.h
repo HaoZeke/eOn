@@ -145,6 +145,11 @@ public:
   const oh_tst_options_t &oh_tst_options() const;
   const instanton_options_t &instanton_options() const;
 
+  /// True while this address is a live Parameters object.
+  /// A moved-from or destroyed object is not live. The check uses the
+  /// address only, so a dangling Matter pointer does not dereference it.
+  [[nodiscard]] static bool is_live(const Parameters *self) noexcept;
+
   friend int config::load_ini(::INIReader &, Parameters &);
   friend void config::apply_ssot_defaults(Parameters &);
   friend void config::validate_and_link(Parameters &);
@@ -157,6 +162,8 @@ private:
   std::unique_ptr<Impl> impl_;
   Impl &ensure_impl();
   void record_load(std::string_view source, int error);
+  static void note_constructed(Parameters *self) noexcept;
+  static void note_destroyed(Parameters *self) noexcept;
 };
 
 /// Write hole for INI/JSON loaders and nanobind property setters.

@@ -1203,4 +1203,78 @@ TEST_CASE("ConFileIO append leaves no scratch files behind",
   std::filesystem::remove_all(dir);
 }
 
+// A writer that builds Matter in a helper and returns it drops the
+// Parameters the constructor borrowed. matter2con and matter2convel used
+// to dereference that dead object (32-atom trajectories and the survey
+// frame). The write keeps the force-section flag from when it was alive.
+TEST_CASE("matter2con survives after Parameters ends",
+          "[confileio][matter2con]") {
+  std::shared_ptr<Matter> held;
+  {
+    Parameters params;
+    ParametersLoadAccess::potential_options(params).potential = PotType::LJ;
+    auto pot = eonc::helpers::sharePotential(
+        eonc::helpers::makePotential(PotType::LJ, params));
+    held = std::make_shared<Matter>(pot, params);
+    constexpr long n = 32;
+    held->resize(n);
+    held->setCell(12.0 * Matrix3d::Identity());
+    for (long i = 0; i < n; ++i) {
+      held->setAtomicNr(i, 29);
+      held->setMass(i, 63.546);
+      held->setPosition(i, 0, 0.2 * static_cast<double>(i));
+      held->setPosition(i, 1, 0.1 * static_cast<double>(i % 8));
+      held->setPosition(i, 2, 0.05 * static_cast<double>(i % 4));
+      held->setVelocity(i, 0, 1.0e-4 * static_cast<double>(i));
+    }
+    held->setFixedMask(0, {true, true, false});
+    held->setAtomIndex(0, 41);
+  }
+
+  const auto dir = std::filesystem::temp_directory_path();
+  const std::string traj = (dir / "_test_params_ended.con").string();
+  const std::string survey = (dir / "_test_params_ended.convel").string();
+  std::filesystem::remove(traj);
+  std::filesystem::remove(survey);
+
+  eonc::io::ConFrameMetadata meta;
+  meta.frame_index = 0;
+  REQUIRE(eonc::io::io_ok(held->matter2con(traj, false, &meta)));
+  meta.frame_index = 1;
+  REQUIRE(eonc::io::io_ok(held->matter2con(traj, true, &meta)));
+  REQUIRE(eonc::io::io_ok(eonc::io::matter2convel(*held, survey)));
+
+  const auto frames = readcon::read_all_frames(traj);
+  REQUIRE(frames.size() == 2);
+  REQUIRE(frames.front().atoms().size() == 32);
+  const auto vel = readcon::read_first_frame(survey);
+  REQUIRE(vel.atoms().size() == 32);
+  REQUIRE(vel.has_velocities());
+
+  std::filesystem::remove(traj);
+  std::filesystem::remove(survey);
+}
+
+TEST_CASE("writeConForces set after Matter construction is still written",
+          "[confileio][forces]") {
+  Parameters params;
+  ParametersLoadAccess::potential_options(params).potential = PotType::LJ;
+  auto pot = eonc::helpers::sharePotential(
+      eonc::helpers::makePotential(PotType::LJ, params));
+  auto m = std::make_shared<Matter>(pot, params);
+  m->con2matter(std::string("reactant.con"));
+  ParametersLoadAccess::main_options(params).writeConForces = true;
+  (void)m->getPotentialEnergy();
+  REQUIRE_FALSE(eonc::io::write_con_forces());
+
+  const std::string tmpfile =
+      (std::filesystem::temp_directory_path() / "_test_forces_after.con")
+          .string();
+  REQUIRE(eonc::io::io_ok(m->matter2con(tmpfile, false)));
+  const auto frames = readcon::read_all_frames(tmpfile);
+  REQUIRE(frames.size() == 1);
+  REQUIRE(frames[0].has_forces());
+  std::filesystem::remove(tmpfile);
+}
+
 } /* namespace tests */

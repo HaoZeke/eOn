@@ -58,6 +58,7 @@ Matter::Matter(std::shared_ptr<Potential> pot, const Parameters &params)
       removeNetForce{params.main_options().removeNetForce},
       structComp{params.structure_comparison_options()},
       parameters{&params},
+      writeConForcesCached_{params.main_options().writeConForces},
       nAtoms{0},
       impl_{std::make_unique<Impl>()},
       biasPotential{nullptr},
@@ -68,7 +69,14 @@ Matter::Matter(std::shared_ptr<Potential> pot, const Parameters &params)
       cachedPotEpoch_{0} {}
 
 bool Matter::getWriteConForces() const noexcept {
-  return parameters != nullptr && parameters->main_options().writeConForces;
+  // matter2con / matter2convel run after a helper has returned this Matter
+  // and destroyed the Parameters it was built with. The address is still
+  // stored. Reading it is the segfault on the 32-atom trajectory and the
+  // survey frame. Use the flag from the last time that object was alive.
+  if (parameters != nullptr && Parameters::is_live(parameters)) {
+    writeConForcesCached_ = parameters->main_options().writeConForces;
+  }
+  return writeConForcesCached_;
 }
 
 namespace {
@@ -112,6 +120,7 @@ const Matter &Matter::operator=(const Matter &matter) {
   removeNetForce = matter.removeNetForce;
   structComp = matter.structComp;
   parameters = matter.parameters;
+  writeConForcesCached_ = matter.writeConForcesCached_;
 
   usePeriodicBoundaries = matter.usePeriodicBoundaries;
   pbcConvention = matter.pbcConvention;
@@ -163,6 +172,7 @@ Matter &Matter::operator=(Matter &&other) noexcept {
   removeNetForce = other.removeNetForce;
   structComp = other.structComp;
   parameters = other.parameters;
+  writeConForcesCached_ = other.writeConForcesCached_;
   nAtoms = other.nAtoms;
   impl_->positions = std::move(other.impl_->positions);
   impl_->velocities = std::move(other.impl_->velocities);

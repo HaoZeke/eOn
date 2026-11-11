@@ -53,6 +53,7 @@ Parameters::Parameters()
   eonc::config::apply_ssot_defaults(*this);
   // Resolve computed fields via validate_and_link.
   eonc::config::validate_and_link(*this);
+  note_constructed(this);
 }
 
 int Parameters::load(std::string_view filename) {

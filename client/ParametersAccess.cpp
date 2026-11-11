@@ -15,8 +15,10 @@
 // Parameters.cpp.
 #include "ParametersImpl.h"
 
+#include <atomic>
 #include <memory>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 namespace eonc {
@@ -24,12 +26,82 @@ namespace eonc {
 static_assert(sizeof(Parameters) == sizeof(std::unique_ptr<int>),
               "Parameters layout is the Impl pointer");
 
-Parameters::~Parameters() = default;
-Parameters::Parameters(Parameters &&) noexcept = default;
-Parameters &Parameters::operator=(Parameters &&) noexcept = default;
+namespace {
+
+// Leaked on purpose: a static Parameters can be destroyed after a
+// function-local registry, and note_destroyed must still be a no-op.
+struct ParameterLiveness {
+  std::atomic_flag lock = ATOMIC_FLAG_INIT;
+  std::unordered_set<const Parameters *> live;
+
+  void enter() noexcept {
+    while (lock.test_and_set(std::memory_order_acquire)) {
+    }
+  }
+  void leave() noexcept { lock.clear(std::memory_order_release); }
+};
+
+ParameterLiveness &liveness() {
+  static auto *registry = new ParameterLiveness;
+  return *registry;
+}
+
+} // namespace
+
+void Parameters::note_constructed(Parameters *self) noexcept {
+  if (self == nullptr) {
+    return;
+  }
+  auto &registry = liveness();
+  registry.enter();
+  try {
+    registry.live.insert(self);
+  } catch (...) {
+  }
+  registry.leave();
+}
+
+void Parameters::note_destroyed(Parameters *self) noexcept {
+  if (self == nullptr) {
+    return;
+  }
+  auto &registry = liveness();
+  registry.enter();
+  registry.live.erase(self);
+  registry.leave();
+}
+
+bool Parameters::is_live(const Parameters *self) noexcept {
+  if (self == nullptr) {
+    return false;
+  }
+  auto &registry = liveness();
+  registry.enter();
+  const bool found = registry.live.find(self) != registry.live.end();
+  registry.leave();
+  return found;
+}
+
+Parameters::~Parameters() { note_destroyed(this); }
+
+Parameters::Parameters(Parameters &&other) noexcept
+    : impl_(std::move(other.impl_)) {
+  note_destroyed(&other);
+  note_constructed(this);
+}
+
+Parameters &Parameters::operator=(Parameters &&other) noexcept {
+  if (this != &other) {
+    impl_ = std::move(other.impl_);
+    note_destroyed(&other);
+  }
+  return *this;
+}
 
 Parameters::Parameters(const Parameters &other)
-    : impl_(std::make_unique<Impl>(other.impl_ ? *other.impl_ : Impl{})) {}
+    : impl_(std::make_unique<Impl>(other.impl_ ? *other.impl_ : Impl{})) {
+  note_constructed(this);
+}
 
 // Copy in place, so option-group references taken before the assignment
 // stay valid.
@@ -73,6 +145,10 @@ const Parameters::constants_t &Parameters::constants() const {
 }
 
 const Parameters::main_options_t &Parameters::main_options() const {
+  if (!impl_) {
+    static const main_options_t fallback{};
+    return fallback;
+  }
   return impl_->main_options_;
 }
 
