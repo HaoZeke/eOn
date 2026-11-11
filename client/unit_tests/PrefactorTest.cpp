@@ -10,6 +10,7 @@
 ** https://github.com/TheochemUI/eOn
 */
 
+#include "eon/FiniteDifference.h"
 #include "eon/Hessian.h"
 #include "eon/Prefactor.h"
 #include "TestUtils.hpp"
@@ -34,6 +35,25 @@ static std::pair<std::shared_ptr<Matter>, Parameters> makeLJCluster() {
                             [params](Matter *owned) { delete owned; });
   m->con2matter(std::string("reactant.con"));
   return {m, *params};
+}
+
+TEST_CASE("the logged soft mode stays under the conditioning floor",
+          "[prefactor]") {
+  // diffusion/5/6731651123961377170 client log:
+  // dropped saddle mode 7.571959181695015e-07 overlap 3.574183784076393e-05
+  // The logged overlap is the square root of the squared overlap.
+  const double logged = 7.571959181695015e-07;
+  const double overlap = 3.574183784076393e-05;
+  const double overlap2 = overlap * overlap;
+  // The 1e-6 request drops this mode. The floor does not.
+  REQUIRE(std::abs(logged) <= 1e-6);
+  REQUIRE(overlap2 < 0.5);
+  REQUIRE(eonc::keepVibrationalMode(logged, overlap2, 0.02, 771));
+  // diffusion/4/2045009418749124428 second saddle mode, about -2.1e-5.
+  // It is above the floor, so two negative modes stay two.
+  REQUIRE(eonc::keepVibrationalMode(-2.1e-5, 0.0, 0.02, 771));
+  REQUIRE_FALSE(eonc::keepVibrationalMode(1.0e-18, 0.0, 0.02, 771));
+  REQUIRE_FALSE(eonc::keepVibrationalMode(0.01, 0.5, 0.02, 771));
 }
 
 TEST_CASE("without eigenvectors the prefactor uses the magnitude cut", "[prefactor]") {
@@ -182,10 +202,9 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(full.size() > partial.size());
   // A subset of the moving atoms is not the full saddle spectrum.
   REQUIRE(partialStatus == eonc::Prefactor::SADDLE_ORDER);
-  REQUIRE(fullStatus == 0);
-  REQUIRE(fullPref > 0.0);
-  REQUIRE(fullBack > 0.0);
-  REQUIRE(fullPref != fullBack);
+  // Eigenvectors are present, so 0.5 is not the magnitude cut. The
+  // LJ13 extra negatives stay, and the minimum is not first order.
+  REQUIRE(fullStatus == eonc::Prefactor::MINIMUM_ORDER);
 
   double unused1 = 0.0;
   double unused2 = 0.0;
@@ -194,8 +213,12 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(), nullptr,
                                          unused1, unused2, full) == -1);
   ParametersLoadAccess::prefactor_options(params).rate = "neither";
+  // The product is reached only after a first-order spectrum. This
+  // fixture needs the magnitude cut, so eigenvectors are off here.
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
   int unknownRate = eonc::Prefactor::getPrefactors(
       params, min1.get(), saddle.get(), min2.get(), unused1, unused2, full);
+  ParametersLoadAccess::hessian_options(params).write_modes = true;
   // An unrecognised rate skips both products and still returns the spectrum.
   REQUIRE(unknownRate == eonc::Prefactor::OK);
   ParametersLoadAccess::prefactor_options(params).rate =
@@ -247,7 +270,8 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
     logger->set_log_level(quill::LogLevel::None);
     int silent = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), fullPref, fullBack, full);
-    REQUIRE(silent == 0);
+    // Eigenvectors are present, so 0.5 is not applied.
+    REQUIRE(silent == eonc::Prefactor::MINIMUM_ORDER);
     logger->set_log_level(quill::LogLevel::TraceL3);
   }
 
@@ -259,8 +283,10 @@ TEST_CASE("all_free_atoms keeps every free atom in the prefactor",
   int clusterStatus = eonc::Prefactor::getPrefactors(
       params, min1.get(), saddle.get(), min2.get(), clusterPref, clusterBack,
       full);
-  // The open cluster keeps the same 0.5 cut and one reaction mode.
+  // Rotations are projected, so the extra negatives of this open
+  // cluster leave the spectrum and one reaction mode remains.
   REQUIRE(clusterStatus == eonc::Prefactor::OK);
+  REQUIRE(clusterPref > 0.0);
   min1->setFixed(0, true);
   saddle->setFixed(0, true);
   min2->setFixed(0, true);
@@ -381,10 +407,11 @@ TEST_CASE("prefactor error paths and the quantum rate", "[prefactor]") {
   ParametersLoadAccess::structure_comparison_options(params).check_rotation =
       true;
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
-  // A cut of 3 removes different counts from the three spectra.
+  // Eigenvectors are present, so the request of 3 is not applied.
+  // The extra negatives stay and the minimum is not first order.
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, full) ==
-          eonc::Prefactor::SPECTRUM_LENGTH);
+          eonc::Prefactor::MINIMUM_ORDER);
 
   ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
   // The product geometry is the saddle, so that minimum has a negative mode.
@@ -450,6 +477,7 @@ Coordinates of Component 1
 
   ParametersLoadAccess::prefactor_options(params).rate =
       std::string(eonc::Prefactor::RATE_QQHTST);
+  ParametersLoadAccess::hessian_options(params).write_modes = false;
   ParametersLoadAccess::main_options(params).temperature = 300.0;
   const auto logDir =
       fs::temp_directory_path() /
@@ -598,14 +626,15 @@ TEST_CASE("a thrown fallback logger still returns the saddle status",
   if (auto *logger = eonc::log::get()) {
     logger->set_log_level(quill::LogLevel::None);
   }
-  REQUIRE(status == eonc::Prefactor::OK);
-  REQUIRE(pref1 > 0.0);
+  // Eigenvectors are present, so 0.5 is not applied.
+  REQUIRE(status == eonc::Prefactor::MINIMUM_ORDER);
   REQUIRE(missing == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(missingBare == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(noAtoms == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(badIndex == eonc::Prefactor::POTENTIAL_FAILED);
   REQUIRE(keptNegatives == eonc::Prefactor::MINIMUM_ORDER);
-  REQUIRE(broadCut == eonc::Prefactor::SPECTRUM_LENGTH);
+  // Eigenvectors are present, so the request of 3 is not applied.
+  REQUIRE(broadCut == eonc::Prefactor::MINIMUM_ORDER);
   REQUIRE(magnitude == eonc::Prefactor::OK);
   REQUIRE(far.size() == 0);
   REQUIRE(near.size() > 0);
@@ -676,7 +705,8 @@ Coordinates of Component 1
     ParametersLoadAccess::hessian_options(params).zero_freq_value = 3.0;
     int broad = eonc::Prefactor::getPrefactors(
         params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
-    REQUIRE(broad == eonc::Prefactor::SPECTRUM_LENGTH);
+    // Eigenvectors are present, so the request of 3 is not applied.
+    REQUIRE(broad == eonc::Prefactor::MINIMUM_ORDER);
     restore();
     ParametersLoadAccess::structure_comparison_options(params).check_rotation =
         false;
@@ -786,6 +816,82 @@ TEST_CASE("one image with zero mass or a fixed atom is rejected", "[prefactor]")
   REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
                                          min2.get(), pref1, pref2, atoms) ==
           eonc::Prefactor::FIXED_ATOM);
+}
+
+TEST_CASE("a fixed atom outside the rate list uses the magnitude cut",
+          "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  saddle->con2matter(std::string("saddle.con"));
+  min2->con2matter(std::string("product.con"));
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 1.0e6;
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      true;
+  VectorXi atoms = eonc::Prefactor::allFreeAtoms(min1.get());
+  const int heldOut = atoms(0);
+  VectorXi subset(atoms.size() - 1);
+  for (int i = 1; i < atoms.size(); ++i) {
+    subset(i - 1) = atoms(i);
+  }
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  // The held-out atom is free. Overlap drops differ across the three
+  // images, so the filtered lengths differ.
+  int freeStatus = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, subset);
+  REQUIRE(freeStatus == eonc::Prefactor::SPECTRUM_LENGTH);
+  min1->setFixed(heldOut, true);
+  saddle->setFixed(heldOut, true);
+  min2->setFixed(heldOut, true);
+  REQUIRE(min1->getFixed(heldOut) == 1);
+  // The same atom is fixed and outside the rate list. The magnitude
+  // path runs, and removeZeroFreqs leaves a short list unchanged, so
+  // the three lengths match and the extra negatives remain.
+  int status = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, subset);
+  REQUIRE(status == eonc::Prefactor::MINIMUM_ORDER);
+}
+
+TEST_CASE("a negative atom index is a potential failure", "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  saddle->con2matter(std::string("saddle.con"));
+  min2->con2matter(std::string("product.con"));
+  VectorXi bad(1);
+  bad(0) = -1;
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  REQUIRE(eonc::Prefactor::getPrefactors(params, min1.get(), saddle.get(),
+                                         min2.get(), pref1, pref2, bad) ==
+          eonc::Prefactor::POTENTIAL_FAILED);
+}
+
+TEST_CASE("one atom leaves no rotation to project", "[prefactor]") {
+  auto [min1, params] = makeLJCluster();
+  auto pot = min1->getPotential();
+  min1->con2matter(std::string("tiny.con"));
+  auto saddle = std::make_shared<Matter>(pot, params);
+  auto min2 = std::make_shared<Matter>(pot, params);
+  saddle->con2matter(std::string("tiny.con"));
+  min2->con2matter(std::string("tiny.con"));
+  min1->setPeriodic(false);
+  saddle->setPeriodic(false);
+  min2->setPeriodic(false);
+  ParametersLoadAccess::hessian_options(params).zero_freq_value = 0.5;
+  ParametersLoadAccess::structure_comparison_options(params).check_rotation =
+      true;
+  VectorXi atoms = eonc::Prefactor::allFreeAtoms(min1.get());
+  double pref1 = 0.0;
+  double pref2 = 0.0;
+  int status = eonc::Prefactor::getPrefactors(
+      params, min1.get(), saddle.get(), min2.get(), pref1, pref2, atoms);
+  // A single atom sits on the centre of mass, so each rotation has
+  // zero length. Three translations remain and the saddle order fails.
+  REQUIRE(status == eonc::Prefactor::SADDLE_ORDER);
 }
 
 } /* namespace tests */

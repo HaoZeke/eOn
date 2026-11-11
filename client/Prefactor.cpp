@@ -14,6 +14,7 @@
 #include "eon/Hessian.h"
 
 #include "eon/EonLogger.h"
+#include "eon/FiniteDifference.h"
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -95,7 +96,10 @@ VectorXd rigidModesRemoved(Hessian &hessian, Matter *matter,
       const double overlap = mode.dot(basis);
       projected += overlap * overlap;
     }
-    if (projected >= 0.5 || std::abs(freqs(i)) <= zeroCut) {
+    const double span = freqs.cwiseAbs().maxCoeff();
+    // Magnitude uses the conditioning floor, not the 1e-6 request.
+    // A resolved mode such as the logged 7.6e-7 value stays.
+    if (!keepVibrationalMode(freqs(i), projected, span, n)) {
       EONC_LOG_DEBUG("[Prefactor] dropped {} mode {} overlap {}", where,
                      freqs(i), std::sqrt(projected));
       continue;

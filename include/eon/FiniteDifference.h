@@ -15,6 +15,7 @@
 
 #include <cctype>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -63,6 +64,27 @@ inline double cartesianFromMassWeighted(double q, double massAmu) {
 /// A one-sided difference at that length biased a soft eigenvalue by 40
 /// percent. The assembled Hessian uses the requested step, and never a step
 /// above 1e-3 Å.
+/// |λ|_max * eps * n. A double-precision eigenproblem does not
+/// resolve a mode at or below this floor. Rigid modes are a
+/// separate test: squared overlap with the analytic translation
+/// or rotation of at least one half.
+inline double conditioningFloor(double lambdaMax, int nModes) {
+  return std::abs(lambdaMax) *
+         std::numeric_limits<double>::epsilon() *
+         static_cast<double>(nModes);
+}
+
+inline bool keepVibrationalMode(double eigenvalue, double overlap2,
+                                double lambdaMax, int nModes) {
+  if (overlap2 >= 0.5) {
+    return false;
+  }
+  if (std::abs(eigenvalue) <= conditioningFloor(lambdaMax, nModes)) {
+    return false;
+  }
+  return true;
+}
+
 inline double hessianFiniteDifference(double requested) {
   if (!(requested > 0.0) || !std::isfinite(requested)) {
     return requested;
