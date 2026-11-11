@@ -64,16 +64,16 @@ Mass-weighting uses \(\tilde H_{ij} = H_{ij}/\sqrt{m_i m_j}\).
 
 ### Hessian-range coloring
 
-Coloring is exact only when every Hessian block between two atoms farther
+Hessian coloring of those force products is exact only when every block between two atoms farther
 apart than some distance is zero. A potential reports that distance as
 `Potential::hessianRange`. The value is in the same length unit as the
 positions. `0`, or any non-finite value, means the range is unknown and
 coloring stays off. One column is then built per coordinate.
 
-An interaction cutoff is not this distance. A pair potential is zero past
+An interaction cutoff differs from this distance. A pair potential is zero past
 its cutoff, so the range equals the cutoff. Embedded-atom, Gupta, Stillinger-Weber and Tersoff potentials are atom centred.
 Each potential is zero only past twice the cutoff. The density at one atom depends on every neighbour inside the cutoff. A flexible water model lacks a
-hard intramolecular extent, so a cutoff on the oxygen-oxygen interaction
+hard intramolecular extent. An oxygen-oxygen cutoff on that water model
 leaves the blocks nonzero past every fixed distance. A message-passing
 model is zero past `n_layers` times the edge cutoff, and only when that
 layer count is part of the kernel.
@@ -85,16 +85,16 @@ pair kernel, twice the cutoff for that class of kernel, the
 cutoff plus twice a hard intramolecular extent for a site model, or
 the layer count times each edge cutoff for message passing. Fe-He is the
 exception: its range is the larger of its pair cutoffs and twice its
-largest density cutoff. Anything that is not exactly derivable returns 0.
-A potential that is not an rgpot kernel opts in the same way, by
+largest density cutoff. Anything outside exact derivation returns 0.
+A potential outside the rgpot kernels opts in the same way, by
 overriding `hessianRange`. An override of the deprecated
 `finiteCutoff()` still supplies that distance. Everything else stays at 0.
 
-The table of kernels eOn can wrap, at the current rgpot pin and at rgpot
-`v3.5.0`, is in the developer page
-{doc}`/devdocs/hessian`.
+The developer page {doc}`/devdocs/hessian` lists the kernel table.
+The table covers every kernel eOn can wrap, at the current rgpot
+pin and at rgpot `v3.5.0`.
 
-Mobile atoms are greedy-colored so that two atoms share a color only when
+Those kernels color the mobile atoms. Two mobile atoms share a color only when
 their closed neighborhoods of that range are disjoint. One displacement of
 a whole color along x, y, or z fills every column of that color. Central
 differences use two force evaluations per Cartesian direction per color,
@@ -147,6 +147,7 @@ same call.
 Long partial Hessians can checkpoint FD columns to `checkpoint_path` (e.g.
 `hessian.ckpt`) with `resume = true`. Interrupted jobs continue from the next
 column; a successful run removes the checkpoint.
+That checkpointed Hessian is the matrix the output files record.
 
 ## Usage
 
@@ -165,12 +166,12 @@ fd_scheme = one_sided
 zero_freq_value = 1e-6
 ```
 
-The output `results.dat` records force-call counts; `hessian.dat` contains the
+The output `results.dat` records Hessian force-call counts; `hessian.dat` contains the
 mass-weighted matrix. `[Main] quiet = true` suppresses the write log line only.
 Eigenvalues (squared frequencies) are obtained by diagonalizing the symmetrized
 matrix (ColMajor eigen solve in the client).
 
-The job drops each eigenvalue at or below `zero_freq_value` (default
+The job drops each eigenvalue of that matrix at or below `zero_freq_value` (default
 `1e-6`). A free cluster has 6 of those eigenvalues, a linear cluster has
 5, a periodic cell has 3, and a structure with any fully fixed atom has
 none. The job still drops a different count, and it logs a warning.
@@ -207,7 +208,7 @@ Hessian or a matrix-free Hessian-vector product. It is always intersected with
 free flags so frozen atoms are never moved. Default `All` means
 active = free (historical behavior).
 
-The same polarity applies to matrix-free min-mode. Free/fixed is left unchanged;
+Mode frames use the same polarity for matrix-free min-mode. Free/fixed is left unchanged;
 an explicit list sets the Krylov / Ritz dimension to \(3 N_\mathrm{active}\)
 rather than \(3 N_\mathrm{free}\):
 
