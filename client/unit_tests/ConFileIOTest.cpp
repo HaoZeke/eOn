@@ -744,6 +744,77 @@ TEST_CASE("ConFileIO convel round-trip preserves velocities",
   std::filesystem::remove(tmpfile);
 }
 
+TEST_CASE("convel velocity stays with a fixed atom id",
+          "[confileio][convel]") {
+  // Ids are not sorted. Atom 2 is fixed in x and has a velocity on that
+  // axis. The dynamics view of that axis stays zero. The written convel
+  // must still carry the component with the atom id.
+  const auto src_path =
+      std::filesystem::temp_directory_path() / "_convel_fixed_src.convel";
+  const auto dst_path =
+      std::filesystem::temp_directory_path() / "_convel_fixed_dst.convel";
+  const std::string src = src_path.string();
+  const std::string dst = dst_path.string();
+  {
+    std::ofstream out(src);
+    out << "repro\n"
+           "{\"con_spec_version\":3,\"con_spec_minor\":1,\"sections\":["
+           "\"velocities\"],\"units\":{\"energy\":\"eV\",\"length\":"
+           "\"angstrom\",\"time\":\"fs\"}}\n"
+           "10.0 10.0 10.0\n"
+           "90.0 90.0 90.0\n"
+           "\n"
+           "\n"
+           "1\n"
+           "2\n"
+           "63.546\n"
+           "Cu\n"
+           "Coordinates of Component 1\n"
+           "1.0 0.0 0.0 1 2\n"
+           "0.0 0.0 0.0 0 1\n"
+           "\n"
+           "Cu\n"
+           "Velocities of Component 1\n"
+           "0.400000 0.500000 0.600000 1 2\n"
+           "0.100000 0.200000 0.300000 0 1\n";
+  }
+
+  Parameters params;
+  params.potential_options.potential = PotType::LJ;
+  auto pot = eonc::helpers::makePotential(PotType::LJ, params);
+  Matter loaded(pot, params);
+  REQUIRE(eonc::io::io_ok(eonc::io::convel2matter(loaded, src)));
+
+  long fixed_row = -1;
+  for (long i = 0; i < loaded.numberOfAtoms(); ++i) {
+    if (loaded.getAtomIndex(i) == 2) {
+      fixed_row = i;
+    }
+  }
+  REQUIRE(fixed_row >= 0);
+  REQUIRE(loaded.getVelocities()(fixed_row, 0) ==
+          Catch::Approx(0.0).margin(0.0));
+
+  REQUIRE(eonc::io::io_ok(eonc::io::matter2convel(loaded, dst)));
+  const auto frames = readcon::read_all_frames(dst);
+  REQUIRE(frames.size() == 1);
+  bool saw = false;
+  for (const auto &atom : frames[0].atoms()) {
+    if (atom.atom_id != 2) {
+      continue;
+    }
+    saw = true;
+    const auto vel = atom.velocity();
+    REQUIRE(vel.has_value());
+    REQUIRE((*vel)[0] == Catch::Approx(0.4));
+    REQUIRE((*vel)[1] == Catch::Approx(0.5));
+    REQUIRE((*vel)[2] == Catch::Approx(0.6));
+  }
+  REQUIRE(saw);
+  std::filesystem::remove(src);
+  std::filesystem::remove(dst);
+}
+
 TEST_CASE("ConFileIO writeTibble produces valid output",
           "[confileio][tibble]") {
   Parameters params;

@@ -424,7 +424,8 @@ void apply_geometry(readcon::ConFrameBuilder &builder, Matter &m,
   }
 
   if (with_velocities) {
-    const AtomMatrix vel = m.getVelocities();
+    // getVelocities() drops fixed axes. The file stores the raw component.
+    const AtomMatrix vel = m.getVelocitiesRaw();
     for (long i = 0; i < n; ++i) {
       builder.set_atom_velocity(static_cast<size_t>(i),
                                 {vel(i, 0), vel(i, 1), vel(i, 2)});
@@ -707,7 +708,9 @@ IoStatus con2matter(Matter &m, const readcon::ConFrame &frame,
     m.setPositions(positions);
 
     if (any_velocity || frame.has_velocities()) {
-      m.setVelocities(velocities);
+      // setVelocities() would zero a fixed axis and the atom id would no
+      // longer carry the velocity from the file.
+      m.setVelocitiesRaw(velocities);
     }
 
     const auto meta = metadata_from_frame(frame);

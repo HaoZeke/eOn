@@ -185,6 +185,12 @@ public:
 
   AtomMatrix getVelocities() const;
   void setVelocities(const AtomMatrix &v);
+  /// Stored velocities, including components on fixed axes.
+  /// getVelocities() zeros those components for dynamics. File I/O uses the
+  /// raw matrix so a convel round-trip keeps the velocity that belongs to
+  /// the atom id.
+  const AtomMatrix &getVelocitiesRaw() const;
+  void setVelocitiesRaw(const AtomMatrix &v);
   void setBiasForces(const AtomMatrix &bf);
   void setBiasPotential(BondBoost *bondBoost);
   void setForces(const AtomMatrix &f);

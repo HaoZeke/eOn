@@ -605,6 +605,10 @@ void Matter::setVelocities(const AtomMatrix &v) {
   velocities = v.array() * getFree().array();
 }
 
+const AtomMatrix &Matter::getVelocitiesRaw() const { return velocities; }
+
+void Matter::setVelocitiesRaw(const AtomMatrix &v) { velocities = v; }
+
 void Matter::setForces(const AtomMatrix &f) {
   forces = f.array() * getFree().array();
 }
